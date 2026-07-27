@@ -1,83 +1,100 @@
 <template>
-  <el-container class="admin-layout">
-    <!-- Sidebar -->
-    <el-aside :width="sidebarWidth" class="admin-sidebar">
-      <div class="sidebar-logo" :class="{ collapsed: isCollapsed }">
-        <el-icon :size="28" color="#4080FF">
-          <Anchor />
-        </el-icon>
-        <span v-if="!isCollapsed" class="logo-text">智简魔方</span>
+  <div class="admin-layout">
+    <!-- 侧边栏 -->
+    <aside class="sidebar" :class="{ collapsed: isCollapsed }">
+      <div class="sidebar-header">
+        <img src="/logo.png" alt="Logo" class="logo" />
+        <span v-show="!isCollapsed" class="title">锚点财务</span>
       </div>
-      <el-scrollbar>
+      
+      <el-scrollbar class="sidebar-menu">
         <el-menu
           :default-active="activeMenu"
           :collapse="isCollapsed"
           :collapse-transition="false"
-          background-color="#1a3a5c"
-          text-color="rgba(255,255,255,0.7)"
-          active-text-color="#ffffff"
           router
+          background-color="transparent"
+          text-color="rgba(255, 255, 255, 0.85)"
+          active-text-color="#ffffff"
         >
-          <template v-for="group in menuGroups" :key="group.key">
-            <el-menu-item-group>
+          <template v-for="route in menuRoutes" :key="route.path">
+            <!-- 单级菜单 -->
+            <el-menu-item
+              v-if="!route.children || route.children.length === 1"
+              :index="route.children ? route.children[0].path : route.path"
+            >
+              <el-icon><component :is="route.meta?.icon || 'Document'" /></el-icon>
+              <template #title>{{ route.meta?.title }}</template>
+            </el-menu-item>
+            
+            <!-- 多级菜单 -->
+            <el-sub-menu v-else :index="route.path">
               <template #title>
-                <span class="menu-group-title">{{ group.label }}</span>
+                <el-icon><component :is="route.meta?.icon || 'Folder'" /></el-icon>
+                <span>{{ route.meta?.title }}</span>
               </template>
               <el-menu-item
-                v-for="item in group.children"
-                :key="item.path"
-                :index="item.path"
+                v-for="child in route.children"
+                :key="child.path"
+                :index="`${route.path}/${child.path}`"
               >
-                <el-icon><component :is="item.icon" /></el-icon>
-                <span>{{ item.label }}</span>
+                {{ child.meta?.title }}
               </el-menu-item>
-            </el-menu-item-group>
+            </el-sub-menu>
           </template>
         </el-menu>
       </el-scrollbar>
-    </el-aside>
-
-    <!-- Main Area -->
-    <el-container class="admin-main-container">
-      <!-- Header -->
-      <el-header class="admin-header" height="64px">
+    </aside>
+    
+    <!-- 主内容区 -->
+    <div class="main-area">
+      <!-- 头部 -->
+      <header class="header">
         <div class="header-left">
           <el-icon
-            class="collapse-trigger"
+            class="collapse-btn"
             :size="20"
-            @click="toggleSidebar"
+            @click="isCollapsed = !isCollapsed"
           >
-            <Fold v-if="!isCollapsed" />
-            <Expand v-else />
+            <component :is="isCollapsed ? 'Expand' : 'Fold'" />
           </el-icon>
-          <el-breadcrumb separator="/" class="admin-breadcrumb">
-            <el-breadcrumb-item :to="{ path: '/admin/dashboard' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="currentTitle">{{ currentTitle }}</el-breadcrumb-item>
+          
+          <el-breadcrumb separator="/">
+            <el-breadcrumb-item :to="{ path: '/dashboard' }">首页</el-breadcrumb-item>
+            <el-breadcrumb-item v-if="currentRoute?.meta?.title">
+              {{ currentRoute.meta.title }}
+            </el-breadcrumb-item>
           </el-breadcrumb>
         </div>
+        
         <div class="header-right">
-          <el-tooltip content="全屏" placement="bottom">
-            <el-icon class="header-action" :size="18" @click="toggleFullscreen">
-              <FullScreen />
-            </el-icon>
+          <el-tooltip content="刷新页面" placement="bottom">
+            <el-icon class="header-icon" @click="refreshPage"><Refresh /></el-icon>
           </el-tooltip>
-          <el-badge :value="3" :max="99" class="header-badge">
-            <el-icon class="header-action" :size="18">
-              <Bell />
-            </el-icon>
+          
+          <el-tooltip content="全屏" placement="bottom">
+            <el-icon class="header-icon" @click="toggleFullscreen"><FullScreen /></el-icon>
+          </el-tooltip>
+          
+          <el-badge :value="3" :max="99" class="notify-badge">
+            <el-icon class="header-icon"><Bell /></el-icon>
           </el-badge>
-          <el-dropdown trigger="click" @command="handleUserAction">
-            <div class="header-user">
-              <el-avatar :size="32" :style="{ backgroundColor: '#0056FF' }">
-                {{ adminStore.adminInfo?.username?.charAt(0)?.toUpperCase() || 'A' }}
+          
+          <el-dropdown trigger="click" @command="handleCommand">
+            <div class="user-info">
+              <el-avatar :size="32" class="user-avatar">
+                {{ userStore.username.charAt(0).toUpperCase() }}
               </el-avatar>
-              <span class="username">{{ adminStore.adminInfo?.username || '管理员' }}</span>
+              <span class="username">{{ userStore.username }}</span>
               <el-icon><ArrowDown /></el-icon>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">
-                  <el-icon><User /></el-icon>个人信息
+                  <el-icon><User /></el-icon>个人资料
+                </el-dropdown-item>
+                <el-dropdown-item command="settings">
+                  <el-icon><Setting /></el-icon>系统设置
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon>退出登录
@@ -86,121 +103,49 @@
             </template>
           </el-dropdown>
         </div>
-      </el-header>
-
-      <!-- Content -->
-      <el-main class="admin-content">
-        <router-view />
-      </el-main>
-    </el-container>
-  </el-container>
+      </header>
+      
+      <!-- 内容区 -->
+      <main class="content">
+        <router-view v-slot="{ Component }">
+          <transition name="page-fade" mode="out-in">
+            <keep-alive :include="cachedViews">
+              <component :is="Component" />
+            </keep-alive>
+          </transition>
+        </router-view>
+      </main>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAdminStore } from '@/stores/admin'
-import {
-  DataBoard,
-  User,
-  Goods,
-  ShoppingCart,
-  Document,
-  ChatDotSquare,
-  Ticket,
-  Megaphone,
-  Setting,
-  Key,
-  Postcard,
-  Operation,
-  Bell,
-  Fold,
-  Expand,
-  FullScreen,
-  ArrowDown,
-  SwitchButton,
-  Anchor,
-  TrendCharts,
-  Avatar,
-  Message,
-  Notification,
-} from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
+import { ElMessageBox } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
-const adminStore = useAdminStore()
+const userStore = useUserStore()
 
-const isCollapsed = computed(() => adminStore.sidebarCollapsed)
-const sidebarWidth = computed(() => (isCollapsed.value ? '64px' : '220px'))
+const isCollapsed = ref(false)
+const cachedViews = ref<string[]>([])
+
 const activeMenu = computed(() => route.path)
-const currentTitle = computed(() => (route.meta?.title as string) || '')
+const currentRoute = computed(() => route)
 
-interface MenuItem {
-  label: string
-  path: string
-  icon: any
+const menuRoutes = computed(() => {
+  const mainRoute = router.options.routes.find(r => r.path === '/')
+  return mainRoute?.children?.filter(r => !r.meta?.hidden) || []
+})
+
+const refreshPage = () => {
+  const { fullPath } = route
+  router.replace('/redirect' + fullPath)
 }
 
-interface MenuGroup {
-  key: string
-  label: string
-  children: MenuItem[]
-}
-
-const menuGroups: MenuGroup[] = [
-  {
-    key: 'home',
-    label: '主页',
-    children: [
-      { label: '仪表盘', path: '/admin/dashboard', icon: DataBoard },
-    ],
-  },
-  {
-    key: 'users',
-    label: '用户管理',
-    children: [
-      { label: '用户管理', path: '/admin/users', icon: User },
-      { label: '代理商管理', path: '/admin/agents', icon: Avatar },
-    ],
-  },
-  {
-    key: 'business',
-    label: '业务管理',
-    children: [
-      { label: '产品管理', path: '/admin/products', icon: Goods },
-      { label: '订单管理', path: '/admin/orders', icon: ShoppingCart },
-      { label: '账单管理', path: '/admin/invoices', icon: Document },
-      { label: '工单管理', path: '/admin/tickets', icon: ChatDotSquare },
-      { label: '优惠券管理', path: '/admin/coupons', icon: Ticket },
-    ],
-  },
-  {
-    key: 'content',
-    label: '内容管理',
-    children: [
-      { label: '公告管理', path: '/admin/announcements', icon: Megaphone },
-      { label: '邮件模板', path: '/admin/email-templates', icon: Message },
-      { label: '通知管理', path: '/admin/notifications', icon: Notification },
-    ],
-  },
-  {
-    key: 'system',
-    label: '系统管理',
-    children: [
-      { label: '支付管理', path: '/admin/payments', icon: Postcard },
-      { label: '第三方登录', path: '/admin/oauth', icon: Key },
-      { label: '报表统计', path: '/admin/reports', icon: TrendCharts },
-      { label: '系统日志', path: '/admin/logs', icon: Operation },
-      { label: '系统设置', path: '/admin/settings', icon: Setting },
-    ],
-  },
-]
-
-function toggleSidebar() {
-  adminStore.toggleSidebar()
-}
-
-function toggleFullscreen() {
+const toggleFullscreen = () => {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen()
   } else {
@@ -208,153 +153,210 @@ function toggleFullscreen() {
   }
 }
 
-function handleUserAction(command: string) {
-  if (command === 'logout') {
-    adminStore.logout()
+const handleCommand = async (command: string) => {
+  switch (command) {
+    case 'profile':
+      // 跳转个人资料
+      break
+    case 'settings':
+      router.push('/system/general')
+      break
+    case 'logout':
+      try {
+        await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+        userStore.logout()
+        router.push('/login')
+      } catch {
+        // 取消
+      }
+      break
   }
 }
-
-onMounted(() => {
-  adminStore.fetchAdminInfo()
-})
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .admin-layout {
+  display: flex;
   height: 100vh;
   overflow: hidden;
 }
 
-/* ── Sidebar ── */
-.admin-sidebar {
-  background: #1a3a5c;
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
   transition: width 0.3s ease;
   overflow: hidden;
+  
+  &.collapsed {
+    width: var(--sidebar-collapsed-width);
+  }
+  
+  .sidebar-header {
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    
+    .logo {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+    
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      white-space: nowrap;
+    }
+  }
+  
+  .sidebar-menu {
+    flex: 1;
+    padding: 8px 0;
+    
+    :deep(.el-menu) {
+      border-right: none;
+      
+      .el-menu-item {
+        height: 48px;
+        line-height: 48px;
+        margin: 2px 8px;
+        border-radius: 8px;
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        &.is-active {
+          background: rgba(255, 255, 255, 0.2) !important;
+          font-weight: 500;
+        }
+      }
+      
+      .el-sub-menu {
+        .el-sub-menu__title {
+          height: 48px;
+          line-height: 48px;
+          margin: 2px 8px;
+          border-radius: 8px;
+          
+          &:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+          }
+        }
+        
+        .el-menu-item {
+          min-width: auto;
+          padding-left: 56px !important;
+        }
+      }
+    }
+  }
 }
 
-.sidebar-logo {
-  height: 64px;
+.main-area {
+  flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 0 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  flex-shrink: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-color);
 }
 
-.sidebar-logo.collapsed {
-  padding: 0;
-}
-
-.logo-text {
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-  white-space: nowrap;
-  letter-spacing: 1px;
-}
-
-.menu-group-title {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.35);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.admin-sidebar :deep(.el-menu) {
-  border-right: none;
-}
-
-.admin-sidebar :deep(.el-menu-item) {
-  height: 44px;
-  line-height: 44px;
-  margin: 2px 8px;
-  border-radius: 6px;
-}
-
-.admin-sidebar :deep(.el-menu-item.is-active) {
-  background: linear-gradient(135deg, #0056FF 0%, #4080FF 100%) !important;
-  color: #fff !important;
-  font-weight: 500;
-}
-
-.admin-sidebar :deep(.el-menu-item:hover) {
-  background: rgba(255, 255, 255, 0.06) !important;
-}
-
-.admin-sidebar :deep(.el-menu-item-group__title) {
-  padding: 12px 0 4px 20px;
-}
-
-/* ── Header ── */
-.admin-header {
-  background: #1a3a5c;
+.header {
+  height: var(--header-height);
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  padding: 0 20px;
+  box-shadow: var(--shadow-sm);
+  
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    
+    .collapse-btn {
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: color 0.3s;
+      
+      &:hover {
+        color: var(--primary-color);
+      }
+    }
+  }
+  
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    
+    .header-icon {
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: color 0.3s;
+      
+      &:hover {
+        color: var(--primary-color);
+      }
+    }
+    
+    .notify-badge {
+      display: flex;
+      align-items: center;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background 0.3s;
+      
+      &:hover {
+        background: var(--bg-color);
+      }
+      
+      .user-avatar {
+        background: var(--primary-color);
+        color: #fff;
+        font-size: 14px;
+      }
+      
+      .username {
+        font-size: 14px;
+        color: var(--text-primary);
+      }
+    }
+  }
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.collapse-trigger {
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.collapse-trigger:hover {
-  color: #fff;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.header-action {
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.header-action:hover {
-  color: #fff;
-}
-
-.header-badge {
-  line-height: 1;
-}
-
-.header-user {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.username {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-/* ── Main Content ── */
-.admin-main-container {
-  overflow: hidden;
-}
-
-.admin-content {
-  background: #f5f7fa;
-  padding: 20px;
+.content {
+  flex: 1;
   overflow-y: auto;
+  padding: 20px;
+}
+
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
 }
 </style>
