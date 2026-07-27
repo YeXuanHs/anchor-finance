@@ -13,7 +13,7 @@
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/products" class="nav-link">产品</router-link>
           <a href="#" class="nav-link">公告</a>
-          <router-link to="/knowledge" class="nav-link active">帮助</router-link>
+          <router-link to="/knowledge" class="nav-link active">帮助中心</router-link>
         </nav>
         <div class="header-actions">
           <n-button text @click="$router.push('/login')">登录</n-button>
@@ -36,21 +36,19 @@
     <div class="search-banner">
       <div class="search-inner">
         <h1 class="search-title">帮助中心</h1>
-        <p class="search-desc">搜索常见问题，快速找到解决方案</p>
-        <div class="search-box">
-          <n-input
-            v-model:value="searchKeyword"
-            placeholder="输入关键词搜索帮助文章..."
-            size="large"
-            clearable
-            @keyup.enter="handleSearch"
-          >
-            <template #prefix>
-              <n-icon :component="SearchOutline" />
-            </template>
-          </n-input>
-          <n-button type="primary" size="large" @click="handleSearch">搜索</n-button>
-        </div>
+        <p class="search-subtitle">搜索您需要的帮助信息</p>
+        <n-input
+          v-model:value="searchKeyword"
+          placeholder="搜索文章标题或关键词..."
+          size="large"
+          round
+          clearable
+          class="search-input"
+        >
+          <template #prefix>
+            <n-icon :component="SearchOutline" />
+          </template>
+        </n-input>
       </div>
     </div>
 
@@ -61,15 +59,16 @@
         <aside class="sidebar">
           <div class="sidebar-card">
             <h3 class="sidebar-title">
-              <n-icon size="18" color="#1890ff"><ListOutline /></n-icon>
+              <n-icon size="18" color="#1890ff"><FolderOpenOutline /></n-icon>
               文章分类
             </h3>
             <n-tree
               :data="categoryTree"
-              :selected-keys="selectedCategoryKeys"
+              :selected-keys="selectedCategories"
               selectable
               block-line
-              @update:selected-keys="handleCategorySelect"
+              :render-suffix="renderCategorySuffix"
+              @update:selected-keys="onCategorySelect"
             />
           </div>
 
@@ -84,10 +83,11 @@
                 v-for="(article, index) in hotArticles"
                 :key="article.id"
                 class="hot-item"
-                @click="openArticle(article)"
+                @click="toggleArticle(article.id)"
               >
-                <span class="hot-rank" :class="{ top: index < 3 }">{{ index + 1 }}</span>
+                <span class="hot-rank" :class="{ 'top-3': index < 3 }">{{ index + 1 }}</span>
                 <span class="hot-title">{{ article.title }}</span>
+                <span class="hot-views">{{ formatViews(article.views) }}</span>
               </div>
             </div>
           </div>
@@ -95,79 +95,86 @@
 
         <!-- Article List -->
         <main class="article-list">
-          <!-- Toolbar -->
-          <div class="toolbar">
-            <div class="toolbar-left">
-              <span class="result-count">共 <strong>{{ filteredArticles.length }}</strong> 篇文章</span>
-              <n-tag v-if="activeCategoryLabel" type="info" size="small" :bordered="false" closable @close="clearCategory">
-                {{ activeCategoryLabel }}
-              </n-tag>
-            </div>
-            <div class="toolbar-right">
-              <n-select
-                v-model:value="sortBy"
-                :options="sortOptions"
-                size="small"
-                style="width: 140px;"
-                placeholder="排序方式"
-              />
-            </div>
+          <!-- Active Category Tags -->
+          <div class="filter-tags">
+            <n-tag
+              v-for="cat in activeCategories"
+              :key="cat"
+              closable
+              type="info"
+              size="small"
+              @close="removeCategory(cat)"
+            >
+              {{ cat }}
+            </n-tag>
+            <n-button
+              v-if="activeCategories.length > 0"
+              text
+              type="primary"
+              size="small"
+              @click="clearCategories"
+            >
+              清除筛选
+            </n-button>
+          </div>
+
+          <!-- Result Info -->
+          <div class="result-info">
+            <span>共 <strong>{{ filteredArticles.length }}</strong> 篇文章</span>
           </div>
 
           <!-- Article Cards -->
           <div class="articles-grid">
-            <div
+            <n-card
               v-for="article in paginatedArticles"
               :key="article.id"
               class="article-card"
-              @click="toggleArticle(article)"
+              hoverable
+              @click="toggleArticle(article.id)"
             >
               <div class="article-header">
-                <div class="article-meta">
-                  <n-tag :type="getCategoryTagType(article.category)" size="small" :bordered="false">
-                    {{ article.category }}
-                  </n-tag>
-                  <span class="article-views">
-                    <n-icon size="14"><EyeOutline /></n-icon>
-                    {{ article.views }}
-                  </span>
-                  <span class="article-helpful">
-                    <n-icon size="14"><ThumbsUpOutline /></n-icon>
-                    {{ article.helpful }}
-                  </span>
-                </div>
+                <n-tag :type="getCategoryTagType(article.category)" size="small" :bordered="false">
+                  {{ article.category }}
+                </n-tag>
+                <n-icon
+                  size="16"
+                  class="expand-icon"
+                  :class="{ expanded: expandedArticle === article.id }"
+                >
+                  <ChevronDownOutline />
+                </n-icon>
               </div>
               <h3 class="article-title">{{ article.title }}</h3>
               <p class="article-summary">{{ article.summary }}</p>
+              <div class="article-meta">
+                <span class="meta-item">
+                  <n-icon size="14"><EyeOutline /></n-icon>
+                  {{ formatViews(article.views) }}
+                </span>
+                <span class="meta-item">
+                  <n-icon size="14"><ThumbsUpOutline /></n-icon>
+                  {{ article.helpful }}
+                </span>
+                <span class="meta-item">
+                  <n-icon size="14"><TimeOutline /></n-icon>
+                  {{ article.updateTime }}
+                </span>
+              </div>
 
-              <!-- Expanded Content -->
-              <n-collapse v-if="expandedArticle === article.id">
-                <n-collapse-item :name="article.id" :title="null">
-                  <div class="article-content" v-html="article.content"></div>
+              <!-- Expanded Detail -->
+              <n-collapse v-if="expandedArticle === article.id" :default-expanded-names="['detail']">
+                <n-collapse-item name="detail">
+                  <div class="article-detail" v-html="article.content"></div>
                 </n-collapse-item>
               </n-collapse>
-
-              <div class="article-footer">
-                <span class="article-date">
-                  <n-icon size="14"><TimeOutline /></n-icon>
-                  {{ article.date }}
-                </span>
-                <n-button text type="primary" size="small">
-                  {{ expandedArticle === article.id ? '收起' : '展开阅读' }}
-                  <template #icon>
-                    <n-icon>
-                      <component :is="expandedArticle === article.id ? ChevronUpOutline : ChevronDownOutline" />
-                    </n-icon>
-                  </template>
-                </n-button>
-              </div>
-            </div>
+            </n-card>
           </div>
 
           <!-- Empty State -->
           <div v-if="filteredArticles.length === 0" class="empty-state">
-            <n-empty description="暂无匹配的文章" />
-            <n-button type="primary" class="empty-btn" @click="resetFilters">重置筛选</n-button>
+            <n-icon size="64" color="#c9cdd4"><DocumentTextOutline /></n-icon>
+            <p>暂无匹配的文章</p>
+            <n-button type="primary" @click="clearFilters">清除筛选</n-button>
           </div>
 
           <!-- Pagination -->
@@ -186,242 +193,210 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { TreeOption } from 'naive-ui'
+import { ref, computed, h } from 'vue'
 import {
   AnchorOutline,
-  ListOutline,
   SearchOutline,
+  FolderOpenOutline,
   FlameOutline,
+  ChevronDownOutline,
   EyeOutline,
   ThumbsUpOutline,
   TimeOutline,
-  ChevronUpOutline,
-  ChevronDownOutline,
+  DocumentTextOutline,
   ServerOutline,
-  GlobeOutline,
   ShieldCheckmarkOutline,
   CardOutline,
-  SettingsOutline
+  SettingsOutline,
+  HelpCircleOutline
 } from '@vicons/ionicons5'
+import { NIcon } from 'naive-ui'
+import type { TreeOption } from 'naive-ui'
 
 const searchKeyword = ref('')
-const selectedCategoryKeys = ref<string[]>(['all'])
-const sortBy = ref('default')
+const selectedCategories = ref<string[]>([])
+const expandedArticle = ref<number | null>(null)
 const currentPage = ref(1)
 const pageSize = 6
-const expandedArticle = ref<number | null>(null)
-
-const sortOptions = [
-  { label: '默认排序', value: 'default' },
-  { label: '最多浏览', value: 'views' },
-  { label: '最有帮助', value: 'helpful' },
-  { label: '最新发布', value: 'newest' }
-]
-
-const categoryTree: TreeOption[] = [
-  {
-    key: 'all',
-    label: '全部文章'
-  },
-  {
-    key: 'quickstart',
-    label: '快速入门',
-    children: [
-      { key: 'quickstart-register', label: '注册与认证' },
-      { key: 'quickstart-first', label: '首次购买' }
-    ]
-  },
-  {
-    key: 'product',
-    label: '产品使用',
-    children: [
-      { key: 'product-ecs', label: '云服务器' },
-      { key: 'product-vps', label: 'VPS' },
-      { key: 'product-domain', label: '域名管理' }
-    ]
-  },
-  {
-    key: 'billing',
-    label: '费用与账单',
-    children: [
-      { key: 'billing-pay', label: '支付方式' },
-      { key: 'billing-refund', label: '退款说明' }
-    ]
-  },
-  {
-    key: 'security',
-    label: '安全相关',
-    children: [
-      { key: 'security-ssl', label: 'SSL证书' },
-      { key: 'security-ddos', label: 'DDoS防护' }
-    ]
-  },
-  {
-    key: 'faq',
-    label: '常见问题'
-  }
-]
-
-const activeCategoryLabel = computed(() => {
-  const key = selectedCategoryKeys.value[0]
-  if (!key || key === 'all') return ''
-  const find = (nodes: TreeOption[]): string | undefined => {
-    for (const n of nodes) {
-      if (n.key === key) return n.label as string
-      if (n.children) {
-        const r = find(n.children)
-        if (r) return r
-      }
-    }
-  }
-  return find(categoryTree) ?? ''
-})
 
 interface Article {
   id: number
   title: string
   category: string
-  categoryKey: string
   summary: string
   content: string
   views: number
   helpful: number
-  date: string
+  updateTime: string
 }
 
 const articles = ref<Article[]>([
   {
     id: 1,
-    title: '如何注册并完成实名认证',
-    category: '快速入门',
-    categoryKey: 'quickstart',
-    summary: '本教程将引导您完成账号注册和实名认证流程，认证后可享受更多功能和优惠。',
-    content: '<p><strong>第一步：</strong>访问官网首页，点击右上角"免费注册"按钮。</p><p><strong>第二步：</strong>填写邮箱、手机号和密码，完成基础信息注册。</p><p><strong>第三步：</strong>进入控制台，选择"账号设置" → "实名认证"，上传身份证正反面照片。</p><p><strong>第四步：</strong>等待审核（通常1-2个工作日），认证完成后即可购买产品。</p>',
-    views: 3420,
-    helpful: 286,
-    date: '2026-07-15'
+    title: '如何购买云服务器',
+    category: '购买指南',
+    summary: '详细介绍云服务器的购买流程，包括选择配置、下单支付、开通服务等步骤。',
+    content: '<p>1. 登录账号后进入产品中心，选择适合的云服务器产品。</p><p>2. 根据业务需求选择机房线路、CPU、内存、带宽等配置。</p><p>3. 确认订单信息后完成支付，系统将在5分钟内自动开通服务。</p><p>4. 开通成功后，服务器信息将发送至您的邮箱和站内消息。</p>',
+    views: 3562,
+    helpful: 284,
+    updateTime: '2025-12-15'
   },
   {
     id: 2,
-    title: '云服务器购买与初始化配置指南',
-    category: '云服务器',
-    categoryKey: 'product-ecs',
-    summary: '详细介绍如何选择合适的云服务器配置、购买流程以及初始化环境设置。',
-    content: '<p>本文将帮助您了解如何选购最适合您业务需求的云服务器。</p><p><strong>选择地域：</strong>根据目标用户分布选择最近的机房，如面向大陆用户推荐香港节点。</p><p><strong>选择配置：</strong>个人建站推荐1核2G起步，企业应用推荐2核4G以上。</p><p><strong>系统选择：</strong>支持CentOS、Ubuntu、Debian、Windows Server等主流系统。</p><p><strong>安全设置：</strong>购买后请立即修改默认密码，配置安全组规则。</p>',
-    views: 2856,
-    helpful: 198,
-    date: '2026-07-10'
+    title: '云服务器远程连接教程',
+    category: '使用教程',
+    summary: 'Windows和Linux系统远程连接云服务器的详细步骤，包含SSH和远程桌面两种方式。',
+    content: '<p><strong>Windows系统：</strong>使用远程桌面连接(mstsc)，输入服务器IP和端口，使用账号密码登录。</p><p><strong>Linux系统：</strong>使用SSH工具(如PuTTY、Xshell)，输入ssh root@服务器IP，使用密钥或密码认证。</p><p>首次登录建议修改默认密码并配置密钥登录以提升安全性。</p>',
+    views: 2891,
+    helpful: 236,
+    updateTime: '2025-12-10'
   },
   {
     id: 3,
-    title: '域名注册与DNS解析设置教程',
-    category: '域名管理',
-    categoryKey: 'product-domain',
-    summary: '从域名注册到DNS解析配置，手把手教您完成域名相关操作。',
-    content: '<p><strong>域名注册：</strong>在产品中心选择"域名注册"，搜索您想要的域名，加入购物车并完成支付。</p><p><strong>DNS解析：</strong>进入控制台 → 域名管理 → DNS解析，添加A记录、CNAME记录等。</p><p><strong>注意事项：</strong>域名解析生效通常需要10分钟至24小时，取决于TTL设置和DNS缓存。</p>',
-    views: 2140,
-    helpful: 165,
-    date: '2026-07-08'
+    title: '域名解析设置指南',
+    category: '使用教程',
+    summary: '域名DNS解析的完整配置教程，包括A记录、CNAME、MX记录等常用解析类型。',
+    content: '<p>1. 登录控制台，进入域名管理页面。</p><p>2. 选择需要设置解析的域名，点击「解析设置」。</p><p>3. 添加A记录：将域名指向服务器IP地址。</p><p>4. 添加CNAME记录：将域名指向另一个域名。</p><p>5. 添加MX记录：用于邮箱服务配置。</p><p>解析生效时间一般为10分钟至24小时。</p>',
+    views: 2145,
+    helpful: 189,
+    updateTime: '2025-12-08'
   },
   {
     id: 4,
-    title: '支持哪些支付方式及充值说明',
-    category: '费用与账单',
-    categoryKey: 'billing-pay',
-    summary: '了解平台支持的所有支付方式，以及余额充值、发票申请等常见问题。',
-    content: '<p><strong>支付方式：</strong>目前支持支付宝、微信支付、银行卡转账、USDT等支付方式。</p><p><strong>余额充值：</strong>控制台 → 财务中心 → 余额充值，最低充值金额10元。</p><p><strong>发票申请：</strong>完成实名认证后，可在"财务中心"申请增值税普通发票或专用发票。</p>',
-    views: 1890,
-    helpful: 142,
-    date: '2026-07-05'
+    title: 'SSL证书申请与安装教程',
+    category: '安全相关',
+    summary: '免费SSL证书的申请流程以及在不同Web服务器上的安装配置方法。',
+    content: '<p>1. 进入SSL证书管理页面，选择DV免费证书。</p><p>2. 填写域名信息，选择验证方式（DNS验证或文件验证）。</p><p>3. 完成验证后证书将自动签发。</p><p>4. 下载证书文件，根据服务器类型（Nginx/Apache/IIS）进行安装。</p><p>5. 配置完成后使用HTTPS访问测试。</p>',
+    views: 1876,
+    helpful: 152,
+    updateTime: '2025-12-05'
   },
   {
     id: 5,
-    title: 'SSL证书申请与安装全流程',
-    category: 'SSL证书',
-    categoryKey: 'security-ssl',
-    summary: '免费SSL证书申请和付费证书购买后的安装部署完整指南。',
-    content: '<p><strong>免费证书：</strong>DV SSL证书支持免费申请，10分钟内签发。</p><p><strong>申请流程：</strong>控制台 → SSL证书 → 申请证书 → 选择域名验证方式（DNS验证或文件验证）。</p><p><strong>安装部署：</strong>证书签发后，下载对应服务器格式的证书文件，按文档配置到Nginx/Apache/IIS。</p>',
+    title: '账单与支付方式说明',
+    category: '购买指南',
+    summary: '平台支持的支付方式、账单周期、续费提醒及发票申请等相关说明。',
+    content: '<p><strong>支持的支付方式：</strong>支付宝、微信支付、银行卡转账、余额支付。</p><p><strong>账单周期：</strong>月付、季付、半年付、年付，周期越长优惠越大。</p><p><strong>续费提醒：</strong>服务到期前7天、3天、1天发送续费提醒。</p><p><strong>发票申请：</strong>支持增值税普通发票和专用发票，可在控制台申请。</p>',
     views: 1654,
     helpful: 128,
-    date: '2026-07-01'
+    updateTime: '2025-12-01'
   },
   {
     id: 6,
-    title: 'VPS与云服务器有什么区别',
-    category: '常见问题',
-    categoryKey: 'faq',
-    summary: '从技术架构、性能、价格等方面对比VPS和云服务器的差异，帮您做出最佳选择。',
-    content: '<p><strong>架构差异：</strong>VPS基于KVM虚拟化技术，资源共享但性能隔离；云服务器采用分布式架构，资源完全独享。</p><p><strong>性能对比：</strong>云服务器支持弹性伸缩、热迁移，高可用性更强；VPS适合中小规模应用。</p><p><strong>价格差异：</strong>VPS价格更低，适合个人和小型项目；云服务器适合企业级应用。</p>',
-    views: 3100,
-    helpful: 245,
-    date: '2026-06-28'
+    title: '服务器备份与恢复指南',
+    category: '使用教程',
+    summary: '如何创建服务器快照、自动备份策略设置以及数据恢复操作步骤。',
+    content: '<p>1. 进入服务器管理页面，选择「快照/备份」选项。</p><p>2. 手动创建快照：点击创建快照，输入名称和描述。</p><p>3. 设置自动备份：选择备份周期（每日/每周）和保留数量。</p><p>4. 数据恢复：选择快照点，点击恢复即可回滚到该时间点。</p><p>建议定期创建快照，重要操作前务必先备份。</p>',
+    views: 1432,
+    helpful: 115,
+    updateTime: '2025-11-28'
   },
   {
     id: 7,
-    title: '如何申请退款及退款政策说明',
-    category: '退款说明',
-    categoryKey: 'billing-refund',
-    summary: '了解退款条件、退款流程和退款到账时间等详细说明。',
-    content: '<p><strong>退款条件：</strong>购买后5天内可申请无理由退款（域名、SSL证书等特殊产品除外）。</p><p><strong>退款流程：</strong>控制台 → 工单中心 → 提交退款工单，说明退款原因。</p><p><strong>到账时间：</strong>审核通过后，退款将在3-5个工作日内原路返回。</p>',
-    views: 980,
-    helpful: 76,
-    date: '2026-06-25'
+    title: '服务器安全加固建议',
+    category: '安全相关',
+    summary: '云服务器安全加固的最佳实践，包括防火墙配置、端口管理、入侵检测等。',
+    content: '<p>1. 修改SSH默认端口，禁用root远程登录。</p><p>2. 配置防火墙规则，仅开放必要端口。</p><p>3. 安装fail2ban防止暴力破解。</p><p>4. 定期更新系统和软件补丁。</p><p>5. 启用登录日志审计和异常告警。</p><p>6. 使用密钥对替代密码认证。</p>',
+    views: 1298,
+    helpful: 103,
+    updateTime: '2025-11-25'
   },
   {
     id: 8,
-    title: 'DDoS高防产品使用指南',
-    category: 'DDoS防护',
-    categoryKey: 'security-ddos',
-    summary: '了解DDoS高防产品的配置方法和最佳实践，保障业务安全稳定运行。',
-    content: '<p><strong>产品概述：</strong>DDoS高防可为云服务器、独立服务器提供最高T级防护能力。</p><p><strong>接入方式：</strong>支持域名接入（CNAME方式）和IP接入（直接绑定高防IP）。</p><p><strong>防护配置：</strong>控制台 → DDoS高防 → 防护规则，可配置CC防护、黑白名单等。</p>',
-    views: 1320,
-    helpful: 98,
-    date: '2026-06-20'
+    title: '如何申请退款',
+    category: '售后支持',
+    summary: '退款政策说明、退款申请流程以及退款到账时间等常见问题解答。',
+    content: '<p><strong>退款政策：</strong>新购产品5天内可申请无理由退款（已使用的流量费用除外）。</p><p>1. 进入订单管理页面，找到需要退款的订单。</p><p>2. 点击「申请退款」，选择退款原因并提交。</p><p>3. 客服将在24小时内审核退款申请。</p><p>4. 审核通过后，退款将在3-5个工作日内原路退回。</p>',
+    views: 987,
+    helpful: 76,
+    updateTime: '2025-11-20'
   },
   {
     id: 9,
-    title: 'VPS系统重装与快照管理',
-    category: 'VPS',
-    categoryKey: 'product-vps',
-    summary: '学习如何重装VPS操作系统、创建和恢复快照，以及常用运维操作。',
-    content: '<p><strong>系统重装：</strong>控制台 → VPS管理 → 更多 → 重装系统，选择新系统镜像并设置密码。</p><p><strong>快照功能：</strong>快照可在"备份管理"中创建，建议在重大操作前创建快照以便回滚。</p><p><strong>注意事项：</strong>重装系统会清空所有数据，请提前备份重要文件。</p>',
-    views: 1560,
-    helpful: 112,
-    date: '2026-06-18'
+    title: '服务器性能优化指南',
+    category: '使用教程',
+    summary: '提升云服务器运行性能的实用技巧，涵盖系统调优、Web服务优化和缓存配置。',
+    content: '<p><strong>系统层面：</strong>调整内核参数、优化文件系统、合理配置Swap。</p><p><strong>Web服务：</strong>启用Gzip压缩、配置浏览器缓存、优化数据库查询。</p><p><strong>缓存加速：</strong>使用Redis/Memcached缓存热点数据，配置CDN加速静态资源。</p><p><strong>监控排查：</strong>使用top/htop、vmstat、iostat等工具定位性能瓶颈。</p>',
+    views: 876,
+    helpful: 68,
+    updateTime: '2025-11-18'
+  },
+  {
+    id: 10,
+    title: '工单提交与处理流程',
+    category: '售后支持',
+    summary: '如何提交技术支持工单、工单的处理流程以及紧急问题的联系方式。',
+    content: '<p>1. 登录控制台，进入「工单中心」。</p><p>2. 选择问题分类（技术咨询/故障报备/账户问题）。</p><p>3. 详细描述问题并附上相关截图或日志。</p><p>4. 普通工单24小时内响应，紧急工单2小时内响应。</p><p>紧急问题可拨打7x24小时客服热线：400-XXX-XXXX。</p>',
+    views: 765,
+    helpful: 54,
+    updateTime: '2025-11-15'
   }
 ])
 
+const categoryTree = computed<TreeOption[]>(() => {
+  const categories = [...new Set(articles.value.map(a => a.category))]
+  return [
+    {
+      key: 'all',
+      label: '全部文章',
+      prefix: () => h(NIcon, { size: 16, color: '#1890ff' }, { default: () => h(DocumentTextOutline) }),
+      suffix: () => h('span', { class: 'tree-count' }, articles.value.length),
+      children: categories.map(cat => ({
+        key: cat,
+        label: cat,
+        prefix: () => h(NIcon, { size: 16, color: '#86909c' }, { default: () => h(HelpCircleOutline) }),
+        suffix: () => h('span', { class: 'tree-count' }, articles.value.filter(a => a.category === cat).length)
+      }))
+    }
+  ]
+})
+
+function renderCategorySuffix({ option }: { option: TreeOption }) {
+  return option.suffix ? option.suffix() : null
+}
+
+function onCategorySelect(keys: string[]) {
+  const key = keys[0]
+  if (!key || key === 'all') {
+    selectedCategories.value = []
+  } else {
+    selectedCategories.value = [key]
+  }
+  currentPage.value = 1
+}
+
+const activeCategories = computed(() => selectedCategories.value)
+
+function removeCategory(cat: string) {
+  selectedCategories.value = selectedCategories.value.filter(c => c !== cat)
+}
+
+function clearCategories() {
+  selectedCategories.value = []
+}
+
+function clearFilters() {
+  searchKeyword.value = ''
+  selectedCategories.value = []
+  currentPage.value = 1
+}
+
 const hotArticles = computed(() => {
-  return [...articles.value].sort((a, b) => b.views - a.views).slice(0, 6)
+  return [...articles.value].sort((a, b) => b.views - a.views).slice(0, 5)
 })
 
 const filteredArticles = computed(() => {
   let list = [...articles.value]
 
-  // Category filter
-  const key = selectedCategoryKeys.value[0]
-  if (key && key !== 'all') {
-    list = list.filter(a => a.categoryKey === key)
+  if (selectedCategories.value.length > 0) {
+    list = list.filter(a => selectedCategories.value.includes(a.category))
   }
 
-  // Search filter
   if (searchKeyword.value.trim()) {
-    const kw = searchKeyword.value.trim().toLowerCase()
+    const keyword = searchKeyword.value.trim().toLowerCase()
     list = list.filter(a =>
-      a.title.toLowerCase().includes(kw) ||
-      a.summary.toLowerCase().includes(kw) ||
-      a.category.toLowerCase().includes(kw)
+      a.title.toLowerCase().includes(keyword) || a.summary.toLowerCase().includes(keyword)
     )
-  }
-
-  // Sort
-  if (sortBy.value === 'views') {
-    list.sort((a, b) => b.views - a.views)
-  } else if (sortBy.value === 'helpful') {
-    list.sort((a, b) => b.helpful - a.helpful)
-  } else if (sortBy.value === 'newest') {
-    list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }
 
   return list
@@ -434,55 +409,24 @@ const paginatedArticles = computed(() => {
   return filteredArticles.value.slice(start, start + pageSize)
 })
 
-function getCategoryTagType(category: string): 'success' | 'info' | 'warning' | 'error' | 'default' {
-  const map: Record<string, 'success' | 'info' | 'warning' | 'error'> = {
-    '快速入门': 'success',
-    '云服务器': 'info',
-    'VPS': 'info',
-    '域名管理': 'warning',
-    '费用与账单': 'default' as any,
-    '退款说明': 'default' as any,
-    'SSL证书': 'success',
-    'DDoS防护': 'error',
-    '常见问题': 'warning'
+function toggleArticle(id: number) {
+  expandedArticle.value = expandedArticle.value === id ? null : id
+}
+
+function formatViews(views: number): string {
+  if (views >= 10000) return (views / 10000).toFixed(1) + 'w'
+  if (views >= 1000) return (views / 1000).toFixed(1) + 'k'
+  return views.toString()
+}
+
+function getCategoryTagType(category: string): 'info' | 'success' | 'warning' | 'error' {
+  const map: Record<string, 'info' | 'success' | 'warning' | 'error'> = {
+    '购买指南': 'info',
+    '使用教程': 'success',
+    '安全相关': 'warning',
+    '售后支持': 'error'
   }
-  return (map[category] ?? 'info')
-}
-
-function handleCategorySelect(keys: string[]) {
-  selectedCategoryKeys.value = keys.length ? keys : ['all']
-  currentPage.value = 1
-  expandedArticle.value = null
-}
-
-function clearCategory() {
-  selectedCategoryKeys.value = ['all']
-  currentPage.value = 1
-}
-
-function handleSearch() {
-  currentPage.value = 1
-  expandedArticle.value = null
-}
-
-function toggleArticle(article: Article) {
-  expandedArticle.value = expandedArticle.value === article.id ? null : article.id
-}
-
-function openArticle(article: Article) {
-  expandedArticle.value = article.id
-  currentPage.value = 1
-  // Scroll to article section
-  const el = document.querySelector('.article-list')
-  if (el) el.scrollIntoView({ behavior: 'smooth' })
-}
-
-function resetFilters() {
-  searchKeyword.value = ''
-  selectedCategoryKeys.value = ['all']
-  sortBy.value = 'default'
-  currentPage.value = 1
-  expandedArticle.value = null
+  return map[category] || 'info'
 }
 </script>
 
@@ -576,43 +520,31 @@ function resetFilters() {
 
 /* Search Banner */
 .search-banner {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  padding: 48px 0;
+  background: linear-gradient(135deg, #1890ff, #096dd9);
+  padding: 48px 24px;
 }
 
 .search-inner {
-  max-width: 720px;
+  max-width: 600px;
   margin: 0 auto;
-  padding: 0 24px;
   text-align: center;
 }
 
 .search-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: #fff;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
-.search-desc {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.85);
-  margin-bottom: 28px;
+.search-subtitle {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 24px;
 }
 
-.search-box {
-  display: flex;
-  gap: 12px;
-}
-
-.search-box :deep(.n-input) {
-  flex: 1;
-  border-radius: 8px;
-}
-
-.search-box .n-button {
-  border-radius: 8px;
-  padding: 0 28px;
+.search-input {
+  max-width: 500px;
 }
 
 /* Main Content */
@@ -654,52 +586,68 @@ function resetFilters() {
   gap: 8px;
 }
 
+:deep(.tree-count) {
+  font-size: 12px;
+  color: #c9cdd4;
+  background: #f2f3f5;
+  padding: 1px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+}
+
 /* Hot Articles */
 .hot-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
 }
 
 .hot-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s;
 }
 
 .hot-item:hover {
-  background: #f2f3f5;
+  background: #f7f8fa;
 }
 
 .hot-rank {
   width: 22px;
   height: 22px;
   border-radius: 6px;
+  background: #f2f3f5;
+  color: #86909c;
+  font-size: 12px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  background: #f2f3f5;
-  color: #86909c;
   flex-shrink: 0;
 }
 
-.hot-rank.top {
+.hot-rank.top-3 {
   background: linear-gradient(135deg, #1890ff, #096dd9);
   color: #fff;
 }
 
 .hot-title {
+  flex: 1;
   font-size: 13px;
   color: #4e5969;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hot-views {
+  font-size: 12px;
+  color: #c9cdd4;
+  flex-shrink: 0;
 }
 
 /* Article List */
@@ -708,34 +656,24 @@ function resetFilters() {
   min-width: 0;
 }
 
-/* Toolbar */
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 16px 20px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-}
-
-.toolbar-left {
+.filter-tags {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
-.result-count {
+.result-info {
   font-size: 14px;
   color: #86909c;
+  margin-bottom: 16px;
 }
 
-.result-count strong {
+.result-info strong {
   color: #1890ff;
 }
 
-/* Articles Grid */
 .articles-grid {
   display: flex;
   flex-direction: column;
@@ -743,79 +681,52 @@ function resetFilters() {
 }
 
 .article-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
   cursor: pointer;
   transition: all 0.3s;
-  border: 1px solid #f0f1f5;
+  border-radius: 12px;
 }
 
 .article-card:hover {
-  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.08);
-  border-color: rgba(24, 144, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.1);
 }
 
 .article-header {
-  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
-.article-meta {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.article-views,
-.article-helpful {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
+.expand-icon {
+  transition: transform 0.3s;
   color: #c9cdd4;
 }
 
+.expand-icon.expanded {
+  transform: rotate(180deg);
+  color: #1890ff;
+}
+
 .article-title {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: #1d2129;
   margin-bottom: 8px;
 }
 
 .article-summary {
-  font-size: 14px;
+  font-size: 13px;
   color: #86909c;
   line-height: 1.6;
   margin-bottom: 12px;
 }
 
-.article-content {
-  font-size: 14px;
-  color: #4e5969;
-  line-height: 1.8;
-  padding: 16px;
-  background: #f7f8fa;
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-
-.article-content :deep(p) {
-  margin-bottom: 8px;
-}
-
-.article-content :deep(p:last-child) {
-  margin-bottom: 0;
-}
-
-.article-footer {
+.article-meta {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 14px;
-  border-top: 1px solid #f2f3f5;
+  gap: 20px;
 }
 
-.article-date {
+.meta-item {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -823,24 +734,41 @@ function resetFilters() {
   color: #c9cdd4;
 }
 
+.article-detail {
+  padding: 16px;
+  margin-top: 12px;
+  background: #f7f8fa;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #4e5969;
+  line-height: 1.8;
+}
+
+.article-detail :deep(p) {
+  margin-bottom: 8px;
+}
+
+.article-detail :deep(strong) {
+  color: #1d2129;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
   padding: 80px 0;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  color: #c9cdd4;
 }
 
-.empty-btn {
-  margin-top: 20px;
+.empty-state p {
+  margin: 16px 0 24px;
+  font-size: 15px;
 }
 
 /* Pagination */
 .pagination-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 24px;
+  margin-top: 32px;
   padding: 20px;
   background: #fff;
   border-radius: 12px;
@@ -857,14 +785,6 @@ function resetFilters() {
 @media (max-width: 768px) {
   .nav-links {
     display: none;
-  }
-
-  .search-title {
-    font-size: 24px;
-  }
-
-  .search-box {
-    flex-direction: column;
   }
 }
 </style>

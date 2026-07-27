@@ -1,208 +1,370 @@
 <template>
   <n-card :bordered="false" rounded>
     <!-- 筛选栏 -->
-    <n-space justify="space-between" style="margin-bottom: 16px">
-      <n-space>
+    <n-space justify="space-between" align="center" style="margin-bottom: 16px; flex-wrap: wrap; gap: 12px">
+      <n-space style="flex-wrap: wrap; gap: 12px">
         <n-select
-          v-model:value="filters.type"
+          v-model:value="filterType"
           :options="logTypeOptions"
           placeholder="日志类型"
           clearable
           style="width: 150px"
         />
         <n-date-picker
-          v-model:value="filters.dateRange"
+          v-model:value="dateRange"
           type="daterange"
           clearable
-          style="width: 300px"
+          style="width: 280px"
         />
         <n-input
-          v-model:value="filters.keyword"
+          v-model:value="searchKeyword"
           placeholder="搜索关键词"
           clearable
           style="width: 200px"
-          @keyup.enter="handleSearch"
-        />
-        <n-button @click="handleSearch">搜索</n-button>
-        <n-button @click="resetFilters">重置</n-button>
+        >
+          <template #prefix>
+            <n-icon><SearchOutline /></n-icon>
+          </template>
+        </n-input>
       </n-space>
-      <n-button type="primary" @click="handleExport">导出日志</n-button>
+      <n-space>
+        <n-button @click="handleExport">
+          <template #icon><n-icon><DownloadOutline /></n-icon></template>
+          导出日志
+        </n-button>
+        <n-button type="error" @click="handleClearLogs">
+          清空日志
+        </n-button>
+      </n-space>
     </n-space>
 
     <!-- 日志表格 -->
-    <n-data-table :columns="logColumns" :data="filteredLogs" :bordered="false" :pagination="pagination" />
+    <n-data-table
+      :columns="columns"
+      :data="filteredLogs"
+      :bordered="false"
+      :single-line="false"
+      :pagination="pagination"
+      striped
+    />
   </n-card>
 
-  <!-- 日志详情抽屉 -->
-  <n-modal v-model:show="showDetail" preset="card" title="日志详情" style="width: 600px">
-    <n-descriptions :column="1" label-placement="left" bordered v-if="currentLog">
-      <n-descriptions-item label="日志ID">{{ currentLog.id }}</n-descriptions-item>
-      <n-descriptions-item label="时间">{{ currentLog.time }}</n-descriptions-item>
-      <n-descriptions-item label="日志类型">
-        <n-tag :type="logTypeTagMap[currentLog.type]" size="small" :bordered="false">
-          {{ logTypeMap[currentLog.type] }}
+  <!-- 日志详情对话框 -->
+  <n-modal
+    v-model:show="showDetail"
+    title="日志详情"
+    preset="card"
+    style="max-width: 640px"
+    :bordered="false"
+  >
+    <n-descriptions :column="1" label-placement="left" bordered size="small">
+      <n-descriptions-item label="日志ID">{{ detailLog?.id }}</n-descriptions-item>
+      <n-descriptions-item label="时间">{{ detailLog?.time }}</n-descriptions-item>
+      <n-descriptions-item label="操作类型">
+        <n-tag :type="getTypeTag(detailLog?.type || '')" size="small" :bordered="false">
+          {{ detailLog?.typeLabel }}
         </n-tag>
       </n-descriptions-item>
-      <n-descriptions-item label="操作类型">{{ currentLog.action }}</n-descriptions-item>
-      <n-descriptions-item label="操作人">{{ currentLog.operator }}</n-descriptions-item>
-      <n-descriptions-item label="IP 地址">{{ currentLog.ip }}</n-descriptions-item>
+      <n-descriptions-item label="操作人">{{ detailLog?.operator }}</n-descriptions-item>
+      <n-descriptions-item label="IP地址">{{ detailLog?.ip }}</n-descriptions-item>
       <n-descriptions-item label="状态">
-        <n-tag :type="currentLog.status === 'success' ? 'success' : 'error'" size="small" :bordered="false">
-          {{ currentLog.status === 'success' ? '成功' : '失败' }}
+        <n-tag :type="detailLog?.status === 'success' ? 'success' : 'error'" size="small" :bordered="false">
+          {{ detailLog?.status === 'success' ? '成功' : '失败' }}
         </n-tag>
       </n-descriptions-item>
-      <n-descriptions-item label="描述">{{ currentLog.description }}</n-descriptions-item>
-      <n-descriptions-item label="User Agent">{{ currentLog.userAgent }}</n-descriptions-item>
+      <n-descriptions-item label="User Agent">{{ detailLog?.userAgent }}</n-descriptions-item>
+      <n-descriptions-item label="描述">{{ detailLog?.description }}</n-descriptions-item>
+      <n-descriptions-item label="详细信息">
+        <n-log :log="detailLog?.detail || ''" language="log" :rows="6" />
+      </n-descriptions-item>
     </n-descriptions>
   </n-modal>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, h } from 'vue'
-import { useMessage, NButton, NTag, NSpace } from 'naive-ui'
+import { ref, computed, h } from 'vue'
+import { useMessage, NTag, NButton, NPopconfirm, NSpace } from 'naive-ui'
+import { SearchOutline, DownloadOutline } from '@vicons/ionicons5'
 import type { DataTableColumns, PaginationProps } from 'naive-ui'
 
 const message = useMessage()
+const filterType = ref<string | null>(null)
+const dateRange = ref<[number, number] | null>(null)
+const searchKeyword = ref('')
 const showDetail = ref(false)
-const currentLog = ref<LogEntry | null>(null)
+const detailLog = ref<LogEntry | null>(null)
 
-// ---- Types ----
-interface LogEntry {
-  id: number
-  time: string
-  type: 'operation' | 'login' | 'error'
-  action: string
-  operator: string
-  ip: string
-  description: string
-  status: 'success' | 'failed'
-  userAgent: string
-}
-
-// ---- Options ----
 const logTypeOptions = [
   { label: '操作日志', value: 'operation' },
   { label: '登录日志', value: 'login' },
   { label: '错误日志', value: 'error' },
 ]
 
-const logTypeMap: Record<string, string> = {
+const typeLabelMap: Record<string, string> = {
   operation: '操作日志',
   login: '登录日志',
   error: '错误日志',
 }
 
-const logTypeTagMap: Record<string, 'info' | 'warning' | 'error' | 'success'> = {
-  operation: 'info',
-  login: 'success',
-  error: 'error',
+interface LogEntry {
+  id: string
+  time: string
+  type: string
+  typeLabel: string
+  operator: string
+  ip: string
+  description: string
+  status: 'success' | 'error'
+  userAgent: string
+  detail: string
 }
 
-// ---- Mock Data ----
-const logs = ref<LogEntry[]>([
-  { id: 1001, time: '2026-07-27 09:55:12', type: 'login', action: '用户登录', operator: 'admin', ip: '192.168.1.100', description: '管理员登录成功', status: 'success', userAgent: 'Chrome/126.0 Windows 10' },
-  { id: 1002, time: '2026-07-27 09:50:03', type: 'operation', action: '修改产品', operator: 'admin', ip: '192.168.1.100', description: '修改了产品 "基础版" 的价格', status: 'success', userAgent: 'Chrome/126.0 Windows 10' },
-  { id: 1003, time: '2026-07-27 09:45:22', type: 'operation', action: '创建订单', operator: '张三', ip: '10.0.0.55', description: '创建订单 ORD-20260727-001', status: 'success', userAgent: 'Safari/18.0 macOS' },
-  { id: 1004, time: '2026-07-27 09:40:11', type: 'error', action: '支付回调', operator: '系统', ip: '127.0.0.1', description: '支付宝回调签名验证失败: invalid sign', status: 'failed', userAgent: 'Alipay-Notify/2.0' },
-  { id: 1005, time: '2026-07-27 09:35:00', type: 'login', action: '用户登录', operator: '李四', ip: '10.0.0.88', description: '用户登录失败: 密码错误', status: 'failed', userAgent: 'Firefox/128.0 Windows 11' },
-  { id: 1006, time: '2026-07-27 09:30:45', type: 'operation', action: '删除优惠券', operator: 'admin', ip: '192.168.1.100', description: '删除了过期优惠券 SUMMER2026', status: 'success', userAgent: 'Chrome/126.0 Windows 10' },
-  { id: 1007, time: '2026-07-27 09:25:18', type: 'error', action: '邮件发送', operator: '系统', ip: '127.0.0.1', description: 'SMTP 连接超时: smtp.example.com:465', status: 'failed', userAgent: 'AnchorFinance-Worker/1.0' },
-  { id: 1008, time: '2026-07-27 09:20:33', type: 'operation', action: '导出数据', operator: 'admin', ip: '192.168.1.100', description: '导出用户列表 CSV 共 1,523 条记录', status: 'success', userAgent: 'Chrome/126.0 Windows 10' },
-  { id: 1009, time: '2026-07-27 09:15:09', type: 'login', action: '用户登录', operator: '王五', ip: '172.16.0.12', description: '用户通过微信 OAuth 登录成功', status: 'success', userAgent: 'WeChat/8.0 iOS 17' },
-  { id: 1010, time: '2026-07-27 09:10:44', type: 'operation', action: '修改设置', operator: 'admin', ip: '192.168.1.100', description: '更新了邮件 SMTP 配置', status: 'success', userAgent: 'Chrome/126.0 Windows 10' },
-  { id: 1011, time: '2026-07-27 09:05:21', type: 'error', action: 'API 请求', operator: '系统', ip: '127.0.0.1', description: '第三方 API rate limit exceeded: github.com', status: 'failed', userAgent: 'AnchorFinance-Worker/1.0' },
-  { id: 1012, time: '2026-07-27 09:00:00', type: 'operation', action: '系统备份', operator: '系统', ip: '127.0.0.1', description: '每日数据库自动备份完成，大小 245MB', status: 'success', userAgent: 'AnchorFinance-Cron/1.0' },
+const mockLogs = ref<LogEntry[]>([
+  {
+    id: '10001',
+    time: '2026-07-27 10:15:32',
+    type: 'login',
+    typeLabel: '登录日志',
+    operator: 'admin',
+    ip: '192.168.1.100',
+    description: '管理员登录系统',
+    status: 'success',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0',
+    detail: 'Login successful for user admin from IP 192.168.1.100',
+  },
+  {
+    id: '10002',
+    time: '2026-07-27 09:45:18',
+    type: 'operation',
+    typeLabel: '操作日志',
+    operator: 'admin',
+    ip: '192.168.1.100',
+    description: '修改系统基本设置',
+    status: 'success',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0',
+    detail: 'Updated settings: siteName, siteDescription, timezone',
+  },
+  {
+    id: '10003',
+    time: '2026-07-27 09:30:05',
+    type: 'error',
+    typeLabel: '错误日志',
+    operator: 'system',
+    ip: '127.0.0.1',
+    description: '邮件发送失败：SMTP连接超时',
+    status: 'error',
+    userAgent: 'AnchorFinance/1.0',
+    detail: 'Error: SMTP connection timeout after 30s\nHost: smtp.example.com:465\nRetry count: 3',
+  },
+  {
+    id: '10004',
+    time: '2026-07-27 09:12:44',
+    type: 'operation',
+    typeLabel: '操作日志',
+    operator: 'admin',
+    ip: '192.168.1.100',
+    description: '新增OAuth提供商：GitHub',
+    status: 'success',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0',
+    detail: 'Added OAuth provider: github\nAppID: Iv1.abc123def456\nCallback: /oauth/github/callback',
+  },
+  {
+    id: '10005',
+    time: '2026-07-27 08:55:21',
+    type: 'login',
+    typeLabel: '登录日志',
+    operator: 'user_zhang',
+    ip: '10.0.0.55',
+    description: '用户登录失败：密码错误',
+    status: 'error',
+    userAgent: 'Mozilla/5.0 (Macintosh) Safari/605.1',
+    detail: 'Login failed for user_zhang: incorrect password\nAttempt: 2/5',
+  },
+  {
+    id: '10006',
+    time: '2026-07-27 08:30:00',
+    type: 'operation',
+    typeLabel: '操作日志',
+    operator: 'admin',
+    ip: '192.168.1.100',
+    description: '导出系统日志报表',
+    status: 'success',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0',
+    detail: 'Exported logs from 2026-07-01 to 2026-07-27\nFormat: CSV\nTotal records: 1523',
+  },
+  {
+    id: '10007',
+    time: '2026-07-26 23:59:01',
+    type: 'error',
+    typeLabel: '错误日志',
+    operator: 'system',
+    ip: '127.0.0.1',
+    description: '数据库备份失败：磁盘空间不足',
+    status: 'error',
+    userAgent: 'AnchorFinance/1.0 CronJob',
+    detail: 'Backup failed: insufficient disk space\nRequired: 2.5GB\nAvailable: 1.2GB\nPath: /backups/db/',
+  },
+  {
+    id: '10008',
+    time: '2026-07-26 18:20:33',
+    type: 'operation',
+    typeLabel: '操作日志',
+    operator: 'editor_li',
+    ip: '10.0.0.88',
+    description: '发布财务报告：2026年Q2',
+    status: 'success',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Edge/126.0',
+    detail: 'Published report: Q2-2026-Financial-Report.pdf\nCategory: Financial Reports\nVisibility: public',
+  },
+  {
+    id: '10009',
+    time: '2026-07-26 15:10:12',
+    type: 'login',
+    typeLabel: '登录日志',
+    operator: 'admin',
+    ip: '192.168.1.100',
+    description: '管理员登录系统',
+    status: 'success',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0',
+    detail: 'Login successful for user admin from IP 192.168.1.100\n2FA verified: true',
+  },
+  {
+    id: '10010',
+    time: '2026-07-26 14:05:48',
+    type: 'operation',
+    typeLabel: '操作日志',
+    operator: 'admin',
+    ip: '192.168.1.100',
+    description: '修改邮件SMTP配置',
+    status: 'success',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0',
+    detail: 'Updated SMTP settings\nHost: smtp.example.com\nPort: 465\nEncryption: SSL',
+  },
 ])
 
-// ---- Filters ----
-const filters = reactive({
-  type: null as string | null,
-  dateRange: null as [number, number] | null,
-  keyword: '',
-})
-
 const filteredLogs = computed(() => {
-  let result = logs.value
-  if (filters.type) {
-    result = result.filter((l) => l.type === filters.type)
+  let logs = [...mockLogs.value]
+  if (filterType.value) {
+    logs = logs.filter((l) => l.type === filterType.value)
   }
-  if (filters.keyword) {
-    const kw = filters.keyword.toLowerCase()
-    result = result.filter(
+  if (searchKeyword.value) {
+    const kw = searchKeyword.value.toLowerCase()
+    logs = logs.filter(
       (l) =>
-        l.action.toLowerCase().includes(kw) ||
-        l.operator.toLowerCase().includes(kw) ||
         l.description.toLowerCase().includes(kw) ||
+        l.operator.toLowerCase().includes(kw) ||
         l.ip.includes(kw)
     )
   }
-  return result
+  return logs
 })
 
-const pagination: PaginationProps = reactive({
+const pagination: PaginationProps = {
   page: 1,
   pageSize: 10,
   showSizePicker: true,
   pageSizes: [10, 20, 50],
-  itemCount: computed(() => filteredLogs.value.length),
-  prefix: ({ itemCount }: { itemCount: number | undefined }) => `共 ${itemCount ?? 0} 条`,
-})
+  itemCount: computed(() => filteredLogs.value.length) as unknown as number,
+}
 
-// ---- Table Columns ----
-const logColumns: DataTableColumns<LogEntry> = [
-  { title: 'ID', key: 'id', width: 80 },
-  { title: '时间', key: 'time', width: 180 },
+function getTypeTag(type: string): 'success' | 'warning' | 'error' | 'info' | 'default' {
+  const map: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
+    operation: 'info',
+    login: 'success',
+    error: 'error',
+  }
+  return map[type] || 'default'
+}
+
+const columns: DataTableColumns<LogEntry> = [
+  {
+    title: '时间',
+    key: 'time',
+    width: 180,
+    sorter: (a, b) => a.time.localeCompare(b.time),
+  },
   {
     title: '类型',
     key: 'type',
-    width: 100,
-    render: (row) =>
-      h(NTag, { type: logTypeTagMap[row.type], size: 'small', bordered: false }, () => logTypeMap[row.type]),
+    width: 110,
+    render(row) {
+      return h(NTag, {
+        type: getTypeTag(row.type),
+        size: 'small',
+        bordered: false,
+      }, { default: () => row.typeLabel })
+    },
   },
-  { title: '操作', key: 'action', width: 120 },
-  { title: '操作人', key: 'operator', width: 100 },
-  { title: 'IP 地址', key: 'ip', width: 140 },
-  { title: '描述', key: 'description', ellipsis: { tooltip: true } },
+  {
+    title: '操作人',
+    key: 'operator',
+    width: 120,
+  },
+  {
+    title: 'IP地址',
+    key: 'ip',
+    width: 140,
+  },
+  {
+    title: '描述',
+    key: 'description',
+    ellipsis: { tooltip: true },
+  },
   {
     title: '状态',
     key: 'status',
-    width: 80,
-    render: (row) =>
-      h(NTag, { type: row.status === 'success' ? 'success' : 'error', size: 'small', bordered: false }, () =>
-        row.status === 'success' ? '成功' : '失败'
-      ),
+    width: 90,
+    render(row) {
+      return h(NTag, {
+        type: row.status === 'success' ? 'success' : 'error',
+        size: 'small',
+        bordered: false,
+      }, { default: () => row.status === 'success' ? '成功' : '失败' })
+    },
   },
   {
     title: '操作',
     key: 'actions',
-    width: 100,
-    render: (row) =>
-      h(NButton, { size: 'small', quaternary: true, type: 'info', onClick: () => viewDetail(row) }, () => '详情'),
+    width: 150,
+    render(row) {
+      return h(NSpace, { size: 'small' }, {
+        default: () => [
+          h(NButton, {
+            size: 'small',
+            type: 'info',
+            onClick: () => viewDetail(row),
+          }, { default: () => '详情' }),
+          h(NPopconfirm, {
+            onPositiveClick: () => deleteLog(row.id),
+          }, {
+            trigger: () => h(NButton, { size: 'small', type: 'error' }, { default: () => '删除' }),
+            default: () => '确定删除此日志？',
+          }),
+        ],
+      })
+    },
   },
 ]
 
-// ---- Handlers ----
-function handleSearch() {
-  pagination.page = 1
-}
-
-function resetFilters() {
-  filters.type = null
-  filters.dateRange = null
-  filters.keyword = ''
-  pagination.page = 1
-}
-
 function viewDetail(row: LogEntry) {
-  currentLog.value = row
+  detailLog.value = row
   showDetail.value = true
 }
 
+function deleteLog(id: string) {
+  mockLogs.value = mockLogs.value.filter((l) => l.id !== id)
+  message.success('日志已删除')
+}
+
 function handleExport() {
-  message.loading('正在生成日志导出文件...')
-  setTimeout(() => {
-    message.success('日志导出成功 (logs_export_20260727.csv)')
-  }, 1500)
+  // TODO: real export
+  message.success('日志导出中，请稍候...')
+}
+
+function handleClearLogs() {
+  // TODO: real clear with confirm
+  mockLogs.value = []
+  message.success('日志已清空')
 }
 </script>
 

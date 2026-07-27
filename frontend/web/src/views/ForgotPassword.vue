@@ -16,10 +16,10 @@
           </div>
           <h1 class="logo-text">找回密码</h1>
         </div>
-        <p class="forgot-subtitle">请按照步骤重置您的密码</p>
+        <p class="forgot-subtitle">按照以下步骤重置您的账户密码</p>
       </div>
 
-      <n-steps :current="currentStep" :status="stepStatus" class="steps-bar">
+      <n-steps :current="currentStep" :status="stepStatus" class="forgot-steps" size="small">
         <n-step title="输入账号" />
         <n-step title="验证身份" />
         <n-step title="设置新密码" />
@@ -29,15 +29,14 @@
       <!-- Step 1: 输入账号 -->
       <div v-if="currentStep === 1" class="step-content">
         <n-form ref="accountFormRef" :model="accountForm" :rules="accountRules" class="forgot-form">
-          <n-form-item path="account" label="邮箱或手机号">
+          <n-form-item path="account">
             <n-input
               v-model:value="accountForm.account"
               placeholder="请输入邮箱或手机号"
               size="large"
-              @keyup.enter="handleNextStep1"
             >
               <template #prefix>
-                <n-icon :component="PersonOutline" color="#1890ff" />
+                <n-icon :component="MailOutline" color="#1890ff" />
               </template>
             </n-input>
           </n-form-item>
@@ -48,6 +47,7 @@
                 v-model:value="accountForm.captcha"
                 placeholder="请输入图形验证码"
                 size="large"
+                @keyup.enter="handleNextStep"
               >
                 <template #prefix>
                   <n-icon :component="ImageOutline" color="#1890ff" />
@@ -67,8 +67,8 @@
             block
             size="large"
             :loading="loading"
-            class="submit-btn"
-            @click="handleNextStep1"
+            class="forgot-btn"
+            @click="handleNextStep"
           >
             下一步
           </n-button>
@@ -79,16 +79,17 @@
       <div v-if="currentStep === 2" class="step-content">
         <n-form ref="verifyFormRef" :model="verifyForm" :rules="verifyRules" class="forgot-form">
           <div class="verify-hint">
-            验证码已发送至 <span class="highlight">{{ maskedAccount }}</span>
+            <n-icon :component="InformationCircleOutline" color="#1890ff" />
+            <span>验证码已发送至 {{ maskedAccount }}</span>
           </div>
 
-          <n-form-item path="verifyCode" label="验证码">
+          <n-form-item path="verifyCode">
             <div class="captcha-row">
               <n-input
                 v-model:value="verifyForm.verifyCode"
                 placeholder="请输入验证码"
                 size="large"
-                @keyup.enter="handleNextStep2"
+                @keyup.enter="handleVerifyCode"
               >
                 <template #prefix>
                   <n-icon :component="ShieldCheckmarkOutline" color="#1890ff" />
@@ -112,7 +113,7 @@
               type="primary"
               size="large"
               :loading="loading"
-              @click="handleNextStep2"
+              @click="handleVerifyCode"
             >
               验证
             </n-button>
@@ -123,7 +124,7 @@
       <!-- Step 3: 设置新密码 -->
       <div v-if="currentStep === 3" class="step-content">
         <n-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" class="forgot-form">
-          <n-form-item path="newPassword" label="新密码">
+          <n-form-item path="newPassword">
             <n-input
               v-model:value="passwordForm.newPassword"
               type="password"
@@ -137,14 +138,14 @@
             </n-input>
           </n-form-item>
 
-          <n-form-item path="confirmPassword" label="确认密码">
+          <n-form-item path="confirmPassword">
             <n-input
               v-model:value="passwordForm.confirmPassword"
               type="password"
               show-password-on="click"
               placeholder="请再次输入新密码"
               size="large"
-              @keyup.enter="handleNextStep3"
+              @keyup.enter="handleResetPassword"
             >
               <template #prefix>
                 <n-icon :component="LockClosedOutline" color="#1890ff" />
@@ -152,13 +153,20 @@
             </n-input>
           </n-form-item>
 
+          <div class="password-tips">
+            <n-icon :component="CheckmarkCircleOutline" :color="passwordStrength >= 1 ? '#52c41a' : '#d9d9d9'" />
+            <n-icon :component="CheckmarkCircleOutline" :color="passwordStrength >= 2 ? '#52c41a' : '#d9d9d9'" />
+            <n-icon :component="CheckmarkCircleOutline" :color="passwordStrength >= 3 ? '#52c41a' : '#d9d9d9'" />
+            <span class="strength-text">密码强度：{{ strengthLabel }}</span>
+          </div>
+
           <div class="step-actions">
             <n-button size="large" @click="currentStep = 2">上一步</n-button>
             <n-button
               type="primary"
               size="large"
               :loading="loading"
-              @click="handleNextStep3"
+              @click="handleResetPassword"
             >
               重置密码
             </n-button>
@@ -167,11 +175,11 @@
       </div>
 
       <!-- Step 4: 完成 -->
-      <div v-if="currentStep === 4" class="step-content step-result">
+      <div v-if="currentStep === 4" class="step-content step-done">
         <n-result status="success" title="密码重置成功" description="您的密码已成功重置，请使用新密码登录">
           <template #footer>
             <n-button type="primary" size="large" @click="goToLogin">
-              前往登录
+              返回登录
             </n-button>
           </template>
         </n-result>
@@ -190,11 +198,13 @@ import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import type { FormInst, FormRules, StepsProps } from 'naive-ui'
 import {
-  PersonOutline,
+  MailOutline,
   ImageOutline,
   RefreshOutline,
+  InformationCircleOutline,
+  ShieldCheckmarkOutline,
   LockClosedOutline,
-  ShieldCheckmarkOutline
+  CheckmarkCircleOutline
 } from '@vicons/ionicons5'
 
 const router = useRouter()
@@ -204,8 +214,8 @@ const currentStep = ref(1)
 const stepStatus = ref<StepsProps['status']>('process')
 const loading = ref(false)
 const sendingCode = ref(false)
-const cooldown = ref(0)
 const captchaUrl = ref('')
+const cooldown = ref(0)
 let cooldownTimer: ReturnType<typeof setInterval> | null = null
 
 const accountFormRef = ref<FormInst | null>(null)
@@ -228,26 +238,41 @@ const passwordForm = ref({
 
 const accountRules: FormRules = {
   account: [
-    { required: true, message: '请输入邮箱或手机号', trigger: 'blur' }
+    { required: true, message: '请输入邮箱或手机号', trigger: 'blur' },
+    {
+      validator: (_rule, value) => {
+        const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        const phoneReg = /^1[3-9]\d{9}$/
+        if (!value) return true
+        if (!emailReg.test(value) && !phoneReg.test(value)) {
+          return new Error('请输入正确的邮箱或手机号')
+        }
+        return true
+      },
+      trigger: 'blur'
+    }
   ],
   captcha: { required: true, message: '请输入验证码', trigger: 'blur' }
 }
 
 const verifyRules: FormRules = {
-  verifyCode: { required: true, message: '请输入验证码', trigger: 'blur' }
+  verifyCode: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { len: 6, message: '验证码为6位数字', trigger: 'blur' }
+  ]
 }
 
 const passwordRules: FormRules = {
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码至少6位', trigger: 'blur' }
+    { min: 6, message: '密码至少6个字符', trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
     {
-      validator: (_rule: any, value: string) => {
+      validator: (_rule, value) => {
         if (value !== passwordForm.value.newPassword) {
-          return new Error('两次密码输入不一致')
+          return new Error('两次输入的密码不一致')
         }
         return true
       },
@@ -261,9 +286,24 @@ const maskedAccount = computed(() => {
   if (!account) return ''
   if (account.includes('@')) {
     const [name, domain] = account.split('@')
-    return name.slice(0, 2) + '***@' + domain
+    return `${name.slice(0, 2)}***@${domain}`
   }
-  return account.slice(0, 3) + '****' + account.slice(-4)
+  return `${account.slice(0, 3)}****${account.slice(-4)}`
+})
+
+const passwordStrength = computed(() => {
+  const pwd = passwordForm.value.newPassword
+  if (!pwd) return 0
+  let score = 0
+  if (pwd.length >= 6) score++
+  if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++
+  if (/\d/.test(pwd) && /[^A-Za-z0-9]/.test(pwd)) score++
+  return score
+})
+
+const strengthLabel = computed(() => {
+  const labels = ['', '弱', '中', '强']
+  return labels[passwordStrength.value] || ''
 })
 
 function refreshCaptcha() {
@@ -274,8 +314,9 @@ function startCooldown() {
   cooldown.value = 60
   cooldownTimer = setInterval(() => {
     cooldown.value--
-    if (cooldown.value <= 0) {
-      if (cooldownTimer) clearInterval(cooldownTimer)
+    if (cooldown.value <= 0 && cooldownTimer) {
+      clearInterval(cooldownTimer)
+      cooldownTimer = null
     }
   }, 1000)
 }
@@ -288,7 +329,7 @@ onUnmounted(() => {
   if (cooldownTimer) clearInterval(cooldownTimer)
 })
 
-async function handleNextStep1() {
+async function handleNextStep() {
   try {
     await accountFormRef.value?.validate()
     loading.value = true
@@ -297,16 +338,31 @@ async function handleNextStep1() {
     message.success('验证码已发送')
     currentStep.value = 2
     startCooldown()
-  } catch (error: any) {
-    if (error?.message) message.error(error.message)
+  } catch {
+    message.error('请正确填写账号和验证码')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleVerifyCode() {
+  try {
+    await verifyFormRef.value?.validate()
+    loading.value = true
+    // TODO: 调用验证码校验API
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    message.success('身份验证成功')
+    currentStep.value = 3
+  } catch {
+    message.error('验证码错误或已过期')
   } finally {
     loading.value = false
   }
 }
 
 async function handleResendCode() {
+  sendingCode.value = true
   try {
-    sendingCode.value = true
     // TODO: 调用重新发送验证码API
     await new Promise(resolve => setTimeout(resolve, 1000))
     message.success('验证码已重新发送')
@@ -318,32 +374,17 @@ async function handleResendCode() {
   }
 }
 
-async function handleNextStep2() {
-  try {
-    await verifyFormRef.value?.validate()
-    loading.value = true
-    // TODO: 调用验证验证码API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    message.success('验证成功')
-    currentStep.value = 3
-  } catch {
-    message.error('验证码错误')
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleNextStep3() {
+async function handleResetPassword() {
   try {
     await passwordFormRef.value?.validate()
     loading.value = true
     // TODO: 调用重置密码API
     await new Promise(resolve => setTimeout(resolve, 1000))
     message.success('密码重置成功')
-    stepStatus.value = 'finish'
     currentStep.value = 4
-  } catch (error: any) {
-    if (error?.message) message.error(error.message)
+    stepStatus.value = 'finish'
+  } catch {
+    message.error('请正确填写新密码')
   } finally {
     loading.value = false
   }
@@ -363,6 +404,7 @@ function goToLogin() {
   background: linear-gradient(135deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%);
   position: relative;
   overflow: hidden;
+  padding: 40px 20px;
 }
 
 .forgot-bg {
@@ -473,16 +515,17 @@ function goToLogin() {
   margin: 0;
 }
 
-.steps-bar {
+.forgot-steps {
   margin-bottom: 32px;
+  padding: 0 16px;
 }
 
 .step-content {
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -533,44 +576,45 @@ function goToLogin() {
 }
 
 .verify-hint {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f0f5ff;
+  border-radius: 8px;
   color: #595959;
   font-size: 14px;
-  margin-bottom: 20px;
-  padding: 12px;
-  background: #f0f7ff;
-  border-radius: 8px;
-}
-
-.verify-hint .highlight {
-  color: #1890ff;
-  font-weight: 500;
+  margin-bottom: 16px;
 }
 
 .step-actions {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 8px;
+  gap: 12px;
+  justify-content: flex-end;
 }
 
-.step-actions .n-button {
-  flex: 1;
-  height: 44px;
-  font-size: 15px;
-  border-radius: 12px;
+.step-actions .n-button:last-child {
+  min-width: 120px;
 }
 
-.step-actions .n-button[type="button"]:last-child {
-  background: linear-gradient(135deg, #1890ff, #096dd9);
-  border: none;
+.password-tips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
-.step-result {
-  padding: 24px 0;
+.strength-text {
+  font-size: 13px;
+  color: #8c8c8c;
+  margin-left: 4px;
 }
 
-.submit-btn {
+.step-done {
+  padding: 20px 0;
+}
+
+.forgot-btn {
   height: 44px;
   font-size: 16px;
   font-weight: 500;
@@ -580,7 +624,7 @@ function goToLogin() {
   transition: all 0.3s;
 }
 
-.submit-btn:hover {
+.forgot-btn:hover {
   background: linear-gradient(135deg, #40a9ff, #1890ff);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
@@ -588,9 +632,9 @@ function goToLogin() {
 
 .forgot-footer {
   text-align: center;
+  margin-top: 24px;
   color: #8c8c8c;
   font-size: 14px;
-  margin-top: 24px;
 }
 
 .link-text {

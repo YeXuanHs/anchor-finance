@@ -1,46 +1,93 @@
 <template>
   <div class="wallet-page">
-    <div class="page-header">
-      <h2 class="page-title">我的钱包</h2>
-      <p class="page-desc">管理您的余额和交易记录</p>
-    </div>
-
-    <!-- 余额卡片 -->
-    <n-card class="balance-card" :bordered="false">
-      <div class="balance-content">
-        <div class="balance-info">
-          <n-statistic label="账户余额 (CNY)">
+    <div class="wallet-header-section">
+      <div class="balance-card">
+        <div class="balance-card-inner">
+          <div class="balance-info">
+            <div class="balance-label">
+              <n-icon :component="WalletOutline" size="20" />
+              <span>账户余额</span>
+            </div>
             <div class="balance-amount">
               <span class="currency">¥</span>
               <span class="amount">{{ balance.toFixed(2) }}</span>
             </div>
-          </n-statistic>
-        </div>
-        <div class="balance-actions">
-          <n-button type="primary" size="large" @click="showRecharge = true">
-            <template #icon>
-              <n-icon :component="WalletOutline" />
-            </template>
-            充值
-          </n-button>
-          <n-button size="large" @click="showWithdraw = true">
-            <template #icon>
-              <n-icon :component="CashOutline" />
-            </template>
-            提现
-          </n-button>
+            <div class="balance-actions">
+              <n-button type="primary" size="large" @click="showRechargeModal = true">
+                <template #icon><n-icon :component="AddCircleOutline" /></template>
+                充值
+              </n-button>
+              <n-button size="large" @click="showWithdrawModal = true">
+                <template #icon><n-icon :component="ArrowUpOutline" /></template>
+                提现
+              </n-button>
+            </div>
+          </div>
+          <div class="balance-decoration">
+            <div class="deco-circle deco-circle-1"></div>
+            <div class="deco-circle deco-circle-2"></div>
+            <div class="deco-circle deco-circle-3"></div>
+          </div>
         </div>
       </div>
+
+      <div class="stats-row">
+        <n-card class="stat-card" :bordered="false">
+          <n-statistic label="本月充值" :value="monthlyRecharge" precision="2" prefix="¥" />
+        </n-card>
+        <n-card class="stat-card" :bordered="false">
+          <n-statistic label="本月消费" :value="monthlyExpense" precision="2" prefix="¥" />
+        </n-card>
+        <n-card class="stat-card" :bordered="false">
+          <n-statistic label="冻结金额" :value="frozenAmount" precision="2" prefix="¥" />
+        </n-card>
+      </div>
+    </div>
+
+    <n-card class="records-card" :bordered="false">
+      <template #header>
+        <div class="records-header">
+          <span class="records-title">余额变动记录</span>
+          <n-input
+            v-model:value="searchKeyword"
+            placeholder="搜索备注..."
+            clearable
+            style="width: 240px"
+          >
+            <template #prefix>
+              <n-icon :component="SearchOutline" color="#1890ff" />
+            </template>
+          </n-input>
+        </div>
+      </template>
+
+      <n-tabs v-model:value="activeType" type="segment" animated class="type-tabs">
+        <n-tab-pane name="all" tab="全部" />
+        <n-tab-pane name="recharge" tab="充值" />
+        <n-tab-pane name="expense" tab="消费" />
+        <n-tab-pane name="refund" tab="退款" />
+        <n-tab-pane name="withdraw" tab="提现" />
+      </n-tabs>
+
+      <n-data-table
+        :columns="columns"
+        :data="filteredRecords"
+        :bordered="false"
+        :single-line="false"
+        :pagination="pagination"
+        class="records-table"
+      />
     </n-card>
 
     <!-- 充值弹窗 -->
-    <n-modal v-model:show="showRecharge" preset="card" title="账户充值" style="width: 440px" :bordered="false">
+    <n-modal v-model:show="showRechargeModal" preset="card" title="账户充值" style="width: 480px" :bordered="false">
       <n-form ref="rechargeFormRef" :model="rechargeForm" :rules="rechargeRules">
-        <n-form-item path="amount" label="充值金额">
+        <n-form-item label="充值金额" path="amount">
           <n-input-number
             v-model:value="rechargeForm.amount"
             :min="1"
             :max="50000"
+            :precision="2"
             placeholder="请输入充值金额"
             size="large"
             style="width: 100%"
@@ -49,48 +96,50 @@
           </n-input-number>
         </n-form-item>
 
-        <n-form-item label="快捷金额">
-          <div class="quick-amounts">
-            <n-button
-              v-for="amount in quickAmounts"
-              :key="amount"
-              :type="rechargeForm.amount === amount ? 'primary' : 'default'"
-              @click="rechargeForm.amount = amount"
-            >
-              ¥{{ amount }}
-            </n-button>
-          </div>
-        </n-form-item>
+        <div class="quick-amounts">
+          <n-button
+            v-for="amount in quickAmounts"
+            :key="amount"
+            :type="rechargeForm.amount === amount ? 'primary' : 'default'"
+            @click="rechargeForm.amount = amount"
+          >
+            ¥{{ amount }}
+          </n-button>
+        </div>
 
-        <n-form-item path="payMethod" label="支付方式">
+        <n-form-item label="支付方式" path="payMethod">
           <n-radio-group v-model:value="rechargeForm.payMethod">
-            <n-space>
+            <div class="pay-methods">
               <n-radio value="alipay">
                 <div class="pay-method-label">
-                  <span class="pay-icon alipay-icon">支</span>
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="#1677FF">
+                    <path d="M21.422 15.358c-3.492 1.464-6.924-0.096-9.348-1.776 0.78-2.016 1.32-4.392 1.32-6.78 0-1.176-0.18-2.292-0.456-3.324h-3.12v4.536h5.64v1.8H11.04v1.224c1.872 0.864 3.708 1.8 5.604 1.8 1.416 0 2.856-0.624 3.78-1.62v3.936zM12.012 2.484C6.48 2.484 2.004 6.96 2.004 12.492s4.476 10.008 10.008 10.008 10.008-4.476 10.008-10.008-4.476-10.008-10.008-10.008zm0 18c-4.416 0-8-3.584-8-8s3.584-8 8-8 8 3.584 8 8-3.584 8-8 8z"/>
+                  </svg>
                   支付宝
                 </div>
               </n-radio>
               <n-radio value="wechat">
                 <div class="pay-method-label">
-                  <span class="pay-icon wechat-icon">微</span>
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="#07c160">
+                    <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348z"/>
+                  </svg>
                   微信支付
                 </div>
               </n-radio>
               <n-radio value="bank">
                 <div class="pay-method-label">
-                  <span class="pay-icon bank-icon">银</span>
+                  <n-icon :component="CardOutline" size="20" color="#1890ff" />
                   银行卡
                 </div>
               </n-radio>
-            </n-space>
+            </div>
           </n-radio-group>
         </n-form-item>
       </n-form>
 
       <template #footer>
         <div class="modal-footer">
-          <n-button @click="showRecharge = false">取消</n-button>
+          <n-button @click="showRechargeModal = false">取消</n-button>
           <n-button type="primary" :loading="recharging" @click="handleRecharge">
             确认充值
           </n-button>
@@ -99,13 +148,18 @@
     </n-modal>
 
     <!-- 提现弹窗 -->
-    <n-modal v-model:show="showWithdraw" preset="card" title="申请提现" style="width: 440px" :bordered="false">
+    <n-modal v-model:show="showWithdrawModal" preset="card" title="申请提现" style="width: 480px" :bordered="false">
       <n-form ref="withdrawFormRef" :model="withdrawForm" :rules="withdrawRules">
-        <n-form-item path="amount" label="提现金额">
+        <n-form-item label="可提现余额">
+          <div class="available-balance">¥{{ balance.toFixed(2) }}</div>
+        </n-form-item>
+
+        <n-form-item label="提现金额" path="amount">
           <n-input-number
             v-model:value="withdrawForm.amount"
             :min="1"
             :max="balance"
+            :precision="2"
             placeholder="请输入提现金额"
             size="large"
             style="width: 100%"
@@ -114,55 +168,64 @@
           </n-input-number>
         </n-form-item>
 
-        <div class="withdraw-hint">
-          可用余额：<span class="highlight">¥{{ balance.toFixed(2) }}</span>
-        </div>
-
-        <n-form-item path="account" label="提现账户">
+        <n-form-item label="提现账户" path="account">
           <n-input
             v-model:value="withdrawForm.account"
             placeholder="请输入银行卡号或支付宝账号"
             size="large"
+          >
+            <template #prefix>
+              <n-icon :component="CardOutline" color="#1890ff" />
+            </template>
+          </n-input>
+        </n-form-item>
+
+        <n-form-item label="提现备注" path="remark">
+          <n-input
+            v-model:value="withdrawForm.remark"
+            type="textarea"
+            placeholder="选填"
+            :rows="2"
           />
         </n-form-item>
       </n-form>
 
       <template #footer>
         <div class="modal-footer">
-          <n-button @click="showWithdraw = false">取消</n-button>
+          <n-button @click="showWithdrawModal = false">取消</n-button>
           <n-button type="primary" :loading="withdrawing" @click="handleWithdraw">
             提交申请
           </n-button>
         </div>
       </template>
     </n-modal>
-
-    <!-- 交易记录 -->
-    <n-card title="交易记录" class="records-card" :bordered="false">
-      <n-data-table
-        :columns="columns"
-        :data="records"
-        :pagination="pagination"
-        :bordered="false"
-        :single-line="false"
-        striped
-      />
-    </n-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, h } from 'vue'
+import { ref, computed, h } from 'vue'
 import { useMessage } from 'naive-ui'
 import type { FormInst, FormRules, DataTableColumns } from 'naive-ui'
 import { NTag } from 'naive-ui'
-import { WalletOutline, CashOutline } from '@vicons/ionicons5'
+import {
+  WalletOutline,
+  AddCircleOutline,
+  ArrowUpOutline,
+  SearchOutline,
+  CardOutline
+} from '@vicons/ionicons5'
 
 const message = useMessage()
 
 const balance = ref(12580.50)
-const showRecharge = ref(false)
-const showWithdraw = ref(false)
+const monthlyRecharge = ref(3000.00)
+const monthlyExpense = ref(1256.80)
+const frozenAmount = ref(500.00)
+const searchKeyword = ref('')
+const activeType = ref('all')
+
+const showRechargeModal = ref(false)
+const showWithdrawModal = ref(false)
 const recharging = ref(false)
 const withdrawing = ref(false)
 
@@ -172,13 +235,14 @@ const withdrawFormRef = ref<FormInst | null>(null)
 const quickAmounts = [50, 100, 200, 500, 1000, 2000]
 
 const rechargeForm = ref({
-  amount: 100 as number | null,
+  amount: null as number | null,
   payMethod: 'alipay'
 })
 
 const withdrawForm = ref({
   amount: null as number | null,
-  account: ''
+  account: '',
+  remark: ''
 })
 
 const rechargeRules: FormRules = {
@@ -195,64 +259,25 @@ const withdrawRules: FormRules = {
   account: { required: true, message: '请输入提现账户', trigger: 'blur' }
 }
 
-interface Record {
+interface RecordItem {
   id: number
   time: string
-  type: 'recharge' | 'consume' | 'refund' | 'withdraw'
+  type: string
+  typeLabel: string
   amount: number
   balance: number
   remark: string
 }
 
-const typeMap: Record<string, { label: string; type: 'success' | 'warning' | 'error' | 'info' }> = {
-  recharge: { label: '充值', type: 'success' },
-  consume: { label: '消费', type: 'warning' },
-  refund: { label: '退款', type: 'info' },
-  withdraw: { label: '提现', type: 'error' }
-}
-
-const columns: DataTableColumns<Record> = [
-  { title: '时间', key: 'time', width: 180 },
-  {
-    title: '类型',
-    key: 'type',
-    width: 100,
-    render(row) {
-      const config = typeMap[row.type]
-      return h(NTag, { type: config.type, size: 'small', round: true }, { default: () => config.label })
-    }
-  },
-  {
-    title: '金额',
-    key: 'amount',
-    width: 140,
-    render(row) {
-      const isPositive = ['recharge', 'refund'].includes(row.type)
-      const prefix = isPositive ? '+' : '-'
-      const color = isPositive ? '#52c41a' : '#ff4d4f'
-      return h('span', { style: { color, fontWeight: 600 } }, `${prefix}¥${Math.abs(row.amount).toFixed(2)}`)
-    }
-  },
-  {
-    title: '余额',
-    key: 'balance',
-    width: 140,
-    render(row) {
-      return h('span', { style: { fontWeight: 500 } }, `¥${row.balance.toFixed(2)}`)
-    }
-  },
-  { title: '备注', key: 'remark', ellipsis: { tooltip: true } }
-]
-
-const records = ref<Record[]>([
-  { id: 1, time: '2026-07-27 09:30:00', type: 'recharge', amount: 500, balance: 12580.50, remark: '支付宝充值' },
-  { id: 2, time: '2026-07-26 15:20:00', type: 'consume', amount: 299, balance: 12080.50, remark: '购买产品 - 企业基础版' },
-  { id: 3, time: '2026-07-25 10:00:00', type: 'refund', amount: 99, balance: 12379.50, remark: '订单退款 #ORD20260725' },
-  { id: 4, time: '2026-07-24 14:15:00', type: 'consume', amount: 199, balance: 12280.50, remark: '续费服务' },
-  { id: 5, time: '2026-07-23 08:00:00', type: 'withdraw', amount: 1000, balance: 12479.50, remark: '提现至工商银行' },
-  { id: 6, time: '2026-07-22 16:45:00', type: 'recharge', amount: 2000, balance: 13479.50, remark: '微信充值' },
-  { id: 7, time: '2026-07-21 11:30:00', type: 'consume', amount: 599, balance: 11479.50, remark: '购买产品 - 高级版' },
-  { id: 8, time: '2026-07-20 09:00:00', type: 'recharge', amount: 1000, balance: 12078.50, remark: '支付宝充值' }
+const records = ref<RecordItem[]>([
+  { id: 1, time: '2026-07-27 09:30', type: 'recharge', typeLabel: '充值', amount: 500, balance: 12580.50, remark: '支付宝充值' },
+  { id: 2, time: '2026-07-26 15:20', type: 'expense', typeLabel: '消费', amount: -299, balance: 12080.50, remark: '购买产品A' },
+  { id: 3, time: '2026-07-25 10:15', type: 'refund', typeLabel: '退款', amount: 99, balance: 12379.50, remark: '订单取消退款' },
+  { id: 4, time: '2026-07-24 18:45', type: 'expense', typeLabel: '消费', amount: -158, balance: 12280.50, remark: '购买产品B' },
+  { id: 5, time: '2026-07-23 14:00', type: 'withdraw', typeLabel: '提现', amount: -2000, balance: 12438.50, remark: '提现到银行卡' },
+  { id: 6, time: '2026-07-22 08:30', type: 'recharge', typeLabel: '充值', amount: 1000, balance: 14438.50, remark: '微信充值' },
+  { id: 7, time: '2026-07-21 20:10', type: 'expense', typeLabel: '消费', amount: -320, balance: 13438.50, remark: '购买产品C' },
+  { id: 8, time: '2026-07-20 11:25', type: 'recharge', typeLabel: '充值', amount: 2000, balance: 13758.50, remark: '银行卡充值' },
 ])
 
 const pagination = reactive({
@@ -261,10 +286,60 @@ const pagination = reactive({
   showSizePicker: true,
   pageSizes: [10, 20, 50],
   onChange: (page: number) => { pagination.page = page },
-  onUpdatePageSize: (size: number) => {
-    pagination.pageSize = size
+  onUpdatePageSize: (pageSize: number) => {
+    pagination.pageSize = pageSize
     pagination.page = 1
   }
+})
+
+const typeColorMap: Record<string, string> = {
+  recharge: 'success',
+  expense: 'error',
+  refund: 'info',
+  withdraw: 'warning'
+}
+
+const columns: DataTableColumns<RecordItem> = [
+  { title: '时间', key: 'time', width: 180 },
+  {
+    title: '类型',
+    key: 'type',
+    width: 100,
+    render(row) {
+      return h(NTag, { type: typeColorMap[row.type] as any, size: 'small', bordered: false }, { default: () => row.typeLabel })
+    }
+  },
+  {
+    title: '金额',
+    key: 'amount',
+    width: 120,
+    render(row) {
+      const color = row.amount > 0 ? '#52c41a' : '#ff4d4f'
+      const prefix = row.amount > 0 ? '+' : ''
+      return h('span', { style: { color, fontWeight: 600 } }, `${prefix}${row.amount.toFixed(2)}`)
+    }
+  },
+  {
+    title: '余额',
+    key: 'balance',
+    width: 120,
+    render(row) {
+      return h('span', {}, `¥${row.balance.toFixed(2)}`)
+    }
+  },
+  { title: '备注', key: 'remark', ellipsis: { tooltip: true } }
+]
+
+const filteredRecords = computed(() => {
+  let list = records.value
+  if (activeType.value !== 'all') {
+    list = list.filter(r => r.type === activeType.value)
+  }
+  if (searchKeyword.value) {
+    const kw = searchKeyword.value.toLowerCase()
+    list = list.filter(r => r.remark.toLowerCase().includes(kw))
+  }
+  return list
 })
 
 async function handleRecharge() {
@@ -272,13 +347,13 @@ async function handleRecharge() {
     await rechargeFormRef.value?.validate()
     recharging.value = true
     // TODO: 调用充值API
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    await new Promise(resolve => setTimeout(resolve, 1000))
     balance.value += rechargeForm.value.amount || 0
     message.success('充值成功')
-    showRecharge.value = false
-    rechargeForm.value.amount = 100
+    showRechargeModal.value = false
+    rechargeForm.value.amount = null
   } catch {
-    message.error('请填写完整信息')
+    message.error('请正确填写充值信息')
   } finally {
     recharging.value = false
   }
@@ -287,15 +362,20 @@ async function handleRecharge() {
 async function handleWithdraw() {
   try {
     await withdrawFormRef.value?.validate()
+    if ((withdrawForm.value.amount || 0) > balance.value) {
+      message.error('提现金额不能超过余额')
+      return
+    }
     withdrawing.value = true
     // TODO: 调用提现API
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    message.success('提现申请已提交，请等待审核')
-    showWithdraw.value = false
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    message.success('提现申请已提交')
+    showWithdrawModal.value = false
     withdrawForm.value.amount = null
     withdrawForm.value.account = ''
+    withdrawForm.value.remark = ''
   } catch {
-    message.error('请填写完整信息')
+    message.error('请正确填写提现信息')
   } finally {
     withdrawing.value = false
   }
@@ -304,65 +384,58 @@ async function handleWithdraw() {
 
 <style scoped>
 .wallet-page {
-  max-width: 960px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
 }
 
-.page-header {
+.wallet-header-section {
   margin-bottom: 24px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 4px;
-}
-
-.page-desc {
-  color: #8c8c8c;
-  font-size: 14px;
-  margin: 0;
 }
 
 .balance-card {
-  margin-bottom: 24px;
-  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.balance-card-inner {
   background: linear-gradient(135deg, #1890ff, #096dd9);
+  border-radius: 16px;
+  padding: 36px 40px;
   color: #fff;
+  position: relative;
+  overflow: hidden;
 }
 
-.balance-card :deep(.n-card__content) {
-  padding: 32px;
+.balance-info {
+  position: relative;
+  z-index: 1;
 }
 
-.balance-content {
+.balance-label {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-}
-
-.balance-info :deep(.n-statistic .n-statistic__label) {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 14px;
+  gap: 8px;
+  font-size: 15px;
+  opacity: 0.9;
+  margin-bottom: 12px;
 }
 
 .balance-amount {
   display: flex;
   align-items: baseline;
+  gap: 4px;
+  margin-bottom: 24px;
 }
 
 .balance-amount .currency {
   font-size: 28px;
   font-weight: 600;
-  margin-right: 4px;
 }
 
 .balance-amount .amount {
-  font-size: 42px;
+  font-size: 48px;
   font-weight: 700;
-  letter-spacing: -1px;
+  letter-spacing: 1px;
 }
 
 .balance-actions {
@@ -376,33 +449,114 @@ async function handleWithdraw() {
 }
 
 .balance-actions .n-button:first-child {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(10px);
-}
-
-.balance-actions .n-button:first-child:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.balance-actions .n-button:last-child {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.95);
   color: #1890ff;
   border: none;
 }
 
-.balance-actions .n-button:last-child:hover {
-  background: #f0f7ff;
+.balance-actions .n-button:last-child {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.balance-decoration {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.deco-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.1;
+}
+
+.deco-circle-1 {
+  width: 300px;
+  height: 300px;
+  background: #fff;
+  top: -100px;
+  right: -50px;
+}
+
+.deco-circle-2 {
+  width: 200px;
+  height: 200px;
+  background: #fff;
+  bottom: -60px;
+  right: 150px;
+}
+
+.deco-circle-3 {
+  width: 120px;
+  height: 120px;
+  background: #fff;
+  top: 20px;
+  right: 250px;
+  opacity: 0.06;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.stat-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(24, 144, 255, 0.06);
+  transition: box-shadow 0.3s, transform 0.3s;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 20px rgba(24, 144, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.records-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(24, 144, 255, 0.06);
+}
+
+.records-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.records-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.type-tabs {
+  margin-bottom: 16px;
+}
+
+.records-table {
+  margin-top: 8px;
 }
 
 .quick-amounts {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 16px;
 }
 
 .quick-amounts .n-button {
-  border-radius: 8px;
+  min-width: 80px;
+}
+
+.pay-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .pay-method-label {
@@ -411,53 +565,15 @@ async function handleWithdraw() {
   gap: 8px;
 }
 
-.pay-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.alipay-icon {
-  background: #1677ff;
-}
-
-.wechat-icon {
-  background: #07c160;
-}
-
-.bank-icon {
-  background: #f5222d;
-}
-
-.withdraw-hint {
-  text-align: right;
-  font-size: 13px;
-  color: #8c8c8c;
-  margin-bottom: 16px;
-}
-
-.withdraw-hint .highlight {
-  color: #1890ff;
+.available-balance {
+  font-size: 20px;
   font-weight: 600;
+  color: #1890ff;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-}
-
-.records-card {
-  border-radius: 12px;
-}
-
-.records-card :deep(.n-card-header__main) {
-  font-weight: 600;
 }
 </style>

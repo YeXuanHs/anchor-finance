@@ -1,74 +1,93 @@
 <template>
   <div class="verification-page">
-    <!-- Header Banner -->
-    <div class="page-banner">
-      <div class="banner-content">
-        <h1 class="banner-title">实名认证</h1>
-        <p class="banner-desc">完成实名认证，享受完整服务</p>
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">实名认证</h1>
+        <p class="page-desc">完成实名认证，享受更多服务和更高账户安全等级</p>
       </div>
-      <div class="banner-status">
-        <div class="status-icon" :class="statusClass">
-          <n-icon :size="32" :component="statusIcon" />
-        </div>
-        <span class="status-text">{{ statusText }}</span>
+      <div class="header-illustration">
+        <svg viewBox="0 0 200 120" fill="none" width="200" height="120">
+          <rect x="40" y="20" width="120" height="80" rx="8" fill="#fff" fill-opacity="0.2" />
+          <rect x="55" y="35" width="40" height="30" rx="4" fill="#fff" fill-opacity="0.3" />
+          <circle cx="75" cy="50" r="8" fill="#fff" fill-opacity="0.4" />
+          <rect x="55" y="72" width="90" height="4" rx="2" fill="#fff" fill-opacity="0.3" />
+          <rect x="55" y="82" width="60" height="4" rx="2" fill="#fff" fill-opacity="0.3" />
+          <path d="M140 55l-20 0m0 0l5-5m-5 5l5 5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill-opacity="0.6" />
+          <circle cx="155" cy="75" r="18" fill="#fff" fill-opacity="0.15" />
+          <path d="M148 75l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill-opacity="0.7" />
+        </svg>
       </div>
     </div>
 
     <!-- Status Alert -->
     <n-alert
-      v-if="verificationStatus !== 'none'"
-      :type="alertType"
-      :title="alertTitle"
+      v-if="verificationStatus !== 'unverified'"
+      :type="statusAlertType"
+      :title="statusAlertTitle"
+      :bordered="false"
       closable
     >
-      {{ alertMessage }}
+      {{ statusAlertDesc }}
     </n-alert>
 
-    <!-- Steps -->
-    <n-card class="section-card">
+    <!-- Verification Steps -->
+    <n-card class="steps-card" :bordered="false">
       <n-steps :current="currentStep" :status="stepStatus">
-        <n-step title="选择认证类型" />
-        <n-step title="填写认证信息" />
-        <n-step title="上传证件照片" />
-        <n-step title="提交审核" />
+        <n-step title="选择认证类型" description="个人认证或企业认证" />
+        <n-step title="填写信息" description="提交认证资料" />
+        <n-step title="审核中" description="等待平台审核" />
+        <n-step title="认证完成" description="认证成功" />
       </n-steps>
     </n-card>
 
-    <!-- Verification Type Selection -->
-    <n-card v-if="currentStep === 1" class="section-card" title="选择认证类型">
+    <!-- Certification Type Selection -->
+    <n-card v-if="currentStep === 1" class="form-card" title="选择认证类型" :bordered="false">
       <div class="type-selection">
         <div
           class="type-card"
-          :class="{ active: verificationType === 'personal' }"
-          @click="verificationType = 'personal'"
+          :class="{ active: certType === 'personal' }"
+          @click="certType = 'personal'"
         >
           <div class="type-icon personal">
             <n-icon :size="40" :component="PersonOutline" />
           </div>
-          <h3>个人认证</h3>
-          <p>适用于个人用户，需提供身份证信息</p>
+          <div class="type-info">
+            <div class="type-title">个人认证</div>
+            <div class="type-desc">适用于个人用户，需提供身份证信息</div>
+          </div>
+          <n-radio
+            :checked="certType === 'personal'"
+            @update:checked="certType = 'personal'"
+          />
         </div>
         <div
           class="type-card"
-          :class="{ active: verificationType === 'enterprise' }"
-          @click="verificationType = 'enterprise'"
+          :class="{ active: certType === 'enterprise' }"
+          @click="certType = 'enterprise'"
         >
           <div class="type-icon enterprise">
             <n-icon :size="40" :component="BusinessOutline" />
           </div>
-          <h3>企业认证</h3>
-          <p>适用于企业用户，需提供营业执照</p>
+          <div class="type-info">
+            <div class="type-title">企业认证</div>
+            <div class="type-desc">适用于企业用户，需提供营业执照信息</div>
+          </div>
+          <n-radio
+            :checked="certType === 'enterprise'"
+            @update:checked="certType = 'enterprise'"
+          />
         </div>
       </div>
-      <div class="step-actions">
-        <n-button type="primary" round :disabled="!verificationType" @click="nextStep">
+      <div class="form-actions">
+        <n-button type="primary" round @click="goToStep2">
           下一步
         </n-button>
       </div>
     </n-card>
 
-    <!-- Personal Verification Form -->
-    <n-card v-if="currentStep === 2 && verificationType === 'personal'" class="section-card" title="个人信息">
+    <!-- Personal Certification Form -->
+    <n-card v-if="currentStep === 2 && certType === 'personal'" class="form-card" title="个人实名认证" :bordered="false">
       <n-form
         ref="personalFormRef"
         :model="personalForm"
@@ -78,20 +97,54 @@
         require-mark-placement="right-hanging"
       >
         <n-form-item label="真实姓名" path="realName">
-          <n-input v-model:value="personalForm.realName" placeholder="请输入真实姓名" />
+          <n-input v-model:value="personalForm.realName" placeholder="请输入身份证上的真实姓名" />
         </n-form-item>
         <n-form-item label="身份证号" path="idCard">
           <n-input v-model:value="personalForm.idCard" placeholder="请输入18位身份证号码" maxlength="18" />
         </n-form-item>
+        <n-form-item label="身份证正面" path="idCardFront">
+          <n-upload
+            :max="1"
+            accept="image/*"
+            :default-upload="false"
+            @change="handleFrontChange"
+          >
+            <n-button>
+              <template #icon>
+                <n-icon :component="CloudUploadOutline" />
+              </template>
+              上传人像面照片
+            </n-button>
+          </n-upload>
+          <div class="upload-tip">请上传身份证人像面照片，支持 JPG/PNG 格式</div>
+        </n-form-item>
+        <n-form-item label="身份证反面" path="idCardBack">
+          <n-upload
+            :max="1"
+            accept="image/*"
+            :default-upload="false"
+            @change="handleBackChange"
+          >
+            <n-button>
+              <template #icon>
+                <n-icon :component="CloudUploadOutline" />
+              </template>
+              上传国徽面照片
+            </n-button>
+          </n-upload>
+          <div class="upload-tip">请上传身份证国徽面照片，支持 JPG/PNG 格式</div>
+        </n-form-item>
       </n-form>
-      <div class="step-actions">
-        <n-button round @click="prevStep">上一步</n-button>
-        <n-button type="primary" round @click="nextStep">下一步</n-button>
+      <div class="form-actions">
+        <n-button round @click="currentStep = 1">上一步</n-button>
+        <n-button type="primary" round :loading="submitting" @click="handleSubmitPersonal">
+          提交认证
+        </n-button>
       </div>
     </n-card>
 
-    <!-- Enterprise Verification Form -->
-    <n-card v-if="currentStep === 2 && verificationType === 'enterprise'" class="section-card" title="企业信息">
+    <!-- Enterprise Certification Form -->
+    <n-card v-if="currentStep === 2 && certType === 'enterprise'" class="form-card" title="企业实名认证" :bordered="false">
       <n-form
         ref="enterpriseFormRef"
         :model="enterpriseForm"
@@ -101,117 +154,105 @@
         require-mark-placement="right-hanging"
       >
         <n-form-item label="企业名称" path="companyName">
-          <n-input v-model:value="enterpriseForm.companyName" placeholder="请输入企业全称" />
+          <n-input v-model:value="enterpriseForm.companyName" placeholder="请输入营业执照上的企业全称" />
         </n-form-item>
         <n-form-item label="统一社会信用代码" path="creditCode">
           <n-input v-model:value="enterpriseForm.creditCode" placeholder="请输入18位统一社会信用代码" maxlength="18" />
         </n-form-item>
         <n-form-item label="法人姓名" path="legalPerson">
-          <n-input v-model:value="enterpriseForm.legalPerson" placeholder="请输入法人姓名" />
+          <n-input v-model:value="enterpriseForm.legalPerson" placeholder="请输入法定代表人姓名" />
+        </n-form-item>
+        <n-form-item label="法人身份证号" path="legalIdCard">
+          <n-input v-model:value="enterpriseForm.legalIdCard" placeholder="请输入法定代表人身份证号码" maxlength="18" />
+        </n-form-item>
+        <n-form-item label="营业执照" path="businessLicense">
+          <n-upload
+            :max="1"
+            accept="image/*"
+            :default-upload="false"
+            @change="handleLicenseChange"
+          >
+            <n-button>
+              <template #icon>
+                <n-icon :component="CloudUploadOutline" />
+              </template>
+              上传营业执照照片
+            </n-button>
+          </n-upload>
+          <div class="upload-tip">请上传营业执照副本照片，支持 JPG/PNG 格式</div>
+        </n-form-item>
+        <n-form-item label="联系人" path="contactPerson">
+          <n-input v-model:value="enterpriseForm.contactPerson" placeholder="请输入业务联系人姓名" />
+        </n-form-item>
+        <n-form-item label="联系电话" path="contactPhone">
+          <n-input v-model:value="enterpriseForm.contactPhone" placeholder="请输入业务联系电话" />
         </n-form-item>
       </n-form>
-      <div class="step-actions">
-        <n-button round @click="prevStep">上一步</n-button>
-        <n-button type="primary" round @click="nextStep">下一步</n-button>
+      <div class="form-actions">
+        <n-button round @click="currentStep = 1">上一步</n-button>
+        <n-button type="primary" round :loading="submitting" @click="handleSubmitEnterprise">
+          提交认证
+        </n-button>
       </div>
     </n-card>
 
-    <!-- Upload Documents -->
-    <n-card v-if="currentStep === 3 && verificationType === 'personal'" class="section-card" title="上传身份证照片">
-      <div class="upload-grid">
-        <div class="upload-item">
-          <h4>身份证正面（人像面）</h4>
-          <n-upload
-            :max="1"
-            accept="image/*"
-            list-type="image-card"
-            @change="(options: any) => handleUpload('idFront', options)"
-          >
-            <div class="upload-placeholder">
-              <n-icon :size="32" :component="CameraOutline" />
-              <span>点击上传</span>
-            </div>
-          </n-upload>
+    <!-- Review Pending -->
+    <n-card v-if="currentStep === 3" class="form-card" :bordered="false">
+      <div class="review-pending">
+        <div class="pending-icon">
+          <n-icon :size="64" :component="TimeOutline" color="#fa8c16" />
         </div>
-        <div class="upload-item">
-          <h4>身份证反面（国徽面）</h4>
-          <n-upload
-            :max="1"
-            accept="image/*"
-            list-type="image-card"
-            @change="(options: any) => handleUpload('idBack', options)"
-          >
-            <div class="upload-placeholder">
-              <n-icon :size="32" :component="CameraOutline" />
-              <span>点击上传</span>
-            </div>
-          </n-upload>
+        <div class="pending-title">认证审核中</div>
+        <div class="pending-desc">
+          您的{{ certType === 'personal' ? '个人' : '企业' }}认证资料已提交，我们将在 1-3 个工作日内完成审核。
+          审核结果将通过站内消息和邮件通知您。
         </div>
-      </div>
-      <div class="upload-tips">
-        <p>拍摄要求：</p>
-        <ul>
-          <li>请确保照片清晰，文字可辨认</li>
-          <li>请勿遮挡或反光</li>
-          <li>支持 JPG、PNG 格式，大小不超过 5MB</li>
-        </ul>
-      </div>
-      <div class="step-actions">
-        <n-button round @click="prevStep">上一步</n-button>
-        <n-button type="primary" round :loading="submitting" @click="handleSubmit">提交认证</n-button>
+        <div class="pending-info">
+          <div class="info-item">
+            <span class="info-label">提交时间</span>
+            <span class="info-value">{{ submitTime }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">认证类型</span>
+            <span class="info-value">{{ certType === 'personal' ? '个人认证' : '企业认证' }}</span>
+          </div>
+        </div>
       </div>
     </n-card>
 
-    <n-card v-if="currentStep === 3 && verificationType === 'enterprise'" class="section-card" title="上传营业执照">
-      <div class="upload-grid single">
-        <div class="upload-item">
-          <h4>营业执照照片</h4>
-          <n-upload
-            :max="1"
-            accept="image/*"
-            list-type="image-card"
-            @change="(options: any) => handleUpload('license', options)"
-          >
-            <div class="upload-placeholder">
-              <n-icon :size="32" :component="CameraOutline" />
-              <span>点击上传</span>
-            </div>
-          </n-upload>
-        </div>
-      </div>
-      <div class="upload-tips">
-        <p>拍摄要求：</p>
-        <ul>
-          <li>请上传最新的营业执照副本</li>
-          <li>确保照片清晰，信息完整可见</li>
-          <li>支持 JPG、PNG 格式，大小不超过 5MB</li>
-        </ul>
-      </div>
-      <div class="step-actions">
-        <n-button round @click="prevStep">上一步</n-button>
-        <n-button type="primary" round :loading="submitting" @click="handleSubmit">提交认证</n-button>
-      </div>
-    </n-card>
-
-    <!-- Success -->
-    <n-card v-if="currentStep === 4" class="section-card success-card">
-      <div class="success-content">
-        <div class="success-icon">
+    <!-- Verified -->
+    <n-card v-if="verificationStatus === 'verified'" class="form-card" :bordered="false">
+      <div class="verified-info">
+        <div class="verified-icon">
           <n-icon :size="64" :component="CheckmarkCircleOutline" color="#52c41a" />
         </div>
-        <h2>认证申请已提交</h2>
-        <p>我们将在 1-3 个工作日内完成审核，请耐心等待</p>
-        <n-button type="primary" round @click="$router.push('/user/dashboard')">返回首页</n-button>
+        <div class="verified-title">认证已通过</div>
+        <div class="verified-desc">您的实名认证已通过审核，可以享受所有平台服务。</div>
+        <div class="verified-details">
+          <div class="detail-item">
+            <span class="detail-label">认证类型</span>
+            <span class="detail-value">{{ certType === 'personal' ? '个人认证' : '企业认证' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">{{ certType === 'personal' ? '真实姓名' : '企业名称' }}</span>
+            <span class="detail-value">{{ certType === 'personal' ? personalForm.realName : enterpriseForm.companyName }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">认证时间</span>
+            <span class="detail-value">2026-07-20</span>
+          </div>
+        </div>
       </div>
     </n-card>
 
     <!-- Verification History -->
-    <n-card v-if="verificationHistory.length" class="section-card" title="认证记录">
+    <n-card class="history-card" title="认证记录" :bordered="false">
       <n-data-table
         :columns="historyColumns"
-        :data="verificationHistory"
+        :data="historyRecords"
         :bordered="false"
         :single-line="false"
+        size="small"
       />
     </n-card>
   </div>
@@ -220,178 +261,232 @@
 <script setup lang="ts">
 import { ref, computed, h } from 'vue'
 import type { DataTableColumns, FormRules } from 'naive-ui'
-import { NTag } from 'naive-ui'
+import { NTag, NButton, useMessage } from 'naive-ui'
 import {
   PersonOutline,
   BusinessOutline,
-  CameraOutline,
-  CheckmarkCircleOutline,
-  ShieldCheckmarkOutline,
+  CloudUploadOutline,
   TimeOutline,
-  CloseCircleOutline,
-  EllipseOutline
+  CheckmarkCircleOutline
 } from '@vicons/ionicons5'
-import { useMessage } from 'naive-ui'
 
 const message = useMessage()
 
-type VerificationStatus = 'none' | 'pending' | 'verified' | 'failed'
-type VerificationType = '' | 'personal' | 'enterprise'
-
-const verificationStatus = ref<VerificationStatus>('none')
-const verificationType = ref<VerificationType>('')
+const certType = ref<'personal' | 'enterprise'>('personal')
 const currentStep = ref(1)
-const stepStatus = ref<'process' | 'finish' | 'error'>('process')
+const stepStatus = ref<'process' | 'finish' | 'error' | 'wait'>('process')
 const submitting = ref(false)
+const verificationStatus = ref<'unverified' | 'pending' | 'verified' | 'failed'>('unverified')
+const submitTime = ref('')
 
+// Personal form
+const personalFormRef = ref()
 const personalForm = ref({
   realName: '',
-  idCard: ''
-})
-
-const enterpriseForm = ref({
-  companyName: '',
-  creditCode: '',
-  legalPerson: ''
+  idCard: '',
+  idCardFront: null as File | null,
+  idCardBack: null as File | null
 })
 
 const personalRules: FormRules = {
   realName: { required: true, message: '请输入真实姓名', trigger: 'blur' },
   idCard: [
-    { required: true, message: '请输入身份证号', trigger: 'blur' },
-    { pattern: /^\d{17}[\dXx]$/, message: '请输入正确的18位身份证号码', trigger: 'blur' }
+    { required: true, message: '请输入身份证号码', trigger: 'blur' },
+    { pattern: /^\d{17}[\dXx]$/, message: '请输入有效的身份证号码', trigger: 'blur' }
   ]
 }
+
+// Enterprise form
+const enterpriseFormRef = ref()
+const enterpriseForm = ref({
+  companyName: '',
+  creditCode: '',
+  legalPerson: '',
+  legalIdCard: '',
+  businessLicense: null as File | null,
+  contactPerson: '',
+  contactPhone: ''
+})
 
 const enterpriseRules: FormRules = {
   companyName: { required: true, message: '请输入企业名称', trigger: 'blur' },
   creditCode: [
     { required: true, message: '请输入统一社会信用代码', trigger: 'blur' },
-    { pattern: /^[0-9A-HJ-NPQRTUWXY]{2}\d{6}[0-9A-HJ-NPQRTUWXY]{10}$/, message: '请输入正确的统一社会信用代码', trigger: 'blur' }
+    { pattern: /^[0-9A-HJ-NPQRTUWXY]{2}\d{6}[0-9A-HJ-NPQRTUWXY]{10}$/, message: '请输入有效的统一社会信用代码', trigger: 'blur' }
   ],
-  legalPerson: { required: true, message: '请输入法人姓名', trigger: 'blur' }
+  legalPerson: { required: true, message: '请输入法定代表人姓名', trigger: 'blur' },
+  legalIdCard: [
+    { required: true, message: '请输入法定代表人身份证号码', trigger: 'blur' },
+    { pattern: /^\d{17}[\dXx]$/, message: '请输入有效的身份证号码', trigger: 'blur' }
+  ],
+  contactPerson: { required: true, message: '请输入联系人姓名', trigger: 'blur' },
+  contactPhone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号码', trigger: 'blur' }
+  ]
 }
 
-const statusClass = computed(() => {
-  const map: Record<VerificationStatus, string> = {
-    none: 'unverified',
-    pending: 'pending',
-    verified: 'verified',
-    failed: 'failed'
+// Status alert
+const statusAlertType = computed(() => {
+  const map = {
+    pending: 'warning' as const,
+    verified: 'success' as const,
+    failed: 'error' as const,
+    unverified: 'info' as const
   }
   return map[verificationStatus.value]
 })
 
-const statusIcon = computed(() => {
-  const map: Record<VerificationStatus, any> = {
-    none: EllipseOutline,
-    pending: TimeOutline,
-    verified: ShieldCheckmarkOutline,
-    failed: CloseCircleOutline
-  }
-  return map[verificationStatus.value]
-})
-
-const statusText = computed(() => {
-  const map: Record<VerificationStatus, string> = {
-    none: '未认证',
-    pending: '审核中',
-    verified: '已认证',
-    failed: '认证失败'
-  }
-  return map[verificationStatus.value]
-})
-
-const alertType = computed(() => {
-  const map = { pending: 'info', verified: 'success', failed: 'error', none: 'info' }
-  return map[verificationStatus.value] as 'info' | 'success' | 'error'
-})
-
-const alertTitle = computed(() => {
+const statusAlertTitle = computed(() => {
   const map = {
     pending: '认证审核中',
     verified: '认证已通过',
     failed: '认证未通过',
-    none: ''
+    unverified: ''
   }
   return map[verificationStatus.value]
 })
 
-const alertMessage = computed(() => {
+const statusAlertDesc = computed(() => {
   const map = {
-    pending: '您的认证申请正在审核中，预计 1-3 个工作日内完成。',
-    verified: '恭喜您，实名认证已通过！现在可以享受完整服务。',
-    failed: '很抱歉，您的认证申请未通过。请检查信息是否正确后重新提交。',
-    none: ''
+    pending: '您的认证资料正在审核中，请耐心等待。',
+    verified: '您的实名认证已通过，可以正常使用所有功能。',
+    failed: '您的认证未通过，请检查资料后重新提交。',
+    unverified: ''
   }
   return map[verificationStatus.value]
 })
 
+// History records
 interface HistoryRecord {
-  id: number
+  id: string
   type: string
-  submitDate: string
-  reviewDate: string
+  typeName: string
+  submitTime: string
+  reviewTime: string
   status: 'approved' | 'pending' | 'rejected'
   statusText: string
-  remark: string
+  reason?: string
 }
 
-const verificationHistory = ref<HistoryRecord[]>([])
+const historyRecords = ref<HistoryRecord[]>([
+  {
+    id: 'VER001',
+    type: 'personal',
+    typeName: '个人认证',
+    submitTime: '2026-07-25 14:30',
+    reviewTime: '2026-07-26 10:15',
+    status: 'pending',
+    statusText: '审核中'
+  },
+  {
+    id: 'VER002',
+    type: 'personal',
+    typeName: '个人认证',
+    submitTime: '2026-07-10 09:00',
+    reviewTime: '2026-07-11 16:20',
+    status: 'rejected',
+    statusText: '未通过',
+    reason: '身份证照片模糊，请重新上传'
+  },
+  {
+    id: 'VER003',
+    type: 'personal',
+    typeName: '个人认证',
+    submitTime: '2026-06-15 11:00',
+    reviewTime: '2026-06-16 14:30',
+    status: 'approved',
+    statusText: '已通过'
+  }
+])
 
 const historyColumns: DataTableColumns<HistoryRecord> = [
-  { title: '认证类型', key: 'type', width: 100 },
-  { title: '提交时间', key: 'submitDate', width: 120 },
-  { title: '审核时间', key: 'reviewDate', width: 120 },
+  { title: '编号', key: 'id', width: 100 },
+  { title: '认证类型', key: 'typeName', width: 100 },
+  { title: '提交时间', key: 'submitTime', width: 160 },
+  { title: '审核时间', key: 'reviewTime', width: 160 },
   {
     title: '状态',
     key: 'status',
     width: 100,
-    render: (row) =>
-      h(
+    render: (row) => {
+      const typeMap: Record<string, 'success' | 'warning' | 'error'> = {
+        approved: 'success',
+        pending: 'warning',
+        rejected: 'error'
+      }
+      return h(
         NTag,
-        {
-          type: row.status === 'approved' ? 'success' : row.status === 'pending' ? 'warning' : 'error',
-          size: 'small',
-          round: true,
-          bordered: false
-        },
+        { type: typeMap[row.status], size: 'small', round: true, bordered: false },
         { default: () => row.statusText }
       )
+    }
   },
-  { title: '备注', key: 'remark', ellipsis: { tooltip: true } }
+  {
+    title: '备注',
+    key: 'reason',
+    ellipsis: { tooltip: true },
+    render: (row) => h('span', { style: row.status === 'rejected' ? 'color: #f5222d' : '' }, row.reason || '-')
+  }
 ]
 
-function nextStep() {
-  if (currentStep.value < 4) {
-    currentStep.value++
+// File handlers
+function handleFrontChange(options: { fileList: any[] }) {
+  if (options.fileList.length > 0) {
+    personalForm.value.idCardFront = options.fileList[0].file
   }
 }
 
-function prevStep() {
-  if (currentStep.value > 1) {
-    currentStep.value--
+function handleBackChange(options: { fileList: any[] }) {
+  if (options.fileList.length > 0) {
+    personalForm.value.idCardBack = options.fileList[0].file
   }
 }
 
-function handleUpload(field: string, options: any) {
-  // Handle file upload
-  console.log(`Upload ${field}:`, options)
+function handleLicenseChange(options: { fileList: any[] }) {
+  if (options.fileList.length > 0) {
+    enterpriseForm.value.businessLicense = options.fileList[0].file
+  }
 }
 
-async function handleSubmit() {
-  submitting.value = true
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    verificationStatus.value = 'pending'
-    currentStep.value = 4
-    message.success('认证申请已提交')
-  } catch {
-    message.error('提交失败，请稍后重试')
-  } finally {
-    submitting.value = false
-  }
+// Step navigation
+function goToStep2() {
+  currentStep.value = 2
+}
+
+// Submit handlers
+function handleSubmitPersonal() {
+  personalFormRef.value?.validate((errors: any) => {
+    if (errors) {
+      message.warning('请完善必填信息')
+      return
+    }
+    submitting.value = true
+    setTimeout(() => {
+      submitting.value = false
+      verificationStatus.value = 'pending'
+      currentStep.value = 3
+      submitTime.value = new Date().toLocaleString('zh-CN')
+      message.success('个人认证资料已提交')
+    }, 1500)
+  })
+}
+
+function handleSubmitEnterprise() {
+  enterpriseFormRef.value?.validate((errors: any) => {
+    if (errors) {
+      message.warning('请完善必填信息')
+      return
+    }
+    submitting.value = true
+    setTimeout(() => {
+      submitting.value = false
+      verificationStatus.value = 'pending'
+      currentStep.value = 3
+      submitTime.value = new Date().toLocaleString('zh-CN')
+      message.success('企业认证资料已提交')
+    }, 1500)
+  })
 }
 </script>
 
@@ -402,19 +497,19 @@ async function handleSubmit() {
   gap: 24px;
 }
 
-/* ==================== Banner ==================== */
-.page-banner {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 50%, #0050b3 100%);
-  border-radius: 12px;
-  padding: 32px;
+/* ==================== Page Header ==================== */
+.page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  overflow: hidden;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 50%, #0050b3 100%);
+  border-radius: 12px;
+  padding: 32px;
   position: relative;
+  overflow: hidden;
 }
 
-.page-banner::before {
+.page-header::before {
   content: '';
   position: absolute;
   top: -50%;
@@ -425,256 +520,269 @@ async function handleSubmit() {
   border-radius: 50%;
 }
 
-.banner-content {
+.header-content {
   position: relative;
   z-index: 1;
 }
 
-.banner-title {
+.page-title {
   font-size: 24px;
   font-weight: 700;
   color: #fff;
   margin: 0 0 8px 0;
 }
 
-.banner-desc {
+.page-desc {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.8);
   margin: 0;
 }
 
-.banner-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.header-illustration {
   position: relative;
   z-index: 1;
 }
 
-.status-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.status-icon.unverified {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-.status-icon.pending {
-  background: rgba(250, 173, 20, 0.3);
-  color: #fad414;
-}
-
-.status-icon.verified {
-  background: rgba(82, 196, 26, 0.3);
-  color: #52c41a;
-}
-
-.status-icon.failed {
-  background: rgba(255, 77, 79, 0.3);
-  color: #ff4d4f;
-}
-
-.status-text {
-  font-size: 18px;
-  font-weight: 600;
-  color: #fff;
-}
-
-/* ==================== Section Card ==================== */
-.section-card {
+/* ==================== Steps Card ==================== */
+.steps-card {
   border-radius: 12px;
   border: 1px solid #f0f0f0;
 }
 
-.section-card :deep(.n-card-header) {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.section-card :deep(.n-card__content) {
-  padding: 20px;
+/* ==================== Form Card ==================== */
+.form-card {
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
 }
 
 /* ==================== Type Selection ==================== */
 .type-selection {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
   margin-bottom: 24px;
 }
 
 .type-card {
-  border: 2px solid #f0f0f0;
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   padding: 32px 24px;
-  text-align: center;
+  border-radius: 12px;
+  border: 2px solid #f0f0f0;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .type-card:hover {
-  border-color: #91caff;
-  background: #f0f7ff;
+  border-color: #d0e4ff;
+  background: #f0f5ff;
 }
 
 .type-card.active {
   border-color: #1890ff;
-  background: #e6f4ff;
-  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.15);
+  background: #e6f0ff;
+}
+
+.type-card.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #1890ff;
+  border-radius: 12px 12px 0 0;
 }
 
 .type-icon {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 16px;
 }
 
 .type-icon.personal {
-  background: linear-gradient(135deg, #e6f4ff, #bae0ff);
+  background: linear-gradient(135deg, #e6f0ff, #bae0ff);
   color: #1890ff;
 }
 
 .type-icon.enterprise {
-  background: linear-gradient(135deg, #f6ffed, #d9f7be);
-  color: #52c41a;
+  background: linear-gradient(135deg, #f0f5ff, #d6e4ff);
+  color: #2f54eb;
 }
 
-.type-card h3 {
-  font-size: 18px;
+.type-info {
+  text-align: center;
+}
+
+.type-title {
+  font-size: 16px;
   font-weight: 600;
   color: #262626;
-  margin: 0 0 8px 0;
+  margin-bottom: 8px;
 }
 
-.type-card p {
-  font-size: 14px;
-  color: #8c8c8c;
-  margin: 0;
-}
-
-/* ==================== Upload Grid ==================== */
-.upload-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  margin-bottom: 16px;
-}
-
-.upload-grid.single {
-  grid-template-columns: 1fr;
-  max-width: 400px;
-}
-
-.upload-item h4 {
-  font-size: 15px;
-  font-weight: 500;
-  color: #262626;
-  margin: 0 0 12px 0;
-}
-
-.upload-placeholder {
-  width: 148px;
-  height: 148px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #fafafa;
-  border: 1px dashed #d9d9d9;
-  border-radius: 8px;
-  color: #8c8c8c;
-  font-size: 14px;
-}
-
-.upload-tips {
-  background: #f0f7ff;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 24px;
-}
-
-.upload-tips p {
-  font-size: 14px;
-  font-weight: 500;
-  color: #262626;
-  margin: 0 0 8px 0;
-}
-
-.upload-tips ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.upload-tips li {
+.type-desc {
   font-size: 13px;
-  color: #595959;
-  line-height: 1.8;
+  color: #8c8c8c;
 }
 
-/* ==================== Step Actions ==================== */
-.step-actions {
+/* ==================== Form Actions ==================== */
+.form-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  justify-content: center;
+  gap: 16px;
   padding-top: 24px;
   border-top: 1px solid #f0f0f0;
 }
 
-/* ==================== Success Card ==================== */
-.success-card {
+/* ==================== Upload Tips ==================== */
+.upload-tip {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 8px;
+}
+
+/* ==================== Review Pending ==================== */
+.review-pending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px;
   text-align: center;
 }
 
-.success-content {
-  padding: 32px 0;
-}
-
-.success-icon {
+.pending-icon {
   margin-bottom: 24px;
 }
 
-.success-content h2 {
-  font-size: 22px;
+.pending-title {
+  font-size: 20px;
   font-weight: 600;
   color: #262626;
-  margin: 0 0 8px 0;
+  margin-bottom: 12px;
 }
 
-.success-content p {
+.pending-desc {
   font-size: 14px;
   color: #8c8c8c;
-  margin: 0 0 32px 0;
+  max-width: 480px;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.pending-info {
+  display: flex;
+  gap: 48px;
+  padding: 24px;
+  background: #fafafa;
+  border-radius: 12px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-label {
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.info-value {
+  font-size: 15px;
+  font-weight: 500;
+  color: #262626;
+}
+
+/* ==================== Verified Info ==================== */
+.verified-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.verified-icon {
+  margin-bottom: 24px;
+}
+
+.verified-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #52c41a;
+  margin-bottom: 12px;
+}
+
+.verified-desc {
+  font-size: 14px;
+  color: #8c8c8c;
+  max-width: 480px;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.verified-details {
+  display: flex;
+  gap: 48px;
+  padding: 24px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 12px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-label {
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.detail-value {
+  font-size: 15px;
+  font-weight: 500;
+  color: #262626;
+}
+
+/* ==================== History Card ==================== */
+.history-card {
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
 }
 
 /* ==================== Responsive ==================== */
-@media (max-width: 768px) {
-  .page-banner {
-    flex-direction: column;
-    gap: 24px;
-    text-align: center;
-  }
-
+@media (max-width: 1200px) {
   .type-selection {
     grid-template-columns: 1fr;
   }
+}
 
-  .upload-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
 
-  .upload-grid.single {
-    max-width: 100%;
+  .header-illustration {
+    display: none;
+  }
+
+  .pending-info,
+  .verified-details {
+    flex-direction: column;
+    gap: 16px;
   }
 }
 </style>

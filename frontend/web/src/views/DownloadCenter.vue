@@ -12,8 +12,8 @@
         <nav class="nav-links">
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/products" class="nav-link">产品</router-link>
-          <router-link to="/download" class="nav-link active">下载</router-link>
-          <a href="#" class="nav-link">帮助</a>
+          <a href="#" class="nav-link">公告</a>
+          <router-link to="/download" class="nav-link active">下载中心</router-link>
         </nav>
         <div class="header-actions">
           <n-button text @click="$router.push('/login')">登录</n-button>
@@ -61,41 +61,43 @@
         </aside>
 
         <!-- File List -->
-        <main class="file-list-area">
+        <main class="file-list">
           <!-- Toolbar -->
           <div class="toolbar">
             <div class="toolbar-left">
               <n-input
                 v-model:value="searchKeyword"
-                placeholder="搜索文件..."
+                placeholder="搜索文件名称..."
+                size="small"
                 clearable
-                style="width: 280px;"
+                style="width: 260px;"
               >
                 <template #prefix>
                   <n-icon :component="SearchOutline" />
                 </template>
               </n-input>
+            </div>
+            <div class="toolbar-right">
               <span class="result-count">共 <strong>{{ filteredFiles.length }}</strong> 个文件</span>
             </div>
           </div>
 
           <!-- Data Table -->
-          <div v-if="filteredFiles.length > 0" class="table-wrap">
+          <n-card class="table-card" :bordered="false">
             <n-data-table
+              v-if="filteredFiles.length > 0"
               :columns="columns"
               :data="paginatedFiles"
               :bordered="false"
               :single-line="false"
               striped
             />
-          </div>
-
-          <!-- Empty State -->
-          <div v-else class="empty-state">
-            <n-icon size="64" color="#c9cdd4"><CloudOfflineOutline /></n-icon>
-            <p>暂无匹配的文件</p>
-            <n-button type="primary" @click="resetFilters">重置筛选</n-button>
-          </div>
+            <n-empty v-else description="暂无匹配的文件" class="empty-state">
+              <template #extra>
+                <n-button type="primary" size="small" @click="clearFilters">清除筛选</n-button>
+              </template>
+            </n-empty>
+          </n-card>
 
           <!-- Pagination -->
           <div v-if="totalPages > 1" class="pagination-wrap">
@@ -114,206 +116,206 @@
 
 <script setup lang="ts">
 import { ref, computed, h } from 'vue'
-import type { DataTableColumns } from 'naive-ui'
-import { NButton, NTag, NIcon } from 'naive-ui'
 import {
   AnchorOutline,
-  FolderOpenOutline,
   SearchOutline,
-  CloudOfflineOutline,
-  DocumentOutline,
+  FolderOpenOutline,
+  ServerOutline,
+  DesktopOutline,
   CodeSlashOutline,
-  SettingsOutline,
-  ImageOutline,
-  ArchiveOutline,
+  DocumentTextOutline,
+  CloudDownloadOutline,
+  ExtensionPuzzleOutline,
   DownloadOutline
 } from '@vicons/ionicons5'
-
-interface FileItem {
-  id: number
-  name: string
-  category: string
-  categoryKey: string
-  version: string
-  size: string
-  updateTime: string
-  downloads: number
-  description: string
-  icon: any
-}
+import { NButton, NIcon, NTag } from 'naive-ui'
+import type { DataTableColumns } from 'naive-ui'
 
 const searchKeyword = ref('')
 const selectedGroup = ref('all')
 const currentPage = ref(1)
 const pageSize = 10
 
-const fileGroups = computed(() => [
-  { key: 'all', label: '全部文件', icon: FolderOpenOutline, count: files.value.length },
-  { key: 'client', label: '客户端', icon: CodeSlashOutline, count: files.value.filter(f => f.categoryKey === 'client').length },
-  { key: 'plugin', label: '插件扩展', icon: SettingsOutline, count: files.value.filter(f => f.categoryKey === 'plugin').length },
-  { key: 'template', label: '模板主题', icon: ImageOutline, count: files.value.filter(f => f.categoryKey === 'template').length },
-  { key: 'tool', label: '实用工具', icon: DocumentOutline, count: files.value.filter(f => f.categoryKey === 'tool').length },
-  { key: 'sdk', label: 'SDK/API', icon: ArchiveOutline, count: files.value.filter(f => f.categoryKey === 'sdk').length }
-])
+interface FileItem {
+  id: number
+  name: string
+  category: string
+  version: string
+  size: string
+  updateTime: string
+  downloads: number
+  description: string
+  fileUrl: string
+}
 
 const files = ref<FileItem[]>([
   {
     id: 1,
-    name: 'AnchorFinance-Desktop-Client.exe',
-    category: '客户端',
-    categoryKey: 'client',
+    name: 'AnchorPanel-控制面板安装包',
+    category: '面板程序',
     version: 'v3.2.1',
-    size: '68.5 MB',
-    updateTime: '2026-07-20',
-    downloads: 12580,
-    description: 'Windows桌面客户端，支持账务管理、报表导出等功能',
-    icon: CodeSlashOutline
+    size: '45.6 MB',
+    updateTime: '2025-12-15',
+    downloads: 8932,
+    description: '服务器管理控制面板，支持一键部署、环境配置、站点管理等功能',
+    fileUrl: '#'
   },
   {
     id: 2,
-    name: 'AnchorFinance-Mac-Client.dmg',
-    category: '客户端',
-    categoryKey: 'client',
-    version: 'v3.2.1',
-    size: '72.3 MB',
-    updateTime: '2026-07-20',
-    downloads: 8920,
-    description: 'macOS桌面客户端，适配Apple Silicon芯片',
-    icon: CodeSlashOutline
+    name: 'AnchorPanel-Agent客户端',
+    category: '面板程序',
+    version: 'v3.2.0',
+    size: '12.3 MB',
+    updateTime: '2025-12-12',
+    downloads: 6543,
+    description: '配合控制面板使用的服务器端Agent程序',
+    fileUrl: '#'
   },
   {
     id: 3,
-    name: 'WechatPay-Plugin-v2.1.0.zip',
-    category: '插件扩展',
-    categoryKey: 'plugin',
-    version: 'v2.1.0',
-    size: '2.8 MB',
-    updateTime: '2026-07-18',
-    downloads: 5634,
-    description: '微信支付对接插件，支持JSAPI/Native/H5支付',
-    icon: SettingsOutline
+    name: 'WordPress一键部署脚本',
+    category: '部署脚本',
+    version: 'v1.5.0',
+    size: '2.1 MB',
+    updateTime: '2025-12-10',
+    downloads: 12456,
+    description: '支持LNMP/LAMP环境自动配置WordPress站点',
+    fileUrl: '#'
   },
   {
     id: 4,
-    name: 'Alipay-Plugin-v2.0.5.zip',
-    category: '插件扩展',
-    categoryKey: 'plugin',
-    version: 'v2.0.5',
-    size: '3.1 MB',
-    updateTime: '2026-07-15',
-    downloads: 4892,
-    description: '支付宝对接插件，支持当面付/手机网站支付',
-    icon: SettingsOutline
+    name: 'Node.js环境自动配置脚本',
+    category: '部署脚本',
+    version: 'v2.0.3',
+    size: '1.8 MB',
+    updateTime: '2025-12-08',
+    downloads: 7821,
+    description: '自动安装配置Node.js、PM2、Nginx反向代理',
+    fileUrl: '#'
   },
   {
     id: 5,
-    name: 'Admin-Theme-Blue.zip',
-    category: '模板主题',
-    categoryKey: 'template',
-    version: 'v1.5.0',
-    size: '15.2 MB',
-    updateTime: '2026-07-12',
-    downloads: 3456,
-    description: '蓝色主题后台管理模板，清新简洁风格',
-    icon: ImageOutline
+    name: '服务器安全加固工具',
+    category: '安全工具',
+    version: 'v1.3.2',
+    size: '8.7 MB',
+    updateTime: '2025-12-05',
+    downloads: 4567,
+    description: '一键加固服务器安全配置，包括防火墙、SSH、端口管理',
+    fileUrl: '#'
   },
   {
     id: 6,
-    name: 'Admin-Theme-Dark.zip',
-    category: '模板主题',
-    categoryKey: 'template',
-    version: 'v1.3.0',
-    size: '16.8 MB',
-    updateTime: '2026-07-10',
-    downloads: 2789,
-    description: '暗黑主题后台管理模板，护眼深色风格',
-    icon: ImageOutline
+    name: 'SSL证书自动申请工具',
+    category: '安全工具',
+    version: 'v1.1.0',
+    size: '3.4 MB',
+    updateTime: '2025-12-01',
+    downloads: 3298,
+    description: '基于Let\'s Encrypt自动申请和续期SSL证书',
+    fileUrl: '#'
   },
   {
     id: 7,
-    name: 'DataExport-Tool-v1.2.0.exe',
-    category: '实用工具',
-    categoryKey: 'tool',
-    version: 'v1.2.0',
-    size: '12.5 MB',
-    updateTime: '2026-07-08',
-    downloads: 2345,
-    description: '数据导出工具，支持Excel/CSV/PDF格式',
-    icon: DocumentOutline
+    name: '数据备份恢复工具',
+    category: '运维工具',
+    version: 'v2.1.1',
+    size: '15.2 MB',
+    updateTime: '2025-11-28',
+    downloads: 5678,
+    description: '支持MySQL、PostgreSQL数据库的定时备份与一键恢复',
+    fileUrl: '#'
   },
   {
     id: 8,
-    name: 'Database-Backup-Tool-v1.0.3.exe',
-    category: '实用工具',
-    categoryKey: 'tool',
-    version: 'v1.0.3',
-    size: '8.9 MB',
-    updateTime: '2026-07-05',
-    downloads: 1987,
-    description: '数据库备份工具，支持定时自动备份',
-    icon: DocumentOutline
+    name: '服务器迁移助手',
+    category: '运维工具',
+    version: 'v1.0.5',
+    size: '6.9 MB',
+    updateTime: '2025-11-25',
+    downloads: 2345,
+    description: '支持站点、数据库、邮件的一键跨服务器迁移',
+    fileUrl: '#'
   },
   {
     id: 9,
-    name: 'AnchorFinance-PHP-SDK-v2.3.0.zip',
-    category: 'SDK/API',
-    categoryKey: 'sdk',
-    version: 'v2.3.0',
-    size: '1.2 MB',
-    updateTime: '2026-07-22',
-    downloads: 3210,
-    description: 'PHP SDK，支持Composer安装，完善的API封装',
-    icon: ArchiveOutline
+    name: '产品API接口文档',
+    category: '开发文档',
+    version: 'v2.0',
+    size: '4.5 MB',
+    updateTime: '2025-11-20',
+    downloads: 1890,
+    description: '完整的RESTful API接口文档，含SDK示例代码',
+    fileUrl: '#'
   },
   {
     id: 10,
-    name: 'AnchorFinance-Python-SDK-v1.8.0.tar.gz',
-    category: 'SDK/API',
-    categoryKey: 'sdk',
-    version: 'v1.8.0',
-    size: '0.9 MB',
-    updateTime: '2026-07-20',
-    downloads: 2678,
-    description: 'Python SDK，支持pip安装，完整类型提示',
-    icon: ArchiveOutline
+    name: 'WebHook集成指南',
+    category: '开发文档',
+    version: 'v1.2',
+    size: '2.3 MB',
+    updateTime: '2025-11-18',
+    downloads: 1234,
+    description: 'WebHook事件订阅与回调处理开发指南',
+    fileUrl: '#'
   },
   {
     id: 11,
-    name: 'AnchorFinance-Java-SDK-v1.5.0.jar',
-    category: 'SDK/API',
-    categoryKey: 'sdk',
-    version: 'v1.5.0',
-    size: '2.4 MB',
-    updateTime: '2026-07-18',
-    downloads: 2145,
-    description: 'Java SDK，Maven中央仓库可直接引用',
-    icon: ArchiveOutline
+    name: 'Windows远程连接工具',
+    category: '客户端工具',
+    version: 'v5.8.0',
+    size: '28.6 MB',
+    updateTime: '2025-11-15',
+    downloads: 9876,
+    description: '支持RDP、VNC、SSH多种协议的远程连接客户端',
+    fileUrl: '#'
   },
   {
     id: 12,
-    name: 'Stripe-Plugin-v1.2.0.zip',
-    category: '插件扩展',
-    categoryKey: 'plugin',
-    version: 'v1.2.0',
-    size: '3.5 MB',
-    updateTime: '2026-07-16',
-    downloads: 1876,
-    description: 'Stripe国际支付插件，支持信用卡/Apple Pay',
-    icon: SettingsOutline
+    name: 'FTP文件传输工具',
+    category: '客户端工具',
+    version: 'v3.5.2',
+    size: '18.4 MB',
+    updateTime: '2025-11-10',
+    downloads: 6543,
+    description: '支持FTP/SFTP协议的文件传输管理工具',
+    fileUrl: '#'
   }
 ])
+
+const fileGroups = computed(() => {
+  const categories = [...new Set(files.value.map(f => f.category))]
+  const iconMap: Record<string, any> = {
+    '面板程序': ServerOutline,
+    '部署脚本': CodeSlashOutline,
+    '安全工具': ExtensionPuzzleOutline,
+    '运维工具': DesktopOutline,
+    '开发文档': DocumentTextOutline,
+    '客户端工具': CloudDownloadOutline
+  }
+  return [
+    { key: 'all', label: '全部文件', icon: FolderOpenOutline, count: files.value.length },
+    ...categories.map(cat => ({
+      key: cat,
+      label: cat,
+      icon: iconMap[cat] || DocumentTextOutline,
+      count: files.value.filter(f => f.category === cat).length
+    }))
+  ]
+})
 
 const filteredFiles = computed(() => {
   let list = [...files.value]
 
   if (selectedGroup.value !== 'all') {
-    list = list.filter(f => f.categoryKey === selectedGroup.value)
+    list = list.filter(f => f.category === selectedGroup.value)
   }
 
   if (searchKeyword.value.trim()) {
     const keyword = searchKeyword.value.trim().toLowerCase()
-    list = list.filter(
-      f => f.name.toLowerCase().includes(keyword) || f.description.toLowerCase().includes(keyword)
+    list = list.filter(f =>
+      f.name.toLowerCase().includes(keyword) ||
+      f.description.toLowerCase().includes(keyword)
     )
   }
 
@@ -327,28 +329,35 @@ const paginatedFiles = computed(() => {
   return filteredFiles.value.slice(start, start + pageSize)
 })
 
-function resetFilters() {
-  selectedGroup.value = 'all'
+function clearFilters() {
   searchKeyword.value = ''
+  selectedGroup.value = 'all'
   currentPage.value = 1
 }
 
+function formatDownloads(count: number): string {
+  if (count >= 10000) return (count / 10000).toFixed(1) + 'w'
+  if (count >= 1000) return (count / 1000).toFixed(1) + 'k'
+  return count.toString()
+}
+
 function handleDownload(file: FileItem) {
-  // TODO: implement actual download logic
-  console.log('Downloading:', file.name)
+  window.open(file.fileUrl, '_blank')
 }
 
 const columns: DataTableColumns<FileItem> = [
   {
-    title: '文件名',
+    title: '文件名称',
     key: 'name',
-    minWidth: 280,
+    minWidth: 260,
     render(row) {
-      return h('div', { style: 'display: flex; align-items: center; gap: 10px;' }, [
-        h(NIcon, { size: 20, color: '#1890ff' }, { default: () => h(row.icon) }),
-        h('div', null, [
-          h('div', { style: 'font-weight: 600; color: #1d2129; font-size: 14px;' }, row.name),
-          h('div', { style: 'font-size: 12px; color: #86909c; margin-top: 2px;' }, row.description)
+      return h('div', { class: 'file-name-cell' }, [
+        h('div', { class: 'file-icon-wrap' }, [
+          h(NIcon, { size: 20, color: '#1890ff' }, { default: () => h(DownloadOutline) })
+        ]),
+        h('div', { class: 'file-info' }, [
+          h('div', { class: 'file-name' }, row.name),
+          h('div', { class: 'file-desc' }, row.description)
         ])
       ])
     }
@@ -356,17 +365,17 @@ const columns: DataTableColumns<FileItem> = [
   {
     title: '分类',
     key: 'category',
-    width: 100,
+    width: 120,
     render(row) {
-      return h(NTag, { size: 'small', bordered: false, type: 'info' }, { default: () => row.category })
+      return h(NTag, { type: 'info', size: 'small', bordered: false }, { default: () => row.category })
     }
   },
   {
     title: '版本',
     key: 'version',
-    width: 90,
+    width: 100,
     render(row) {
-      return h(NTag, { size: 'small', bordered: false, type: 'success' }, { default: () => row.version })
+      return h(NTag, { type: 'success', size: 'small', bordered: false }, { default: () => row.version })
     }
   },
   {
@@ -383,15 +392,15 @@ const columns: DataTableColumns<FileItem> = [
     title: '下载次数',
     key: 'downloads',
     width: 100,
-    sorter: (a, b) => a.downloads - b.downloads,
     render(row) {
-      return h('span', { style: 'color: #1890ff; font-weight: 500;' }, row.downloads.toLocaleString())
+      return h('span', { class: 'download-count' }, formatDownloads(row.downloads))
     }
   },
   {
     title: '操作',
     key: 'action',
     width: 100,
+    fixed: 'right',
     render(row) {
       return h(
         NButton,
@@ -404,10 +413,7 @@ const columns: DataTableColumns<FileItem> = [
             handleDownload(row)
           }
         },
-        {
-          icon: () => h(NIcon, null, { default: () => h(DownloadOutline) }),
-          default: () => '下载'
-        }
+        { default: () => '下载', icon: () => h(NIcon, null, { default: () => h(DownloadOutline) }) }
       )
     }
   }
@@ -584,16 +590,16 @@ const columns: DataTableColumns<FileItem> = [
   color: #1890ff;
 }
 
-/* File List Area */
-.file-list-area {
+/* File List */
+.file-list {
   flex: 1;
   min-width: 0;
 }
 
 .toolbar {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 16px;
   margin-bottom: 20px;
   padding: 16px 20px;
   background: #fff;
@@ -601,43 +607,62 @@ const columns: DataTableColumns<FileItem> = [
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
-.toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
 .result-count {
   font-size: 14px;
   color: #86909c;
-  white-space: nowrap;
 }
 
 .result-count strong {
   color: #1890ff;
 }
 
-/* Table */
-.table-wrap {
-  background: #fff;
+.table-card {
   border-radius: 12px;
-  padding: 4px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+:deep(.file-name-cell) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+:deep(.file-icon-wrap) {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #e6f7ff, #bae7ff);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+:deep(.file-info) {
+  min-width: 0;
+}
+
+:deep(.file-name) {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d2129;
+  margin-bottom: 2px;
+}
+
+:deep(.file-desc) {
+  font-size: 12px;
+  color: #86909c;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Empty State */
+:deep(.download-count) {
+  font-weight: 600;
+  color: #1890ff;
+}
+
 .empty-state {
-  text-align: center;
-  padding: 80px 0;
-  color: #c9cdd4;
-  background: #fff;
-  border-radius: 12px;
-}
-
-.empty-state p {
-  margin: 16px 0 24px;
-  font-size: 15px;
+  padding: 60px 0;
 }
 
 /* Pagination */

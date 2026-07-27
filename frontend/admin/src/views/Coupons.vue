@@ -1,41 +1,38 @@
 <template>
   <div>
     <n-card :bordered="false" rounded>
-      <template #header>
-        <n-space align="center" justify="space-between">
-          <span style="font-size: 18px; font-weight: 600">优惠券管理</span>
-          <n-space>
-            <n-input
-              v-model:value="searchKeyword"
-              placeholder="搜索优惠券名称"
-              clearable
-              style="width: 240px"
-              @clear="handleSearch"
-              @keydown.enter="handleSearch"
-            >
-              <template #prefix>
-                <n-icon><SearchIcon /></n-icon>
-              </template>
-            </n-input>
-            <n-select
-              v-model:value="filterType"
-              :options="typeFilterOptions"
-              placeholder="筛选类型"
-              clearable
-              style="width: 140px"
-            />
-            <n-select
-              v-model:value="filterStatus"
-              :options="statusFilterOptions"
-              placeholder="筛选状态"
-              clearable
-              style="width: 120px"
-            />
-            <n-button type="primary" @click="openCouponModal()">
-              <template #icon><n-icon><AddIcon /></n-icon></template>
-              创建优惠券
-            </n-button>
-          </n-space>
+      <template #header-extra>
+        <n-space style="padding: 12px 0 4px">
+          <n-input
+            v-model:value="searchKeyword"
+            placeholder="搜索优惠券名称"
+            clearable
+            style="width: 240px"
+            @clear="handleSearch"
+            @keydown.enter="handleSearch"
+          >
+            <template #prefix>
+              <n-icon><SearchIcon /></n-icon>
+            </template>
+          </n-input>
+          <n-select
+            v-model:value="filterType"
+            placeholder="优惠券类型"
+            clearable
+            style="width: 150px"
+            :options="typeOptions"
+          />
+          <n-select
+            v-model:value="filterStatus"
+            placeholder="状态"
+            clearable
+            style="width: 120px"
+            :options="statusOptions"
+          />
+          <n-button type="primary" @click="openCouponModal()">
+            <template #icon><n-icon><AddIcon /></n-icon></template>
+            创建优惠券
+          </n-button>
         </n-space>
       </template>
 
@@ -54,7 +51,7 @@
       v-model:show="couponModalVisible"
       preset="card"
       :title="editingCoupon ? '编辑优惠券' : '创建优惠券'"
-      style="width: 600px"
+      style="width: 640px"
       :bordered="false"
       :segmented="{ content: true, footer: true }"
     >
@@ -67,25 +64,28 @@
         </n-form-item>
         <n-form-item label="面值" path="value">
           <n-input-number v-model:value="couponForm.value" :min="0" :precision="2" style="width: 100%">
-            <template #prefix>{{ couponForm.type === 'discount' ? '折' : '¥' }}</template>
+            <template #prefix>
+              <span v-if="couponForm.type === 'fixed'">¥</span>
+              <span v-else-if="couponForm.type === 'percent'">%</span>
+            </template>
           </n-input-number>
         </n-form-item>
         <n-form-item label="使用条件" path="minAmount">
           <n-input-number v-model:value="couponForm.minAmount" :min="0" :precision="2" style="width: 100%">
-            <template #prefix>满¥</template>
-            <template #suffix>可用</template>
+            <template #prefix>¥</template>
+            <template #suffix>满减门槛</template>
           </n-input-number>
         </n-form-item>
-        <n-form-item label="有效期" path="validity">
+        <n-form-item label="发放总量" path="totalCount">
+          <n-input-number v-model:value="couponForm.totalCount" :min="1" style="width: 100%" />
+        </n-form-item>
+        <n-form-item label="有效期" path="dateRange">
           <n-date-picker
-            v-model:value="couponForm.validity"
+            v-model:value="couponForm.dateRange"
             type="daterange"
             style="width: 100%"
-            :shortcuts="dateShortcuts"
+            clearable
           />
-        </n-form-item>
-        <n-form-item label="发放数量" path="total">
-          <n-input-number v-model:value="couponForm.total" :min="1" style="width: 100%" />
         </n-form-item>
         <n-form-item label="状态" path="status">
           <n-switch v-model:value="couponForm.status" checked-value="active" unchecked-value="inactive">
@@ -138,135 +138,49 @@ const editingCoupon = ref<any>(null)
 
 // ---- Options ----
 const typeOptions = [
-  { label: '满减券', value: 'full_reduction' },
-  { label: '折扣券', value: 'discount' },
-  { label: '固定金额券', value: 'fixed' },
+  { label: '满减', value: 'full' },
+  { label: '折扣', value: 'percent' },
+  { label: '固定金额', value: 'fixed' },
 ]
 
-const typeFilterOptions = [
-  { label: '满减券', value: 'full_reduction' },
-  { label: '折扣券', value: 'discount' },
-  { label: '固定金额券', value: 'fixed' },
-]
-
-const statusFilterOptions = [
+const statusOptions = [
   { label: '启用', value: 'active' },
   { label: '禁用', value: 'inactive' },
+  { label: '已过期', value: 'expired' },
 ]
 
 const typeNameMap: Record<string, string> = {
-  full_reduction: '满减券',
-  discount: '折扣券',
-  fixed: '固定金额券',
+  full: '满减',
+  percent: '折扣',
+  fixed: '固定金额',
 }
 
 const statusNameMap: Record<string, string> = {
   active: '启用',
   inactive: '禁用',
-}
-
-const dateShortcuts = {
-  '最近7天': () => {
-    const end = new Date()
-    const start = new Date()
-    start.setTime(start.getTime() - 7 * 24 * 3600 * 1000)
-    return [start.getTime(), end.getTime()]
-  },
-  '最近30天': () => {
-    const end = new Date()
-    const start = new Date()
-    start.setTime(start.getTime() - 30 * 24 * 3600 * 1000)
-    return [start.getTime(), end.getTime()]
-  },
-  '最近90天': () => {
-    const end = new Date()
-    const start = new Date()
-    start.setTime(start.getTime() - 90 * 24 * 3600 * 1000)
-    return [start.getTime(), end.getTime()]
-  },
+  expired: '已过期',
 }
 
 // ---- Coupons ----
 const coupons = ref([
-  {
-    id: 1,
-    name: '新用户专享券',
-    type: 'full_reduction',
-    value: 50,
-    minAmount: 200,
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-    total: 1000,
-    used: 256,
-    status: 'active',
-  },
-  {
-    id: 2,
-    name: 'VIP折扣券',
-    type: 'discount',
-    value: 8.5,
-    minAmount: 100,
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-    total: 500,
-    used: 89,
-    status: 'active',
-  },
-  {
-    id: 3,
-    name: '新年特惠券',
-    type: 'fixed',
-    value: 30,
-    minAmount: 0,
-    startDate: '2026-01-01',
-    endDate: '2026-02-28',
-    total: 2000,
-    used: 2000,
-    status: 'inactive',
-  },
-  {
-    id: 4,
-    name: '企业客户专享',
-    type: 'full_reduction',
-    value: 200,
-    minAmount: 1000,
-    startDate: '2026-03-01',
-    endDate: '2026-12-31',
-    total: 200,
-    used: 45,
-    status: 'active',
-  },
-  {
-    id: 5,
-    name: '老用户回馈券',
-    type: 'discount',
-    value: 9,
-    minAmount: 50,
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-    total: 800,
-    used: 234,
-    status: 'active',
-  },
+  { id: 1, name: '新用户专享券', type: 'fixed', value: 50, minAmount: 100, totalCount: 1000, usedCount: 356, status: 'active', startDate: '2026-01-01', endDate: '2026-12-31' },
+  { id: 2, name: '满500减100', type: 'full', value: 100, minAmount: 500, totalCount: 500, usedCount: 128, status: 'active', startDate: '2026-03-01', endDate: '2026-09-30' },
+  { id: 3, name: '8折优惠券', type: 'percent', value: 20, minAmount: 200, totalCount: 800, usedCount: 445, status: 'active', startDate: '2026-01-15', endDate: '2026-06-30' },
+  { id: 4, name: '双十一狂欢券', type: 'fixed', value: 100, minAmount: 300, totalCount: 2000, usedCount: 2000, status: 'expired', startDate: '2025-11-01', endDate: '2025-11-30' },
+  { id: 5, name: '年中大促折扣', type: 'percent', value: 15, minAmount: 150, totalCount: 600, usedCount: 89, status: 'inactive', startDate: '2026-06-01', endDate: '2026-06-30' },
+  { id: 6, name: 'VIP专属券', type: 'fixed', value: 200, minAmount: 1000, totalCount: 100, usedCount: 23, status: 'active', startDate: '2026-01-01', endDate: '2026-12-31' },
 ])
 
 const filteredCoupons = computed(() => {
-  let result = coupons.value
-
-  if (searchKeyword.value.trim()) {
-    const kw = searchKeyword.value.trim().toLowerCase()
-    result = result.filter((c) => c.name.toLowerCase().includes(kw))
-  }
-
-  if (filterType.value) {
-    result = result.filter((c) => c.type === filterType.value)
-  }
-
-  if (filterStatus.value) {
-    result = result.filter((c) => c.status === filterStatus.value)
-  }
-
-  return result
+  return coupons.value.filter((c) => {
+    if (searchKeyword.value.trim()) {
+      const kw = searchKeyword.value.trim().toLowerCase()
+      if (!c.name.toLowerCase().includes(kw)) return false
+    }
+    if (filterType.value && c.type !== filterType.value) return false
+    if (filterStatus.value && c.status !== filterStatus.value) return false
+    return true
+  })
 })
 
 // ---- Coupon Form ----
@@ -275,8 +189,8 @@ const couponForm = reactive({
   type: null as string | null,
   value: 0,
   minAmount: 0,
-  validity: null as [number, number] | null,
-  total: 100,
+  totalCount: 100,
+  dateRange: null as [number, number] | null,
   status: 'active',
 })
 
@@ -284,7 +198,7 @@ const couponRules: FormRules = {
   name: { required: true, message: '请输入优惠券名称', trigger: 'blur' },
   type: { required: true, message: '请选择优惠券类型', trigger: 'change' },
   value: { required: true, type: 'number', message: '请输入面值', trigger: 'blur' },
-  total: { required: true, type: 'number', message: '请输入发放数量', trigger: 'blur' },
+  totalCount: { required: true, type: 'number', message: '请输入发放总量', trigger: 'blur' },
 }
 
 // ---- Coupon Table Columns ----
@@ -294,43 +208,37 @@ const couponColumns: DataTableColumns<any> = [
   {
     title: '类型',
     key: 'type',
-    width: 100,
-    render: (row) =>
-      h(
-        NTag,
-        {
-          size: 'small',
-          round: true,
-          bordered: false,
-          type: row.type === 'full_reduction' ? 'info' : row.type === 'discount' ? 'warning' : 'success',
-        },
-        { default: () => typeNameMap[row.type] || row.type }
-      ),
+    width: 90,
+    render: (row) => h(NTag, { size: 'small', round: true, bordered: false, type: row.type === 'fixed' ? 'success' : row.type === 'percent' ? 'warning' : 'info' }, { default: () => typeNameMap[row.type] || row.type }),
   },
   {
     title: '面值',
     key: 'value',
     width: 100,
-    render: (row) =>
-      h('span', { style: 'font-weight:600;color:#1890ff' }, row.type === 'discount' ? `${row.value}折` : `¥${row.value}`),
+    sorter: (a, b) => a.value - b.value,
+    render: (row) => {
+      const prefix = row.type === 'percent' ? '%' : '¥'
+      return h('span', { style: 'font-weight:600;color:#18a058' }, `${row.type === 'percent' ? row.value : row.value}${prefix}`)
+    },
   },
   {
     title: '使用条件',
     key: 'minAmount',
     width: 120,
-    render: (row) => (row.minAmount > 0 ? `满¥${row.minAmount}可用` : '无门槛'),
+    render: (row) => h('span', null, row.minAmount > 0 ? `满¥${row.minAmount}可用` : '无门槛'),
   },
   {
     title: '有效期',
-    key: 'validity',
-    width: 180,
-    render: (row) => `${row.startDate} ~ ${row.endDate}`,
+    key: 'dateRange',
+    width: 200,
+    render: (row) => h('span', null, `${row.startDate} ~ ${row.endDate}`),
   },
   {
     title: '已使用',
-    key: 'used',
+    key: 'usedCount',
     width: 100,
-    render: (row) => `${row.used} / ${row.total}`,
+    sorter: (a, b) => a.usedCount - b.usedCount,
+    render: (row) => h('span', null, `${row.usedCount} / ${row.totalCount}`),
   },
   {
     title: '状态',
@@ -340,6 +248,7 @@ const couponColumns: DataTableColumns<any> = [
       h(NSwitch, {
         value: row.status === 'active',
         size: 'small',
+        disabled: row.status === 'expired',
         onUpdateValue: () => handleToggleCoupon(row),
       }),
   },
@@ -352,23 +261,19 @@ const couponColumns: DataTableColumns<any> = [
         default: () => [
           h(NTooltip, {}, {
             trigger: () =>
-              h(
-                NButton,
-                { size: 'small', quaternary: true, type: 'primary', onClick: () => openCouponModal(row) },
-                { icon: () => h(NIcon, null, { default: () => h(EditIcon) }) }
-              ),
+              h(NButton, { size: 'small', quaternary: true, type: 'primary', onClick: () => openCouponModal(row) }, {
+                icon: () => h(NIcon, null, { default: () => h(EditIcon) }),
+              }),
             default: () => '编辑',
           }),
           h(NPopconfirm, { onPositiveClick: () => handleToggleCoupon(row) }, {
             trigger: () =>
               h(NTooltip, {}, {
                 trigger: () =>
-                  h(
-                    NButton,
-                    { size: 'small', quaternary: true, type: 'warning' },
-                    { icon: () => h(NIcon, null, { default: () => h(DownIcon) }) }
-                  ),
-                default: () => (row.status === 'active' ? '禁用' : '启用'),
+                  h(NButton, { size: 'small', quaternary: true, type: 'warning', disabled: row.status === 'expired' }, {
+                    icon: () => h(NIcon, null, { default: () => h(StatusIcon) }),
+                  }),
+                default: () => row.status === 'active' ? '禁用' : '启用',
               }),
             default: () => `确认${row.status === 'active' ? '禁用' : '启用'}该优惠券？`,
           }),
@@ -376,11 +281,9 @@ const couponColumns: DataTableColumns<any> = [
             trigger: () =>
               h(NTooltip, {}, {
                 trigger: () =>
-                  h(
-                    NButton,
-                    { size: 'small', quaternary: true, type: 'error' },
-                    { icon: () => h(NIcon, null, { default: () => h(DeleteIcon) }) }
-                  ),
+                  h(NButton, { size: 'small', quaternary: true, type: 'error' }, {
+                    icon: () => h(NIcon, null, { default: () => h(DeleteIcon) }),
+                  }),
                 default: () => '删除',
               }),
             default: () => `确认删除优惠券「${row.name}」？`,
@@ -390,14 +293,11 @@ const couponColumns: DataTableColumns<any> = [
   },
 ]
 
-// DownArrow icon for "禁用"
-const DownIcon = defineComponent({
-  render: () =>
-    h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 512 512', fill: 'currentColor' }, [
-      h('path', {
-        d: 'M256 464l128-128H320V256h-32v80H128l128 128zm0-400v80h-32V144H128l128-128 128 128H320V64h-64z',
-      }),
-    ]),
+// Status icon component
+const StatusIcon = defineComponent({
+  render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 512 512', fill: 'currentColor' }, [
+    h('path', { d: 'M256 48C141.13 48 48 141.13 48 256s93.13 208 208 208 208-93.13 208-208S370.87 48 256 48zm-24 312h48v48h-48v-48zm0-80h48v80h-48v-80zm0-160h48v120h-48V120z' }),
+  ]),
 })
 
 // ---- Actions ----
@@ -409,30 +309,18 @@ function openCouponModal(coupon?: any) {
       type: coupon.type,
       value: coupon.value,
       minAmount: coupon.minAmount,
-      validity: [new Date(coupon.startDate).getTime(), new Date(coupon.endDate).getTime()],
-      total: coupon.total,
+      totalCount: coupon.totalCount,
+      dateRange: null,
       status: coupon.status,
     })
   } else {
-    Object.assign(couponForm, {
-      name: '',
-      type: null,
-      value: 0,
-      minAmount: 0,
-      validity: null,
-      total: 100,
-      status: 'active',
-    })
+    Object.assign(couponForm, { name: '', type: null, value: 0, minAmount: 0, totalCount: 100, dateRange: null, status: 'active' })
   }
   couponModalVisible.value = true
 }
 
 async function handleCouponSubmit() {
-  try {
-    await couponFormRef.value?.validate()
-  } catch {
-    return
-  }
+  try { await couponFormRef.value?.validate() } catch { return }
   submitting.value = true
   try {
     // TODO: API call
@@ -446,6 +334,7 @@ async function handleCouponSubmit() {
 }
 
 function handleToggleCoupon(coupon: any) {
+  if (coupon.status === 'expired') return
   coupon.status = coupon.status === 'active' ? 'inactive' : 'active'
   message.success(`优惠券「${coupon.name}」已${coupon.status === 'active' ? '启用' : '禁用'}`)
 }
@@ -461,7 +350,16 @@ function handleSearch() {
 </script>
 
 <style scoped>
-.n-card {
-  margin: 16px;
+:deep(.n-card) {
+  background-color: #1e1e2e;
+  color: #cdd6f4;
+}
+
+:deep(.n-data-table) {
+  --n-th-color: #181825;
+  --n-td-color: #1e1e2e;
+  --n-border-color: #313244;
+  --n-th-text-color: #cdd6f4;
+  --n-td-text-color: #cdd6f4;
 }
 </style>

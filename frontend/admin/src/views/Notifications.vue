@@ -6,283 +6,330 @@
         <n-grid :cols="3" :x-gap="16" style="margin-top: 20px">
           <!-- 邮件渠道 -->
           <n-gi>
-            <n-card title="邮件通知" size="small" :bordered="false">
-              <n-space vertical>
-                <n-space justify="space-between" align="center">
-                  <n-text>启用邮件通知</n-text>
+            <n-card title="邮件通知" size="small" :bordered="false" style="border-radius: 12px">
+              <n-form :model="channels.email" label-placement="left" label-width="80">
+                <n-form-item label="启用">
                   <n-switch v-model:value="channels.email.enabled" />
-                </n-space>
+                </n-form-item>
                 <template v-if="channels.email.enabled">
-                  <n-form label-placement="top" size="small">
-                    <n-form-item label="发件人名称">
-                      <n-input v-model:value="channels.email.fromName" placeholder="锚点财务" />
-                    </n-form-item>
-                    <n-form-item label="发件人邮箱">
-                      <n-input v-model:value="channels.email.fromEmail" placeholder="noreply@example.com" />
-                    </n-form-item>
-                  </n-form>
-                  <n-button size="small" type="primary" @click="testChannel('email')">
-                    发送测试邮件
-                  </n-button>
+                  <n-form-item label="发件人">
+                    <n-input v-model:value="channels.email.fromName" placeholder="锚点财务" />
+                  </n-form-item>
+                  <n-form-item label="回复邮箱">
+                    <n-input v-model:value="channels.email.replyTo" placeholder="support@example.com" />
+                  </n-form-item>
                 </template>
-              </n-space>
+              </n-form>
+              <template #footer>
+                <n-space justify="end">
+                  <n-button size="small" @click="testChannel('email')">发送测试</n-button>
+                  <n-button size="small" type="primary" @click="saveChannel('email')">保存</n-button>
+                </n-space>
+              </template>
             </n-card>
           </n-gi>
 
           <!-- 短信渠道 -->
           <n-gi>
-            <n-card title="短信通知" size="small" :bordered="false">
-              <n-space vertical>
-                <n-space justify="space-between" align="center">
-                  <n-text>启用短信通知</n-text>
+            <n-card title="短信通知" size="small" :bordered="false" style="border-radius: 12px">
+              <n-form :model="channels.sms" label-placement="left" label-width="80">
+                <n-form-item label="启用">
                   <n-switch v-model:value="channels.sms.enabled" />
-                </n-space>
+                </n-form-item>
                 <template v-if="channels.sms.enabled">
-                  <n-form label-placement="top" size="small">
-                    <n-form-item label="短信签名">
-                      <n-input v-model:value="channels.sms.signName" placeholder="短信签名" />
-                    </n-form-item>
-                    <n-form-item label="测试手机号">
-                      <n-input v-model:value="channels.sms.testPhone" placeholder="13800138000" />
-                    </n-form-item>
-                  </n-form>
-                  <n-button size="small" type="primary" @click="testChannel('sms')">
-                    发送测试短信
-                  </n-button>
+                  <n-form-item label="签名">
+                    <n-input v-model:value="channels.sms.signName" placeholder="短信签名" />
+                  </n-form-item>
+                  <n-form-item label="测试手机">
+                    <n-input v-model:value="channels.sms.testPhone" placeholder="13800138000" />
+                  </n-form-item>
                 </template>
-              </n-space>
+              </n-form>
+              <template #footer>
+                <n-space justify="end">
+                  <n-button size="small" @click="testChannel('sms')">发送测试</n-button>
+                  <n-button size="small" type="primary" @click="saveChannel('sms')">保存</n-button>
+                </n-space>
+              </template>
             </n-card>
           </n-gi>
 
           <!-- 站内信渠道 -->
           <n-gi>
-            <n-card title="站内信通知" size="small" :bordered="false">
-              <n-space vertical>
-                <n-space justify="space-between" align="center">
-                  <n-text>启用站内信</n-text>
-                  <n-switch v-model:value="channels.internal.enabled" />
-                </n-space>
-                <template v-if="channels.internal.enabled">
-                  <n-form label-placement="top" size="small">
-                    <n-form-item label="保留天数">
-                      <n-input-number v-model:value="channels.internal.retainDays" :min="1" :max="365" style="width:100%" />
-                    </n-form-item>
-                    <n-form-item label="最大条数">
-                      <n-input-number v-model:value="channels.internal.maxCount" :min="10" :max="1000" style="width:100%" />
-                    </n-form-item>
-                  </n-form>
+            <n-card title="站内信通知" size="small" :bordered="false" style="border-radius: 12px">
+              <n-form :model="channels.site" label-placement="left" label-width="80">
+                <n-form-item label="启用">
+                  <n-switch v-model:value="channels.site.enabled" />
+                </n-form-item>
+                <template v-if="channels.site.enabled">
+                  <n-form-item label="保留天数">
+                    <n-input-number v-model:value="channels.site.retainDays" :min="1" :max="365" style="width: 100%" />
+                  </n-form-item>
+                  <n-form-item label="最大条数">
+                    <n-input-number v-model:value="channels.site.maxCount" :min="10" :max="1000" style="width: 100%" />
+                  </n-form-item>
                 </template>
-              </n-space>
+              </n-form>
+              <template #footer>
+                <n-space justify="end">
+                  <n-button size="small" type="primary" @click="saveChannel('site')">保存</n-button>
+                </n-space>
+              </template>
             </n-card>
           </n-gi>
         </n-grid>
-        <n-button type="primary" style="margin-top: 20px" @click="saveChannels">保存渠道配置</n-button>
       </n-tab-pane>
 
-      <!-- 通知事件 -->
-      <n-tab-pane name="events" tab="通知事件">
+      <!-- 事件通知开关 -->
+      <n-tab-pane name="events" tab="事件通知">
         <n-data-table
           :columns="eventColumns"
-          :data="eventList"
+          :data="eventData"
+          :pagination="false"
           :bordered="false"
-          :single-line="false"
           striped
-          style="margin-top: 12px"
+          style="margin-top: 16px"
         />
       </n-tab-pane>
 
       <!-- 发送记录 -->
       <n-tab-pane name="logs" tab="发送记录">
-        <n-space style="margin-top: 12px; margin-bottom: 12px">
+        <n-space style="margin-top: 16px; margin-bottom: 12px">
           <n-select
             v-model:value="logFilter.channel"
-            :options="channelFilterOptions"
-            placeholder="渠道筛选"
+            :options="logChannelOptions"
+            placeholder="全部渠道"
             clearable
             style="width: 140px"
           />
           <n-select
             v-model:value="logFilter.status"
-            :options="statusFilterOptions"
-            placeholder="状态筛选"
+            :options="logStatusOptions"
+            placeholder="全部状态"
             clearable
             style="width: 140px"
           />
-          <n-button @click="refreshLogs">刷新</n-button>
+          <n-button type="primary" @click="refreshLogs">刷新</n-button>
         </n-space>
         <n-data-table
           :columns="logColumns"
           :data="filteredLogs"
+          :pagination="logPagination"
           :bordered="false"
-          :single-line="false"
           striped
         />
       </n-tab-pane>
     </n-tabs>
   </n-card>
+
+  <!-- 测试发送对话框 -->
+  <n-modal
+    v-model:show="showTestModal"
+    preset="card"
+    title="测试发送"
+    style="width: 480px"
+    :bordered="false"
+  >
+    <n-form :model="testForm" label-placement="left" label-width="80">
+      <n-form-item label="渠道">
+        <n-tag :type="testForm.channel === 'email' ? 'info' : testForm.channel === 'sms' ? 'warning' : 'default'">
+          {{ testForm.channel === 'email' ? '邮件' : testForm.channel === 'sms' ? '短信' : '站内信' }}
+        </n-tag>
+      </n-form-item>
+      <n-form-item :label="testForm.channel === 'email' ? '邮箱' : '手机号'" v-if="testForm.channel !== 'site'">
+        <n-input v-model:value="testForm.target" :placeholder="testForm.channel === 'email' ? 'test@example.com' : '13800138000'" />
+      </n-form-item>
+    </n-form>
+    <template #footer>
+      <n-space justify="end">
+        <n-button @click="showTestModal = false">取消</n-button>
+        <n-button type="primary" :loading="testSending" @click="sendTest">发送</n-button>
+      </n-space>
+    </template>
+  </n-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, h } from 'vue'
-import { useMessage, NTag, NSwitch, NSpace, NButton } from 'naive-ui'
+import { useMessage, NTag, NSwitch, NButton, NSpace, NPopconfirm } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 
 const message = useMessage()
 const activeTab = ref('channels')
 
-// ---- 通知渠道配置 ----
+// ---- 渠道配置 ----
 const channels = reactive({
-  email: { enabled: true, fromName: '锚点财务', fromEmail: 'noreply@anchorfinance.com' },
+  email: { enabled: true, fromName: '锚点财务', replyTo: 'support@anchorfinance.com' },
   sms: { enabled: false, signName: '锚点财务', testPhone: '' },
-  internal: { enabled: true, retainDays: 90, maxCount: 500 },
+  site: { enabled: true, retainDays: 90, maxCount: 200 },
 })
 
-function saveChannels() {
-  // TODO: API call
-  message.success('渠道配置已保存')
+function saveChannel(type: string) {
+  message.success(`${type === 'email' ? '邮件' : type === 'sms' ? '短信' : '站内信'}渠道已保存`)
 }
+
+// ---- 测试发送 ----
+const showTestModal = ref(false)
+const testSending = ref(false)
+const testForm = reactive({ channel: '', target: '' })
 
 function testChannel(type: string) {
-  // TODO: API call
-  const names: Record<string, string> = { email: '测试邮件', sms: '测试短信', internal: '站内信' }
-  message.info(`${names[type] || '测试'}发送中...`)
+  testForm.channel = type
+  testForm.target = ''
+  showTestModal.value = true
 }
 
-// ---- 通知事件列表 ----
-const eventList = ref([
-  { id: '1', name: 'user_register', label: '用户注册', desc: '新用户完成注册时触发', email: true, sms: false, internal: true },
-  { id: '2', name: 'order_created', label: '订单创建', desc: '用户下单成功时触发', email: true, sms: true, internal: true },
-  { id: '3', name: 'order_paid', label: '订单支付', desc: '订单支付成功时触发', email: true, sms: true, internal: true },
-  { id: '4', name: 'order_expired', label: '订单到期', desc: '服务即将到期时触发', email: true, sms: false, internal: true },
-  { id: '5', name: 'bill_created', label: '账单生成', desc: '新账单生成时触发', email: true, sms: false, internal: true },
-  { id: '6', name: 'bill_overdue', label: '账单逾期', desc: '账单逾期未付时触发', email: true, sms: true, internal: true },
-  { id: '7', name: 'ticket_reply', label: '工单回复', desc: '工单有新回复时触发', email: true, sms: false, internal: true },
-  { id: '8', name: 'ticket_closed', label: '工单关闭', desc: '工单被关闭时触发', email: true, sms: false, internal: true },
-  { id: '9', name: 'password_reset', label: '密码重置', desc: '用户请求重置密码时触发', email: true, sms: false, internal: false },
-  { id: '10', name: 'server_down', label: '服务器宕机', desc: '监控到服务器不可用时触发', email: true, sms: true, internal: true },
+function sendTest() {
+  if (testForm.channel !== 'site' && !testForm.target) {
+    message.warning('请输入目标地址')
+    return
+  }
+  testSending.value = true
+  setTimeout(() => {
+    testSending.value = false
+    showTestModal.value = false
+    message.success('测试消息已发送')
+  }, 800)
+}
+
+// ---- 事件通知 ----
+interface EventRow {
+  id: number
+  name: string
+  description: string
+  email: boolean
+  sms: boolean
+  site: boolean
+}
+
+const eventData = ref<EventRow[]>([
+  { id: 1, name: '用户注册', description: '新用户完成注册时触发', email: true, sms: false, site: true },
+  { id: 2, name: '订单创建', description: '用户创建新订单时触发', email: true, sms: true, site: true },
+  { id: 3, name: '订单支付成功', description: '订单支付成功后触发', email: true, sms: true, site: true },
+  { id: 4, name: '账单到期提醒', description: '账单到期前 N 天触发', email: true, sms: false, site: true },
+  { id: 5, name: '账单逾期', description: '账单逾期未支付时触发', email: true, sms: true, site: true },
+  { id: 6, name: '工单创建', description: '用户提交新工单时触发', email: false, sms: false, site: true },
+  { id: 7, name: '工单回复', description: '工单收到新回复时触发', email: true, sms: false, site: true },
+  { id: 8, name: '密码重置', description: '用户请求重置密码时触发', email: true, sms: false, site: false },
+  { id: 9, name: '服务开通', description: '服务开通成功后触发', email: true, sms: true, site: true },
+  { id: 10, name: '服务到期', description: '服务即将到期时触发', email: true, sms: true, site: true },
+  { id: 11, name: '退款通知', description: '退款处理完成时触发', email: true, sms: false, site: true },
+  { id: 12, name: '系统公告', description: '管理员发布公告时触发', email: false, sms: false, site: true },
 ])
 
-const eventColumns: DataTableColumns<any> = [
-  { title: '事件名称', key: 'label', width: 140 },
-  { title: '描述', key: 'desc', ellipsis: { tooltip: true } },
+function toggleEvent(row: EventRow, field: 'email' | 'sms' | 'site', val: boolean) {
+  row[field] = val
+  message.success(`已${val ? '开启' : '关闭'}「${row.name}」的${field === 'email' ? '邮件' : field === 'sms' ? '短信' : '站内信'}通知`)
+}
+
+const eventColumns: DataTableColumns<EventRow> = [
+  { title: '事件名称', key: 'name', width: 160 },
+  { title: '描述', key: 'description', ellipsis: { tooltip: true } },
   {
     title: '邮件通知',
     key: 'email',
-    width: 100,
+    width: 110,
     align: 'center',
     render(row) {
-      return h(NSwitch, {
-        value: row.email,
-        size: 'small',
-        onUpdateValue: (val: boolean) => {
-          row.email = val
-          message.success(`邮件通知已${val ? '开启' : '关闭'}`)
-        },
-      })
+      return h(NSwitch, { value: row.email, size: 'small', onUpdateValue: (v: boolean) => toggleEvent(row, 'email', v) })
     },
   },
   {
     title: '短信通知',
     key: 'sms',
-    width: 100,
+    width: 110,
     align: 'center',
     render(row) {
-      return h(NSwitch, {
-        value: row.sms,
-        size: 'small',
-        onUpdateValue: (val: boolean) => {
-          row.sms = val
-          message.success(`短信通知已${val ? '开启' : '关闭'}`)
-        },
-      })
+      return h(NSwitch, { value: row.sms, size: 'small', onUpdateValue: (v: boolean) => toggleEvent(row, 'sms', v) })
     },
   },
   {
-    title: '站内信',
-    key: 'internal',
-    width: 100,
+    title: '站内信通知',
+    key: 'site',
+    width: 110,
     align: 'center',
     render(row) {
-      return h(NSwitch, {
-        value: row.internal,
-        size: 'small',
-        onUpdateValue: (val: boolean) => {
-          row.internal = val
-          message.success(`站内信通知已${val ? '开启' : '关闭'}`)
-        },
-      })
+      return h(NSwitch, { value: row.site, size: 'small', onUpdateValue: (v: boolean) => toggleEvent(row, 'site', v) })
     },
   },
 ]
 
 // ---- 发送记录 ----
+interface LogRow {
+  id: number
+  channel: string
+  event: string
+  target: string
+  status: string
+  time: string
+}
+
 const logFilter = reactive({ channel: null as string | null, status: null as string | null })
 
-const channelFilterOptions = [
+const logChannelOptions = [
   { label: '邮件', value: 'email' },
   { label: '短信', value: 'sms' },
-  { label: '站内信', value: 'internal' },
+  { label: '站内信', value: 'site' },
 ]
 
-const statusFilterOptions = [
+const logStatusOptions = [
   { label: '成功', value: 'success' },
   { label: '失败', value: 'failed' },
   { label: '待发送', value: 'pending' },
 ]
 
-const logList = ref([
-  { id: '1', time: '2026-07-27 09:30:12', channel: 'email', event: '订单支付', recipient: 'user@example.com', status: 'success' },
-  { id: '2', time: '2026-07-27 09:28:05', channel: 'sms', event: '订单创建', recipient: '138****8000', status: 'success' },
-  { id: '3', time: '2026-07-27 09:25:00', channel: 'internal', event: '工单回复', recipient: '用户 张三', status: 'success' },
-  { id: '4', time: '2026-07-27 09:20:33', channel: 'email', event: '账单逾期', recipient: 'billing@example.com', status: 'failed' },
-  { id: '5', time: '2026-07-27 08:15:22', channel: 'email', event: '用户注册', recipient: 'newuser@example.com', status: 'success' },
-  { id: '6', time: '2026-07-26 18:00:00', channel: 'sms', event: '服务器宕机', recipient: '139****0000', status: 'success' },
+const logData = ref<LogRow[]>([
+  { id: 1, channel: 'email', event: '订单支付成功', target: 'user@example.com', status: 'success', time: '2026-07-27 09:32' },
+  { id: 2, channel: 'sms', event: '账单到期提醒', target: '138****8000', status: 'success', time: '2026-07-27 09:00' },
+  { id: 3, channel: 'site', event: '工单回复', target: '用户 #1024', status: 'success', time: '2026-07-26 18:15' },
+  { id: 4, channel: 'email', event: '密码重置', target: 'admin@example.com', status: 'failed', time: '2026-07-26 14:20' },
+  { id: 5, channel: 'email', event: '用户注册', target: 'newuser@example.com', status: 'success', time: '2026-07-26 10:05' },
+  { id: 6, channel: 'sms', event: '订单创建', target: '139****1234', status: 'pending', time: '2026-07-26 09:50' },
+  { id: 7, channel: 'site', event: '系统公告', target: '全体用户', status: 'success', time: '2026-07-25 16:00' },
+  { id: 8, channel: 'email', event: '服务到期', target: 'vip@example.com', status: 'success', time: '2026-07-25 11:30' },
 ])
 
 const filteredLogs = computed(() => {
-  return logList.value.filter(l => {
+  return logData.value.filter((l) => {
     if (logFilter.channel && l.channel !== logFilter.channel) return false
     if (logFilter.status && l.status !== logFilter.status) return false
     return true
   })
 })
 
-function refreshLogs() {
-  // TODO: API call
-  message.success('发送记录已刷新')
-}
+const logPagination = reactive({ pageSize: 10 })
 
-const channelLabel: Record<string, string> = { email: '邮件', sms: '短信', internal: '站内信' }
+const channelLabel: Record<string, string> = { email: '邮件', sms: '短信', site: '站内信' }
+const channelTagType: Record<string, 'info' | 'warning' | 'default'> = { email: 'info', sms: 'warning', site: 'default' }
+const statusLabel: Record<string, string> = { success: '成功', failed: '失败', pending: '待发送' }
+const statusTagType: Record<string, 'success' | 'error' | 'warning'> = { success: 'success', failed: 'error', pending: 'warning' }
 
-const logColumns: DataTableColumns<any> = [
-  { title: '时间', key: 'time', width: 170 },
+const logColumns: DataTableColumns<LogRow> = [
+  { title: 'ID', key: 'id', width: 60 },
   {
     title: '渠道',
     key: 'channel',
-    width: 80,
+    width: 90,
     render(row) {
-      const typeMap: Record<string, string> = { email: 'info', sms: 'warning', internal: 'success' }
-      return h(NTag, { size: 'small', type: (typeMap[row.channel] as any) || 'default' }, { default: () => channelLabel[row.channel] || row.channel })
+      return h(NTag, { type: channelTagType[row.channel], size: 'small', bordered: false }, { default: () => channelLabel[row.channel] })
     },
   },
-  { title: '事件', key: 'event', width: 120 },
-  { title: '接收方', key: 'recipient', ellipsis: { tooltip: true } },
+  { title: '事件', key: 'event', width: 160 },
+  { title: '目标', key: 'target', ellipsis: { tooltip: true } },
   {
     title: '状态',
     key: 'status',
-    width: 80,
-    align: 'center',
+    width: 90,
     render(row) {
-      const map: Record<string, { label: string; type: string }> = {
-        success: { label: '成功', type: 'success' },
-        failed: { label: '失败', type: 'error' },
-        pending: { label: '待发送', type: 'warning' },
-      }
-      const info = map[row.status] || { label: row.status, type: 'default' }
-      return h(NTag, { size: 'small', type: info.type as any }, { default: () => info.label })
+      return h(NTag, { type: statusTagType[row.status], size: 'small', bordered: false }, { default: () => statusLabel[row.status] })
     },
   },
+  { title: '时间', key: 'time', width: 160 },
 ]
+
+function refreshLogs() {
+  message.success('记录已刷新')
+}
 </script>
 
 <style scoped>
