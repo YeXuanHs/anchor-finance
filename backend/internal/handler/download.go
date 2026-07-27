@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/anchor-finance/backend/internal/service"
-	"github.com/anchor-finance/backend/pkg/logger"
-	"github.com/anchor-finance/backend/pkg/response"
+	"anchorfinance/internal/service"
+	"anchorfinance/pkg/logger"
+	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )

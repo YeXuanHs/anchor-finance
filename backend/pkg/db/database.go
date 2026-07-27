@@ -18,6 +18,8 @@ type Config struct {
 	DBName   string
 }
 
+var dbConn *gorm.DB
+
 // InitDB establishes a PostgreSQL connection using GORM.
 func InitDB(cfg Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
@@ -41,10 +43,46 @@ func InitDB(cfg Config) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
+	dbConn = db
 	return db, nil
+}
+
+// GetDB returns the database connection.
+func GetDB() *gorm.DB {
+	return dbConn
 }
 
 // AutoMigrate runs automatic migration for all registered models.
 func AutoMigrate(db *gorm.DB, models ...interface{}) error {
 	return db.AutoMigrate(models...)
+}
+
+// systemSetting is used to read system settings from DB.
+type systemSetting struct {
+	Key   string `gorm:"column:key"`
+	Value string `gorm:"column:value"`
+}
+
+func (systemSetting) TableName() string {
+	return "system_settings"
+}
+
+// GetSystemSetting reads a single setting value from the database.
+func GetSystemSetting(key string) string {
+	if dbConn == nil {
+		return ""
+	}
+	var s systemSetting
+	if err := dbConn.Where("key = ?", key).First(&s).Error; err != nil {
+		return ""
+	}
+	return s.Value
+}
+
+// SetSystemSetting writes a single setting value to the database.
+func SetSystemSetting(key, value string) error {
+	if dbConn == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	return dbConn.Where("key = ?", key).Assign(systemSetting{Value: value}).FirstOrCreate(&systemSetting{Key: key}).Error
 }

@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"github.com/anchor-finance/backend/internal/service"
+	"anchorfinance/internal/service"
 	"github.com/gin-gonic/gin"
 )
 

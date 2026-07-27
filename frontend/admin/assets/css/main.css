@@ -1,0 +1,253 @@
+/* AnchorFinance Admin - Deep Blue Theme */
+:root {
+  --af-primary: #409eff;
+  --af-primary-light: #66b1ff;
+  --af-primary-dark: #337ecc;
+  --af-success: #67c23a;
+  --af-warning: #e6a23c;
+  --af-danger: #f56c6c;
+  --af-info: #909399;
+
+  /* Deep blue sidebar */
+  --sidebar-bg: #001529;
+  --sidebar-bg-light: #001d3d;
+  --sidebar-text: rgba(255, 255, 255, 0.65);
+  --sidebar-text-active: #ffffff;
+  --sidebar-item-active: var(--af-primary);
+
+  /* Content area */
+  --content-bg: #f0f2f5;
+  --card-bg: #ffffff;
+  --border-color: #e8e8e8;
+  --text-primary: #1a1a2e;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#__nuxt {
+  width: 100%;
+  height: 100%;
+}
+
+/* Element Plus theme overrides for deep blue */
+:root {
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #79bbff;
+  --el-color-primary-light-5: #a0cfff;
+  --el-color-primary-light-7: #c6e2ff;
+  --el-color-primary-light-8: #d9ecff;
+  --el-color-primary-light-9: #ecf5ff;
+  --el-color-primary-dark-2: #337ecc;
+}
+
+/* Dark sidebar menu overrides */
+.el-menu {
+  border-right: none !important;
+}
+
+.el-menu--dark {
+  --el-menu-bg-color: #001529;
+  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08);
+  --el-menu-text-color: rgba(255, 255, 255, 0.65);
+  --el-menu-active-color: #ffffff;
+  --el-menu-item-font-size: 14px;
+}
+
+.el-menu--dark .el-menu-item {
+  height: 44px;
+  line-height: 44px;
+  margin: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.el-menu--dark .el-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.el-menu--dark .el-menu-item.is-active {
+  background-color: var(--af-primary) !important;
+  color: #ffffff !important;
+  font-weight: 500;
+}
+
+.el-menu--dark .el-sub-menu__title {
+  height: 44px;
+  line-height: 44px;
+  margin: 4px 8px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.el-menu--dark .el-sub-menu__title:hover {
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* Card styling */
+.admin-card {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03),
+              0 1px 6px -1px rgba(0, 0, 0, 0.02),
+              0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  transition: all 0.3s;
+}
+
+.admin-card:hover {
+  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.06),
+              0 6px 16px 0 rgba(0, 0, 0, 0.08),
+              0 9px 28px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Stat card gradient backgrounds */
+.stat-card {
+  border-radius: 12px;
+  border: none;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card.blue {
+  background: linear-gradient(135deg, #409eff 0%, #337ecc 100%);
+  color: #ffffff;
+}
+
+.stat-card.green {
+  background: linear-gradient(135deg, #67c23a 0%, #529b2e 100%);
+  color: #ffffff;
+}
+
+.stat-card.orange {
+  background: linear-gradient(135deg, #e6a23c 0%, #cf9236 100%);
+  color: #ffffff;
+}
+
+.stat-card.red {
+  background: linear-gradient(135deg, #f56c6c 0%, #dd6161 100%);
+  color: #ffffff;
+}
+
+/* Table styling */
+.el-table {
+  --el-table-border-color: #f0f0f0;
+  --el-table-header-bg-color: #fafafa;
+  --el-table-header-text-color: #1a1a2e;
+  --el-table-text-color: #333333;
+}
+
+.el-table th.el-table__cell {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* Page header */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* Breadcrumb override */
+.el-breadcrumb {
+  font-size: 14px;
+}
+
+.el-breadcrumb__inner {
+  color: var(--text-secondary) !important;
+}
+
+.el-breadcrumb__inner.is-link:hover {
+  color: var(--af-primary) !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-enter-active {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Skeleton loading */
+.skeleton-block {
+  background: linear-gradient(90deg, #f2f2f2 25%, #e6e6e6 37%, #f2f2f2 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+  border-radius: 4px;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}

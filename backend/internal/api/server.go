@@ -5,51 +5,52 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/anchor-finance/backend/internal/api/admin"
-	"github.com/anchor-finance/backend/internal/api/middleware"
-	v1 "github.com/anchor-finance/backend/internal/api/v1"
-	v2 "github.com/anchor-finance/backend/internal/api/v2"
-	"github.com/anchor-finance/backend/internal/service"
-	"github.com/anchor-finance/backend/pkg/auth"
-	"github.com/anchor-finance/backend/pkg/logger"
+	"anchorfinance/internal/api/admin"
+	"anchorfinance/internal/api/middleware"
+	v1 "anchorfinance/internal/api/v1"
+	v2 "anchorfinance/internal/api/v2"
+	"anchorfinance/internal/config"
+	"anchorfinance/internal/service"
+	"anchorfinance/pkg/auth"
+	"anchorfinance/pkg/db"
+	"anchorfinance/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 // Deps holds all dependencies for route registration.
 type Deps struct {
-	DB      *gorm.DB
-	Redis   *redis.Client
-	Log     *logger.Logger
-	JWTKey  string
-	UserSvc *service.UserService
-	ProdSvc *service.ProductService
-	OrdSvc  *service.OrderService
-	InvSvc  *service.InvoiceService
-	TicSvc  *service.TicketService
-	PaySvc  *service.PaymentService
-	CartSvc *service.CartService
+	DB       *gorm.DB
+	Redis    *redis.Client
+	Log      *logger.Logger
+	JWTKey   string
+	UserSvc  *service.UserService
+	ProdSvc  *service.ProductService
+	OrdSvc   *service.OrderService
+	InvSvc   *service.InvoiceService
+	TicSvc   *service.TicketService
+	PaySvc   *service.PaymentService
+	CartSvc  *service.CartService
 	OAuthSvc *service.OAuthService
 }
 
 // Server holds the application server dependencies.
 type Server struct {
-	db         *gorm.DB
-	redis      *redis.Client
+	cfg        *config.Config
 	jwtManager *auth.JWTManager
 	router     *gin.Engine
-	installH   *InstallHandler
 	deps       *Deps
 }
 
 // NewServer creates and configures the HTTP server with all routes and middleware.
-func NewServer(dbConn *gorm.DB, rdb *redis.Client, jwtSecret string) *Server {
+func NewServer(cfg *config.Config, jwtMgr *auth.JWTManager) *Server {
 	gin.SetMode(gin.ReleaseMode)
 
-	log := logger.New()
-	jwtMgr := auth.NewJWTManager(jwtSecret, 72)
+	dbConn := db.GetDB()
+	log := logger.Default()
+	rdb := db.GetRedis()
+	jwtKey := db.GetSystemSetting("jwt_secret")
 
 	// Initialize all services
 	userSvc := service.NewUserService(dbConn, log)
@@ -65,7 +66,7 @@ func NewServer(dbConn *gorm.DB, rdb *redis.Client, jwtSecret string) *Server {
 		DB:       dbConn,
 		Redis:    rdb,
 		Log:      log,
-		JWTKey:   jwtSecret,
+		JWTKey:   jwtKey,
 		UserSvc:  userSvc,
 		ProdSvc:  prodSvc,
 		OrdSvc:   ordSvc,
@@ -77,11 +78,9 @@ func NewServer(dbConn *gorm.DB, rdb *redis.Client, jwtSecret string) *Server {
 	}
 
 	s := &Server{
-		db:         dbConn,
-		redis:      rdb,
+		cfg:        cfg,
 		jwtManager: jwtMgr,
 		router:     gin.New(),
-		installH:   NewInstallHandler(),
 		deps:       deps,
 	}
 
@@ -100,9 +99,6 @@ func (s *Server) setupMiddleware() {
 
 // setupRoutes registers all route groups.
 func (s *Server) setupRoutes() {
-	// Install routes (only active when not installed)
-	s.installH.RegisterRoutes(s.router)
-
 	// Serve frontend static files
 	s.serveStaticFiles()
 
@@ -122,6 +118,10 @@ func (s *Server) setupRoutes() {
 	// Admin routes
 	adminGroup := s.router.Group("/api/admin")
 	admin.RegisterRoutes(adminGroup, s.deps.toAdminDeps())
+
+	// Public API routes (banners, payment methods, OAuth providers)
+	publicGroup := s.router.Group("/api/public")
+	admin.RegisterPublicRoutes(publicGroup, s.deps.DB, s.deps.Log)
 }
 
 // toV1Deps converts Deps to v1.Deps.
@@ -176,7 +176,6 @@ func (s *Server) serveStaticFiles() {
 	if info, err := os.Stat(adminDir); err == nil && info.IsDir() {
 		s.router.Static("/admin", adminDir)
 		s.router.NoRoute(func(c *gin.Context) {
-			// If the path starts with /admin, serve admin index.html for SPA routing
 			if len(c.Request.URL.Path) >= 6 && c.Request.URL.Path[:6] == "/admin" {
 				indexPath := filepath.Join(adminDir, "index.html")
 				if _, err := os.Stat(indexPath); err == nil {
@@ -184,7 +183,6 @@ func (s *Server) serveStaticFiles() {
 					return
 				}
 			}
-			// For all other routes, serve frontend index.html (SPA fallback)
 			indexPath := filepath.Join(frontendDir, "index.html")
 			if _, err := os.Stat(indexPath); err == nil {
 				c.File(indexPath)
@@ -203,7 +201,6 @@ func (s *Server) serveStaticFiles() {
 
 // Run starts the HTTP server on the given address.
 func (s *Server) Run(addr string) error {
-	logrus.Infof("AnchorFinance server starting on %s", addr)
 	return s.router.Run(addr)
 }
 

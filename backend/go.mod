@@ -1,4 +1,4 @@
-module github.com/anchor-finance/backend
+module anchorfinance
 
 go 1.21
 

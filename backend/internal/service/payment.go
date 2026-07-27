@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/anchor-finance/backend/pkg/payment"
+	"anchorfinance/pkg/payment"
 )
 
 // CreatePaymentInput contains optional input for creating a payment.

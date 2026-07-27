@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	"github.com/anchor-finance/backend/internal/model"
+	"anchorfinance/internal/model"
 	"gorm.io/gorm"
 )
 

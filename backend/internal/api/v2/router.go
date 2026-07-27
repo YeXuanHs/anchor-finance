@@ -3,10 +3,10 @@ package v2
 import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"github.com/anchor-finance/backend/internal/handler"
-	"github.com/anchor-finance/backend/internal/api/middleware"
-	"github.com/anchor-finance/backend/internal/service"
-	"github.com/anchor-finance/backend/pkg/logger"
+	"anchorfinance/internal/handler"
+	"anchorfinance/internal/api/middleware"
+	"anchorfinance/internal/service"
+	"anchorfinance/pkg/logger"
 )
 
 // Deps holds shared dependencies for route registration.

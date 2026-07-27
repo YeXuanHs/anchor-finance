@@ -3,8 +3,8 @@ package job
 import (
 	"time"
 
-	"github.com/anchor-finance/backend/internal/service"
-	"github.com/anchor-finance/backend/pkg/logger"
+	"anchorfinance/internal/service"
+	"anchorfinance/pkg/logger"
 
 	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"

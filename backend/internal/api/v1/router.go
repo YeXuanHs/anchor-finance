@@ -2,10 +2,10 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/anchor-finance/backend/internal/handler"
-	"github.com/anchor-finance/backend/internal/api/middleware"
-	"github.com/anchor-finance/backend/internal/service"
-	"github.com/anchor-finance/backend/pkg/logger"
+	"anchorfinance/internal/handler"
+	"anchorfinance/internal/api/middleware"
+	"anchorfinance/internal/service"
+	"anchorfinance/pkg/logger"
 	"gorm.io/gorm"
 )
 

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/anchor-finance/backend/pkg/oauth"
+	"anchorfinance/pkg/oauth"
 )
 
 const (

@@ -6,9 +6,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/anchor-finance/backend/internal/model"
-	"github.com/anchor-finance/backend/pkg/logger"
-	"github.com/anchor-finance/backend/pkg/oauth"
+	"anchorfinance/internal/model"
+	"anchorfinance/pkg/logger"
+	"anchorfinance/pkg/oauth"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"

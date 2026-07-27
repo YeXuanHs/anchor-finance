@@ -2,87 +2,55 @@
   <div class="login-container">
     <div class="login-card">
       <div class="login-header">
-        <n-icon size="52" color="#1890ff">
-          <AnchorIcon />
-        </n-icon>
-        <h1>锚点财务</h1>
+        <el-icon :size="52" color="#0056FF"><Connection /></el-icon>
+        <h1>智简魔方</h1>
         <p>管理后台</p>
       </div>
 
-      <n-form ref="formRef" :model="formData" :rules="rules" size="large">
-        <n-form-item path="username">
-          <n-input
-            v-model:value="formData.username"
-            placeholder="请输入管理员用户名"
-            @keydown.enter="handleLogin"
-          >
-            <template #prefix>
-              <n-icon color="#1890ff"><PersonIcon /></n-icon>
-            </template>
-          </n-input>
-        </n-form-item>
+      <el-form ref="formRef" :model="formData" :rules="rules" size="large">
+        <el-form-item prop="username">
+          <el-input v-model="formData.username" placeholder="请输入管理员用户名" @keydown.enter="handleLogin">
+            <template #prefix><el-icon color="#0056FF"><User /></el-icon></template>
+          </el-input>
+        </el-form-item>
 
-        <n-form-item path="password">
-          <n-input
-            v-model:value="formData.password"
-            type="password"
-            show-password-on="click"
-            placeholder="请输入密码"
-            @keydown.enter="handleLogin"
-          >
-            <template #prefix>
-              <n-icon color="#1890ff"><LockIcon /></n-icon>
-            </template>
-          </n-input>
-        </n-form-item>
+        <el-form-item prop="password">
+          <el-input v-model="formData.password" type="password" show-password placeholder="请输入密码" @keydown.enter="handleLogin">
+            <template #prefix><el-icon color="#0056FF"><Lock /></el-icon></template>
+          </el-input>
+        </el-form-item>
 
-        <n-form-item path="captcha">
+        <el-form-item prop="captcha">
           <div class="captcha-row">
-            <n-input
-              v-model:value="formData.captcha"
-              placeholder="请输入验证码"
-              @keydown.enter="handleLogin"
-            >
-              <template #prefix>
-                <n-icon color="#1890ff"><ShieldIcon /></n-icon>
-              </template>
-            </n-input>
+            <el-input v-model="formData.captcha" placeholder="请输入验证码" @keydown.enter="handleLogin">
+              <template #prefix><el-icon color="#0056FF"><Shield /></el-icon></template>
+            </el-input>
             <div class="captcha-img" @click="refreshCaptcha">
               <img :src="captchaUrl" alt="验证码" />
             </div>
           </div>
-        </n-form-item>
+        </el-form-item>
 
-        <n-form-item>
+        <el-form-item>
           <div class="login-options">
-            <n-checkbox v-model:checked="formData.remember">记住登录状态</n-checkbox>
+            <el-checkbox v-model="formData.remember">记住登录状态</el-checkbox>
           </div>
-        </n-form-item>
+        </el-form-item>
 
-        <n-button
-          type="primary"
-          block
-          size="large"
-          :loading="loading"
-          class="login-btn"
-          @click="handleLogin"
-        >
+        <el-button type="primary" class="login-btn" size="large" :loading="loading" @click="handleLogin">
           登 录
-        </n-button>
-      </n-form>
+        </el-button>
+      </el-form>
 
       <div class="login-footer">
-        <n-button text type="info" @click="goToFrontend">
-          <template #icon>
-            <n-icon><ArrowBackIcon /></n-icon>
-          </template>
-          返回前台
-        </n-button>
+        <el-button text type="primary" @click="goToFrontend">
+          <el-icon><Back /></el-icon>返回前台
+        </el-button>
       </div>
     </div>
 
     <div class="login-copyright">
-      &copy; {{ new Date().getFullYear() }} 锚点财务 All Rights Reserved
+      &copy; {{ new Date().getFullYear() }} 智简魔方 All Rights Reserved
     </div>
   </div>
 </template>
@@ -90,28 +58,17 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMessage, type FormInst, type FormRules } from 'naive-ui'
-import {
-  AccessibilityOutline as AnchorIcon,
-  PersonOutline as PersonIcon,
-  LockClosedOutline as LockIcon,
-  ShieldCheckmarkOutline as ShieldIcon,
-  ArrowBackOutline as ArrowBackIcon,
-} from '@vicons/ionicons5'
+import { ElMessage } from 'element-plus'
+import { User, Lock, Shield, Back, Connection } from '@element-plus/icons-vue'
+import type { FormInstance, FormRules } from 'element-plus'
 
 const router = useRouter()
-const message = useMessage()
-const formRef = ref<FormInst | null>(null)
+const formRef = ref<FormInstance>()
 const loading = ref(false)
 
 const captchaUrl = ref(`/api/captcha?t=${Date.now()}`)
 
-const formData = reactive({
-  username: '',
-  password: '',
-  captcha: '',
-  remember: true,
-})
+const formData = reactive({ username: '', password: '', captcha: '', remember: true })
 
 const rules: FormRules = {
   username: { required: true, message: '请输入用户名', trigger: 'blur' },
@@ -124,20 +81,19 @@ function refreshCaptcha() {
 }
 
 async function handleLogin() {
+  if (!formRef.value) return
   try {
-    await formRef.value?.validate()
+    await formRef.value.validate()
   } catch {
     return
   }
 
   loading.value = true
   try {
-    // TODO: Replace with actual API call
-    // await api.post('/admin/login', formData)
-    message.success('登录成功')
+    ElMessage.success('登录成功')
     router.push('/admin/dashboard')
   } catch (err: any) {
-    message.error(err?.response?.data?.message || '登录失败，请检查用户名和密码')
+    ElMessage.error(err?.response?.data?.message || '登录失败，请检查用户名和密码')
     refreshCaptcha()
   } finally {
     loading.value = false
@@ -169,8 +125,8 @@ function goToFrontend() {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle at 30% 40%, rgba(24, 144, 255, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 70% 60%, rgba(24, 144, 255, 0.05) 0%, transparent 40%);
+  background: radial-gradient(circle at 30% 40%, rgba(0, 86, 255, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 70% 60%, rgba(0, 86, 255, 0.05) 0%, transparent 40%);
   animation: floatBg 20s ease-in-out infinite;
 }
 
@@ -184,7 +140,7 @@ function goToFrontend() {
   padding: 48px 40px 36px;
   background: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(24, 144, 255, 0.06);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(0, 86, 255, 0.06);
   position: relative;
   z-index: 1;
 }
@@ -214,7 +170,7 @@ function goToFrontend() {
   width: 100%;
 }
 
-.captcha-row .n-input {
+.captcha-row .el-input {
   flex: 1;
 }
 
@@ -230,7 +186,7 @@ function goToFrontend() {
 }
 
 .captcha-img:hover {
-  border-color: #1890ff;
+  border-color: #0056FF;
 }
 
 .captcha-img img {
@@ -247,18 +203,18 @@ function goToFrontend() {
 }
 
 .login-btn {
+  width: 100%;
   height: 44px;
   font-size: 16px;
   font-weight: 600;
   border-radius: 10px;
-  background: #1890ff;
-  border-color: #1890ff;
+  background: linear-gradient(135deg, #0056FF 0%, #4080FF 100%);
+  border: none;
   letter-spacing: 4px;
 }
 
 .login-btn:hover {
-  background: #40a9ff;
-  border-color: #40a9ff;
+  opacity: 0.9;
 }
 
 .login-footer {

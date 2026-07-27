@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/anchor-finance/backend/pkg/auth"
+	"anchorfinance/pkg/auth"
 	"github.com/gin-gonic/gin"
 )
 

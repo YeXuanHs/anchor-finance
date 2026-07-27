@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/anchor-finance/backend/internal/model"
-	"github.com/anchor-finance/backend/pkg/logger"
-	"github.com/anchor-finance/backend/pkg/response"
+	"anchorfinance/internal/model"
+	"anchorfinance/pkg/logger"
+	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

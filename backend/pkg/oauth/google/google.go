@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/anchor-finance/backend/pkg/oauth"
+	"anchorfinance/pkg/oauth"
 )
 
 const (

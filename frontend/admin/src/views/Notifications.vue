@@ -1,339 +1,145 @@
 <template>
-  <n-card :bordered="false" rounded>
-    <n-tabs v-model:value="activeTab" type="line" animated>
-      <!-- 通知渠道配置 -->
-      <n-tab-pane name="channels" tab="通知渠道">
-        <n-grid :cols="3" :x-gap="16" style="margin-top: 20px">
-          <!-- 邮件渠道 -->
-          <n-gi>
-            <n-card title="邮件通知" size="small" :bordered="false" style="border-radius: 12px">
-              <n-form :model="channels.email" label-placement="left" label-width="80">
-                <n-form-item label="启用">
-                  <n-switch v-model:value="channels.email.enabled" />
-                </n-form-item>
-                <template v-if="channels.email.enabled">
-                  <n-form-item label="发件人">
-                    <n-input v-model:value="channels.email.fromName" placeholder="锚点财务" />
-                  </n-form-item>
-                  <n-form-item label="回复邮箱">
-                    <n-input v-model:value="channels.email.replyTo" placeholder="support@example.com" />
-                  </n-form-item>
-                </template>
-              </n-form>
-              <template #footer>
-                <n-space justify="end">
-                  <n-button size="small" @click="testChannel('email')">发送测试</n-button>
-                  <n-button size="small" type="primary" @click="saveChannel('email')">保存</n-button>
-                </n-space>
-              </template>
-            </n-card>
-          </n-gi>
+  <div class="admin-page">
+    <el-card shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <span class="card-title">通知管理</span>
+          <div class="card-actions">
+            <el-select v-model="filterType" placeholder="通知类型" clearable style="width: 130px">
+              <el-option label="系统通知" value="system" /><el-option label="订单通知" value="order" />
+              <el-option label="工单通知" value="ticket" /><el-option label="营销通知" value="promo" />
+            </el-select>
+            <el-button type="primary" @click="openModal()">
+              <el-icon><Plus /></el-icon>发送通知
+            </el-button>
+          </div>
+        </div>
+      </template>
 
-          <!-- 短信渠道 -->
-          <n-gi>
-            <n-card title="短信通知" size="small" :bordered="false" style="border-radius: 12px">
-              <n-form :model="channels.sms" label-placement="left" label-width="80">
-                <n-form-item label="启用">
-                  <n-switch v-model:value="channels.sms.enabled" />
-                </n-form-item>
-                <template v-if="channels.sms.enabled">
-                  <n-form-item label="签名">
-                    <n-input v-model:value="channels.sms.signName" placeholder="短信签名" />
-                  </n-form-item>
-                  <n-form-item label="测试手机">
-                    <n-input v-model:value="channels.sms.testPhone" placeholder="13800138000" />
-                  </n-form-item>
-                </template>
-              </n-form>
-              <template #footer>
-                <n-space justify="end">
-                  <n-button size="small" @click="testChannel('sms')">发送测试</n-button>
-                  <n-button size="small" type="primary" @click="saveChannel('sms')">保存</n-button>
-                </n-space>
-              </template>
-            </n-card>
-          </n-gi>
+      <el-table :data="filteredNotifications" stripe size="small">
+        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column prop="title" label="标题" show-overflow-tooltip />
+        <el-table-column prop="type" label="类型" width="100">
+          <template #default="{ row }">
+            <el-tag :type="typeMap[row.type]?.type as any" size="small">{{ typeMap[row.type]?.label }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="target" label="目标" width="100">
+          <template #default="{ row }">{{ row.target === 'all' ? '全体用户' : row.target }}</template>
+        </el-table-column>
+        <el-table-column prop="channel" label="渠道" width="120">
+          <template #default="{ row }">
+            <el-tag v-for="ch in row.channel" :key="ch" size="small" style="margin-right: 4px">{{ channelMap[ch] }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'sent' ? 'success' : row.status === 'pending' ? 'warning' : 'info'" size="small">
+              {{ statusMap[row.status] }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="sentAt" label="发送时间" width="160" />
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-popconfirm title="确认删除该通知？" @confirm="handleDelete(row.id)">
+              <template #reference><el-button text type="danger">删除</el-button></template>
+            </el-popconfirm>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
-          <!-- 站内信渠道 -->
-          <n-gi>
-            <n-card title="站内信通知" size="small" :bordered="false" style="border-radius: 12px">
-              <n-form :model="channels.site" label-placement="left" label-width="80">
-                <n-form-item label="启用">
-                  <n-switch v-model:value="channels.site.enabled" />
-                </n-form-item>
-                <template v-if="channels.site.enabled">
-                  <n-form-item label="保留天数">
-                    <n-input-number v-model:value="channels.site.retainDays" :min="1" :max="365" style="width: 100%" />
-                  </n-form-item>
-                  <n-form-item label="最大条数">
-                    <n-input-number v-model:value="channels.site.maxCount" :min="10" :max="1000" style="width: 100%" />
-                  </n-form-item>
-                </template>
-              </n-form>
-              <template #footer>
-                <n-space justify="end">
-                  <n-button size="small" type="primary" @click="saveChannel('site')">保存</n-button>
-                </n-space>
-              </template>
-            </n-card>
-          </n-gi>
-        </n-grid>
-      </n-tab-pane>
-
-      <!-- 事件通知开关 -->
-      <n-tab-pane name="events" tab="事件通知">
-        <n-data-table
-          :columns="eventColumns"
-          :data="eventData"
-          :pagination="false"
-          :bordered="false"
-          striped
-          style="margin-top: 16px"
-        />
-      </n-tab-pane>
-
-      <!-- 发送记录 -->
-      <n-tab-pane name="logs" tab="发送记录">
-        <n-space style="margin-top: 16px; margin-bottom: 12px">
-          <n-select
-            v-model:value="logFilter.channel"
-            :options="logChannelOptions"
-            placeholder="全部渠道"
-            clearable
-            style="width: 140px"
-          />
-          <n-select
-            v-model:value="logFilter.status"
-            :options="logStatusOptions"
-            placeholder="全部状态"
-            clearable
-            style="width: 140px"
-          />
-          <n-button type="primary" @click="refreshLogs">刷新</n-button>
-        </n-space>
-        <n-data-table
-          :columns="logColumns"
-          :data="filteredLogs"
-          :pagination="logPagination"
-          :bordered="false"
-          striped
-        />
-      </n-tab-pane>
-    </n-tabs>
-  </n-card>
-
-  <!-- 测试发送对话框 -->
-  <n-modal
-    v-model:show="showTestModal"
-    preset="card"
-    title="测试发送"
-    style="width: 480px"
-    :bordered="false"
-  >
-    <n-form :model="testForm" label-placement="left" label-width="80">
-      <n-form-item label="渠道">
-        <n-tag :type="testForm.channel === 'email' ? 'info' : testForm.channel === 'sms' ? 'warning' : 'default'">
-          {{ testForm.channel === 'email' ? '邮件' : testForm.channel === 'sms' ? '短信' : '站内信' }}
-        </n-tag>
-      </n-form-item>
-      <n-form-item :label="testForm.channel === 'email' ? '邮箱' : '手机号'" v-if="testForm.channel !== 'site'">
-        <n-input v-model:value="testForm.target" :placeholder="testForm.channel === 'email' ? 'test@example.com' : '13800138000'" />
-      </n-form-item>
-    </n-form>
-    <template #footer>
-      <n-space justify="end">
-        <n-button @click="showTestModal = false">取消</n-button>
-        <n-button type="primary" :loading="testSending" @click="sendTest">发送</n-button>
-      </n-space>
-    </template>
-  </n-modal>
+    <el-dialog v-model="modalVisible" title="发送通知" width="600px" destroy-on-close>
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
+        <el-form-item label="通知标题" prop="title"><el-input v-model="formData.title" placeholder="请输入通知标题" /></el-form-item>
+        <el-form-item label="通知类型" prop="type">
+          <el-select v-model="formData.type" style="width: 100%">
+            <el-option label="系统通知" value="system" /><el-option label="订单通知" value="order" />
+            <el-option label="工单通知" value="ticket" /><el-option label="营销通知" value="promo" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="发送目标">
+          <el-select v-model="formData.target" style="width: 100%">
+            <el-option label="全体用户" value="all" /><el-option label="活跃用户" value="active" /><el-option label="VIP用户" value="vip" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="发送渠道">
+          <el-checkbox-group v-model="formData.channel">
+            <el-checkbox value="site" label="站内信" /><el-checkbox value="email" label="邮件" />
+            <el-checkbox value="sms" label="短信" />
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="通知内容" prop="content">
+          <el-input v-model="formData.content" type="textarea" :rows="6" placeholder="通知内容" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="modalVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">发送</el-button>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, h } from 'vue'
-import { useMessage, NTag, NSwitch, NButton, NSpace, NPopconfirm } from 'naive-ui'
-import type { DataTableColumns } from 'naive-ui'
+import { ref, reactive, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
+import type { FormInstance, FormRules } from 'element-plus'
 
-const message = useMessage()
-const activeTab = ref('channels')
+const submitting = ref(false)
+const modalVisible = ref(false)
+const filterType = ref<string | null>(null)
+const formRef = ref<FormInstance>()
 
-// ---- 渠道配置 ----
-const channels = reactive({
-  email: { enabled: true, fromName: '锚点财务', replyTo: 'support@anchorfinance.com' },
-  sms: { enabled: false, signName: '锚点财务', testPhone: '' },
-  site: { enabled: true, retainDays: 90, maxCount: 200 },
-})
-
-function saveChannel(type: string) {
-  message.success(`${type === 'email' ? '邮件' : type === 'sms' ? '短信' : '站内信'}渠道已保存`)
+const typeMap: Record<string, { label: string; type: string }> = {
+  system: { label: '系统', type: 'danger' }, order: { label: '订单', type: 'primary' },
+  ticket: { label: '工单', type: 'warning' }, promo: { label: '营销', type: 'success' },
 }
+const channelMap: Record<string, string> = { site: '站内', email: '邮件', sms: '短信' }
+const statusMap: Record<string, string> = { sent: '已发送', pending: '待发送', failed: '失败' }
 
-// ---- 测试发送 ----
-const showTestModal = ref(false)
-const testSending = ref(false)
-const testForm = reactive({ channel: '', target: '' })
-
-function testChannel(type: string) {
-  testForm.channel = type
-  testForm.target = ''
-  showTestModal.value = true
-}
-
-function sendTest() {
-  if (testForm.channel !== 'site' && !testForm.target) {
-    message.warning('请输入目标地址')
-    return
-  }
-  testSending.value = true
-  setTimeout(() => {
-    testSending.value = false
-    showTestModal.value = false
-    message.success('测试消息已发送')
-  }, 800)
-}
-
-// ---- 事件通知 ----
-interface EventRow {
-  id: number
-  name: string
-  description: string
-  email: boolean
-  sms: boolean
-  site: boolean
-}
-
-const eventData = ref<EventRow[]>([
-  { id: 1, name: '用户注册', description: '新用户完成注册时触发', email: true, sms: false, site: true },
-  { id: 2, name: '订单创建', description: '用户创建新订单时触发', email: true, sms: true, site: true },
-  { id: 3, name: '订单支付成功', description: '订单支付成功后触发', email: true, sms: true, site: true },
-  { id: 4, name: '账单到期提醒', description: '账单到期前 N 天触发', email: true, sms: false, site: true },
-  { id: 5, name: '账单逾期', description: '账单逾期未支付时触发', email: true, sms: true, site: true },
-  { id: 6, name: '工单创建', description: '用户提交新工单时触发', email: false, sms: false, site: true },
-  { id: 7, name: '工单回复', description: '工单收到新回复时触发', email: true, sms: false, site: true },
-  { id: 8, name: '密码重置', description: '用户请求重置密码时触发', email: true, sms: false, site: false },
-  { id: 9, name: '服务开通', description: '服务开通成功后触发', email: true, sms: true, site: true },
-  { id: 10, name: '服务到期', description: '服务即将到期时触发', email: true, sms: true, site: true },
-  { id: 11, name: '退款通知', description: '退款处理完成时触发', email: true, sms: false, site: true },
-  { id: 12, name: '系统公告', description: '管理员发布公告时触发', email: false, sms: false, site: true },
+const notifications = ref([
+  { id: 1, title: '系统升级通知', type: 'system', target: 'all', channel: ['site', 'email'], status: 'sent', sentAt: '2026-07-27 10:00' },
+  { id: 2, title: '订单支付成功提醒', type: 'order', target: 'all', channel: ['site', 'email', 'sms'], status: 'sent', sentAt: '2026-07-27 09:30' },
+  { id: 3, title: '新工单提醒', type: 'ticket', target: 'all', channel: ['site'], status: 'sent', sentAt: '2026-07-27 08:00' },
+  { id: 4, title: '夏季大促活动', type: 'promo', target: 'active', channel: ['site', 'email'], status: 'pending', sentAt: '-' },
+  { id: 5, title: '服务器维护通知', type: 'system', target: 'all', channel: ['site', 'email', 'sms'], status: 'sent', sentAt: '2026-07-26 18:00' },
 ])
 
-function toggleEvent(row: EventRow, field: 'email' | 'sms' | 'site', val: boolean) {
-  row[field] = val
-  message.success(`已${val ? '开启' : '关闭'}「${row.name}」的${field === 'email' ? '邮件' : field === 'sms' ? '短信' : '站内信'}通知`)
-}
-
-const eventColumns: DataTableColumns<EventRow> = [
-  { title: '事件名称', key: 'name', width: 160 },
-  { title: '描述', key: 'description', ellipsis: { tooltip: true } },
-  {
-    title: '邮件通知',
-    key: 'email',
-    width: 110,
-    align: 'center',
-    render(row) {
-      return h(NSwitch, { value: row.email, size: 'small', onUpdateValue: (v: boolean) => toggleEvent(row, 'email', v) })
-    },
-  },
-  {
-    title: '短信通知',
-    key: 'sms',
-    width: 110,
-    align: 'center',
-    render(row) {
-      return h(NSwitch, { value: row.sms, size: 'small', onUpdateValue: (v: boolean) => toggleEvent(row, 'sms', v) })
-    },
-  },
-  {
-    title: '站内信通知',
-    key: 'site',
-    width: 110,
-    align: 'center',
-    render(row) {
-      return h(NSwitch, { value: row.site, size: 'small', onUpdateValue: (v: boolean) => toggleEvent(row, 'site', v) })
-    },
-  },
-]
-
-// ---- 发送记录 ----
-interface LogRow {
-  id: number
-  channel: string
-  event: string
-  target: string
-  status: string
-  time: string
-}
-
-const logFilter = reactive({ channel: null as string | null, status: null as string | null })
-
-const logChannelOptions = [
-  { label: '邮件', value: 'email' },
-  { label: '短信', value: 'sms' },
-  { label: '站内信', value: 'site' },
-]
-
-const logStatusOptions = [
-  { label: '成功', value: 'success' },
-  { label: '失败', value: 'failed' },
-  { label: '待发送', value: 'pending' },
-]
-
-const logData = ref<LogRow[]>([
-  { id: 1, channel: 'email', event: '订单支付成功', target: 'user@example.com', status: 'success', time: '2026-07-27 09:32' },
-  { id: 2, channel: 'sms', event: '账单到期提醒', target: '138****8000', status: 'success', time: '2026-07-27 09:00' },
-  { id: 3, channel: 'site', event: '工单回复', target: '用户 #1024', status: 'success', time: '2026-07-26 18:15' },
-  { id: 4, channel: 'email', event: '密码重置', target: 'admin@example.com', status: 'failed', time: '2026-07-26 14:20' },
-  { id: 5, channel: 'email', event: '用户注册', target: 'newuser@example.com', status: 'success', time: '2026-07-26 10:05' },
-  { id: 6, channel: 'sms', event: '订单创建', target: '139****1234', status: 'pending', time: '2026-07-26 09:50' },
-  { id: 7, channel: 'site', event: '系统公告', target: '全体用户', status: 'success', time: '2026-07-25 16:00' },
-  { id: 8, channel: 'email', event: '服务到期', target: 'vip@example.com', status: 'success', time: '2026-07-25 11:30' },
-])
-
-const filteredLogs = computed(() => {
-  return logData.value.filter((l) => {
-    if (logFilter.channel && l.channel !== logFilter.channel) return false
-    if (logFilter.status && l.status !== logFilter.status) return false
-    return true
-  })
+const filteredNotifications = computed(() => {
+  if (!filterType.value) return notifications.value
+  return notifications.value.filter((n) => n.type === filterType.value)
 })
 
-const logPagination = reactive({ pageSize: 10 })
-
-const channelLabel: Record<string, string> = { email: '邮件', sms: '短信', site: '站内信' }
-const channelTagType: Record<string, 'info' | 'warning' | 'default'> = { email: 'info', sms: 'warning', site: 'default' }
-const statusLabel: Record<string, string> = { success: '成功', failed: '失败', pending: '待发送' }
-const statusTagType: Record<string, 'success' | 'error' | 'warning'> = { success: 'success', failed: 'error', pending: 'warning' }
-
-const logColumns: DataTableColumns<LogRow> = [
-  { title: 'ID', key: 'id', width: 60 },
-  {
-    title: '渠道',
-    key: 'channel',
-    width: 90,
-    render(row) {
-      return h(NTag, { type: channelTagType[row.channel], size: 'small', bordered: false }, { default: () => channelLabel[row.channel] })
-    },
-  },
-  { title: '事件', key: 'event', width: 160 },
-  { title: '目标', key: 'target', ellipsis: { tooltip: true } },
-  {
-    title: '状态',
-    key: 'status',
-    width: 90,
-    render(row) {
-      return h(NTag, { type: statusTagType[row.status], size: 'small', bordered: false }, { default: () => statusLabel[row.status] })
-    },
-  },
-  { title: '时间', key: 'time', width: 160 },
-]
-
-function refreshLogs() {
-  message.success('记录已刷新')
+const formData = reactive({ title: '', type: 'system', target: 'all', channel: ['site'] as string[], content: '' })
+const rules: FormRules = {
+  title: { required: true, message: '请输入通知标题', trigger: 'blur' },
+  content: { required: true, message: '请输入通知内容', trigger: 'blur' },
 }
+
+function openModal() {
+  Object.assign(formData, { title: '', type: 'system', target: 'all', channel: ['site'], content: '' })
+  modalVisible.value = true
+}
+
+async function handleSubmit() {
+  if (!formRef.value) return
+  try { await formRef.value.validate() } catch { return }
+  submitting.value = true
+  try {
+    notifications.value.unshift({ id: Date.now(), title: formData.title, type: formData.type, target: formData.target, channel: [...formData.channel], status: 'sent', sentAt: new Date().toLocaleString() })
+    ElMessage.success('通知发送成功')
+    modalVisible.value = false
+  } finally { submitting.value = false }
+}
+
+function handleDelete(id: number) { notifications.value = notifications.value.filter((n) => n.id !== id); ElMessage.success('通知已删除') }
 </script>
 
 <style scoped>
-.n-card {
-  border-radius: 12px;
-}
+.card-header { display: flex; align-items: center; justify-content: space-between; }
+.card-title { font-size: 16px; font-weight: 600; }
+.card-actions { display: flex; align-items: center; gap: 12px; }
 </style>

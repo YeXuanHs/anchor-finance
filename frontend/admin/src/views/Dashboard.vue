@@ -1,148 +1,158 @@
 <template>
   <div class="dashboard">
     <!-- Stat Cards -->
-    <n-grid :cols="4" :x-gap="16" :y-gap="16" responsive="screen" :item-responsive="true">
-      <n-gi span="4 m:2 l:1">
-        <n-card class="stat-card" :bordered="false" rounded>
+    <el-row :gutter="16">
+      <el-col :xs="24" :sm="12" :lg="6">
+        <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
             <div class="stat-info">
               <span class="stat-label">今日收入</span>
               <span class="stat-value">¥{{ stats.todayRevenue.toLocaleString() }}</span>
               <span class="stat-change" :class="stats.revenueChange >= 0 ? 'up' : 'down'">
-                <n-icon size="14">
-                  <TrendUpIcon v-if="stats.revenueChange >= 0" />
-                  <TrendDownIcon v-else />
-                </n-icon>
+                <el-icon :size="14"><Top v-if="stats.revenueChange >= 0" /><Bottom v-else /></el-icon>
                 {{ Math.abs(stats.revenueChange) }}%
               </span>
             </div>
             <div class="stat-icon blue">
-              <n-icon size="28"><CashIcon /></n-icon>
+              <el-icon :size="28"><Wallet /></el-icon>
             </div>
           </div>
-        </n-card>
-      </n-gi>
-      <n-gi span="4 m:2 l:1">
-        <n-card class="stat-card" :bordered="false" rounded>
-          <div class="stat-content">
-            <div class="stat-info">
-              <span class="stat-label">今日订单</span>
-              <span class="stat-value">{{ stats.todayOrders }}</span>
-              <span class="stat-change" :class="stats.ordersChange >= 0 ? 'up' : 'down'">
-                <n-icon size="14">
-                  <TrendUpIcon v-if="stats.ordersChange >= 0" />
-                  <TrendDownIcon v-else />
-                </n-icon>
-                {{ Math.abs(stats.ordersChange) }}%
-              </span>
-            </div>
-            <div class="stat-icon cyan">
-              <n-icon size="28"><CartIcon /></n-icon>
-            </div>
-          </div>
-        </n-card>
-      </n-gi>
-      <n-gi span="4 m:2 l:1">
-        <n-card class="stat-card" :bordered="false" rounded>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :sm="12" :lg="6">
+        <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
             <div class="stat-info">
               <span class="stat-label">新增用户</span>
               <span class="stat-value">{{ stats.newUsers }}</span>
               <span class="stat-change" :class="stats.usersChange >= 0 ? 'up' : 'down'">
-                <n-icon size="14">
-                  <TrendUpIcon v-if="stats.usersChange >= 0" />
-                  <TrendDownIcon v-else />
-                </n-icon>
+                <el-icon :size="14"><Top v-if="stats.usersChange >= 0" /><Bottom v-else /></el-icon>
                 {{ Math.abs(stats.usersChange) }}%
               </span>
             </div>
             <div class="stat-icon green">
-              <n-icon size="28"><PeopleIcon /></n-icon>
+              <el-icon :size="28"><User /></el-icon>
             </div>
           </div>
-        </n-card>
-      </n-gi>
-      <n-gi span="4 m:2 l:1">
-        <n-card class="stat-card" :bordered="false" rounded>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :sm="12" :lg="6">
+        <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
             <div class="stat-info">
               <span class="stat-label">待处理工单</span>
               <span class="stat-value" :class="{ 'text-red': stats.openTickets > 0 }">{{ stats.openTickets }}</span>
-              <span class="stat-change neutral" v-if="stats.openTickets > 0">
-                需要处理
-              </span>
+              <span class="stat-change neutral" v-if="stats.openTickets > 0">需要处理</span>
             </div>
             <div class="stat-icon" :class="stats.openTickets > 0 ? 'red' : 'green'">
-              <n-icon size="28"><TicketIcon /></n-icon>
+              <el-icon :size="28"><ChatDotSquare /></el-icon>
             </div>
           </div>
-        </n-card>
-      </n-gi>
-    </n-grid>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :sm="12" :lg="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-content">
+            <div class="stat-info">
+              <span class="stat-label">服务器数量</span>
+              <span class="stat-value">{{ stats.serverCount }}</span>
+              <span class="stat-change up">
+                <el-icon :size="14"><Top /></el-icon>
+                运行正常
+              </span>
+            </div>
+            <div class="stat-icon cyan">
+              <el-icon :size="28"><Monitor /></el-icon>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
 
     <!-- Charts Row -->
-    <n-grid :cols="3" :x-gap="16" style="margin-top: 16px" responsive="screen" :item-responsive="true">
-      <n-gi span="3 l:2">
-        <n-card title="收入趋势（近30天）" :bordered="false" rounded class="chart-card">
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :lg="16">
+        <el-card class="chart-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>收入趋势（近30天）</span>
+            </div>
+          </template>
           <v-chart :option="revenueChartOption" autoresize style="height: 360px" />
-        </n-card>
-      </n-gi>
-      <n-gi span="3 l:1">
-        <n-card title="订单状态分布" :bordered="false" rounded class="chart-card">
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :lg="8">
+        <el-card class="chart-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>订单状态分布</span>
+            </div>
+          </template>
           <v-chart :option="orderPieOption" autoresize style="height: 360px" />
-        </n-card>
-      </n-gi>
-    </n-grid>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <!-- Recent Orders & Tickets -->
-    <n-grid :cols="3" :x-gap="16" style="margin-top: 16px" responsive="screen" :item-responsive="true">
-      <n-gi span="3 l:2">
-        <n-card title="最近订单" :bordered="false" rounded>
-          <template #header-extra>
-            <n-button text type="primary" @click="$router.push('/admin/orders')">查看全部</n-button>
+    <!-- Recent Orders -->
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :lg="16">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>最近订单</span>
+              <el-button text type="primary" @click="$router.push('/admin/orders')">查看全部</el-button>
+            </div>
           </template>
-          <n-data-table
-            :columns="orderColumns"
-            :data="recentOrders"
-            :bordered="false"
-            :pagination="false"
-            size="small"
-          />
-        </n-card>
-      </n-gi>
-      <n-gi span="3 l:1">
-        <n-card title="最近工单" :bordered="false" rounded>
-          <template #header-extra>
-            <n-button text type="primary" @click="$router.push('/admin/tickets')">查看全部</n-button>
+          <el-table :data="recentOrders" size="small" stripe>
+            <el-table-column prop="id" label="订单号" width="160" show-overflow-tooltip />
+            <el-table-column prop="user" label="用户" width="90" />
+            <el-table-column prop="product" label="产品" show-overflow-tooltip />
+            <el-table-column prop="amount" label="金额" width="100">
+              <template #default="{ row }">
+                <span style="font-weight: 600; color: #0056FF">¥{{ row.amount }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="statusMap[row.status]?.type" size="small" round>
+                  {{ statusMap[row.status]?.label }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="time" label="时间" width="160" />
+          </el-table>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>最近工单</span>
+              <el-button text type="primary" @click="$router.push('/admin/tickets')">查看全部</el-button>
+            </div>
           </template>
-          <n-list hoverable clickable>
-            <n-list-item v-for="ticket in recentTickets" :key="ticket.id">
-              <n-thing>
-                <template #header>
-                  <span class="ticket-subject">{{ ticket.subject }}</span>
-                </template>
-                <template #header-extra>
-                  <n-tag :type="priorityType(ticket.priority)" size="small" round>
-                    {{ ticket.priority }}
-                  </n-tag>
-                </template>
-                <template #description>
-                  <div class="ticket-meta">
-                    <span>{{ ticket.user }}</span>
-                    <span>{{ ticket.time }}</span>
-                  </div>
-                </template>
-              </n-thing>
-            </n-list-item>
-          </n-list>
-        </n-card>
-      </n-gi>
-    </n-grid>
+          <div class="ticket-list">
+            <div v-for="ticket in recentTickets" :key="ticket.id" class="ticket-item">
+              <div class="ticket-info">
+                <span class="ticket-subject">{{ ticket.subject }}</span>
+                <div class="ticket-meta">
+                  <span>{{ ticket.user }}</span>
+                  <span>{{ ticket.time }}</span>
+                </div>
+              </div>
+              <el-tag :type="priorityType(ticket.priority)" size="small" round>
+                {{ ticket.priority }}
+              </el-tag>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <script setup lang="ts">
-import { h, reactive, computed } from 'vue'
+import { reactive, computed, ref } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -154,29 +164,25 @@ import {
   GridComponent,
 } from 'echarts/components'
 import {
-  TrendUpOutline as TrendUpIcon,
-  TrendDownOutline as TrendDownIcon,
-  CashOutline as CashIcon,
-  CartOutline as CartIcon,
-  PeopleOutline as PeopleIcon,
-  ChatbubblesOutline as TicketIcon,
-} from '@vicons/ionicons5'
-import { NTag, NButton, type DataTableColumns } from 'naive-ui'
+  Top,
+  Bottom,
+  Wallet,
+  User,
+  ChatDotSquare,
+  Monitor,
+} from '@element-plus/icons-vue'
 
 use([CanvasRenderer, LineChart, PieChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
 
-// ---- Stats ----
 const stats = reactive({
   todayRevenue: 12680,
   revenueChange: 12.5,
-  todayOrders: 86,
-  ordersChange: 8.3,
   newUsers: 34,
   usersChange: -2.1,
   openTickets: 7,
+  serverCount: 24,
 })
 
-// ---- Revenue Chart (Last 30 days) ----
 function getLast30Days(): string[] {
   const days: string[] = []
   const now = new Date()
@@ -204,7 +210,7 @@ const revenueChartOption = computed(() => ({
     textStyle: { color: '#333' },
     formatter: (params: any) => {
       const p = params[0]
-      return `<div style="font-weight:600">${p.axisValue}</div><div>收入: <b style="color:#1890ff">¥${p.value.toLocaleString()}</b></div>`
+      return `<div style="font-weight:600">${p.axisValue}</div><div>收入: <b style="color:#0056FF">¥${p.value.toLocaleString()}</b></div>`
     },
   },
   grid: { left: '3%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
@@ -234,29 +240,28 @@ const revenueChartOption = computed(() => ({
       symbol: 'circle',
       symbolSize: 6,
       showSymbol: false,
-      lineStyle: { color: '#1890ff', width: 3 },
-      itemStyle: { color: '#1890ff', borderWidth: 2, borderColor: '#fff' },
+      lineStyle: { color: '#0056FF', width: 3 },
+      itemStyle: { color: '#0056FF', borderWidth: 2, borderColor: '#fff' },
       areaStyle: {
         color: {
           type: 'linear',
           x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [
-            { offset: 0, color: 'rgba(24, 144, 255, 0.25)' },
-            { offset: 0.5, color: 'rgba(24, 144, 255, 0.08)' },
-            { offset: 1, color: 'rgba(24, 144, 255, 0.01)' },
+            { offset: 0, color: 'rgba(0, 86, 255, 0.25)' },
+            { offset: 0.5, color: 'rgba(0, 86, 255, 0.08)' },
+            { offset: 1, color: 'rgba(0, 86, 255, 0.01)' },
           ],
         },
       },
       emphasis: {
         focus: 'series',
-        itemStyle: { borderWidth: 3, shadowBlur: 10, shadowColor: 'rgba(24,144,255,0.3)' },
+        itemStyle: { borderWidth: 3, shadowBlur: 10, shadowColor: 'rgba(0,86,255,0.3)' },
       },
       data: generateRevenueData(),
     },
   ],
 }))
 
-// ---- Order Pie Chart ----
 const orderPieOption = computed(() => ({
   tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
   legend: { bottom: '2%', left: 'center', itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 12 } },
@@ -274,7 +279,7 @@ const orderPieOption = computed(() => ({
       },
       labelLine: { show: false },
       data: [
-        { value: 340, name: '待支付', itemStyle: { color: '#1890ff' } },
+        { value: 340, name: '待支付', itemStyle: { color: '#0056FF' } },
         { value: 580, name: '已支付', itemStyle: { color: '#52c41a' } },
         { value: 1220, name: '已开通', itemStyle: { color: '#fa8c16' } },
         { value: 180, name: '已取消', itemStyle: { color: '#d9d9d9' } },
@@ -283,12 +288,11 @@ const orderPieOption = computed(() => ({
   ],
 }))
 
-// ---- Recent Orders Table ----
-const statusMap: Record<string, { label: string; color: string }> = {
-  pending: { label: '待支付', color: 'warning' },
-  paid: { label: '已支付', color: 'info' },
-  active: { label: '已开通', color: 'success' },
-  cancelled: { label: '已取消', color: 'default' },
+const statusMap: Record<string, { label: string; type: string }> = {
+  pending: { label: '待支付', type: 'warning' },
+  paid: { label: '已支付', type: 'info' },
+  active: { label: '已开通', type: 'success' },
+  cancelled: { label: '已取消', type: 'info' },
 }
 
 const recentOrders = ref([
@@ -299,29 +303,6 @@ const recentOrders = ref([
   { id: 'AF20260726005', user: '孙七', product: '4核8G云服务器', amount: 399, status: 'cancelled', time: '2026-07-25 16:55' },
 ])
 
-const orderColumns: DataTableColumns<any> = [
-  { title: '订单号', key: 'id', width: 150, ellipsis: { tooltip: true } },
-  { title: '用户', key: 'user', width: 80 },
-  { title: '产品', key: 'product', ellipsis: { tooltip: true } },
-  {
-    title: '金额',
-    key: 'amount',
-    width: 100,
-    render: (row) => h('span', { style: 'font-weight:600;color:#1890ff' }, `¥${row.amount}`),
-  },
-  {
-    title: '状态',
-    key: 'status',
-    width: 90,
-    render: (row) => {
-      const s = statusMap[row.status]
-      return h(NTag, { type: s.color as any, size: 'small', round: true, bordered: false }, { default: () => s.label })
-    },
-  },
-  { title: '时间', key: 'time', width: 150 },
-]
-
-// ---- Recent Tickets ----
 const recentTickets = ref([
   { id: 1, subject: '服务器无法连接SSH', user: '张三', priority: '紧急', time: '10分钟前' },
   { id: 2, subject: '域名解析未生效', user: '李四', priority: '高', time: '30分钟前' },
@@ -330,14 +311,14 @@ const recentTickets = ref([
   { id: 5, subject: 'SSL证书安装咨询', user: '孙七', priority: '低', time: '3小时前' },
 ])
 
-function priorityType(priority: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
-  const map: Record<string, 'error' | 'warning' | 'info' | 'success' | 'default'> = {
-    '紧急': 'error',
+function priorityType(priority: string) {
+  const map: Record<string, string> = {
+    '紧急': 'danger',
     '高': 'warning',
     '中': 'info',
-    '低': 'default',
+    '低': 'info',
   }
-  return map[priority] || 'default'
+  return (map[priority] || 'info') as any
 }
 </script>
 
@@ -348,12 +329,7 @@ function priorityType(priority: string): 'error' | 'warning' | 'info' | 'success
 
 .stat-card {
   border-radius: 12px;
-  transition: box-shadow 0.3s, transform 0.2s;
-}
-
-.stat-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
+  margin-bottom: 16px;
 }
 
 .stat-content {
@@ -416,8 +392,8 @@ function priorityType(priority: string): 'error' | 'warning' | 'info' | 'success
 }
 
 .stat-icon.blue {
-  background: rgba(24, 144, 255, 0.1);
-  color: #1890ff;
+  background: rgba(0, 86, 255, 0.1);
+  color: #0056FF;
 }
 
 .stat-icon.cyan {
@@ -439,9 +415,43 @@ function priorityType(priority: string): 'error' | 'warning' | 'info' | 'success
   border-radius: 12px;
 }
 
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ticket-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.ticket-item:last-child {
+  border-bottom: none;
+}
+
+.ticket-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .ticket-subject {
   font-size: 14px;
   color: #1a1a2e;
+  font-weight: 500;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ticket-meta {
@@ -449,5 +459,6 @@ function priorityType(priority: string): 'error' | 'warning' | 'info' | 'success
   gap: 12px;
   font-size: 12px;
   color: #8c8c8c;
+  margin-top: 4px;
 }
 </style>

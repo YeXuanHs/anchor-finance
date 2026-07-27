@@ -6,11 +6,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/anchor-finance/backend/internal/model"
-	"github.com/anchor-finance/backend/pkg/auth"
-	"github.com/anchor-finance/backend/pkg/logger"
-	"github.com/anchor-finance/backend/pkg/oauth"
-	"github.com/anchor-finance/backend/pkg/oauth/juhe"
+	"anchorfinance/internal/model"
+	"anchorfinance/pkg/auth"
+	"anchorfinance/pkg/logger"
+	"anchorfinance/pkg/oauth"
+	"anchorfinance/pkg/oauth/juhe"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"

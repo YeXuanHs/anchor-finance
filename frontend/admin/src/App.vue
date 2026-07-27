@@ -1,25 +1,11 @@
 <template>
-  <n-config-provider :theme-overrides="themeOverrides" :locale="zhCN" :date-locale="dateZhCN">
-    <n-message-provider>
-      <n-dialog-provider>
-        <n-notification-provider>
-          <router-view />
-        </n-notification-provider>
-      </n-dialog-provider>
-    </n-message-provider>
-  </n-config-provider>
+  <el-config-provider :locale="zhCn" :size="'default'">
+    <router-view />
+  </el-config-provider>
 </template>
 
 <script setup lang="ts">
-import { zhCN, dateZhCN, type GlobalThemeOverrides } from 'naive-ui'
-
-const themeOverrides: GlobalThemeOverrides = {
-  common: {
-    primaryColor: '#18a058',
-    primaryColorHover: '#36ad6a',
-    primaryColorPressed: '#0c7a43',
-  },
-}
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 </script>
 
 <style>
@@ -35,10 +21,11 @@ body {
     'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: #f5f7fa;
 }
 
 #app {
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
 }
 </style>

@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
-	"github.com/anchor-finance/backend/internal/model"
-	"github.com/anchor-finance/backend/internal/service"
+	"anchorfinance/internal/model"
+	"anchorfinance/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"

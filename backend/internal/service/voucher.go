@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/anchor-finance/backend/internal/util"
-	"github.com/anchor-finance/backend/pkg/logger"
+	"anchorfinance/internal/util"
+	"anchorfinance/pkg/logger"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"

@@ -1,0 +1,144 @@
+/* ── Art Design Pro Design System ── */
+
+:root {
+  --admin-sidebar-bg: #1a3a5c;
+  --admin-sidebar-active: #0056FF;
+  --admin-header-bg: #1a3a5c;
+  --admin-primary: #0056FF;
+  --admin-primary-light: #4080FF;
+  --admin-primary-lighter: #EBF3FD;
+  --admin-gradient-btn: linear-gradient(135deg, #0056FF 0%, #4080FF 100%);
+  --admin-radius: 8px;
+  --admin-radius-btn: 6px;
+  --admin-radius-card: 12px;
+  --admin-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --admin-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.12);
+  --admin-page-bg: #f5f7fa;
+  --admin-card-bg: #ffffff;
+  --admin-text-primary: #1a1a2e;
+  --admin-text-regular: #333333;
+  --admin-text-secondary: #666666;
+  --admin-text-placeholder: #999999;
+  --admin-border: #e4e7ed;
+  --admin-border-light: #f0f2f5;
+}
+
+/* ── Global Element Plus Overrides ── */
+.el-button--primary {
+  background: var(--admin-gradient-btn) !important;
+  border: none !important;
+}
+
+.el-button--primary:hover {
+  opacity: 0.9;
+}
+
+.el-card {
+  border-radius: var(--admin-radius-card) !important;
+  border: none !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+.el-card__header {
+  border-bottom: 1px solid var(--admin-border-light) !important;
+  padding: 16px 20px !important;
+  font-weight: 600;
+}
+
+.el-dialog {
+  border-radius: var(--admin-radius-card) !important;
+}
+
+.el-drawer__header {
+  margin-bottom: 0 !important;
+}
+
+/* ── Admin Page Layout Helpers ── */
+.admin-page {
+  padding: 0;
+}
+
+.admin-card {
+  background: var(--admin-card-bg);
+  border-radius: var(--admin-radius-card);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-card:hover {
+  box-shadow: var(--admin-shadow-hover);
+}
+
+/* ── Gradient Button ── */
+.btn-gradient {
+  background: var(--admin-gradient-btn) !important;
+  border: none !important;
+  border-radius: var(--admin-radius-btn) !important;
+  color: #fff !important;
+  font-weight: 500;
+}
+
+.btn-gradient:hover {
+  opacity: 0.9;
+}
+
+/* ── Stat Card ── */
+.stat-card {
+  border-radius: var(--admin-radius-card);
+  transition: box-shadow 0.3s, transform 0.2s;
+  cursor: default;
+}
+
+.stat-card:hover {
+  box-shadow: var(--admin-shadow-hover);
+  transform: translateY(-2px);
+}
+
+/* ── Table Enhancements ── */
+.el-table {
+  --el-table-border-color: var(--admin-border-light);
+}
+
+.el-table th.el-table__cell {
+  background: #fafbfc !important;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+}
+
+/* ── Pagination ── */
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d0d5dd;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b0b5bd;
+}
+
+/* ── Breadcrumb ── */
+.admin-breadcrumb .el-breadcrumb__inner {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.admin-breadcrumb .el-breadcrumb__inner.is-link:hover {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.admin-breadcrumb .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: rgba(255, 255, 255, 0.95) !important;
+}

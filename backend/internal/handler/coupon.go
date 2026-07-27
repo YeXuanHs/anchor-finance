@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/anchor-finance/backend/internal/model"
-	"github.com/anchor-finance/backend/internal/service"
+	"anchorfinance/internal/model"
+	"anchorfinance/internal/service"
 	"github.com/gin-gonic/gin"
 )
 

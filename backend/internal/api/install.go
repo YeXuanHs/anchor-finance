@@ -7,8 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/anchor-finance/backend/pkg/auth"
-	"github.com/anchor-finance/backend/pkg/db"
+	"anchorfinance/pkg/db"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -21,12 +20,15 @@ type installRequest struct {
 	DBUser         string `json:"db_user" binding:"required"`
 	DBPassword     string `json:"db_password"`
 	DBName         string `json:"db_name" binding:"required"`
-	RedisHost      string `json:"redis_host" binding:"required"`
-	RedisPort      string `json:"redis_port" binding:"required"`
+	EnableRedis    bool   `json:"enable_redis"`
+	RedisHost      string `json:"redis_host"`
+	RedisPort      string `json:"redis_port"`
 	RedisPassword  string `json:"redis_password"`
 	AdminUsername  string `json:"admin_username" binding:"required,min=3"`
 	AdminPassword  string `json:"admin_password" binding:"required,min=6"`
 	AdminEmail     string `json:"admin_email" binding:"required,email"`
+	SiteName       string `json:"site_name"`
+	SiteURL        string `json:"site_url"`
 	TestOnly       bool   `json:"test_only"`
 }
 
@@ -59,20 +61,23 @@ func (h *InstallHandler) RegisterRoutes(r *gin.Engine) {
 		grp.GET("/check-env", h.CheckEnv)
 		grp.POST("/test-db", h.TestDB)
 		grp.POST("", h.DoInstall)
+		grp.GET("/status", h.Status)
 	}
 
-	// Serve the installer page
-	r.GET("/install", func(c *gin.Context) {
-		c.File(filepath.Join("install", "index.html"))
-	})
-
-	// Redirect root to install if not installed
+	// Redirect root to frontend install page if not installed
 	r.GET("/", func(c *gin.Context) {
 		if !h.IsInstalled() {
 			c.Redirect(http.StatusFound, "/install")
 			return
 		}
 		c.Next()
+	})
+}
+
+// Status returns installation status.
+func (h *InstallHandler) Status(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"installed": h.IsInstalled(),
 	})
 }
 
@@ -111,7 +116,7 @@ func getGoVersion() string {
 	return ""
 }
 
-// TestDB tests the database and Redis connections.
+// TestDB tests the database and optionally Redis connections.
 func (h *InstallHandler) TestDB(c *gin.Context) {
 	var req installRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -137,26 +142,23 @@ func (h *InstallHandler) TestDB(c *gin.Context) {
 		sqlDB.Close()
 	}
 
-	// Test Redis
-	redisPort := req.RedisPort
-	if redisPort == "" {
-		redisPort = "6379"
-	}
-	rdb, err := db.InitRedis(db.RedisConfig{
-		Host:     req.RedisHost,
-		Port:     redisPort,
-		Password: req.RedisPassword,
-		DB:       0,
-	})
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"ok": false, "message": "Redis 连接失败: " + err.Error()})
-		return
-	}
-	rdb.Close()
-
-	if req.TestOnly {
-		c.JSON(http.StatusOK, gin.H{"ok": true, "message": "数据库和 Redis 连接成功"})
-		return
+	// Test Redis (optional)
+	if req.EnableRedis {
+		redisPort := req.RedisPort
+		if redisPort == "" {
+			redisPort = "6379"
+		}
+		rdb, err := db.InitRedis(db.RedisConfig{
+			Host:     req.RedisHost,
+			Port:     redisPort,
+			Password: req.RedisPassword,
+			DB:       0,
+		})
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"ok": false, "message": "Redis 连接失败: " + err.Error()})
+			return
+		}
+		rdb.Close()
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "连接测试通过"})
@@ -176,11 +178,6 @@ func (h *InstallHandler) DoInstall(c *gin.Context) {
 	}
 
 	// 1. Connect to PostgreSQL
-	redisPort := req.RedisPort
-	if redisPort == "" {
-		redisPort = "6379"
-	}
-
 	pgDB, err := db.InitDB(db.Config{
 		Host:     req.DBHost,
 		Port:     req.DBPort,
@@ -205,13 +202,21 @@ func (h *InstallHandler) DoInstall(c *gin.Context) {
 		return
 	}
 
-	// 4. Create default system configs
-	if err := createDefaultConfigs(pgDB); err != nil {
+	// 4. Create default system configs (all business config goes to DB)
+	siteName := req.SiteName
+	if siteName == "" {
+		siteName = "锚点财务"
+	}
+	siteURL := req.SiteURL
+	if siteURL == "" {
+		siteURL = "http://localhost:8080"
+	}
+	if err := createDefaultConfigs(pgDB, siteName, siteURL, req); err != nil {
 		c.JSON(http.StatusOK, gin.H{"ok": false, "message": "创建默认配置失败: " + err.Error()})
 		return
 	}
 
-	// 5. Generate config.yaml
+	// 5. Generate minimal config.yaml (only connection info)
 	configContent, err := generateConfig(req)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ok": false, "message": "生成配置文件失败: " + err.Error()})
@@ -230,7 +235,7 @@ func (h *InstallHandler) DoInstall(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"ok":             true,
-		"message":        "安装成功",
+		"message":        "安装成功，请重启服务以完成初始化",
 		"config_preview": configContent,
 	})
 }
@@ -285,15 +290,57 @@ func createAdmin(dbConn *gorm.DB, username, password, email string) error {
 	return dbConn.Create(&admin).Error
 }
 
-func createDefaultConfigs(dbConn *gorm.DB) error {
+func createDefaultConfigs(dbConn *gorm.DB, siteName, siteURL string, req installRequest) error {
 	defaults := []systemSetting{
-		{Key: "site_name", Value: "锚点财务", Group: "general", Desc: "站点名称"},
-		{Key: "site_url", Value: "http://localhost:8080", Group: "general", Desc: "站点 URL"},
+		// 通用配置
+		{Key: "site_name", Value: siteName, Group: "general", Desc: "站点名称"},
+		{Key: "site_url", Value: siteURL, Group: "general", Desc: "站点 URL"},
 		{Key: "site_description", Value: "高效、安全的财务管理平台", Group: "general", Desc: "站点描述"},
+		{Key: "site_logo", Value: "/logo.png", Group: "general", Desc: "站点 Logo"},
+		{Key: "enable_registration", Value: "true", Group: "general", Desc: "是否开放注册"},
 		{Key: "currency", Value: "CNY", Group: "finance", Desc: "默认货币"},
 		{Key: "decimal_places", Value: "2", Group: "finance", Desc: "小数位数"},
-		{Key: "jwt_expire_hours", Value: "72", Group: "security", Desc: "JWT 过期时间（小时）"},
-		{Key: "enable_registration", Value: "true", Group: "general", Desc: "是否开放注册"},
+
+		// Redis 配置（存数据库，可选启用）
+		{Key: "redis_enabled", Value: fmt.Sprintf("%v", req.EnableRedis), Group: "redis", Desc: "是否启用 Redis"},
+		{Key: "redis_host", Value: req.RedisHost, Group: "redis", Desc: "Redis 主机"},
+		{Key: "redis_port", Value: req.RedisPort, Group: "redis", Desc: "Redis 端口"},
+		{Key: "redis_password", Value: req.RedisPassword, Group: "redis", Desc: "Redis 密码"},
+
+		// 邮件配置（安装后在后台配置）
+		{Key: "email_enabled", Value: "false", Group: "email", Desc: "是否启用邮件"},
+		{Key: "email_host", Value: "", Group: "email", Desc: "SMTP 主机"},
+		{Key: "email_port", Value: "465", Group: "email", Desc: "SMTP 端口"},
+		{Key: "email_username", Value: "", Group: "email", Desc: "SMTP 用户名"},
+		{Key: "email_password", Value: "", Group: "email", Desc: "SMTP 密码"},
+		{Key: "email_from", Value: "", Group: "email", Desc: "发件人"},
+
+		// 短信配置（安装后在后台配置）
+		{Key: "sms_enabled", Value: "false", Group: "sms", Desc: "是否启用短信"},
+		{Key: "sms_provider", Value: "aliyun", Group: "sms", Desc: "短信服务商"},
+		{Key: "sms_api_key", Value: "", Group: "sms", Desc: "短信 API Key"},
+		{Key: "sms_api_secret", Value: "", Group: "sms", Desc: "短信 API Secret"},
+		{Key: "sms_sign_name", Value: siteName, Group: "sms", Desc: "短信签名"},
+
+		// 支付配置（安装后在后台配置）
+		{Key: "pay_balance_enabled", Value: "true", Group: "payment", Desc: "余额支付"},
+
+		// 定时任务配置
+		{Key: "cron_auto_renew", Value: "0 2 * * *", Group: "cron", Desc: "自动续费 cron 表达式"},
+		{Key: "cron_invoice_check", Value: "0 */1 * * *", Group: "cron", Desc: "账单检查 cron 表达式"},
+		{Key: "cron_product_status", Value: "0 */1 * * *", Group: "cron", Desc: "产品状态检查 cron 表达式"},
+
+		// JWT 配置
+		{Key: "jwt_secret", Value: randomSecret(32), Group: "jwt", Desc: "JWT 签名密钥"},
+		{Key: "jwt_expire_hours", Value: "72", Group: "jwt", Desc: "JWT 过期时间（小时）"},
+
+		// 日志配置
+		{Key: "log_level", Value: "info", Group: "log", Desc: "日志级别"},
+		{Key: "log_format", Value: "text", Group: "log", Desc: "日志格式"},
+
+		// 安全配置
+		{Key: "captcha_enabled", Value: "true", Group: "security", Desc: "是否启用验证码"},
+		{Key: "login_attempt_limit", Value: "5", Group: "security", Desc: "登录尝试次数限制"},
 	}
 
 	for _, s := range defaults {
@@ -305,13 +352,9 @@ func createDefaultConfigs(dbConn *gorm.DB) error {
 }
 
 func generateConfig(req installRequest) (string, error) {
-	redisPort := req.RedisPort
-	if redisPort == "" {
-		redisPort = "6379"
-	}
-
 	content := fmt.Sprintf(`# AnchorFinance Configuration
-# Auto-generated by installer
+# Auto-generated by installer - 仅包含数据库连接信息
+# 其余配置（JWT/日志/邮件/短信/支付/Redis等）全部存储在数据库，通过后台管理
 
 server:
   port: 8080
@@ -323,24 +366,10 @@ database:
   user: %s
   password: "%s"
   dbname: %s
-
-redis:
-  host: %s
-  port: %s
-  password: "%s"
-  db: 0
-
-jwt:
-  secret: "%s"
-  expire_hours: 72
-
-log:
-  level: info
-  format: text
+  sslmode: disable
+  timezone: Asia/Shanghai
 `,
 		req.DBHost, req.DBPort, req.DBUser, req.DBPassword, req.DBName,
-		req.RedisHost, redisPort, req.RedisPassword,
-		randomSecret(32),
 	)
 
 	configPath := filepath.Join("configs", "config.yaml")

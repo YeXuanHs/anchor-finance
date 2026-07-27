@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anchor-finance/backend/pkg/payment"
+	"anchorfinance/pkg/payment"
 )
 
 const (

@@ -1,142 +1,123 @@
 <template>
-  <div>
-    <n-card :bordered="false" rounded>
-      <template #header-extra>
-        <n-space style="padding: 12px 0 4px">
-          <n-input
-            v-model:value="searchKeyword"
-            placeholder="搜索优惠券名称"
-            clearable
-            style="width: 240px"
-            @clear="handleSearch"
-            @keydown.enter="handleSearch"
-          >
-            <template #prefix>
-              <n-icon><SearchIcon /></n-icon>
-            </template>
-          </n-input>
-          <n-select
-            v-model:value="filterType"
-            placeholder="优惠券类型"
-            clearable
-            style="width: 150px"
-            :options="typeOptions"
-          />
-          <n-select
-            v-model:value="filterStatus"
-            placeholder="状态"
-            clearable
-            style="width: 120px"
-            :options="statusOptions"
-          />
-          <n-button type="primary" @click="openCouponModal()">
-            <template #icon><n-icon><AddIcon /></n-icon></template>
-            创建优惠券
-          </n-button>
-        </n-space>
+  <div class="admin-page">
+    <el-card shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <span class="card-title">优惠券管理</span>
+          <div class="card-actions">
+            <el-input v-model="searchKeyword" placeholder="搜索优惠券名称" clearable style="width: 220px">
+              <template #prefix><el-icon><Search /></el-icon></template>
+            </el-input>
+            <el-select v-model="filterType" placeholder="优惠券类型" clearable style="width: 130px">
+              <el-option v-for="o in typeOptions" :key="o.value" :label="o.label" :value="o.value" />
+            </el-select>
+            <el-select v-model="filterStatus" placeholder="状态" clearable style="width: 110px">
+              <el-option v-for="o in statusOptions" :key="o.value" :label="o.label" :value="o.value" />
+            </el-select>
+            <el-button type="primary" @click="openCouponModal()">
+              <el-icon><Plus /></el-icon>创建优惠券
+            </el-button>
+          </div>
+        </div>
       </template>
 
-      <n-data-table
-        :columns="couponColumns"
-        :data="filteredCoupons"
-        :loading="loading"
-        :bordered="false"
-        :row-key="(row: any) => row.id"
-        size="small"
-      />
-    </n-card>
+      <el-table :data="filteredCoupons" v-loading="loading" stripe size="small">
+        <el-table-column prop="id" label="ID" width="60" sortable />
+        <el-table-column prop="name" label="名称" show-overflow-tooltip />
+        <el-table-column prop="type" label="类型" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.type === 'fixed' ? 'success' : row.type === 'percent' ? 'warning' : 'primary'" size="small">
+              {{ typeNameMap[row.type] }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="value" label="面值" width="90" sortable>
+          <template #default="{ row }">
+            <span style="font-weight: 600; color: #52c41a">{{ row.type === 'percent' ? row.value + '%' : '¥' + row.value }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="使用条件" width="120">
+          <template #default="{ row }">{{ row.minAmount > 0 ? `满¥${row.minAmount}可用` : '无门槛' }}</template>
+        </el-table-column>
+        <el-table-column label="有效期" width="200">
+          <template #default="{ row }">{{ row.startDate }} ~ {{ row.endDate }}</template>
+        </el-table-column>
+        <el-table-column label="已使用" width="100" sortable>
+          <template #default="{ row }">{{ row.usedCount }} / {{ row.totalCount }}</template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="80">
+          <template #default="{ row }">
+            <el-switch :model-value="row.status === 'active'" size="small" :disabled="row.status === 'expired'" @change="handleToggleCoupon(row)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="130" fixed="right">
+          <template #default="{ row }">
+            <el-button text type="primary" :icon="Edit" @click="openCouponModal(row)" />
+            <el-popconfirm title="确认删除该优惠券？" @confirm="handleDeleteCoupon(row.id)">
+              <template #reference>
+                <el-button text type="danger" :icon="Delete" />
+              </template>
+            </el-popconfirm>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
-    <!-- Coupon Edit Modal -->
-    <n-modal
-      v-model:show="couponModalVisible"
-      preset="card"
-      :title="editingCoupon ? '编辑优惠券' : '创建优惠券'"
-      style="width: 640px"
-      :bordered="false"
-      :segmented="{ content: true, footer: true }"
-    >
-      <n-form ref="couponFormRef" :model="couponForm" :rules="couponRules" label-placement="left" label-width="100">
-        <n-form-item label="优惠券名称" path="name">
-          <n-input v-model:value="couponForm.name" placeholder="请输入优惠券名称" />
-        </n-form-item>
-        <n-form-item label="优惠券类型" path="type">
-          <n-select v-model:value="couponForm.type" :options="typeOptions" placeholder="选择优惠券类型" />
-        </n-form-item>
-        <n-form-item label="面值" path="value">
-          <n-input-number v-model:value="couponForm.value" :min="0" :precision="2" style="width: 100%">
-            <template #prefix>
-              <span v-if="couponForm.type === 'fixed'">¥</span>
-              <span v-else-if="couponForm.type === 'percent'">%</span>
-            </template>
-          </n-input-number>
-        </n-form-item>
-        <n-form-item label="使用条件" path="minAmount">
-          <n-input-number v-model:value="couponForm.minAmount" :min="0" :precision="2" style="width: 100%">
+    <!-- Coupon Dialog -->
+    <el-dialog v-model="couponModalVisible" :title="editingCoupon ? '编辑优惠券' : '创建优惠券'" width="640px" destroy-on-close>
+      <el-form ref="couponFormRef" :model="couponForm" :rules="couponRules" label-width="100px">
+        <el-form-item label="优惠券名称" prop="name">
+          <el-input v-model="couponForm.name" placeholder="请输入优惠券名称" />
+        </el-form-item>
+        <el-form-item label="优惠券类型" prop="type">
+          <el-select v-model="couponForm.type" placeholder="选择优惠券类型" style="width: 100%">
+            <el-option v-for="o in typeOptions" :key="o.value" :label="o.label" :value="o.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="面值" prop="value">
+          <el-input-number v-model="couponForm.value" :min="0" :precision="2" style="width: 100%">
+            <template #prefix>{{ couponForm.type === 'percent' ? '%' : '¥' }}</template>
+          </el-input-number>
+        </el-form-item>
+        <el-form-item label="使用条件">
+          <el-input-number v-model="couponForm.minAmount" :min="0" :precision="2" style="width: 100%">
             <template #prefix>¥</template>
             <template #suffix>满减门槛</template>
-          </n-input-number>
-        </n-form-item>
-        <n-form-item label="发放总量" path="totalCount">
-          <n-input-number v-model:value="couponForm.totalCount" :min="1" style="width: 100%" />
-        </n-form-item>
-        <n-form-item label="有效期" path="dateRange">
-          <n-date-picker
-            v-model:value="couponForm.dateRange"
-            type="daterange"
-            style="width: 100%"
-            clearable
-          />
-        </n-form-item>
-        <n-form-item label="状态" path="status">
-          <n-switch v-model:value="couponForm.status" checked-value="active" unchecked-value="inactive">
-            <template #checked>启用</template>
-            <template #unchecked>禁用</template>
-          </n-switch>
-        </n-form-item>
-      </n-form>
+          </el-input-number>
+        </el-form-item>
+        <el-form-item label="发放总量" prop="totalCount">
+          <el-input-number v-model="couponForm.totalCount" :min="1" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="有效期">
+          <el-date-picker v-model="couponForm.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="couponForm.status" active-value="active" inactive-value="inactive" active-text="启用" inactive-text="禁用" />
+        </el-form-item>
+      </el-form>
       <template #footer>
-        <n-space justify="end">
-          <n-button @click="couponModalVisible = false">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleCouponSubmit">确定</n-button>
-        </n-space>
+        <el-button @click="couponModalVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleCouponSubmit">确定</el-button>
       </template>
-    </n-modal>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { h, ref, reactive, computed } from 'vue'
-import {
-  useMessage,
-  NTag,
-  NButton,
-  NSwitch,
-  NSpace,
-  NPopconfirm,
-  NTooltip,
-  NIcon,
-  type DataTableColumns,
-  type FormInst,
-  type FormRules,
-} from 'naive-ui'
-import {
-  SearchOutline as SearchIcon,
-  AddOutline as AddIcon,
-  CreateOutline as EditIcon,
-  TrashOutline as DeleteIcon,
-} from '@vicons/ionicons5'
+import { ref, reactive, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Search, Plus, Edit, Delete } from '@element-plus/icons-vue'
+import type { FormInstance, FormRules } from 'element-plus'
 
-const message = useMessage()
 const loading = ref(false)
 const submitting = ref(false)
 const couponModalVisible = ref(false)
 const searchKeyword = ref('')
 const filterType = ref<string | null>(null)
 const filterStatus = ref<string | null>(null)
-const couponFormRef = ref<FormInst | null>(null)
+const couponFormRef = ref<FormInstance>()
 const editingCoupon = ref<any>(null)
 
-// ---- Options ----
 const typeOptions = [
   { label: '满减', value: 'full' },
   { label: '折扣', value: 'percent' },
@@ -149,19 +130,8 @@ const statusOptions = [
   { label: '已过期', value: 'expired' },
 ]
 
-const typeNameMap: Record<string, string> = {
-  full: '满减',
-  percent: '折扣',
-  fixed: '固定金额',
-}
+const typeNameMap: Record<string, string> = { full: '满减', percent: '折扣', fixed: '固定金额' }
 
-const statusNameMap: Record<string, string> = {
-  active: '启用',
-  inactive: '禁用',
-  expired: '已过期',
-}
-
-// ---- Coupons ----
 const coupons = ref([
   { id: 1, name: '新用户专享券', type: 'fixed', value: 50, minAmount: 100, totalCount: 1000, usedCount: 356, status: 'active', startDate: '2026-01-01', endDate: '2026-12-31' },
   { id: 2, name: '满500减100', type: 'full', value: 100, minAmount: 500, totalCount: 500, usedCount: 128, status: 'active', startDate: '2026-03-01', endDate: '2026-09-30' },
@@ -173,193 +143,55 @@ const coupons = ref([
 
 const filteredCoupons = computed(() => {
   return coupons.value.filter((c) => {
-    if (searchKeyword.value.trim()) {
-      const kw = searchKeyword.value.trim().toLowerCase()
-      if (!c.name.toLowerCase().includes(kw)) return false
-    }
+    if (searchKeyword.value.trim() && !c.name.toLowerCase().includes(searchKeyword.value.trim().toLowerCase())) return false
     if (filterType.value && c.type !== filterType.value) return false
     if (filterStatus.value && c.status !== filterStatus.value) return false
     return true
   })
 })
 
-// ---- Coupon Form ----
-const couponForm = reactive({
-  name: '',
-  type: null as string | null,
-  value: 0,
-  minAmount: 0,
-  totalCount: 100,
-  dateRange: null as [number, number] | null,
-  status: 'active',
-})
-
+const couponForm = reactive({ name: '', type: '' as string, value: 0, minAmount: 0, totalCount: 100, dateRange: null as any, status: 'active' })
 const couponRules: FormRules = {
   name: { required: true, message: '请输入优惠券名称', trigger: 'blur' },
   type: { required: true, message: '请选择优惠券类型', trigger: 'change' },
-  value: { required: true, type: 'number', message: '请输入面值', trigger: 'blur' },
-  totalCount: { required: true, type: 'number', message: '请输入发放总量', trigger: 'blur' },
+  value: { required: true, message: '请输入面值', trigger: 'blur' },
+  totalCount: { required: true, message: '请输入发放总量', trigger: 'blur' },
 }
 
-// ---- Coupon Table Columns ----
-const couponColumns: DataTableColumns<any> = [
-  { title: 'ID', key: 'id', width: 60, sorter: (a, b) => a.id - b.id },
-  { title: '名称', key: 'name', ellipsis: { tooltip: true } },
-  {
-    title: '类型',
-    key: 'type',
-    width: 90,
-    render: (row) => h(NTag, { size: 'small', round: true, bordered: false, type: row.type === 'fixed' ? 'success' : row.type === 'percent' ? 'warning' : 'info' }, { default: () => typeNameMap[row.type] || row.type }),
-  },
-  {
-    title: '面值',
-    key: 'value',
-    width: 100,
-    sorter: (a, b) => a.value - b.value,
-    render: (row) => {
-      const prefix = row.type === 'percent' ? '%' : '¥'
-      return h('span', { style: 'font-weight:600;color:#18a058' }, `${row.type === 'percent' ? row.value : row.value}${prefix}`)
-    },
-  },
-  {
-    title: '使用条件',
-    key: 'minAmount',
-    width: 120,
-    render: (row) => h('span', null, row.minAmount > 0 ? `满¥${row.minAmount}可用` : '无门槛'),
-  },
-  {
-    title: '有效期',
-    key: 'dateRange',
-    width: 200,
-    render: (row) => h('span', null, `${row.startDate} ~ ${row.endDate}`),
-  },
-  {
-    title: '已使用',
-    key: 'usedCount',
-    width: 100,
-    sorter: (a, b) => a.usedCount - b.usedCount,
-    render: (row) => h('span', null, `${row.usedCount} / ${row.totalCount}`),
-  },
-  {
-    title: '状态',
-    key: 'status',
-    width: 80,
-    render: (row) =>
-      h(NSwitch, {
-        value: row.status === 'active',
-        size: 'small',
-        disabled: row.status === 'expired',
-        onUpdateValue: () => handleToggleCoupon(row),
-      }),
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 150,
-    render: (row) =>
-      h(NSpace, { size: 4 }, {
-        default: () => [
-          h(NTooltip, {}, {
-            trigger: () =>
-              h(NButton, { size: 'small', quaternary: true, type: 'primary', onClick: () => openCouponModal(row) }, {
-                icon: () => h(NIcon, null, { default: () => h(EditIcon) }),
-              }),
-            default: () => '编辑',
-          }),
-          h(NPopconfirm, { onPositiveClick: () => handleToggleCoupon(row) }, {
-            trigger: () =>
-              h(NTooltip, {}, {
-                trigger: () =>
-                  h(NButton, { size: 'small', quaternary: true, type: 'warning', disabled: row.status === 'expired' }, {
-                    icon: () => h(NIcon, null, { default: () => h(StatusIcon) }),
-                  }),
-                default: () => row.status === 'active' ? '禁用' : '启用',
-              }),
-            default: () => `确认${row.status === 'active' ? '禁用' : '启用'}该优惠券？`,
-          }),
-          h(NPopconfirm, { onPositiveClick: () => handleDeleteCoupon(row.id) }, {
-            trigger: () =>
-              h(NTooltip, {}, {
-                trigger: () =>
-                  h(NButton, { size: 'small', quaternary: true, type: 'error' }, {
-                    icon: () => h(NIcon, null, { default: () => h(DeleteIcon) }),
-                  }),
-                default: () => '删除',
-              }),
-            default: () => `确认删除优惠券「${row.name}」？`,
-          }),
-        ],
-      }),
-  },
-]
-
-// Status icon component
-const StatusIcon = defineComponent({
-  render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 512 512', fill: 'currentColor' }, [
-    h('path', { d: 'M256 48C141.13 48 48 141.13 48 256s93.13 208 208 208 208-93.13 208-208S370.87 48 256 48zm-24 312h48v48h-48v-48zm0-80h48v80h-48v-80zm0-160h48v120h-48V120z' }),
-  ]),
-})
-
-// ---- Actions ----
 function openCouponModal(coupon?: any) {
   editingCoupon.value = coupon || null
   if (coupon) {
-    Object.assign(couponForm, {
-      name: coupon.name,
-      type: coupon.type,
-      value: coupon.value,
-      minAmount: coupon.minAmount,
-      totalCount: coupon.totalCount,
-      dateRange: null,
-      status: coupon.status,
-    })
+    Object.assign(couponForm, { name: coupon.name, type: coupon.type, value: coupon.value, minAmount: coupon.minAmount, totalCount: coupon.totalCount, dateRange: null, status: coupon.status })
   } else {
-    Object.assign(couponForm, { name: '', type: null, value: 0, minAmount: 0, totalCount: 100, dateRange: null, status: 'active' })
+    Object.assign(couponForm, { name: '', type: '', value: 0, minAmount: 0, totalCount: 100, dateRange: null, status: 'active' })
   }
   couponModalVisible.value = true
 }
 
 async function handleCouponSubmit() {
-  try { await couponFormRef.value?.validate() } catch { return }
+  if (!couponFormRef.value) return
+  try { await couponFormRef.value.validate() } catch { return }
   submitting.value = true
   try {
-    // TODO: API call
-    message.success(editingCoupon.value ? '优惠券更新成功' : '优惠券创建成功')
+    ElMessage.success(editingCoupon.value ? '优惠券更新成功' : '优惠券创建成功')
     couponModalVisible.value = false
-  } catch (err: any) {
-    message.error(err.message || '操作失败')
-  } finally {
-    submitting.value = false
-  }
+  } finally { submitting.value = false }
 }
 
 function handleToggleCoupon(coupon: any) {
   if (coupon.status === 'expired') return
   coupon.status = coupon.status === 'active' ? 'inactive' : 'active'
-  message.success(`优惠券「${coupon.name}」已${coupon.status === 'active' ? '启用' : '禁用'}`)
+  ElMessage.success(`优惠券「${coupon.name}」已${coupon.status === 'active' ? '启用' : '禁用'}`)
 }
 
 function handleDeleteCoupon(id: number) {
   coupons.value = coupons.value.filter((c) => c.id !== id)
-  message.success('优惠券已删除')
-}
-
-function handleSearch() {
-  // filter is reactive via computed
+  ElMessage.success('优惠券已删除')
 }
 </script>
 
 <style scoped>
-:deep(.n-card) {
-  background-color: #1e1e2e;
-  color: #cdd6f4;
-}
-
-:deep(.n-data-table) {
-  --n-th-color: #181825;
-  --n-td-color: #1e1e2e;
-  --n-border-color: #313244;
-  --n-th-text-color: #cdd6f4;
-  --n-td-text-color: #cdd6f4;
-}
+.card-header { display: flex; align-items: center; justify-content: space-between; }
+.card-title { font-size: 16px; font-weight: 600; }
+.card-actions { display: flex; align-items: center; gap: 12px; }
 </style>

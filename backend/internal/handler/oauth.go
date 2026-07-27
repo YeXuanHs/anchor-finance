@@ -3,11 +3,11 @@ package handler
 import (
 	"net/http"
 
-	"github.com/anchor-finance/backend/internal/api/middleware"
-	"github.com/anchor-finance/backend/internal/service"
-	"github.com/anchor-finance/backend/pkg/logger"
-	"github.com/anchor-finance/backend/pkg/oauth"
-	"github.com/anchor-finance/backend/pkg/response"
+	"anchorfinance/internal/api/middleware"
+	"anchorfinance/internal/service"
+	"anchorfinance/pkg/logger"
+	"anchorfinance/pkg/oauth"
+	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"

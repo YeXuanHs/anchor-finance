@@ -60,19 +60,7 @@ type Notification struct {
 	Metadata    datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
 }
 
-// EmailTemplate 邮件模板
-type EmailTemplate struct {
-	gorm.Model
-	Code     string `gorm:"type:varchar(64);uniqueIndex;not null" json:"code"`
-	Name     string `gorm:"type:varchar(128);not null" json:"name"`
-	Subject  string `gorm:"type:varchar(256);not null" json:"subject"`
-	Body     string `gorm:"type:text;not null" json:"body"`
-	Format   string `gorm:"type:varchar(16);default:'html'" json:"format"` // html/plain
-	Language string `gorm:"type:varchar(16);default:'zh-CN'" json:"language"`
-	IsSystem bool   `gorm:"default:false" json:"is_system"` // 系统模板不可删除
-	Status   int16  `gorm:"type:smallint;default:1;not null" json:"status"` // 1=启用 0=禁用
-	Variables datatypes.JSON `gorm:"type:jsonb" json:"variables"` // 可用变量说明
-}
+// EmailTemplate moved to internal/model/email_template.go
 
 // PaymentGateway 支付网关
 type PaymentGateway struct {

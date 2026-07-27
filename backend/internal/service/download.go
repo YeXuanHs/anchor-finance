@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 
-	"github.com/anchor-finance/backend/internal/model"
-	"github.com/anchor-finance/backend/pkg/logger"
+	"anchorfinance/internal/model"
+	"anchorfinance/pkg/logger"
 
 	"gorm.io/gorm"
 )

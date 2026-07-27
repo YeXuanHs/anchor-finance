@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/anchor-finance/backend/pkg/logger"
+	"anchorfinance/pkg/logger"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"

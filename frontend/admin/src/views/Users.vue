@@ -1,155 +1,158 @@
 <template>
-  <div>
-    <n-card title="用户管理" :bordered="false" rounded>
-      <template #header-extra>
-        <n-space>
-          <n-input
-            v-model:value="searchKeyword"
-            placeholder="搜索用户名 / 邮箱 / 手机"
-            clearable
-            style="width: 280px"
-            @clear="handleSearch"
-            @keydown.enter="handleSearch"
-          >
-            <template #prefix>
-              <n-icon><SearchIcon /></n-icon>
-            </template>
-          </n-input>
-          <n-button type="primary" @click="openModal()">
-            <template #icon><n-icon><AddIcon /></n-icon></template>
-            添加用户
-          </n-button>
-        </n-space>
+  <div class="admin-page">
+    <el-card shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <span class="card-title">用户管理</span>
+          <div class="card-actions">
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索用户名 / 邮箱 / 手机"
+              clearable
+              style="width: 260px"
+              @clear="handleSearch"
+              @keydown.enter="handleSearch"
+            >
+              <template #prefix><el-icon><Search /></el-icon></template>
+            </el-input>
+            <el-button type="primary" @click="openModal()">
+              <el-icon><Plus /></el-icon>添加用户
+            </el-button>
+          </div>
+        </div>
       </template>
 
-      <n-data-table
-        :columns="columns"
-        :data="paginatedUsers"
-        :loading="loading"
-        :bordered="false"
-        :row-key="(row: any) => row.id"
-        size="small"
-        style="margin-top: 4px"
-      />
+      <el-table :data="paginatedUsers" v-loading="loading" stripe size="small">
+        <el-table-column prop="id" label="ID" width="60" sortable />
+        <el-table-column prop="username" label="用户名" width="120" />
+        <el-table-column prop="email" label="邮箱" show-overflow-tooltip />
+        <el-table-column prop="phone" label="手机" width="130" />
+        <el-table-column prop="status" label="状态" width="80">
+          <template #default="{ row }">
+            <el-switch
+              :model-value="row.status === 'active'"
+              size="small"
+              @change="handleToggleStatus(row)"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column prop="createdAt" label="注册时间" width="160" sortable />
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <el-tooltip content="查看" placement="top">
+              <el-button text type="primary" :icon="View" @click="openDrawer(row)" />
+            </el-tooltip>
+            <el-tooltip content="编辑" placement="top">
+              <el-button text type="primary" :icon="Edit" @click="openModal(row)" />
+            </el-tooltip>
+            <el-popconfirm title="确认删除该用户？" @confirm="handleDelete(row.id)">
+              <template #reference>
+                <el-tooltip content="删除" placement="top">
+                  <el-button text type="danger" :icon="Delete" />
+                </el-tooltip>
+              </template>
+            </el-popconfirm>
+          </template>
+        </el-table-column>
+      </el-table>
 
       <div class="pagination-wrap">
-        <n-pagination
-          v-model:page="pagination.page"
+        <el-pagination
+          v-model:current-page="pagination.page"
           v-model:page-size="pagination.pageSize"
-          :item-count="filteredUsers.length"
-          :page-sizes="pagination.pageSizes"
-          show-size-picker
-          @update:page="handlePageChange"
-          @update:page-size="handlePageSizeChange"
+          :total="filteredUsers.length"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          @current-change="handlePageChange"
+          @size-change="handlePageSizeChange"
         />
       </div>
-    </n-card>
+    </el-card>
 
-    <!-- Add/Edit Modal -->
-    <n-modal
-      v-model:show="modalVisible"
-      preset="card"
+    <!-- Add/Edit Dialog -->
+    <el-dialog
+      v-model="modalVisible"
       :title="editingUser ? '编辑用户' : '添加用户'"
-      style="width: 520px"
-      :bordered="false"
-      :segmented="{ content: true, footer: true }"
+      width="520px"
+      destroy-on-close
     >
-      <n-form ref="formRef" :model="formData" :rules="rules" label-placement="left" label-width="80">
-        <n-form-item label="用户名" path="username">
-          <n-input v-model:value="formData.username" placeholder="请输入用户名" />
-        </n-form-item>
-        <n-form-item label="邮箱" path="email">
-          <n-input v-model:value="formData.email" placeholder="请输入邮箱" />
-        </n-form-item>
-        <n-form-item label="手机" path="phone">
-          <n-input v-model:value="formData.phone" placeholder="请输入手机号" />
-        </n-form-item>
-        <n-form-item v-if="!editingUser" label="密码" path="password">
-          <n-input v-model:value="formData.password" type="password" show-password-on="click" placeholder="请输入密码" />
-        </n-form-item>
-        <n-form-item label="状态" path="status">
-          <n-switch v-model:value="formData.status" checked-value="active" unchecked-value="disabled">
-            <template #checked>启用</template>
-            <template #unchecked>禁用</template>
-          </n-switch>
-        </n-form-item>
-      </n-form>
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="80px">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="formData.username" placeholder="请输入用户名" />
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="formData.email" placeholder="请输入邮箱" />
+        </el-form-item>
+        <el-form-item label="手机" prop="phone">
+          <el-input v-model="formData.phone" placeholder="请输入手机号" />
+        </el-form-item>
+        <el-form-item v-if="!editingUser" label="密码" prop="password">
+          <el-input v-model="formData.password" type="password" show-password placeholder="请输入密码" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="formData.status" active-value="active" inactive-value="disabled" active-text="启用" inactive-text="禁用" />
+        </el-form-item>
+      </el-form>
       <template #footer>
-        <n-space justify="end">
-          <n-button @click="modalVisible = false">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleSubmit">确定</n-button>
-        </n-space>
+        <el-button @click="modalVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
-    </n-modal>
+    </el-dialog>
 
     <!-- User Detail Drawer -->
-    <n-drawer v-model:show="drawerVisible" :width="480" placement="right">
-      <n-drawer-content :title="drawerUser?.username || '用户详情'" closable>
-        <template v-if="drawerUser">
-          <n-descriptions bordered label-placement="left" :column="1" label-style="width:100px">
-            <n-descriptions-item label="ID">{{ drawerUser.id }}</n-descriptions-item>
-            <n-descriptions-item label="用户名">{{ drawerUser.username }}</n-descriptions-item>
-            <n-descriptions-item label="邮箱">{{ drawerUser.email }}</n-descriptions-item>
-            <n-descriptions-item label="手机">{{ drawerUser.phone || '-' }}</n-descriptions-item>
-            <n-descriptions-item label="余额">
-              <n-text type="info" strong>¥{{ drawerUser.balance.toFixed(2) }}</n-text>
-            </n-descriptions-item>
-            <n-descriptions-item label="状态">
-              <n-tag :type="drawerUser.status === 'active' ? 'success' : 'error'" size="small" round>
-                {{ drawerUser.status === 'active' ? '启用' : '禁用' }}
-              </n-tag>
-            </n-descriptions-item>
-            <n-descriptions-item label="注册时间">{{ drawerUser.createdAt }}</n-descriptions-item>
-            <n-descriptions-item label="最后登录">{{ drawerUser.lastLogin || '-' }}</n-descriptions-item>
-          </n-descriptions>
+    <el-drawer v-model="drawerVisible" title="用户详情" size="480px">
+      <template v-if="drawerUser">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="ID">{{ drawerUser.id }}</el-descriptions-item>
+          <el-descriptions-item label="用户名">{{ drawerUser.username }}</el-descriptions-item>
+          <el-descriptions-item label="邮箱">{{ drawerUser.email }}</el-descriptions-item>
+          <el-descriptions-item label="手机">{{ drawerUser.phone || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="余额">
+            <span style="color: #0056FF; font-weight: 600">¥{{ drawerUser.balance.toFixed(2) }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="drawerUser.status === 'active' ? 'success' : 'danger'" size="small">
+              {{ drawerUser.status === 'active' ? '启用' : '禁用' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="注册时间">{{ drawerUser.createdAt }}</el-descriptions-item>
+          <el-descriptions-item label="最后登录">{{ drawerUser.lastLogin || '-' }}</el-descriptions-item>
+        </el-descriptions>
 
-          <n-divider />
-
-          <n-space vertical>
-            <n-text strong>最近订单</n-text>
-            <n-data-table
-              :columns="drawerOrderColumns"
-              :data="drawerOrders"
-              :bordered="false"
-              :pagination="false"
-              size="small"
-            />
-          </n-space>
-        </template>
-      </n-drawer-content>
-    </n-drawer>
+        <el-divider />
+        <h4 style="margin-bottom: 12px">最近订单</h4>
+        <el-table :data="drawerOrders" size="small" stripe>
+          <el-table-column prop="id" label="订单号" width="150" />
+          <el-table-column prop="product" label="产品" />
+          <el-table-column prop="amount" label="金额" width="80">
+            <template #default="{ row }">¥{{ row.amount }}</template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="80">
+            <template #default="{ row }">
+              <el-tag :type="drawerOrderStatusMap[row.status]?.type as any" size="small">
+                {{ drawerOrderStatusMap[row.status]?.label }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="time" label="时间" width="150" />
+        </el-table>
+      </template>
+    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { h, ref, reactive, computed } from 'vue'
-import {
-  useMessage,
-  NTag,
-  NButton,
-  NSwitch,
-  NSpace,
-  NPopconfirm,
-  NTooltip,
-  type DataTableColumns,
-  type FormInst,
-  type FormRules,
-} from 'naive-ui'
-import {
-  SearchOutline as SearchIcon,
-  AddOutline as AddIcon,
-  EyeOutline as ViewIcon,
-  CreateOutline as EditIcon,
-  TrashOutline as DeleteIcon,
-} from '@vicons/ionicons5'
+import { ref, reactive, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Search, Plus, View, Edit, Delete } from '@element-plus/icons-vue'
+import type { FormInstance, FormRules } from 'element-plus'
 
-const message = useMessage()
 const loading = ref(false)
 const submitting = ref(false)
 const modalVisible = ref(false)
 const drawerVisible = ref(false)
 const searchKeyword = ref('')
-const formRef = ref<FormInst | null>(null)
+const formRef = ref<FormInstance>()
 const editingUser = ref<any>(null)
 const drawerUser = ref<any>(null)
 
@@ -158,7 +161,7 @@ const formData = reactive({
   email: '',
   phone: '',
   password: '',
-  status: 'active' as string,
+  status: 'active',
 })
 
 const rules: FormRules = {
@@ -167,13 +170,8 @@ const rules: FormRules = {
   password: { required: true, message: '请输入密码', trigger: 'blur' },
 }
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  pageSizes: [10, 20, 50],
-})
+const pagination = reactive({ page: 1, pageSize: 10 })
 
-// ---- Mock Data ----
 const users = ref([
   { id: 1, username: 'zhangsan', email: 'zhangsan@example.com', phone: '13800138001', balance: 1500.00, status: 'active', createdAt: '2026-01-15 09:30', lastLogin: '2026-07-26 08:12' },
   { id: 2, username: 'lisi', email: 'lisi@example.com', phone: '13800138002', balance: 800.50, status: 'active', createdAt: '2026-02-20 14:22', lastLogin: '2026-07-25 16:45' },
@@ -189,15 +187,11 @@ const users = ref([
   { id: 12, username: 'huangsi', email: 'huangsi@example.com', phone: '13800138012', balance: 0, status: 'disabled', createdAt: '2026-07-10 14:10', lastLogin: '' },
 ])
 
-// ---- Filter & Pagination ----
 const filteredUsers = computed(() => {
   if (!searchKeyword.value.trim()) return users.value
   const kw = searchKeyword.value.trim().toLowerCase()
   return users.value.filter(
-    (u) =>
-      u.username.toLowerCase().includes(kw) ||
-      u.email.toLowerCase().includes(kw) ||
-      u.phone.includes(kw)
+    (u) => u.username.toLowerCase().includes(kw) || u.email.toLowerCase().includes(kw) || u.phone.includes(kw)
   )
 })
 
@@ -206,7 +200,6 @@ const paginatedUsers = computed(() => {
   return filteredUsers.value.slice(start, start + pagination.pageSize)
 })
 
-// ---- Drawer Orders ----
 const drawerOrders = ref([
   { id: 'AF20260726001', product: '基础版主机', amount: 299, status: 'active', time: '2026-07-26 14:30' },
   { id: 'AF20260715003', product: '4核8G云服务器', amount: 399, status: 'paid', time: '2026-07-15 09:20' },
@@ -216,81 +209,9 @@ const drawerOrderStatusMap: Record<string, { label: string; type: string }> = {
   pending: { label: '待支付', type: 'warning' },
   paid: { label: '已支付', type: 'info' },
   active: { label: '已开通', type: 'success' },
-  cancelled: { label: '已取消', type: 'default' },
+  cancelled: { label: '已取消', type: 'info' },
 }
 
-const drawerOrderColumns: DataTableColumns<any> = [
-  { title: '订单号', key: 'id', width: 140 },
-  { title: '产品', key: 'product' },
-  { title: '金额', key: 'amount', width: 80, render: (row) => `¥${row.amount}` },
-  {
-    title: '状态',
-    key: 'status',
-    width: 80,
-    render: (row) => {
-      const s = drawerOrderStatusMap[row.status]
-      return h(NTag, { type: s.type as any, size: 'tiny', round: true, bordered: false }, { default: () => s.label })
-    },
-  },
-  { title: '时间', key: 'time', width: 140 },
-]
-
-// ---- Table Columns ----
-const columns: DataTableColumns<any> = [
-  { title: 'ID', key: 'id', width: 60, sorter: (a, b) => a.id - b.id },
-  { title: '用户名', key: 'username', width: 120 },
-  { title: '邮箱', key: 'email', ellipsis: { tooltip: true } },
-  { title: '手机', key: 'phone', width: 130 },
-  {
-    title: '状态',
-    key: 'status',
-    width: 80,
-    render: (row) =>
-      h(NSwitch, {
-        value: row.status === 'active',
-        size: 'small',
-        onUpdateValue: () => handleToggleStatus(row),
-      }),
-  },
-  { title: '注册时间', key: 'createdAt', width: 150, sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 180,
-    render: (row) =>
-      h(NSpace, { size: 4 }, {
-        default: () => [
-          h(NTooltip, {}, {
-            trigger: () =>
-              h(NButton, { size: 'small', quaternary: true, type: 'info', onClick: () => openDrawer(row) }, {
-                icon: () => h(NIcon, null, { default: () => h(ViewIcon) }),
-              }),
-            default: () => '查看',
-          }),
-          h(NTooltip, {}, {
-            trigger: () =>
-              h(NButton, { size: 'small', quaternary: true, type: 'primary', onClick: () => openModal(row) }, {
-                icon: () => h(NIcon, null, { default: () => h(EditIcon) }),
-              }),
-            default: () => '编辑',
-          }),
-          h(NPopconfirm, { onPositiveClick: () => handleDelete(row.id) }, {
-            trigger: () =>
-              h(NTooltip, {}, {
-                trigger: () =>
-                  h(NButton, { size: 'small', quaternary: true, type: 'error' }, {
-                    icon: () => h(NIcon, null, { default: () => h(DeleteIcon) }),
-                  }),
-                default: () => '删除',
-              }),
-            default: () => `确认删除用户「${row.username}」？`,
-          }),
-        ],
-      }),
-  },
-]
-
-// ---- Actions ----
 function openModal(user?: any) {
   editingUser.value = user || null
   if (user) {
@@ -307,18 +228,18 @@ function openDrawer(user: any) {
 }
 
 async function handleSubmit() {
+  if (!formRef.value) return
   try {
-    await formRef.value?.validate()
+    await formRef.value.validate()
   } catch {
     return
   }
   submitting.value = true
   try {
-    // TODO: API call
-    message.success(editingUser.value ? '用户更新成功' : '用户添加成功')
+    ElMessage.success(editingUser.value ? '用户更新成功' : '用户添加成功')
     modalVisible.value = false
   } catch (err: any) {
-    message.error(err.message || '操作失败')
+    ElMessage.error(err.message || '操作失败')
   } finally {
     submitting.value = false
   }
@@ -326,32 +247,34 @@ async function handleSubmit() {
 
 function handleToggleStatus(user: any) {
   user.status = user.status === 'active' ? 'disabled' : 'active'
-  message.success(`用户「${user.username}」已${user.status === 'active' ? '启用' : '禁用'}`)
+  ElMessage.success(`用户「${user.username}」已${user.status === 'active' ? '启用' : '禁用'}`)
 }
 
 function handleDelete(id: number) {
   users.value = users.value.filter((u) => u.id !== id)
-  message.success('用户已删除')
+  ElMessage.success('用户已删除')
 }
 
-function handleSearch() {
-  pagination.page = 1
-}
-
-function handlePageChange(page: number) {
-  pagination.page = page
-}
-
-function handlePageSizeChange(pageSize: number) {
-  pagination.pageSize = pageSize
-  pagination.page = 1
-}
+function handleSearch() { pagination.page = 1 }
+function handlePageChange(page: number) { pagination.page = page }
+function handlePageSizeChange(size: number) { pagination.pageSize = size; pagination.page = 1 }
 </script>
 
 <style scoped>
-.pagination-wrap {
+.card-header {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 </style>

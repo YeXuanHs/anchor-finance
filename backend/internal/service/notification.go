@@ -6,7 +6,7 @@ import (
 	"html/template"
 	"time"
 
-	"github.com/anchor-finance/backend/pkg/logger"
+	"anchorfinance/pkg/logger"
 
 	"gorm.io/gorm"
 )

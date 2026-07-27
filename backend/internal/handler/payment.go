@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/anchor-finance/backend/internal/service"
-	"github.com/anchor-finance/backend/pkg/payment"
+	"anchorfinance/internal/service"
+	"anchorfinance/pkg/payment"
 )
 
 // PaymentHandler handles HTTP requests for payment operations.
