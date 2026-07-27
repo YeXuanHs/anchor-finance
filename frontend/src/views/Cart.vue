@@ -4,186 +4,105 @@
     <header class="page-header">
       <div class="header-inner">
         <router-link to="/" class="logo">
-          <div class="logo-icon">
-            <el-icon :size="22" color="#fff"><Monitor /></el-icon>
-          </div>
-          <span class="logo-text">智简魔方</span>
+          <img src="/logo.png" alt="锚点财务" class="logo-img" />
+          <span class="logo-text">锚点财务</span>
         </router-link>
-        <nav class="nav-links">
-          <router-link to="/" class="nav-link">首页</router-link>
-          <router-link to="/products" class="nav-link">产品</router-link>
-          <router-link to="/" class="nav-link">公告</router-link>
-          <router-link to="/" class="nav-link">帮助</router-link>
-        </nav>
+        <h2 class="page-title">购物车</h2>
         <div class="header-actions">
-          <el-button text @click="$router.push('/login')">登录</el-button>
-          <el-button class="btn-gradient" round size="small" @click="$router.push('/register')">免费注册</el-button>
+          <el-button text @click="$router.push('/products')">继续选购</el-button>
         </div>
       </div>
     </header>
 
-    <!-- Main Content -->
-    <div class="main-content">
-      <div class="content-inner">
-        <!-- Breadcrumb -->
-        <el-breadcrumb separator="/" class="breadcrumb">
-          <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item>购物车</el-breadcrumb-item>
-        </el-breadcrumb>
+    <div class="cart-content">
+      <div class="cart-inner">
+        <div class="cart-grid" v-loading="loading">
+          <!-- 左侧购物车列表 -->
+          <div class="cart-list">
+            <div class="empty-cart" v-if="!cartItems.length">
+              <el-icon :size="64" color="#e5e5ea"><ShoppingCart /></el-icon>
+              <p>购物车是空的</p>
+              <el-button type="primary" @click="$router.push('/products')">去选购</el-button>
+            </div>
 
-        <!-- Page Title -->
-        <div class="page-title-bar">
-          <h1 class="page-title">
-            <el-icon :size="22" color="#0056FF"><ShoppingCart /></el-icon>
-            购物车
-            <span class="item-count" v-if="cartItems.length">({{ cartItems.length }})</span>
-          </h1>
-        </div>
-
-        <!-- Cart Content -->
-        <div v-if="cartItems.length > 0" class="cart-layout">
-          <!-- Cart Items Table -->
-          <div class="cart-items-panel">
-            <el-table :data="cartItems" style="width: 100%" :header-cell-style="headerCellStyle">
-              <el-table-column label="商品信息" min-width="220">
-                <template #default="{ row }">
-                  <div class="item-info-cell">
-                    <div class="item-icon-wrap">
-                      <el-icon :size="20" color="#0056FF"><Cpu /></el-icon>
-                    </div>
-                    <div>
-                      <div class="item-name">{{ row.name }}</div>
-                      <div class="item-id">ID: {{ row.id }}</div>
-                    </div>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column label="配置摘要" min-width="200">
-                <template #default="{ row }">
-                  <div class="config-tags">
-                    <el-tag size="small" type="info" effect="plain" round>{{ row.cpu }}</el-tag>
-                    <el-tag size="small" type="info" effect="plain" round>{{ row.memory }}</el-tag>
-                    <el-tag size="small" type="info" effect="plain" round>{{ row.disk }}</el-tag>
-                    <el-tag size="small" type="info" effect="plain" round>{{ row.bandwidth }}</el-tag>
-                  </div>
-                  <div class="config-os">{{ row.os }}</div>
-                </template>
-              </el-table-column>
-              <el-table-column label="周期" width="120">
-                <template #default="{ row }">
-                  <el-select
-                    v-model="row.cycle"
-                    size="small"
-                    style="width: 90px"
-                    @change="updateItemPrice(row)"
-                  >
-                    <el-option label="月付" value="月付" />
-                    <el-option label="季付" value="季付" />
-                    <el-option label="半年付" value="半年付" />
-                    <el-option label="年付" value="年付" />
-                  </el-select>
-                </template>
-              </el-table-column>
-              <el-table-column label="单价" width="110">
-                <template #default="{ row }">
-                  <span class="price-text">¥{{ row.unitPrice.toFixed(2) }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column label="数量" width="130">
-                <template #default="{ row }">
-                  <el-input-number
-                    v-model="row.quantity"
-                    :min="1"
-                    :max="20"
-                    size="small"
-                    style="width: 100px"
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column label="小计" width="120">
-                <template #default="{ row }">
-                  <span class="total-text">¥{{ (row.unitPrice * row.quantity).toFixed(2) }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="80" align="center">
-                <template #default="{ row }">
-                  <el-button text type="danger" size="small" @click="removeItem(row.id)">
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-
-          <!-- Summary Panel -->
-          <div class="summary-panel">
-            <div class="summary-card">
-              <h3 class="summary-title">订单摘要</h3>
-
-              <!-- Price Breakdown with el-descriptions -->
-              <el-descriptions :column="1" size="small" border class="price-descriptions">
-                <el-descriptions-item label="商品小计">
-                  ¥{{ subtotal.toFixed(2) }}
-                </el-descriptions-item>
-                <el-descriptions-item v-if="discount > 0" label="优惠折扣">
-                  <span class="discount-value">-¥{{ discount.toFixed(2) }}</span>
-                </el-descriptions-item>
-                <el-descriptions-item label="应付总价">
-                  <span class="final-total">¥{{ finalTotal.toFixed(2) }}</span>
-                </el-descriptions-item>
-              </el-descriptions>
-
-              <!-- Applied Coupon -->
-              <div v-if="appliedCoupon" class="applied-coupon">
-                <div class="coupon-info">
-                  <el-icon :size="16" color="#00b42a"><CircleCheckFilled /></el-icon>
-                  <span>优惠码: {{ appliedCoupon }}</span>
-                </div>
-                <el-button text type="danger" size="small" @click="removeCoupon">移除</el-button>
+            <div v-else>
+              <div class="cart-header">
+                <el-checkbox v-model="selectAll" @change="handleSelectAll">全选</el-checkbox>
+                <span class="items-count">共 {{ cartItems.length }} 件商品</span>
               </div>
 
-              <!-- Coupon Input -->
-              <div v-else class="coupon-row">
-                <el-input
-                  v-model="couponCode"
-                  placeholder="请输入优惠码"
-                  size="default"
-                />
-                <el-button class="btn-gradient" size="default" @click="applyCoupon">应用</el-button>
-              </div>
-              <p v-if="couponMessage" class="coupon-msg" :class="couponSuccess ? 'success' : 'error'">
-                {{ couponMessage }}
-              </p>
-
-              <el-button
-                class="btn-gradient checkout-btn"
-                size="large"
-                round
-                :loading="checkoutLoading"
-                @click="handleCheckout"
-              >
-                去结算
-              </el-button>
-
-              <div class="summary-badges">
-                <div class="badge-item">
-                  <el-icon :size="14" color="#00b42a"><CircleCheckFilled /></el-icon>
-                  <span>7天无理由退款</span>
+              <div v-for="item in cartItems" :key="item.id" class="cart-item">
+                <el-checkbox v-model="item.selected" @change="updateSelection" />
+                
+                <div class="item-icon" :style="{ background: item.gradient || 'linear-gradient(135deg, #1a73e8, #4a90e2)' }">
+                  <el-icon :size="24" color="#fff"><Monitor /></el-icon>
                 </div>
-                <div class="badge-item">
-                  <el-icon :size="14" color="#00b42a"><CircleCheckFilled /></el-icon>
-                  <span>安全支付</span>
+                
+                <div class="item-info">
+                  <h3>{{ item.product_name }}</h3>
+                  <p class="item-specs">
+                    <span v-if="item.region">{{ item.region }}</span>
+                    <span v-if="item.os">{{ item.os }}</span>
+                    <span v-if="item.cpu">{{ item.cpu }}</span>
+                    <span v-if="item.memory">{{ item.memory }}</span>
+                  </p>
+                  <p class="item-cycle">计费周期：{{ item.billing_cycle }}</p>
                 </div>
+                
+                <div class="item-price">
+                  <span class="price-symbol">¥</span>
+                  <span class="price-value">{{ item.price?.toFixed(2) }}</span>
+                  <span class="price-unit">/{{ item.billing_cycle === 'monthly' ? '月' : '年' }}</span>
+                </div>
+                
+                <el-button type="danger" text @click="removeItem(item)">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Empty Cart -->
-        <div v-else class="empty-cart">
-          <el-empty description="购物车是空的">
-            <el-button class="btn-gradient" round @click="$router.push('/products')">去选购产品</el-button>
-          </el-empty>
+          <!-- 右侧结算区 -->
+          <div class="cart-summary" v-if="cartItems.length">
+            <div class="summary-card">
+              <h3>订单摘要</h3>
+              
+              <div class="summary-item">
+                <span>商品合计</span>
+                <span>¥{{ subtotal.toFixed(2) }}</span>
+              </div>
+              
+              <div class="summary-item" v-if="discount > 0">
+                <span>优惠金额</span>
+                <span class="discount">-¥{{ discount.toFixed(2) }}</span>
+              </div>
+              
+              <!-- 优惠码 -->
+              <div class="coupon-input">
+                <el-input v-model="couponCode" placeholder="请输入优惠码" size="small">
+                  <template #append>
+                    <el-button @click="applyCoupon" :loading="couponLoading">应用</el-button>
+                  </template>
+                </el-input>
+              </div>
+              
+              <el-divider />
+              
+              <div class="summary-item total">
+                <span>应付金额</span>
+                <span class="total-price">¥{{ total.toFixed(2) }}</span>
+              </div>
+              
+              <el-button type="primary" size="large" round class="checkout-btn" @click="checkout">
+                去结算 ({{ selectedCount }})
+              </el-button>
+              
+              <div class="summary-tips">
+                <p><el-icon><CircleCheck /></el-icon> 支持多种支付方式</p>
+                <p><el-icon><CircleCheck /></el-icon> 7天无理由退款</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -191,476 +110,339 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import {
-  Monitor,
-  Cpu,
-  ShoppingCart,
-  Delete,
-  CircleCheckFilled
-} from '@element-plus/icons-vue'
+import { ShoppingCart, Monitor, Delete, CircleCheck } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import request from '@/utils/request'
 
 const router = useRouter()
-const checkoutLoading = ref(false)
-
-const headerCellStyle = {
-  background: '#EBF3FD',
-  color: '#1a3a5c',
-  fontWeight: '600',
-  fontSize: '13px'
-}
-
-interface CartItem {
-  id: number
-  name: string
-  cpu: string
-  memory: string
-  disk: string
-  bandwidth: string
-  os: string
-  cycle: string
-  quantity: number
-  unitPrice: number
-  basePrice: number
-}
-
-const cycleMultiplier: Record<string, number> = {
-  '月付': 1,
-  '季付': 2.8,
-  '半年付': 5.2,
-  '年付': 10
-}
-
-const cartItems = ref<CartItem[]>([
-  {
-    id: 10001,
-    name: '云服务器 ECS',
-    cpu: '2核',
-    memory: '4G',
-    disk: '100G SSD',
-    bandwidth: '5Mbps',
-    os: 'CentOS 7',
-    cycle: '月付',
-    quantity: 1,
-    unitPrice: 134,
-    basePrice: 134
-  },
-  {
-    id: 10002,
-    name: '云服务器 ECS',
-    cpu: '4核',
-    memory: '8G',
-    disk: '200G SSD',
-    bandwidth: '10Mbps',
-    os: 'Ubuntu 22.04',
-    cycle: '年付',
-    quantity: 2,
-    unitPrice: 2890,
-    basePrice: 289
-  }
-])
-
+const loading = ref(false)
+const cartItems = ref([])
+const selectAll = ref(false)
 const couponCode = ref('')
-const appliedCoupon = ref('')
-const couponMessage = ref('')
-const couponSuccess = ref(false)
-const discountRate = ref(0)
+const couponLoading = ref(false)
+const discount = ref(0)
 
-const subtotal = computed(() =>
-  cartItems.value.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
-)
-
-const discount = computed(() => subtotal.value * discountRate.value)
-
-const finalTotal = computed(() => subtotal.value - discount.value)
-
-function updateItemPrice(item: CartItem) {
-  item.unitPrice = Math.round(item.basePrice * cycleMultiplier[item.cycle])
+// 获取购物车数据
+const fetchCart = async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/cart')
+    if (data?.data) {
+      cartItems.value = data.data.map((item: any) => ({
+        ...item,
+        selected: true
+      }))
+    }
+  } catch (error) {
+    console.error('获取购物车失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
-function removeItem(id: number) {
-  cartItems.value = cartItems.value.filter(item => item.id !== id)
-  ElMessage.success('已移除')
+// 计算属性
+const subtotal = computed(() => {
+  return cartItems.value
+    .filter(item => item.selected)
+    .reduce((sum, item) => sum + (item.price || 0), 0)
+})
+
+const total = computed(() => Math.max(0, subtotal.value - discount.value))
+
+const selectedCount = computed(() => cartItems.value.filter(item => item.selected).length)
+
+// 全选/取消全选
+const handleSelectAll = (val: boolean) => {
+  cartItems.value.forEach(item => {
+    item.selected = val
+  })
 }
 
-function applyCoupon() {
-  if (!couponCode.value) {
-    couponMessage.value = '请输入优惠码'
-    couponSuccess.value = false
+const updateSelection = () => {
+  selectAll.value = cartItems.value.every(item => item.selected)
+}
+
+// 移除商品
+const removeItem = async (item: any) => {
+  try {
+    await ElMessageBox.confirm('确定要移除该商品吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await request.delete(`/api/v1/cart/${item.id}`)
+    cartItems.value = cartItems.value.filter(i => i.id !== item.id)
+    ElMessage.success('已移除')
+  } catch (error) {
+    // 取消操作
+  }
+}
+
+// 应用优惠码
+const applyCoupon = async () => {
+  if (!couponCode.value) return
+  
+  couponLoading.value = true
+  try {
+    const { data } = await request.post('/api/v1/coupons/verify', {
+      code: couponCode.value
+    })
+    if (data?.ok) {
+      discount.value = data.discount || 0
+      ElMessage.success('优惠码已应用')
+    } else {
+      ElMessage.error(data?.message || '优惠码无效')
+    }
+  } catch (error) {
+    ElMessage.error('验证优惠码失败')
+  } finally {
+    couponLoading.value = false
+  }
+}
+
+// 去结算
+const checkout = () => {
+  const selectedItems = cartItems.value.filter(item => item.selected)
+  if (selectedItems.length === 0) {
+    ElMessage.warning('请选择要结算的商品')
     return
   }
-  if (couponCode.value.toUpperCase() === 'ANCHOR2024') {
-    couponMessage.value = '优惠码有效，享受9折优惠'
-    couponSuccess.value = true
-    discountRate.value = 0.1
-    appliedCoupon.value = couponCode.value.toUpperCase()
-    couponCode.value = ''
-  } else {
-    couponMessage.value = '优惠码无效'
-    couponSuccess.value = false
-    discountRate.value = 0
-  }
+  
+  // 将选中的商品ID存入本地存储
+  localStorage.setItem('checkout_items', JSON.stringify(selectedItems.map(i => i.id)))
+  router.push('/checkout')
 }
 
-function removeCoupon() {
-  appliedCoupon.value = ''
-  discountRate.value = 0
-  couponMessage.value = ''
-  ElMessage.success('优惠码已移除')
-}
-
-function handleCheckout() {
-  const token = localStorage.getItem('token')
-  if (!token) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
-    return
-  }
-  checkoutLoading.value = true
-  setTimeout(() => {
-    checkoutLoading.value = false
-    router.push('/checkout')
-  }, 800)
-}
+onMounted(() => {
+  fetchCart()
+})
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .cart-page {
   min-height: 100vh;
   background: #f5f7fa;
 }
 
-/* Header */
 .page-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
   background: #fff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  z-index: 100;
+  border-bottom: 1px solid #e5e5ea;
+  
+  .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    
+    .logo-img {
+      width: 32px;
+      height: 32px;
+    }
+    
+    .logo-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+  }
+  
+  .page-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+  }
 }
 
-.header-inner {
-  max-width: 1400px;
+.cart-content {
+  padding: 24px 0;
+}
+
+.cart-inner {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  padding: 0 20px;
 }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-}
-
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #0056FF 0%, #4080FF 100%);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo-text {
-  font-size: 17px;
-  font-weight: 700;
-  color: #1a3a5c;
-}
-
-.nav-links {
-  display: flex;
-  gap: 28px;
-}
-
-.nav-link {
-  color: #666;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  transition: color 0.2s;
-  padding: 4px 0;
-}
-
-.nav-link:hover,
-.nav-link.active {
-  color: #0056FF;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Gradient Button */
-.btn-gradient {
-  background: linear-gradient(135deg, #0056FF 0%, #4080FF 100%) !important;
-  border: none !important;
-  color: #fff !important;
-  font-weight: 500;
-}
-
-.btn-gradient:hover {
-  opacity: 0.9;
-}
-
-/* Main Content */
-.main-content {
-  padding-top: 84px;
-  padding-bottom: 40px;
-}
-
-.content-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-/* Breadcrumb */
-.breadcrumb {
-  margin-bottom: 20px;
-}
-
-/* Page Title */
-.page-title-bar {
-  margin-bottom: 20px;
-}
-
-.page-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a3a5c;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.item-count {
-  font-size: 15px;
-  font-weight: 400;
-  color: #999;
-}
-
-/* Cart Layout */
-.cart-layout {
-  display: flex;
+.cart-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
   gap: 24px;
-  align-items: flex-start;
-}
-
-/* Cart Items Panel */
-.cart-items-panel {
-  flex: 1;
-  min-width: 0;
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
-
-:deep(.el-table) {
-  --el-table-border-color: #f0f0f0;
-}
-
-:deep(.el-table th.el-table__cell) {
-  font-weight: 600;
-}
-
-:deep(.el-table .el-table__row:hover > td.el-table__cell) {
-  background-color: #fafbfc;
-}
-
-.item-info-cell {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.item-icon-wrap {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #EBF3FD 0%, #d6e6ff 100%);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.item-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a3a5c;
-}
-
-.item-id {
-  font-size: 11px;
-  color: #ccc;
-  margin-top: 2px;
-}
-
-.config-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 4px;
-}
-
-.config-os {
-  font-size: 11px;
-  color: #999;
-}
-
-.price-text,
-.total-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a3a5c;
-}
-
-.total-text {
-  color: #0056FF;
-}
-
-/* Summary Panel */
-.summary-panel {
-  width: 360px;
-  flex-shrink: 0;
-}
-
-.summary-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 84px;
-}
-
-.summary-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a3a5c;
-  margin-bottom: 20px;
-}
-
-.price-descriptions {
-  margin-bottom: 16px;
-}
-
-:deep(.el-descriptions__label) {
-  font-weight: 500;
-  color: #666;
-}
-
-:deep(.el-descriptions__content) {
-  font-weight: 600;
-  color: #1a3a5c;
-}
-
-.discount-value {
-  color: #00b42a;
-  font-weight: 600;
-}
-
-.final-total {
-  color: #0056FF;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.applied-coupon {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: #e8ffea;
-  border: 1px solid #aff0b5;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-
-.coupon-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #00b42a;
-}
-
-.coupon-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.coupon-msg {
-  font-size: 12px;
-  margin-bottom: 16px;
-}
-
-.coupon-msg.success {
-  color: #00b42a;
-}
-
-.coupon-msg.error {
-  color: #f53f3f;
-}
-
-.checkout-btn {
-  width: 100%;
-  height: 44px;
-  font-size: 15px;
-  font-weight: 600;
-  margin-top: 16px;
-}
-
-.summary-badges {
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.badge-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #999;
-}
-
-/* Empty Cart */
-.empty-cart {
-  padding: 80px 0;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .cart-layout {
-    flex-direction: column-reverse;
+  
+  @media (max-width: 992px) {
+    grid-template-columns: 1fr;
   }
-  .summary-panel {
-    width: 100%;
+}
+
+.cart-list {
+  .empty-cart {
+    background: #fff;
+    border-radius: 12px;
+    padding: 80px 0;
+    text-align: center;
+    
+    p {
+      margin: 16px 0;
+      color: #909399;
+    }
   }
+  
+  .cart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    
+    .items-count {
+      color: #909399;
+      font-size: 14px;
+    }
+  }
+  
+  .cart-item {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid #e5e5ea;
+    transition: all 0.2s;
+    
+    &:hover {
+      border-color: #1a73e8;
+    }
+    
+    .item-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .item-info {
+      flex: 1;
+      
+      h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 8px;
+      }
+      
+      .item-specs {
+        display: flex;
+        gap: 12px;
+        font-size: 13px;
+        color: #909399;
+        margin: 0 0 4px;
+      }
+      
+      .item-cycle {
+        font-size: 13px;
+        color: #909399;
+        margin: 0;
+      }
+    }
+    
+    .item-price {
+      text-align: right;
+      flex-shrink: 0;
+      
+      .price-symbol {
+        font-size: 14px;
+        color: #1a73e8;
+      }
+      
+      .price-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1a73e8;
+      }
+      
+      .price-unit {
+        font-size: 14px;
+        color: #909399;
+      }
+    }
+  }
+}
+
+.cart-summary {
   .summary-card {
-    position: static;
-  }
-}
-
-@media (max-width: 768px) {
-  .nav-links {
-    display: none;
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid #e5e5ea;
+    position: sticky;
+    top: 88px;
+    
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 20px;
+    }
+    
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 14px;
+      color: #606266;
+      
+      .discount {
+        color: #67c23a;
+      }
+      
+      &.total {
+        font-weight: 600;
+        color: #1d1d1f;
+        
+        .total-price {
+          font-size: 24px;
+          color: #1a73e8;
+        }
+      }
+    }
+    
+    .coupon-input {
+      margin: 16px 0;
+    }
+    
+    .checkout-btn {
+      width: 100%;
+      height: 48px;
+      font-size: 16px;
+      margin-top: 16px;
+    }
+    
+    .summary-tips {
+      margin-top: 20px;
+      
+      p {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #909399;
+        margin: 8px 0;
+      }
+    }
   }
 }
 </style>
