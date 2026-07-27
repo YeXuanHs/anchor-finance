@@ -2,17 +2,34 @@ package v2
 
 import (
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"github.com/anchor-finance/backend/internal/handler"
 	"github.com/anchor-finance/backend/internal/api/middleware"
+	"github.com/anchor-finance/backend/internal/service"
+	"github.com/anchor-finance/backend/pkg/logger"
 )
 
-func RegisterRoutes(r *gin.RouterGroup) {
-	authHandler := handler.NewAuthHandler()
-	userHandler := handler.NewUserHandler()
-	productHandler := handler.NewProductHandler()
-	orderHandler := handler.NewOrderHandler()
-	invoiceHandler := handler.NewInvoiceHandler()
-	ticketHandler := handler.NewTicketHandler()
+// Deps holds shared dependencies for route registration.
+type Deps struct {
+	DB      *gorm.DB
+	Log     *logger.Logger
+	JWTKey  string
+	UserSvc *service.UserService
+	ProdSvc *service.ProductService
+	OrdSvc  *service.OrderService
+	InvSvc  *service.InvoiceService
+	TicSvc  *service.TicketService
+	CartSvc *service.CartService
+}
+
+// RegisterRoutes registers all v2 API routes on the given router group.
+func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
+	authHandler := handler.NewAuthHandler(deps.UserSvc, deps.Log, deps.JWTKey)
+	userHandler := handler.NewUserHandler(deps.UserSvc, deps.Log)
+	productHandler := handler.NewProductHandler(deps.ProdSvc, deps.Log)
+	orderHandler := handler.NewOrderHandler(deps.OrdSvc, deps.Log)
+	invoiceHandler := handler.NewInvoiceHandler(deps.InvSvc, deps.Log)
+	ticketHandler := handler.NewTicketHandler(deps.TicSvc, deps.Log)
 
 	// 认证
 	auth := r.Group("/auth")

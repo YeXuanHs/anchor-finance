@@ -5,33 +5,84 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/anchor-finance/backend/internal/api/admin"
 	"github.com/anchor-finance/backend/internal/api/middleware"
+	v1 "github.com/anchor-finance/backend/internal/api/v1"
+	v2 "github.com/anchor-finance/backend/internal/api/v2"
+	"github.com/anchor-finance/backend/internal/service"
 	"github.com/anchor-finance/backend/pkg/auth"
+	"github.com/anchor-finance/backend/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
+// Deps holds all dependencies for route registration.
+type Deps struct {
+	DB      *gorm.DB
+	Redis   *redis.Client
+	Log     *logger.Logger
+	JWTKey  string
+	UserSvc *service.UserService
+	ProdSvc *service.ProductService
+	OrdSvc  *service.OrderService
+	InvSvc  *service.InvoiceService
+	TicSvc  *service.TicketService
+	PaySvc  *service.PaymentService
+	CartSvc *service.CartService
+	OAuthSvc *service.OAuthService
+}
+
 // Server holds the application server dependencies.
 type Server struct {
-	db          *gorm.DB
-	redis       *redis.Client
-	jwtManager  *auth.JWTManager
-	router      *gin.Engine
-	installH    *InstallHandler
+	db         *gorm.DB
+	redis      *redis.Client
+	jwtManager *auth.JWTManager
+	router     *gin.Engine
+	installH   *InstallHandler
+	deps       *Deps
 }
 
 // NewServer creates and configures the HTTP server with all routes and middleware.
 func NewServer(dbConn *gorm.DB, rdb *redis.Client, jwtSecret string) *Server {
 	gin.SetMode(gin.ReleaseMode)
 
+	log := logger.New()
+	jwtMgr := auth.NewJWTManager(jwtSecret, 72)
+
+	// Initialize all services
+	userSvc := service.NewUserService(dbConn, log)
+	prodSvc := service.NewProductService(dbConn, log)
+	ordSvc := service.NewOrderService(dbConn, log)
+	invSvc := service.NewInvoiceService(dbConn, log)
+	ticSvc := service.NewTicketService(dbConn, log)
+	paySvc := service.NewPaymentService(dbConn, log)
+	cartSvc := service.NewCartService(dbConn, log)
+	oauthSvc := service.NewOAuthService(dbConn, log)
+
+	deps := &Deps{
+		DB:       dbConn,
+		Redis:    rdb,
+		Log:      log,
+		JWTKey:   jwtSecret,
+		UserSvc:  userSvc,
+		ProdSvc:  prodSvc,
+		OrdSvc:   ordSvc,
+		InvSvc:   invSvc,
+		TicSvc:   ticSvc,
+		PaySvc:   paySvc,
+		CartSvc:  cartSvc,
+		OAuthSvc: oauthSvc,
+	}
+
 	s := &Server{
 		db:         dbConn,
 		redis:      rdb,
-		jwtManager: auth.NewJWTManager(jwtSecret, 72),
+		jwtManager: jwtMgr,
 		router:     gin.New(),
 		installH:   NewInstallHandler(),
+		deps:       deps,
 	}
 
 	s.setupMiddleware()
@@ -55,46 +106,64 @@ func (s *Server) setupRoutes() {
 	// Serve frontend static files
 	s.serveStaticFiles()
 
-	// API v1
-	v1 := s.router.Group("/api/v1")
-	{
-		v1.GET("/ping", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"ok": true, "message": "pong"})
-		})
+	// Health check
+	s.router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
-		// Public routes (no auth required)
-		public := v1.Group("")
-		{
-			public.POST("/login", s.handleLogin)
-			public.POST("/register", s.handleRegister)
-		}
+	// API v1 - 兼容智简魔方
+	v1Group := s.router.Group("/api/v1")
+	v1.RegisterRoutes(v1Group, s.deps.toV1Deps())
 
-		// Protected routes
-		protected := v1.Group("")
-		protected.Use(middleware.JWTAuth(s.jwtManager))
-		{
-			protected.GET("/user/profile", s.handleGetProfile)
-			protected.PUT("/user/profile", s.handleUpdateProfile)
-		}
-	}
-
-	// API v2 (reserved for future use)
-	v2 := s.router.Group("/api/v2")
-	{
-		v2.GET("/ping", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"ok": true, "message": "pong v2"})
-		})
-	}
+	// API v2 - 锚点财务原生
+	v2Group := s.router.Group("/api/v2")
+	v2.RegisterRoutes(v2Group, s.deps.toV2Deps())
 
 	// Admin routes
-	admin := s.router.Group("/api/admin")
-	admin.Use(middleware.JWTAuth(s.jwtManager))
-	admin.Use(middleware.AdminRequired())
-	{
-		admin.GET("/users", s.handleAdminListUsers)
-		admin.GET("/settings", s.handleAdminGetSettings)
-		admin.PUT("/settings", s.handleAdminUpdateSettings)
-		admin.GET("/dashboard", s.handleAdminDashboard)
+	adminGroup := s.router.Group("/api/admin")
+	admin.RegisterRoutes(adminGroup, s.deps.toAdminDeps())
+}
+
+// toV1Deps converts Deps to v1.Deps.
+func (d *Deps) toV1Deps() v1.Deps {
+	return v1.Deps{
+		DB:      d.DB,
+		Log:     d.Log,
+		JWTKey:  d.JWTKey,
+		UserSvc: d.UserSvc,
+		ProdSvc: d.ProdSvc,
+		OrdSvc:  d.OrdSvc,
+		InvSvc:  d.InvSvc,
+		TicSvc:  d.TicSvc,
+	}
+}
+
+// toV2Deps converts Deps to v2.Deps.
+func (d *Deps) toV2Deps() v2.Deps {
+	return v2.Deps{
+		DB:      d.DB,
+		Log:     d.Log,
+		JWTKey:  d.JWTKey,
+		UserSvc: d.UserSvc,
+		ProdSvc: d.ProdSvc,
+		OrdSvc:  d.OrdSvc,
+		InvSvc:  d.InvSvc,
+		TicSvc:  d.TicSvc,
+		CartSvc: d.CartSvc,
+	}
+}
+
+// toAdminDeps converts Deps to admin.Deps.
+func (d *Deps) toAdminDeps() admin.Deps {
+	return admin.Deps{
+		DB:      d.DB,
+		Log:     d.Log,
+		JWTKey:  d.JWTKey,
+		UserSvc: d.UserSvc,
+		ProdSvc: d.ProdSvc,
+		OrdSvc:  d.OrdSvc,
+		InvSvc:  d.InvSvc,
+		TicSvc:  d.TicSvc,
 	}
 }
 
@@ -141,62 +210,4 @@ func (s *Server) Run(addr string) error {
 // Router returns the underlying gin.Engine for testing purposes.
 func (s *Server) Router() *gin.Engine {
 	return s.router
-}
-
-// --------------- placeholder handlers ---------------
-
-func (s *Server) handleLogin(c *gin.Context) {
-	// TODO: implement login logic
-	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "login endpoint"})
-}
-
-func (s *Server) handleRegister(c *gin.Context) {
-	// TODO: check if registration is enabled
-	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "register endpoint"})
-}
-
-func (s *Server) handleGetProfile(c *gin.Context) {
-	userID, _ := c.Get(middleware.ContextKeyUserID)
-	c.JSON(http.StatusOK, gin.H{
-		"ok":      true,
-		"user_id": userID,
-		"message": "profile endpoint",
-	})
-}
-
-func (s *Server) handleUpdateProfile(c *gin.Context) {
-	userID, _ := c.Get(middleware.ContextKeyUserID)
-	c.JSON(http.StatusOK, gin.H{
-		"ok":      true,
-		"user_id": userID,
-		"message": "update profile endpoint",
-	})
-}
-
-func (s *Server) handleAdminListUsers(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"ok":      true,
-		"message": "admin list users endpoint",
-	})
-}
-
-func (s *Server) handleAdminGetSettings(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"ok":      true,
-		"message": "admin get settings endpoint",
-	})
-}
-
-func (s *Server) handleAdminUpdateSettings(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"ok":      true,
-		"message": "admin update settings endpoint",
-	})
-}
-
-func (s *Server) handleAdminDashboard(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"ok":      true,
-		"message": "admin dashboard endpoint",
-	})
 }

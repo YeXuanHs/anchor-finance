@@ -76,17 +76,17 @@ const router = createRouter({
         {
           path: 'coupons',
           name: 'UserCoupons',
-          component: () => import('@/views/user/Dashboard.vue')
+          component: () => import('@/views/user/Coupons.vue')
         },
         {
           path: 'referral',
           name: 'UserReferral',
-          component: () => import('@/views/user/Dashboard.vue')
+          component: () => import('@/views/user/Referral.vue')
         },
         {
           path: 'verification',
           name: 'UserVerification',
-          component: () => import('@/views/user/Dashboard.vue')
+          component: () => import('@/views/user/Verification.vue')
         },
         {
           path: 'security',

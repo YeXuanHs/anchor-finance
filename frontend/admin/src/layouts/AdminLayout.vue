@@ -84,6 +84,10 @@ import {
   PersonOutline as PersonIcon,
   NotificationsOutline as NotificationsIcon,
   AccessibilityOutline as AnchorIcon,
+  TicketOutline as CouponsIcon,
+  WalletOutline as PaymentsIcon,
+  KeyOutline as OAuthIcon,
+  DocumentTextOutline as LogsIcon,
 } from '@vicons/ionicons5'
 
 const route = useRoute()
@@ -99,44 +103,94 @@ function renderIcon(icon: Component) {
 
 const menuOptions: MenuOption[] = [
   {
-    label: '仪表盘',
-    key: '/admin/dashboard',
-    icon: renderIcon(DashboardIcon),
+    label: '主页',
+    key: 'group-home',
+    children: [
+      {
+        label: '仪表盘',
+        key: '/admin/dashboard',
+        icon: renderIcon(DashboardIcon),
+      },
+    ],
   },
   {
     label: '用户管理',
-    key: '/admin/users',
-    icon: renderIcon(UsersIcon),
+    key: 'group-users',
+    children: [
+      {
+        label: '用户管理',
+        key: '/admin/users',
+        icon: renderIcon(UsersIcon),
+      },
+    ],
   },
   {
-    label: '产品管理',
-    key: '/admin/products',
-    icon: renderIcon(ProductsIcon),
+    label: '业务管理',
+    key: 'group-business',
+    children: [
+      {
+        label: '产品管理',
+        key: '/admin/products',
+        icon: renderIcon(ProductsIcon),
+      },
+      {
+        label: '订单管理',
+        key: '/admin/orders',
+        icon: renderIcon(OrdersIcon),
+      },
+      {
+        label: '账单管理',
+        key: '/admin/invoices',
+        icon: renderIcon(InvoicesIcon),
+      },
+      {
+        label: '工单管理',
+        key: '/admin/tickets',
+        icon: renderIcon(TicketsIcon),
+      },
+      {
+        label: '优惠券管理',
+        key: '/admin/coupons',
+        icon: renderIcon(CouponsIcon),
+      },
+    ],
   },
   {
-    label: '订单管理',
-    key: '/admin/orders',
-    icon: renderIcon(OrdersIcon),
+    label: '内容管理',
+    key: 'group-content',
+    children: [
+      {
+        label: '公告管理',
+        key: '/admin/announcements',
+        icon: renderIcon(AnnouncementsIcon),
+      },
+    ],
   },
   {
-    label: '账单管理',
-    key: '/admin/invoices',
-    icon: renderIcon(InvoicesIcon),
-  },
-  {
-    label: '工单管理',
-    key: '/admin/tickets',
-    icon: renderIcon(TicketsIcon),
-  },
-  {
-    label: '公告管理',
-    key: '/admin/announcements',
-    icon: renderIcon(AnnouncementsIcon),
-  },
-  {
-    label: '系统设置',
-    key: '/admin/settings',
-    icon: renderIcon(SettingsIcon),
+    label: '系统管理',
+    key: 'group-system',
+    children: [
+      {
+        label: '支付管理',
+        key: '/admin/payments',
+        icon: renderIcon(PaymentsIcon),
+      },
+      {
+        label: '第三方登录',
+        key: '/admin/oauth',
+        icon: renderIcon(OAuthIcon),
+      },
+      {
+        label: '系统日志',
+        key: '/admin/logs',
+        icon: renderIcon(LogsIcon),
+      },
+      {
+        label: '系统设置',
+        key: '/admin/settings',
+        icon: renderIcon(SettingsIcon),
+      },
+    ],
   },
 ]
 
