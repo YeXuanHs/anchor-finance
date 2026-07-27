@@ -1,0 +1,45 @@
+# Go
+backend/bin/
+backend/vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config (keep example)
+backend/configs/config.yaml
+!backend/configs/config.example.yaml
+
+# Logs
+*.log
+logs/
+
+# Node
+frontend/web/node_modules/
+frontend/web/dist/
+frontend/admin/node_modules/
+frontend/admin/dist/
+.env.local
+.env.*.local
+
+# Uploads
+uploads/
+
+# Temp
+tmp/
+temp/
