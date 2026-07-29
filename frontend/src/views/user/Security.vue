@@ -53,7 +53,7 @@
               <p>{{ twoFAEnabled ? '已开启' : '未开启' }}。登录时需要验证码二次确认</p>
             </div>
           </div>
-          <el-switch v-model="twoFAEnabled" active-text="已开启" inactive-text="已关闭" />
+          <el-switch v-model="twoFAEnabled" active-text="已开启" inactive-text="已关闭" @change="handleToggle2FA" />
         </div>
         <el-divider />
 
@@ -156,7 +156,7 @@
         <el-form-item label="验证码">
           <div class="captcha-row">
             <el-input v-model="phoneForm.code" placeholder="请输入验证码" />
-            <el-button :disabled="phoneCooldown > 0" @click="phoneCooldown = 60; ElMessage.success('已发送')">
+            <el-button :disabled="phoneCooldown > 0" @click="handleSendPhoneCode">
               {{ phoneCooldown > 0 ? `${phoneCooldown}s` : '发送验证码' }}
             </el-button>
           </div>
@@ -164,7 +164,7 @@
       </el-form>
       <template #footer>
         <el-button @click="showPhoneDialog = false">取消</el-button>
-        <el-button type="primary" @click="showPhoneDialog = false; ElMessage.success('绑定成功')">确认</el-button>
+        <el-button type="primary" @click="handleBindPhone">确认</el-button>
       </template>
     </el-dialog>
 
@@ -176,7 +176,7 @@
         <el-form-item label="验证码">
           <div class="captcha-row">
             <el-input v-model="emailForm.code" placeholder="请输入验证码" />
-            <el-button :disabled="emailCooldown > 0" @click="emailCooldown = 60; ElMessage.success('已发送')">
+            <el-button :disabled="emailCooldown > 0" @click="handleSendEmailCode">
               {{ emailCooldown > 0 ? `${emailCooldown}s` : '发送验证码' }}
             </el-button>
           </div>
@@ -184,21 +184,44 @@
       </el-form>
       <template #footer>
         <el-button @click="showEmailDialog = false">取消</el-button>
-        <el-button type="primary" @click="showEmailDialog = false; ElMessage.success('绑定成功')">确认</el-button>
+        <el-button type="primary" @click="handleBindEmail">确认</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Lock, Key, Iphone, Message, Clock } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
 const twoFAEnabled = ref(false)
-const phone = ref('13800008888')
-const email = ref('zhangsan@example.com')
+const phone = ref('')
+const email = ref('')
+
+async function fetchUserProfile() {
+  try {
+    const res = await request.get('/api/v1/user/profile')
+    const profile = res.data?.data || res.data || {}
+    phone.value = profile.phone || ''
+    email.value = profile.email || ''
+    twoFAEnabled.value = profile.twoFA || profile.two_fa || false
+  } catch { /* ignore */ }
+}
+
+async function fetchLoginLogs() {
+  try {
+    const res = await request.get('/api/v1/login-logs')
+    loginLogs.value = res.data?.data || res.data || []
+  } catch { /* ignore */ }
+}
+
+onMounted(() => {
+  fetchUserProfile()
+  fetchLoginLogs()
+})
 
 const showPasswordDialog = ref(false)
 const showPhoneDialog = ref(false)
@@ -243,12 +266,7 @@ const scoreColor = computed(() => {
   return '#f5222d'
 })
 
-const loginLogs = ref([
-  { time: '2026-07-27 10:30:00', ip: '114.242.xxx.xxx', location: '北京', device: 'Chrome 128 / Windows 11', status: 'success', statusText: '成功' },
-  { time: '2026-07-26 18:15:00', ip: '114.242.xxx.xxx', location: '北京', device: 'Chrome 128 / Windows 11', status: 'success', statusText: '成功' },
-  { time: '2026-07-25 09:00:00', ip: '223.104.xxx.xxx', location: '上海', device: 'Safari / iOS 18', status: 'success', statusText: '成功' },
-  { time: '2026-07-24 22:45:00', ip: '47.93.xxx.xxx', location: '杭州', device: 'Unknown', status: 'failed', statusText: '失败' }
-])
+const loginLogs = ref<any[]>([])
 
 function maskPhone(p: string) { return p.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') }
 function maskEmail(e: string) { const [n, d] = e.split('@'); return n.slice(0, 3) + '***@' + d }
@@ -257,12 +275,70 @@ async function handleChangePassword() {
   if (!passwordFormRef.value) return
   try {
     await passwordFormRef.value.validate()
+    await request.post('/api/v1/user/change-password', {
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword
+    })
     showPasswordDialog.value = false
     ElMessage.success('密码已修改')
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
   } catch {}
+}
+
+async function handleBindPhone() {
+  if (!phoneForm.phone || !phoneForm.code) { ElMessage.warning('请填写手机号和验证码'); return }
+  try {
+    await request.post('/api/v1/user/bind-phone', { phone: phoneForm.phone, code: phoneForm.code })
+    phone.value = phoneForm.phone
+    showPhoneDialog.value = false
+    phoneForm.phone = ''
+    phoneForm.code = ''
+    ElMessage.success('绑定成功')
+  } catch { ElMessage.error('绑定失败') }
+}
+
+async function handleBindEmail() {
+  if (!emailForm.email || !emailForm.code) { ElMessage.warning('请填写邮箱和验证码'); return }
+  try {
+    await request.post('/api/v1/user/bind-email', { email: emailForm.email, code: emailForm.code })
+    email.value = emailForm.email
+    showEmailDialog.value = false
+    emailForm.email = ''
+    emailForm.code = ''
+    ElMessage.success('绑定成功')
+  } catch { ElMessage.error('绑定失败') }
+}
+
+async function handleSendPhoneCode() {
+  if (!phoneForm.phone) { ElMessage.warning('请输入手机号'); return }
+  try {
+    await request.post('/api/v1/sms/send', { phone: phoneForm.phone, type: 'bind_phone' })
+    phoneCooldown.value = 60
+    const timer = setInterval(() => { phoneCooldown.value--; if (phoneCooldown.value <= 0) clearInterval(timer) }, 1000)
+    ElMessage.success('验证码已发送')
+  } catch { ElMessage.error('发送失败') }
+}
+
+async function handleSendEmailCode() {
+  if (!emailForm.email) { ElMessage.warning('请输入邮箱'); return }
+  try {
+    await request.post('/api/v1/email/send', { email: emailForm.email, type: 'bind_email' })
+    emailCooldown.value = 60
+    const timer = setInterval(() => { emailCooldown.value--; if (emailCooldown.value <= 0) clearInterval(timer) }, 1000)
+    ElMessage.success('验证码已发送')
+  } catch { ElMessage.error('发送失败') }
+}
+
+async function handleToggle2FA(val: boolean) {
+  try {
+    await request.post('/api/v1/user/2fa', { enabled: val })
+    ElMessage.success(val ? '已开启两步验证' : '已关闭两步验证')
+  } catch {
+    twoFAEnabled.value = !val
+    ElMessage.error('操作失败')
+  }
 }
 </script>
 

@@ -11,12 +11,17 @@ import (
 )
 
 type UserHandler struct {
-	userSvc *service.UserService
-	log     *logger.Logger
+	userSvc    *service.UserService
+	captchaSvc *service.CaptchaService
+	log        *logger.Logger
 }
 
 func NewUserHandler(userSvc *service.UserService, log *logger.Logger) *UserHandler {
 	return &UserHandler{userSvc: userSvc, log: log}
+}
+
+func NewUserHandlerWithCaptcha(userSvc *service.UserService, captchaSvc *service.CaptchaService, log *logger.Logger) *UserHandler {
+	return &UserHandler{userSvc: userSvc, captchaSvc: captchaSvc, log: log}
 }
 
 // GetProfile returns the authenticated user's profile.
@@ -61,6 +66,56 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 	response.SuccessMsg(c, "password changed")
+}
+
+// BindPhone binds a phone number to the user account after verifying SMS code.
+func (h *UserHandler) BindPhone(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	var req struct {
+		Phone string `json:"phone" binding:"required"`
+		Code  string `json:"code" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Verify SMS code
+	if h.captchaSvc == nil || !h.captchaSvc.CheckAndConsume("captcha:sms:"+req.Phone, req.Code) {
+		response.BadRequest(c, "invalid or expired verification code")
+		return
+	}
+
+	if err := h.userSvc.BindPhone(userID, req.Phone); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "phone bound successfully")
+}
+
+// BindEmail binds an email to the user account after verifying email code.
+func (h *UserHandler) BindEmail(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+		Code  string `json:"code" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Verify email code
+	if h.captchaSvc == nil || !h.captchaSvc.CheckAndConsume("captcha:email:"+req.Email, req.Code) {
+		response.BadRequest(c, "invalid or expired verification code")
+		return
+	}
+
+	if err := h.userSvc.BindEmail(userID, req.Email); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "email bound successfully")
 }
 
 // GetUserList returns a paginated user list (admin).

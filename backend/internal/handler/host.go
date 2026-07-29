@@ -117,6 +117,54 @@ func (h *HostHandler) GetOperations(c *gin.Context) {
 	response.SuccessPage(c, ops, total, page, pageSize)
 }
 
+// Boot powers on a host.
+func (h *HostHandler) Boot(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid host id")
+		return
+	}
+	operatorID := c.GetUint("user_id")
+	op, err := h.hostSvc.PerformAction(uint(id), operatorID, service.HostActionRequest{Action: "boot"})
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, op)
+}
+
+// Shutdown powers off a host.
+func (h *HostHandler) Shutdown(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid host id")
+		return
+	}
+	operatorID := c.GetUint("user_id")
+	op, err := h.hostSvc.PerformAction(uint(id), operatorID, service.HostActionRequest{Action: "shutdown"})
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, op)
+}
+
+// Reboot restarts a host.
+func (h *HostHandler) Reboot(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid host id")
+		return
+	}
+	operatorID := c.GetUint("user_id")
+	op, err := h.hostSvc.PerformAction(uint(id), operatorID, service.HostActionRequest{Action: "reboot"})
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, op)
+}
+
 // GetExpiringHosts returns hosts expiring within N days (admin).
 func (h *HostHandler) GetExpiringHosts(c *gin.Context) {
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "7"))

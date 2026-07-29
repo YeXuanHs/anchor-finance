@@ -23,10 +23,38 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <a href="#solutions" class="nav-link">解决方案</a>
-          <a href="#announcements" class="nav-link">新闻</a>
-          <a href="#partners" class="nav-link">合作伙伴</a>
-          <a href="#footer" class="nav-link">帮助</a>
+          <!-- 解决方案下拉菜单 -->
+          <el-dropdown trigger="hover" @command="(cmd: string) => $router.push(`/solutions/${cmd}`)">
+            <span class="nav-link">
+              解决方案<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="game">游戏加速</el-dropdown-item>
+                <el-dropdown-item command="video">视频直播</el-dropdown-item>
+                <el-dropdown-item command="edu">在线教育</el-dropdown-item>
+                <el-dropdown-item command="ecommerce">电商平台</el-dropdown-item>
+                <el-dropdown-item command="security">安全防护</el-dropdown-item>
+                <el-dropdown-item divided command="">全部方案</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <router-link to="/news" class="nav-link">新闻动态</router-link>
+          <router-link to="/about" class="nav-link">关于我们</router-link>
+          <!-- 帮助下拉菜单 -->
+          <el-dropdown trigger="hover" @command="(cmd: string) => $router.push(`/${cmd}`)">
+            <span class="nav-link">
+              帮助支持<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="help">帮助中心</el-dropdown-item>
+                <el-dropdown-item command="knowledge-base">知识库</el-dropdown-item>
+                <el-dropdown-item command="downloads">下载中心</el-dropdown-item>
+                <el-dropdown-item command="contact">联系我们</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </nav>
         <div class="header-actions">
           <el-button text class="login-btn" @click="$router.push('/login')">
@@ -260,19 +288,19 @@
           <div class="footer-col">
             <h4>帮助支持</h4>
             <ul>
+              <li><router-link to="/help">帮助中心</router-link></li>
               <li><router-link to="/knowledge-base">知识库</router-link></li>
               <li><router-link to="/downloads">下载中心</router-link></li>
-              <li><a href="#">常见问题</a></li>
-              <li><a href="#">联系客服</a></li>
+              <li><router-link to="/contact">联系我们</router-link></li>
             </ul>
           </div>
           <div class="footer-col">
             <h4>关于我们</h4>
             <ul>
-              <li><a href="#">公司介绍</a></li>
-              <li><a href="#">加入我们</a></li>
-              <li><a href="#">合作伙伴</a></li>
-              <li><a href="#">联系我们</a></li>
+              <li><router-link to="/about">公司介绍</router-link></li>
+              <li><router-link to="/news">新闻动态</router-link></li>
+              <li><router-link to="/solutions">解决方案</router-link></li>
+              <li><router-link to="/site-map">网站地图</router-link></li>
             </ul>
           </div>
         </div>

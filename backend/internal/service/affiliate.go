@@ -22,6 +22,157 @@ func NewAffiliateService(db *gorm.DB, log *logger.Logger) *AffiliateService {
 	return &AffiliateService{db: db, log: log}
 }
 
+// TrackVisit records a referral visit for tracking.
+func (s *AffiliateService) TrackVisit(referralCode, ip, userAgent, refererURL, landingURL string) error {
+	var aff model.Affiliate
+	if err := s.db.Where("code = ? AND is_active = true", referralCode).First(&aff).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("invalid referral code")
+		}
+		return err
+	}
+
+	visit := &model.AffiliateVisit{
+		AffiliateID: aff.ID,
+		IP:          ip,
+		UserAgent:   userAgent,
+		RefererURL:  refererURL,
+		LandingURL:  landingURL,
+	}
+	return s.db.Create(visit).Error
+}
+
+// TrackSignup links a new user to the referrer via the referral code.
+func (s *AffiliateService) TrackSignup(userID uint, referralCode string) error {
+	var aff model.Affiliate
+	if err := s.db.Where("code = ? AND is_active = true", referralCode).First(&aff).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("invalid referral code")
+		}
+		return err
+	}
+
+	// Prevent self-referral
+	if aff.UserID == userID {
+		return errors.New("cannot refer yourself")
+	}
+
+	// Mark the most recent unconverted visit from this IP as converted
+	var visit model.AffiliateVisit
+	if err := s.db.Where("affiliate_id = ? AND converted = false", aff.ID).
+		Order("id DESC").First(&visit).Error; err == nil {
+		s.db.Model(&visit).Updates(map[string]interface{}{
+			"converted": true,
+			"user_id":   userID,
+		})
+	}
+
+	s.log.Infof("affiliate signup tracked: user=%d referrer=%d code=%s", userID, aff.UserID, referralCode)
+	return nil
+}
+
+// TrackOrder calculates and records commission for an order made by a referred user.
+func (s *AffiliateService) TrackOrder(referralCode string, orderID uint, orderAmount float64) (*model.AffiliateRecord, error) {
+	var aff model.Affiliate
+	if err := s.db.Where("code = ? AND is_active = true", referralCode).First(&aff).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("invalid referral code")
+		}
+		return nil, err
+	}
+
+	commission := orderAmount * aff.CommissionRate / 100
+	if commission <= 0 {
+		return nil, errors.New("commission amount is zero")
+	}
+
+	record := &model.AffiliateRecord{
+		AffiliateID: aff.ID,
+		UserID:      aff.UserID,
+		OrderID:     orderID,
+		Amount:      commission,
+		Status:      1, // pending confirmation
+		Description: fmt.Sprintf("Commission for order #%d (amount: %.2f, rate: %.1f%%)", orderID, orderAmount, aff.CommissionRate),
+	}
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(record).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.Affiliate{}).
+			Where("id = ?", aff.ID).
+			Updates(map[string]interface{}{
+				"balance":      gorm.Expr("balance + ?", commission),
+				"total_earned": gorm.Expr("total_earned + ?", commission),
+			}).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	s.log.Infof("affiliate order tracked: affiliate=%d order=%d commission=%.2f", aff.ID, orderID, commission)
+	return record, nil
+}
+
+// GetVisits returns paginated visit records for an affiliate (admin).
+func (s *AffiliateService) GetVisits(affiliateID, page, pageSize int) ([]model.AffiliateVisit, int64, error) {
+	var visits []model.AffiliateVisit
+	var total int64
+
+	query := s.db.Model(&model.AffiliateVisit{}).Where("affiliate_id = ?", affiliateID)
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&visits).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return visits, total, nil
+}
+
+// GetStats returns aggregate statistics for an affiliate.
+func (s *AffiliateService) GetStats(affiliateID uint) (map[string]interface{}, error) {
+	var aff model.Affiliate
+	if err := s.db.First(&aff, affiliateID).Error; err != nil {
+		return nil, errors.New("affiliate not found")
+	}
+
+	var visitCount int64
+	s.db.Model(&model.AffiliateVisit{}).Where("affiliate_id = ?", affiliateID).Count(&visitCount)
+
+	var signupCount int64
+	s.db.Model(&model.AffiliateVisit{}).Where("affiliate_id = ? AND converted = true", affiliateID).Count(&signupCount)
+
+	var orderCount int64
+	s.db.Model(&model.AffiliateRecord{}).Where("affiliate_id = ?", affiliateID).Count(&orderCount)
+
+	var confirmedEarnings float64
+	s.db.Model(&model.AffiliateRecord{}).Where("affiliate_id = ? AND status = 2", affiliateID).
+		Select("COALESCE(SUM(amount), 0)").Scan(&confirmedEarnings)
+
+	return map[string]interface{}{
+		"total_visits":        visitCount,
+		"total_signups":       signupCount,
+		"total_orders":        orderCount,
+		"confirmed_earnings":  confirmedEarnings,
+		"balance":             aff.Balance,
+		"total_earned":        aff.TotalEarned,
+		"total_withdrawn":     aff.TotalWithdrawn,
+		"commission_rate":     aff.CommissionRate,
+	}, nil
+}
+
+// UpdateCommissionRate updates the commission rate for an affiliate (admin).
+func (s *AffiliateService) UpdateCommissionRate(affiliateID uint, rate float64) error {
+	if rate < 0 || rate > 100 {
+		return errors.New("commission rate must be between 0 and 100")
+	}
+	return s.db.Model(&model.Affiliate{}).Where("id = ?", affiliateID).
+		Update("commission_rate", rate).Error
+}
+
 // GetByUserID returns the affiliate info for a user, creating one if it doesn't exist.
 func (s *AffiliateService) GetByUserID(userID uint) (*model.Affiliate, error) {
 	var aff model.Affiliate

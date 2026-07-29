@@ -50,6 +50,12 @@ type DcimServer struct {
 	ExpiredAt      *time.Time     `gorm:"index" json:"expired_at"`
 	Remark         string         `gorm:"type:text" json:"remark"`
 	Tags           string         `gorm:"type:varchar(256)" json:"tags"`
+	// 远程控制配置
+	ControlMethod  string         `gorm:"type:varchar(32);default:'local'" json:"control_method"` // local/ipmi/bms/dcim_client/zjmf_api/whmcs
+	ControlURL     string         `gorm:"type:varchar(512)" json:"control_url"`                   // 控制面板URL
+	ControlUser    string         `gorm:"type:varchar(128)" json:"control_user"`                  // 控制面板用户名
+	ControlPass    string         `gorm:"type:varchar(256)" json:"-"`                             // 控制面板密码/token
+	ControlExtra   string         `gorm:"type:jsonb" json:"control_extra"`                        // 额外控制参数JSON
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`

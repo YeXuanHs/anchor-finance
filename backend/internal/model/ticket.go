@@ -43,6 +43,7 @@ type Ticket struct {
 	ClosedAt     *time.Time `json:"closed_at"`
 	Satisfaction int16          `gorm:"type:smallint" json:"satisfaction"` // 1-5 评分
 	AdminNotes   string         `gorm:"type:text" json:"admin_notes"`
+	MergedInto   *uint          `gorm:"index" json:"merged_into"` // 合并目标工单 ID
 	Replies      []TicketReply  `gorm:"foreignKey:TicketID" json:"replies,omitempty"`
 	Attachments  []Attachment   `gorm:"foreignKey:TicketID" json:"attachments,omitempty"`
 	Tags         datatypes.JSON `gorm:"type:jsonb" json:"tags"`
@@ -83,4 +84,17 @@ type Attachment struct {
 	DownloadCount int  `gorm:"default:0" json:"download_count"`
 	IsPublic    bool   `gorm:"default:false" json:"is_public"`
 	Hash        string `gorm:"type:varchar(64);index" json:"hash"` // SHA256
+}
+
+// TicketTransferLog 工单转移/部门转交记录
+type TicketTransferLog struct {
+	gorm.Model
+	TicketID    uint    `gorm:"index;not null" json:"ticket_id"`
+	FromDeptID  *uint   `json:"from_dept_id"`
+	ToDeptID    *uint   `json:"to_dept_id"`
+	FromAgentID *uint   `json:"from_agent_id"`
+	ToAgentID   *uint   `json:"to_agent_id"`
+	OperatorID  uint    `gorm:"not null" json:"operator_id"`
+	Reason      string  `gorm:"type:text" json:"reason"`
+	Ticket      *Ticket `gorm:"foreignKey:TicketID" json:"ticket,omitempty"`
 }

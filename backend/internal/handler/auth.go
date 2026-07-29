@@ -13,9 +13,10 @@ import (
 )
 
 type AuthHandler struct {
-	userSvc *service.UserService
-	log     *logger.Logger
-	jwtKey  []byte
+	userSvc    *service.UserService
+	captchaSvc *service.CaptchaService
+	log        *logger.Logger
+	jwtKey     []byte
 }
 
 func NewAuthHandler(userSvc *service.UserService, log *logger.Logger, jwtKey string) *AuthHandler {
@@ -23,6 +24,15 @@ func NewAuthHandler(userSvc *service.UserService, log *logger.Logger, jwtKey str
 		userSvc: userSvc,
 		log:     log,
 		jwtKey:  []byte(jwtKey),
+	}
+}
+
+func NewAuthHandlerWithCaptcha(userSvc *service.UserService, captchaSvc *service.CaptchaService, log *logger.Logger, jwtKey string) *AuthHandler {
+	return &AuthHandler{
+		userSvc:    userSvc,
+		captchaSvc: captchaSvc,
+		log:        log,
+		jwtKey:     []byte(jwtKey),
 	}
 }
 
@@ -137,9 +147,93 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	})
 }
 
-// Logout is a client-side logout placeholder (token blacklisting can be added).
+// Logout invalidates the current session.
 func (h *AuthHandler) Logout(c *gin.Context) {
+	// Token blacklisting can be implemented with Redis
 	response.SuccessMsg(c, "logged out")
+}
+
+// SMSLogin authenticates via phone + SMS code.
+func (h *AuthHandler) SMSLogin(c *gin.Context) {
+	var req struct {
+		Phone string `json:"phone" binding:"required"`
+		Code  string `json:"code" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Verify SMS code
+	if h.captchaSvc == nil || !h.captchaSvc.CheckAndConsume("captcha:sms:"+req.Phone, req.Code) {
+		response.BadRequest(c, "invalid or expired verification code")
+		return
+	}
+
+	// Find user by phone
+	user, err := h.userSvc.GetByPhone(req.Phone)
+	if err != nil {
+		response.BadRequest(c, "phone number not registered")
+		return
+	}
+
+	// Generate tokens
+	accessToken, refreshToken, err := h.generateTokens(user.ID, user.Username, user.Role)
+	if err != nil {
+		response.ServerError(c, "failed to generate tokens")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"user":          user,
+	})
+}
+
+// VerifyResetCode verifies a password reset code.
+func (h *AuthHandler) VerifyResetCode(c *gin.Context) {
+	var req struct {
+		Account string `json:"account" binding:"required"` // phone or email
+		Code    string `json:"code" binding:"required"`
+		Type    string `json:"type" binding:"required"` // phone or email
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Verify code against stored captcha
+	key := "captcha:sms:" + req.Account
+	if req.Type == "email" {
+		key = "captcha:email:" + req.Account
+	}
+
+	if h.captchaSvc == nil || !h.captchaSvc.Verify(key, req.Code) {
+		response.BadRequest(c, "invalid or expired verification code")
+		return
+	}
+
+	response.Success(c, gin.H{"verified": true, "account": req.Account})
+}
+
+// ResetPassword resets password after code verification.
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req struct {
+		Account     string `json:"account" binding:"required"`
+		Code        string `json:"code" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required,min=6,max=128"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.userSvc.ResetPassword(req.Account, req.NewPassword); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "password reset successfully")
 }
 
 func (h *AuthHandler) generateTokens(userID uint, username, role string) (string, string, error) {

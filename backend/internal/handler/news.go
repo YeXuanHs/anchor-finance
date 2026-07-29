@@ -93,6 +93,38 @@ func (h *NewsHandler) GetDetail(c *gin.Context) {
 	response.Success(c, news)
 }
 
+// Search searches news articles by keyword.
+func (h *NewsHandler) Search(c *gin.Context) {
+	keyword := c.Query("q")
+	if keyword == "" {
+		keyword = c.Query("keyword")
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	var news []model.News
+	var total int64
+
+	query := h.db.Model(&model.News{}).Where("is_published = ?", true)
+	if keyword != "" {
+		q := "%" + keyword + "%"
+		query = query.Where("title LIKE ? OR summary LIKE ? OR content LIKE ?", q, q, q)
+	}
+
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).
+		Order("created_at DESC").
+		Preload("Category").
+		Find(&news).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.SuccessPage(c, news, total, page, pageSize)
+}
+
 // ---------- Admin Endpoints ----------
 
 // AdminGetCategories returns all news categories including inactive (admin).

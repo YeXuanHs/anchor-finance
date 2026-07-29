@@ -47,7 +47,10 @@
     </div>
 
     <div v-else class="list-section">
-      <div v-if="filteredList.length > 0" class="announcement-list">
+      <div v-if="loading" class="empty-state">
+        <n-spin size="medium" />
+      </div>
+      <div v-else-if="filteredList.length > 0" class="announcement-list">
         <n-card
           v-for="item in paginatedList"
           :key="item.id"
@@ -106,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   MegaphoneOutline,
   SearchOutline,
@@ -114,11 +117,13 @@ import {
   ArrowBackOutline,
   ChevronForwardOutline
 } from '@vicons/ionicons5'
+import request from '@/utils/request'
 
 const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = 6
 const selectedAnnouncement = ref<Announcement | null>(null)
+const loading = ref(false)
 
 interface Announcement {
   id: number
@@ -131,78 +136,18 @@ interface Announcement {
   tags: string[]
 }
 
-const announcements = ref<Announcement[]>([
-  {
-    id: 1,
-    title: '系统升级维护通知',
-    summary: '为提升服务质量，系统将于本周六凌晨2:00-6:00进行升级维护，届时部分功能将暂停使用。',
-    content: '<p>尊敬的用户：</p><p>为提升服务质量，系统将于<strong>2026年7月29日（周六）凌晨2:00-6:00</strong>进行升级维护。</p><p>维护期间，以下功能将暂停使用：</p><ul><li>账户充值与提现</li><li>交易记录查询</li><li>部分API接口</li></ul><p>请您提前做好相关安排，对此给您带来的不便，我们深表歉意。</p><p>感谢您的理解与支持！</p>',
-    time: '2026-07-27',
-    level: 'important',
-    levelLabel: '重要',
-    tags: ['系统维护', '服务通知']
-  },
-  {
-    id: 2,
-    title: '新增数字人民币支付方式',
-    summary: '为丰富支付渠道，平台现已支持数字人民币支付，欢迎体验使用。',
-    content: '<p>尊敬的用户：</p><p>我们很高兴地通知您，平台现已正式支持<strong>数字人民币</strong>支付方式。</p><p>您可以在充值页面选择"数字人民币"进行支付，享受更安全、便捷的支付体验。</p><p>如需帮助，请联系客服。</p>',
-    time: '2026-07-25',
-    level: 'new',
-    levelLabel: '新功能',
-    tags: ['支付', '新功能']
-  },
-  {
-    id: 3,
-    title: '2026年端午节假期服务安排',
-    summary: '端午节期间客服服务时间调整，提现到账时间可能延迟，请提前做好资金安排。',
-    content: '<p>尊敬的用户：</p><p>2026年端午节假期期间（6月19日-6月21日），服务安排如下：</p><ul><li>在线客服服务时间调整为 9:00-18:00</li><li>提现申请将在工作日统一处理</li><li>充值服务正常运行</li></ul><p>请提前做好资金安排，祝您节日愉快！</p>',
-    time: '2026-07-20',
-    level: 'notice',
-    levelLabel: '通知',
-    tags: ['假期', '服务调整']
-  },
-  {
-    id: 4,
-    title: '账户安全升级：双重验证功能上线',
-    summary: '为保障账户安全，平台新增双重验证功能，建议所有用户开启。',
-    content: '<p>尊敬的用户：</p><p>为进一步提升账户安全性，我们上线了<strong>双重验证（2FA）</strong>功能。</p><p>开启后，登录时除密码外还需输入动态验证码，有效防止账户被盗。</p><p>设置路径：个人中心 → 安全设置 → 双重验证</p><p>建议所有用户开启此功能。</p>',
-    time: '2026-07-18',
-    level: 'important',
-    levelLabel: '重要',
-    tags: ['安全', '新功能']
-  },
-  {
-    id: 5,
-    title: '费率调整公告',
-    summary: '自8月1日起，部分服务费率将进行调整，详情请查看公告内容。',
-    content: '<p>尊敬的用户：</p><p>自<strong>2026年8月1日</strong>起，以下服务费率将进行调整：</p><ul><li>提现手续费：由0.1%调整为0.08%</li><li>跨行转账费：由2元/笔调整为1元/笔</li></ul><p>此次调整旨在为用户提供更优惠的服务，感谢您的支持。</p>',
-    time: '2026-07-15',
-    level: 'notice',
-    levelLabel: '通知',
-    tags: ['费率', '服务调整']
-  },
-  {
-    id: 7,
-    title: '新用户专享福利活动',
-    summary: '即日起至月底，新注册用户首次充值可享受额外赠送优惠，详情请查看活动规则。',
-    content: '<p>尊敬的新用户：</p><p>为欢迎新用户加入，即日起至<strong>2026年7月31日</strong>，开展新用户专享活动：</p><ul><li>首次充值100元，赠送10元</li><li>首次充值500元，赠送60元</li><li>首次充值1000元，赠送150元</li></ul><p>赠送金额将在充值后24小时内到账，详情请查看活动页面。</p>',
-    time: '2026-07-10',
-    level: 'activity',
-    levelLabel: '活动',
-    tags: ['活动', '新用户']
-  },
-  {
-    id: 8,
-    title: '隐私政策更新说明',
-    summary: '根据最新法规要求，我们更新了隐私政策条款，请您查阅。',
-    content: '<p>尊敬的用户：</p><p>根据最新法规要求，我们对《隐私政策》进行了更新。</p><p>主要更新内容：</p><ul><li>明确了数据收集范围与用途</li><li>增加了用户数据删除权利说明</li><li>优化了第三方数据共享条款</li></ul><p>请您查阅最新版本的隐私政策，继续使用即表示您同意更新后的条款。</p>',
-    time: '2026-07-05',
-    level: 'notice',
-    levelLabel: '通知',
-    tags: ['隐私', '政策更新']
-  }
-])
+const announcements = ref<Announcement[]>([])
+
+async function fetchAnnouncements() {
+  loading.value = true
+  try {
+    const res = await request.get('/api/v1/announcements')
+    announcements.value = res.data?.data || res.data || []
+  } catch { /* ignore */ }
+  loading.value = false
+}
+
+onMounted(() => { fetchAnnouncements() })
 
 const tagTypeMap: Record<string, string> = {
   important: 'error',

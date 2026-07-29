@@ -106,6 +106,18 @@ func (s *ProductService) GetByID(id uint) (*Product, error) {
 	return &product, nil
 }
 
+// GetHotProducts returns the top selling active products.
+func (s *ProductService) GetHotProducts(limit int) ([]Product, error) {
+	var products []Product
+	if err := s.db.Where("status = ?", 1).
+		Order("sort ASC, id DESC").
+		Limit(limit).
+		Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+
 // Create adds a new product.
 func (s *ProductService) Create(req CreateProductRequest) (*Product, error) {
 	product := &Product{
@@ -189,4 +201,117 @@ func (s *ProductService) GetUserProducts(userID uint) ([]UserProduct, error) {
 		return nil, err
 	}
 	return ups, nil
+}
+
+// --- Product Group ---
+
+// ProductGroup represents a product category/group.
+type ProductGroup struct {
+	ID          uint   `gorm:"primaryKey" json:"id"`
+	Name        string `gorm:"size:128;not null" json:"name"`
+	Description string `gorm:"type:text" json:"description"`
+	Slug        string `gorm:"size:128;uniqueIndex" json:"slug"`
+	ParentID    *uint  `gorm:"index" json:"parent_id"`
+	Icon        string `gorm:"size:512" json:"icon"`
+	SortOrder   int    `gorm:"default:0" json:"sort_order"`
+	Status      int16  `gorm:"default:1;not null" json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func (ProductGroup) TableName() string { return "product_groups" }
+
+type CreateGroupRequest struct {
+	Name        string `json:"name" binding:"required,max=128"`
+	Description string `json:"description"`
+	Slug        string `json:"slug" binding:"omitempty,max=128"`
+	ParentID    *uint  `json:"parent_id"`
+	Icon        string `json:"icon"`
+	SortOrder   int    `json:"sort_order"`
+}
+
+type UpdateGroupRequest struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	Slug        *string `json:"slug"`
+	ParentID    *uint   `json:"parent_id"`
+	Icon        *string `json:"icon"`
+	SortOrder   *int    `json:"sort_order"`
+	Status      *int16  `json:"status"`
+}
+
+// GetGroups returns all product groups.
+func (s *ProductService) GetGroups() ([]ProductGroup, error) {
+	var groups []ProductGroup
+	if err := s.db.Order("sort_order ASC, id ASC").Find(&groups).Error; err != nil {
+		return nil, err
+	}
+	return groups, nil
+}
+
+// GetGroupByID returns a single product group by ID.
+func (s *ProductService) GetGroupByID(id uint) (*ProductGroup, error) {
+	var group ProductGroup
+	if err := s.db.First(&group, id).Error; err != nil {
+		return nil, err
+	}
+	return &group, nil
+}
+
+// CreateGroup creates a new product group.
+func (s *ProductService) CreateGroup(req CreateGroupRequest) (*ProductGroup, error) {
+	group := &ProductGroup{
+		Name:        req.Name,
+		Description: req.Description,
+		Slug:        req.Slug,
+		ParentID:    req.ParentID,
+		Icon:        req.Icon,
+		SortOrder:   req.SortOrder,
+		Status:      1,
+	}
+	if err := s.db.Create(group).Error; err != nil {
+		return nil, err
+	}
+	return group, nil
+}
+
+// UpdateGroup updates a product group.
+func (s *ProductService) UpdateGroup(id uint, req UpdateGroupRequest) (*ProductGroup, error) {
+	group, err := s.GetGroupByID(id)
+	if err != nil {
+		return nil, err
+	}
+	updates := map[string]interface{}{}
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.Slug != nil {
+		updates["slug"] = *req.Slug
+	}
+	if req.ParentID != nil {
+		updates["parent_id"] = *req.ParentID
+	}
+	if req.Icon != nil {
+		updates["icon"] = *req.Icon
+	}
+	if req.SortOrder != nil {
+		updates["sort_order"] = *req.SortOrder
+	}
+	if req.Status != nil {
+		updates["status"] = *req.Status
+	}
+	if len(updates) > 0 {
+		if err := s.db.Model(group).Updates(updates).Error; err != nil {
+			return nil, err
+		}
+	}
+	return s.GetGroupByID(id)
+}
+
+// DeleteGroup deletes a product group.
+func (s *ProductService) DeleteGroup(id uint) error {
+	return s.db.Delete(&ProductGroup{}, id).Error
 }

@@ -155,6 +155,24 @@ func (h *OAuthProviderHandler) AdminUpdateSort(c *gin.Context) {
 	response.SuccessMsg(c, "sort order updated")
 }
 
+// List is an alias for AdminGetList.
+func (h *OAuthProviderHandler) List(c *gin.Context) { h.AdminGetList(c) }
+
+// GetDetail is an alias for AdminGetDetail.
+func (h *OAuthProviderHandler) GetDetail(c *gin.Context) { h.AdminGetDetail(c) }
+
+// Create is an alias for AdminCreate.
+func (h *OAuthProviderHandler) Create(c *gin.Context) { h.AdminCreate(c) }
+
+// Update is an alias for AdminUpdate.
+func (h *OAuthProviderHandler) Update(c *gin.Context) { h.AdminUpdate(c) }
+
+// Delete is an alias for AdminDelete.
+func (h *OAuthProviderHandler) Delete(c *gin.Context) { h.AdminDelete(c) }
+
+// SetStatus is an alias for AdminToggleStatus.
+func (h *OAuthProviderHandler) SetStatus(c *gin.Context) { h.AdminToggleStatus(c) }
+
 // GetEnabled returns enabled OAuth providers for frontend.
 func (h *OAuthProviderHandler) GetEnabled(c *gin.Context) {
 	items, err := h.svc.GetEnabled()

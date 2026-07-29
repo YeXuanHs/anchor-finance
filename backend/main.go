@@ -13,6 +13,7 @@ import (
 	"anchorfinance/internal/api"
 	"anchorfinance/internal/config"
 	"anchorfinance/internal/job"
+	"anchorfinance/internal/model"
 	"anchorfinance/pkg/auth"
 	"anchorfinance/pkg/db"
 	"anchorfinance/pkg/logger"
@@ -39,6 +40,11 @@ func main() {
 	// 连接数据库
 	if err := db.InitDB(cfg.Database); err != nil {
 		log.Fatalf("数据库初始化失败: %v", err)
+	}
+
+	// Auto-migrate new models/columns
+	if conn := db.GetDB(); conn != nil {
+		conn.AutoMigrate(&model.TicketTransferLog{})
 	}
 
 	// 从数据库读取日志配置并初始化

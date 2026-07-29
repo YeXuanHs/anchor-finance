@@ -1,22 +1,32 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
+	"time"
 
+	"anchorfinance/internal/model"
 	"anchorfinance/internal/service"
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type OrderHandler struct {
 	orderSvc *service.OrderService
+	db       *gorm.DB
 	log      *logger.Logger
 }
 
 func NewOrderHandler(orderSvc *service.OrderService, log *logger.Logger) *OrderHandler {
 	return &OrderHandler{orderSvc: orderSvc, log: log}
+}
+
+// NewOrderHandlerWithDB creates an OrderHandler with direct DB access.
+func NewOrderHandlerWithDB(orderSvc *service.OrderService, db *gorm.DB, log *logger.Logger) *OrderHandler {
+	return &OrderHandler{orderSvc: orderSvc, db: db, log: log}
 }
 
 // Create creates a new order.
@@ -34,6 +44,150 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		return
 	}
 	response.Success(c, order)
+}
+
+// previewItem is a single item in the preview request.
+type previewItem struct {
+	ProductID    uint   `json:"product_id" binding:"required"`
+	BillingCycle string `json:"billing_cycle"`
+	Quantity     int    `json:"quantity"`
+}
+
+// PreviewRequest is the payload for order preview.
+type PreviewRequest struct {
+	Items      []previewItem `json:"items" binding:"required,min=1"`
+	CouponCode string        `json:"coupon_code"`
+}
+
+// Preview calculates order total without creating the order.
+func (h *OrderHandler) Preview(c *gin.Context) {
+	var req PreviewRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	var total float64
+	var items []map[string]interface{}
+
+	for _, item := range req.Items {
+		if item.Quantity < 1 {
+			item.Quantity = 1
+		}
+
+		// Look up product from database
+		var product model.Product
+		if err := h.db.First(&product, item.ProductID).Error; err != nil {
+			response.BadRequest(c, fmt.Sprintf("product not found: %d", item.ProductID))
+			return
+		}
+
+		if product.Status != 1 {
+			response.BadRequest(c, "product is not available: "+product.Name)
+			return
+		}
+
+		// Check stock
+		if product.StockControl && product.Stock >= 0 && product.Stock < item.Quantity {
+			response.BadRequest(c, fmt.Sprintf("insufficient stock for %s: available %d", product.Name, product.Stock))
+			return
+		}
+
+		// Get base price from Decimal
+		basePrice, _ := product.Price.Float64()
+
+		// Determine price based on billing cycle
+		price := basePrice
+		cycle := item.BillingCycle
+		if cycle == "" {
+			cycle = product.BillingCycle
+		}
+		if cycle != "" && cycle != product.BillingCycle {
+			switch cycle {
+			case "monthly":
+				price = basePrice
+			case "quarterly":
+				price = basePrice * 3 * 0.95
+			case "semi-annually":
+				price = basePrice * 6 * 0.90
+			case "annually":
+				price = basePrice * 12 * 0.85
+			case "biennially":
+				price = basePrice * 24 * 0.80
+			case "triennially":
+				price = basePrice * 36 * 0.75
+			default:
+				price = basePrice
+			}
+		}
+
+		subtotal := price * float64(item.Quantity)
+		total += subtotal
+
+		items = append(items, map[string]interface{}{
+			"product_id":    product.ID,
+			"product_name":  product.Name,
+			"billing_cycle": cycle,
+			"quantity":      item.Quantity,
+			"price":         price,
+			"subtotal":      subtotal,
+		})
+	}
+
+	// Apply coupon if provided
+	couponDiscount := 0.0
+	if req.CouponCode != "" {
+		var coupon model.Coupon
+		if err := h.db.Where("code = ? AND status = 1", req.CouponCode).First(&coupon).Error; err == nil {
+			now := time.Now()
+			valid := true
+			if coupon.StartDate != nil && coupon.StartDate.After(now) {
+				valid = false
+			}
+			if coupon.EndDate != nil && coupon.EndDate.Before(now) {
+				valid = false
+			}
+			if coupon.MaxUses > 0 && coupon.UsedCount >= coupon.MaxUses {
+				valid = false
+			}
+			minOrder, _ := coupon.MinOrderAmount.Float64()
+			if minOrder > 0 && total < minOrder {
+				valid = false
+			}
+
+			if valid {
+				couponVal, _ := coupon.Value.Float64()
+				switch coupon.Type {
+				case "percentage":
+					couponDiscount = total * couponVal / 100
+					maxDisc, _ := coupon.MaxDiscount.Float64()
+					if maxDisc > 0 && couponDiscount > maxDisc {
+						couponDiscount = maxDisc
+					}
+				case "fixed":
+					couponDiscount = couponVal
+					if couponDiscount > total {
+						couponDiscount = total
+					}
+				case "free":
+					couponDiscount = total
+				}
+			}
+		}
+	}
+
+	finalTotal := total - couponDiscount
+	if finalTotal < 0 {
+		finalTotal = 0
+	}
+
+	response.Success(c, gin.H{
+		"items":           items,
+		"subtotal":        total,
+		"coupon_code":     req.CouponCode,
+		"coupon_discount": couponDiscount,
+		"total":           finalTotal,
+	})
 }
 
 // GetDetail returns a single order.

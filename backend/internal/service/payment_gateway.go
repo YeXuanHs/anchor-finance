@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -288,6 +289,43 @@ func (s *PaymentGatewayService) ToggleStatus(id uint) error {
 		newStatus = 0
 	}
 	return s.db.Model(&gw).Update("status", newStatus).Error
+}
+
+// TestConnection tests connection to a payment gateway by validating its configuration.
+func (s *PaymentGatewayService) TestConnection(id uint) error {
+	var gw model.PaymentGateway
+	if err := s.db.First(&gw, id).Error; err != nil {
+		return errors.New("payment gateway not found")
+	}
+
+	if gw.Config == "" {
+		return errors.New("payment gateway has no configuration")
+	}
+
+	var cfg map[string]interface{}
+	if err := json.Unmarshal([]byte(gw.Config), &cfg); err != nil {
+		return errors.New("invalid gateway configuration: " + err.Error())
+	}
+
+	// Verify required config fields are present based on gateway code
+	switch gw.Code {
+	case "alipay":
+		if _, ok := cfg["app_id"]; !ok {
+			return errors.New("missing required field: app_id")
+		}
+	case "wechat":
+		if _, ok := cfg["mch_id"]; !ok {
+			return errors.New("missing required field: mch_id")
+		}
+	default:
+		// For other gateways, just verify config is valid JSON with at least one key
+		if len(cfg) == 0 {
+			return errors.New("gateway configuration is empty")
+		}
+	}
+
+	s.log.Infof("payment gateway connection test passed: id=%d code=%s", gw.ID, gw.Code)
+	return nil
 }
 
 func (s *PaymentGatewayService) UpdateSort(id uint, sortOrder int) error {

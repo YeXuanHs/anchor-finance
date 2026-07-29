@@ -91,14 +91,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
 const searchKey = ref('')
 const activeTab = ref('all')
 const currentPage = ref(1)
 const pageSize = ref(10)
+const loading = ref(false)
 
 interface Order {
   id: string
@@ -111,14 +113,15 @@ interface Order {
   createdAt: string
 }
 
-const orders = ref<Order[]>([
-  { id: 'ORD20260725001', product: '香港云服务器', spec: '2核4G / 50G SSD / 5Mbps', cycle: '月度订阅', amount: '49.00', status: 'active', statusText: '已开通', createdAt: '2026-07-25 10:30:00' },
-  { id: 'ORD20260724002', product: '美国独立服务器', spec: 'E5-2680v4 / 64G / 1T SSD', cycle: '季度订阅', amount: '2,397.00', status: 'pending', statusText: '待支付', createdAt: '2026-07-24 14:20:00' },
-  { id: 'ORD20260720003', product: 'OV SSL证书', spec: '单域名 / 企业验证', cycle: '年度订阅', amount: '199.00', status: 'active', statusText: '已开通', createdAt: '2026-07-20 09:15:00' },
-  { id: 'ORD20260715004', product: '香港 VPS', spec: '1核2G / 30G NVMe / 1Gbps', cycle: '月度订阅', amount: '19.00', status: 'completed', statusText: '已完成', createdAt: '2026-07-15 16:45:00' },
-  { id: 'ORD20260710005', product: '域名注册', spec: '.com / 首年', cycle: '一次性', amount: '9.00', status: 'completed', statusText: '已完成', createdAt: '2026-07-10 11:00:00' },
-  { id: 'ORD20260705006', product: '新加坡 VPS', spec: '2核4G / 60G NVMe', cycle: '月度订阅', amount: '35.00', status: 'cancelled', statusText: '已取消', createdAt: '2026-07-05 09:00:00' }
-])
+const orders = ref<Order[]>([])
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/orders')
+    orders.value = data.data?.list || data.list || data.data || []
+  } catch (e) { console.error(e) } finally { loading.value = false }
+})
 
 const statusTabs = computed(() => [
   { label: '全部', value: 'all', count: orders.value.length },

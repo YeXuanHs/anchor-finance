@@ -39,8 +39,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
+import request from '@/utils/request'
+
+const router = useRouter()
 
 const loading = ref(false)
 const hosts = ref([])
@@ -66,16 +70,32 @@ const getStatusText = (status: string) => {
 }
 
 const viewDetail = (host: any) => {
-  // TODO: 查看主机详情
+  router.push(`/user/products/${host.id}`)
 }
 
 const renewHost = (host: any) => {
-  // TODO: 续费主机
+  router.push({ path: '/user/batch-renew', query: { host_id: host.id } })
 }
 
 const upgradeHost = (host: any) => {
-  // TODO: 升降级主机
+  router.push({ path: '/user/upgrade', query: { host_id: host.id } })
 }
+
+const loadHosts = async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/user/products')
+    hosts.value = data?.data?.list || data?.data?.items || data?.data || []
+  } catch {
+    hosts.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadHosts()
+})
 </script>
 
 <style scoped lang="scss">

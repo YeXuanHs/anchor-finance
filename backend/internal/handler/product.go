@@ -49,6 +49,20 @@ func (h *ProductHandler) GetDetail(c *gin.Context) {
 	response.Success(c, product)
 }
 
+// GetHot returns the top selling products.
+func (h *ProductHandler) GetHot(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "4"))
+	if limit < 1 || limit > 20 {
+		limit = 4
+	}
+	products, err := h.productSvc.GetHotProducts(limit)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, products)
+}
+
 // Create adds a new product (admin).
 func (h *ProductHandler) Create(c *gin.Context) {
 	var req service.CreateProductRequest
@@ -115,12 +129,59 @@ func (h *ProductHandler) GetUserProducts(c *gin.Context) {
 
 // GetGroups returns product categories/groups (admin).
 func (h *ProductHandler) GetGroups(c *gin.Context) {
-	// Placeholder — group model can be added later.
-	response.Success(c, []interface{}{})
+	groups, err := h.productSvc.GetGroups()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, groups)
 }
 
 // CreateGroup creates a product group (admin).
 func (h *ProductHandler) CreateGroup(c *gin.Context) {
-	// Placeholder — group model can be added later.
-	response.SuccessMsg(c, "group created")
+	var req service.CreateGroupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	group, err := h.productSvc.CreateGroup(req)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, group)
+}
+
+// UpdateGroup updates a product group (admin).
+func (h *ProductHandler) UpdateGroup(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid group id")
+		return
+	}
+	var req service.UpdateGroupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	group, err := h.productSvc.UpdateGroup(uint(id), req)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, group)
+}
+
+// DeleteGroup deletes a product group (admin).
+func (h *ProductHandler) DeleteGroup(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid group id")
+		return
+	}
+	if err := h.productSvc.DeleteGroup(uint(id)); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "group deleted")
 }

@@ -64,6 +64,25 @@ type OrderStatsPoint struct {
 	PaidCount  int     `json:"paid_count"`
 }
 
+// TopClientReport represents a top client by spending.
+type TopClientReport struct {
+	UserID     uint    `json:"user_id"`
+	Username   string  `json:"username"`
+	Email      string  `json:"email"`
+	OrderCount int     `json:"order_count"`
+	TotalSpent float64 `json:"total_spent"`
+	Rank       int     `json:"rank"`
+}
+
+// ProductIncomeReport represents income breakdown by product.
+type ProductIncomeReport struct {
+	ProductID   uint    `json:"product_id"`
+	ProductName string  `json:"product_name"`
+	OrderCount  int     `json:"order_count"`
+	TotalIncome float64 `json:"total_income"`
+	Percentage  float64 `json:"percentage"`
+}
+
 type ReportService struct {
 	db  *gorm.DB
 	log *logger.Logger
@@ -242,4 +261,99 @@ func (s *ReportService) GetOrderStats(days int) ([]OrderStatsPoint, error) {
 		results = append(results, p)
 	}
 	return results, nil
+}
+
+// GetTopClients returns top clients ranked by total spending on paid orders.
+func (s *ReportService) GetTopClients(limit int, period string) ([]TopClientReport, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+
+	startDate := periodStartDate(period)
+
+	rows, err := s.db.Raw(`
+		SELECT o.user_id, u.username, u.email,
+		       COUNT(*) AS order_count,
+		       COALESCE(SUM(o.total_price), 0) AS total_spent
+		FROM orders o
+		JOIN users u ON u.id = o.user_id AND u.deleted_at IS NULL
+		WHERE o.status = 1 AND o.deleted_at IS NULL
+		  AND o.created_at >= ?
+		GROUP BY o.user_id, u.username, u.email
+		ORDER BY total_spent DESC
+		LIMIT ?
+	`, startDate, limit).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []TopClientReport
+	rank := 0
+	for rows.Next() {
+		rank++
+		var r TopClientReport
+		if err := rows.Scan(&r.UserID, &r.Username, &r.Email, &r.OrderCount, &r.TotalSpent); err != nil {
+			return nil, err
+		}
+		r.Rank = rank
+		results = append(results, r)
+	}
+	return results, nil
+}
+
+// GetProductIncome returns income breakdown by product for paid orders.
+func (s *ReportService) GetProductIncome(period string) ([]ProductIncomeReport, error) {
+	startDate := periodStartDate(period)
+
+	rows, err := s.db.Raw(`
+		SELECT o.product_id, p.name AS product_name,
+		       COUNT(*) AS order_count,
+		       COALESCE(SUM(o.total_price), 0) AS total_income
+		FROM orders o
+		JOIN products p ON p.id = o.product_id AND p.deleted_at IS NULL
+		WHERE o.status = 1 AND o.deleted_at IS NULL
+		  AND o.created_at >= ?
+		GROUP BY o.product_id, p.name
+		ORDER BY total_income DESC
+	`, startDate).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []ProductIncomeReport
+	var grandTotal float64
+	for rows.Next() {
+		var r ProductIncomeReport
+		if err := rows.Scan(&r.ProductID, &r.ProductName, &r.OrderCount, &r.TotalIncome); err != nil {
+			return nil, err
+		}
+		grandTotal += r.TotalIncome
+		results = append(results, r)
+	}
+
+	for i := range results {
+		if grandTotal > 0 {
+			results[i].Percentage = results[i].TotalIncome / grandTotal * 100
+		}
+	}
+	return results, nil
+}
+
+// periodStartDate returns a time.Time for the start of the given period.
+func periodStartDate(period string) time.Time {
+	now := time.Now()
+	switch period {
+	case "week":
+		return now.AddDate(0, 0, -7)
+	case "month":
+		return now.AddDate(0, -1, 0)
+	case "quarter":
+		return now.AddDate(0, -3, 0)
+	case "year":
+		return now.AddDate(-1, 0, 0)
+	default:
+		return time.Time{} // zero value = no filter
+	}
 }

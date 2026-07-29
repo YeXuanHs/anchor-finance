@@ -86,24 +86,48 @@
         </div>
       </div>
 
-      <!-- Step 2: 管理员设置 -->
+      <!-- Step 2: 站点与管理员设置 -->
       <div v-if="currentStep === 2" class="step-content">
-        <h3>管理员设置</h3>
-        <el-form :model="adminForm" :rules="adminRules" ref="adminFormRef" label-width="120px">
+        <h3>站点与管理员设置</h3>
+        <el-form :model="adminForm" :rules="adminRules" ref="adminFormRef" label-width="140px">
+          <el-divider content-position="left">站点配置</el-divider>
           <el-form-item label="站点名称" prop="site_name">
             <el-input v-model="adminForm.site_name" placeholder="锚点财务" />
           </el-form-item>
           <el-form-item label="站点 URL" prop="site_url">
             <el-input v-model="adminForm.site_url" placeholder="http://localhost:8080" />
           </el-form-item>
+          <el-form-item label="站点描述">
+            <el-input v-model="adminForm.site_description" placeholder="高效、安全的财务管理平台" />
+          </el-form-item>
+
+          <el-divider content-position="left">服务配置</el-divider>
+          <el-form-item label="服务端口" prop="server_port">
+            <el-input v-model="adminForm.server_port" placeholder="8080" />
+          </el-form-item>
+          <el-form-item label="运行模式">
+            <el-radio-group v-model="adminForm.server_mode">
+              <el-radio value="debug">调试模式 (debug)</el-radio>
+              <el-radio value="release">生产模式 (release)</el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <el-divider content-position="left">后台路径配置</el-divider>
+          <el-form-item label="后台访问路径" prop="admin_path">
+            <el-input v-model="adminForm.admin_path" placeholder="/admin">
+              <template #prepend>{{ adminForm.site_url }}</template>
+            </el-input>
+            <div class="form-tip">设置管理后台的访问路径，建议修改默认路径以提高安全性</div>
+          </el-form-item>
+
           <el-divider content-position="left">管理员账号</el-divider>
-          <el-form-item label="用户名" prop="admin_username">
+          <el-form-item label="管理员用户名" prop="admin_username">
             <el-input v-model="adminForm.admin_username" placeholder="admin" />
           </el-form-item>
-          <el-form-item label="邮箱" prop="admin_email">
+          <el-form-item label="管理员邮箱" prop="admin_email">
             <el-input v-model="adminForm.admin_email" placeholder="admin@example.com" />
           </el-form-item>
-          <el-form-item label="密码" prop="admin_password">
+          <el-form-item label="管理员密码" prop="admin_password">
             <el-input v-model="adminForm.admin_password" type="password" show-password placeholder="至少6位" />
           </el-form-item>
           <el-form-item label="确认密码" prop="admin_password_confirm">
@@ -123,9 +147,13 @@
         <el-descriptions :column="1" border>
           <el-descriptions-item label="数据库主机">{{ dbForm.db_host }}:{{ dbForm.db_port }}</el-descriptions-item>
           <el-descriptions-item label="数据库名">{{ dbForm.db_name }}</el-descriptions-item>
-          <el-descriptions-item label="Redis">{{ dbForm.enable_redis ? '已启用' : '未启用' }}</el-descriptions-item>
+          <el-descriptions-item label="Redis">{{ dbForm.enable_redis ? '已启用 (' + dbForm.redis_host + ':' + dbForm.redis_port + ')' : '未启用' }}</el-descriptions-item>
           <el-descriptions-item label="站点名称">{{ adminForm.site_name || '锚点财务' }}</el-descriptions-item>
-          <el-descriptions-item label="管理员">{{ adminForm.admin_username }}</el-descriptions-item>
+          <el-descriptions-item label="站点 URL">{{ adminForm.site_url }}</el-descriptions-item>
+          <el-descriptions-item label="服务端口">{{ adminForm.server_port }}</el-descriptions-item>
+          <el-descriptions-item label="运行模式">{{ adminForm.server_mode === 'debug' ? '调试模式' : '生产模式' }}</el-descriptions-item>
+          <el-descriptions-item label="后台路径">{{ adminForm.site_url }}{{ adminForm.admin_path }}</el-descriptions-item>
+          <el-descriptions-item label="管理员账号">{{ adminForm.admin_username }}</el-descriptions-item>
           <el-descriptions-item label="管理员邮箱">{{ adminForm.admin_email }}</el-descriptions-item>
         </el-descriptions>
 
@@ -255,6 +283,10 @@ const testDB = async () => {
 const adminForm = ref({
   site_name: '锚点财务',
   site_url: 'http://localhost:8080',
+  site_description: '高效、安全的财务管理平台',
+  server_port: '8080',
+  server_mode: 'release',
+  admin_path: '/admin',
   admin_username: 'admin',
   admin_email: '',
   admin_password: '',
@@ -262,6 +294,13 @@ const adminForm = ref({
 })
 
 const adminRules = {
+  site_name: [{ required: true, message: '请输入站点名称', trigger: 'blur' }],
+  site_url: [{ required: true, message: '请输入站点URL', trigger: 'blur' }],
+  server_port: [{ required: true, message: '请输入服务端口', trigger: 'blur' }],
+  admin_path: [
+    { required: true, message: '请输入后台访问路径', trigger: 'blur' },
+    { pattern: /^\/[a-zA-Z0-9_-]+$/, message: '路径必须以/开头，只能包含字母、数字、下划线和横线', trigger: 'blur' },
+  ],
   admin_username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, message: '用户名至少3位', trigger: 'blur' },
@@ -320,6 +359,10 @@ const doInstall = async () => {
       admin_email: adminForm.value.admin_email,
       site_name: adminForm.value.site_name,
       site_url: adminForm.value.site_url,
+      site_description: adminForm.value.site_description,
+      server_port: adminForm.value.server_port,
+      server_mode: adminForm.value.server_mode,
+      admin_path: adminForm.value.admin_path,
     }
 
     const res = await request.post('/api/install', payload)
@@ -467,5 +510,12 @@ const doInstall = async () => {
     background: #fef0f0;
     color: #f56c6c;
   }
+}
+
+.form-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 </style>

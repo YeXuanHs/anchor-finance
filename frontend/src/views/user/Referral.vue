@@ -1,9 +1,10 @@
 <template>
   <div class="referral-page">
     <div class="page-header">
-      <h1 class="page-title">推介计划</h1>
+      <h1 class="page-title">推广联盟</h1>
     </div>
 
+    <!-- Banner Card -->
     <el-card shadow="never" class="banner-card">
       <div class="banner-content">
         <div class="banner-text">
@@ -19,10 +20,55 @@
             <span class="stat-num">¥{{ totalEarnings }}</span>
             <span class="stat-label">累计返利</span>
           </div>
+          <div class="banner-stat">
+            <span class="stat-num">¥{{ availableBalance }}</span>
+            <span class="stat-label">可提现余额</span>
+          </div>
         </div>
       </div>
     </el-card>
 
+    <!-- Quick Navigation -->
+    <div class="quick-nav">
+      <el-card shadow="never" class="nav-card" @click="$router.push('/user/affiliate/buy-record')">
+        <div class="nav-content">
+          <div class="nav-icon" style="background: linear-gradient(135deg, #0056FF, #4080FF);">
+            <el-icon :size="28"><ShoppingCart /></el-icon>
+          </div>
+          <div class="nav-info">
+            <span class="nav-title">购买记录</span>
+            <span class="nav-desc">查看推广订单详情</span>
+          </div>
+          <el-icon class="nav-arrow"><ArrowRight /></el-icon>
+        </div>
+      </el-card>
+      <el-card shadow="never" class="nav-card" @click="$router.push('/user/affiliate/user-list')">
+        <div class="nav-content">
+          <div class="nav-icon" style="background: linear-gradient(135deg, #52c41a, #73d13d);">
+            <el-icon :size="28"><User /></el-icon>
+          </div>
+          <div class="nav-info">
+            <span class="nav-title">推荐用户</span>
+            <span class="nav-desc">管理推荐用户列表</span>
+          </div>
+          <el-icon class="nav-arrow"><ArrowRight /></el-icon>
+        </div>
+      </el-card>
+      <el-card shadow="never" class="nav-card" @click="$router.push('/user/affiliate/withdraw')">
+        <div class="nav-content">
+          <div class="nav-icon" style="background: linear-gradient(135deg, #fa8c16, #ffc53d);">
+            <el-icon :size="28"><Wallet /></el-icon>
+          </div>
+          <div class="nav-info">
+            <span class="nav-title">提现记录</span>
+            <span class="nav-desc">申请提现与记录</span>
+          </div>
+          <el-icon class="nav-arrow"><ArrowRight /></el-icon>
+        </div>
+      </el-card>
+    </div>
+
+    <!-- Referral Code Card -->
     <el-card shadow="never" class="code-card">
       <template #header>
         <span class="card-title">我的推荐码</span>
@@ -47,10 +93,12 @@
       </div>
     </el-card>
 
+    <!-- Recent Records -->
     <el-card shadow="never" class="records-card">
       <template #header>
         <div class="card-header">
-          <span class="card-title">邀请记录</span>
+          <span class="card-title">最近邀请记录</span>
+          <el-button type="primary" link @click="$router.push('/user/affiliate/buy-record')">查看全部</el-button>
         </div>
       </template>
       <el-table :data="referralRecords" stripe style="width: 100%" empty-text="暂无邀请记录">
@@ -83,6 +131,7 @@
       </el-table>
     </el-card>
 
+    <!-- Rules Card -->
     <el-card shadow="never" class="rules-card">
       <template #header>
         <span class="card-title">返利规则</span>
@@ -97,21 +146,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { CopyDocument } from '@element-plus/icons-vue'
+import { CopyDocument, ShoppingCart, User, Wallet, ArrowRight } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
-const referralCode = ref('AF2026ABC')
-const shareLink = ref('https://anchorfin.com/register?ref=AF2026ABC')
-const totalReferrals = ref(12)
-const totalEarnings = ref('1,280.00')
+const loading = ref(false)
+const referralCode = ref('')
+const shareLink = ref('')
+const totalReferrals = ref(0)
+const totalEarnings = ref('0.00')
+const availableBalance = ref('0.00')
 
-const referralRecords = ref([
-  { username: 'user_wang', registerDate: '2026-07-20', spent: '2,397.00', commission: '239.70', status: 'settled', statusText: '已结算' },
-  { username: 'user_li', registerDate: '2026-07-15', spent: '899.00', commission: '89.90', status: 'settled', statusText: '已结算' },
-  { username: 'user_zhao', registerDate: '2026-07-10', spent: '199.00', commission: '19.90', status: 'pending', statusText: '待结算' },
-  { username: 'user_qian', registerDate: '2026-06-28', spent: '699.00', commission: '69.90', status: 'settled', statusText: '已结算' }
-])
+const referralRecords = ref<any[]>([])
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/affiliate/info')
+    const info = data.data || {}
+    referralCode.value = info.referralCode || ''
+    shareLink.value = info.shareLink || ''
+    totalReferrals.value = info.totalReferrals || 0
+    totalEarnings.value = info.totalEarnings || '0.00'
+    availableBalance.value = info.availableBalance || '0.00'
+    referralRecords.value = info.records || []
+  } catch (e) { console.error(e) } finally { loading.value = false }
+})
 
 const rules = [
   '好友通过您的推荐码或链接注册即绑定推荐关系',
@@ -137,7 +198,6 @@ function handleCopyLink() {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 900px;
 }
 
 .page-title {
@@ -176,6 +236,69 @@ function handleCopyLink() {
 
 .stat-num { font-size: 28px; font-weight: 700; color: #fff; }
 .stat-label { font-size: 13px; color: rgba(255,255,255,0.65); }
+
+/* Quick Navigation */
+.quick-nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.nav-card {
+  border-radius: 12px;
+  border: 1px solid #e8ecf1;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 86, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.nav-card :deep(.el-card__body) {
+  padding: 20px;
+}
+
+.nav-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.nav-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.nav-desc {
+  font-size: 13px;
+  color: #909399;
+}
+
+.nav-arrow {
+  color: #c0c4cc;
+  font-size: 18px;
+}
 
 .code-card, .records-card, .rules-card {
   border-radius: 12px;
@@ -226,5 +349,7 @@ function handleCopyLink() {
 
 @media (max-width: 768px) {
   .banner-content { flex-direction: column; gap: 20px; text-align: center; }
+  .banner-stats { justify-content: center; }
+  .quick-nav { grid-template-columns: 1fr; }
 }
 </style>

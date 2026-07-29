@@ -1,8 +1,14 @@
 package service
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"anchorfinance/internal/model"
@@ -13,12 +19,329 @@ import (
 
 // DcimService DCIM业务逻辑
 type DcimService struct {
-	db  *gorm.DB
-	log *logger.Logger
+	db         *gorm.DB
+	log        *logger.Logger
+	httpClient *http.Client
 }
 
 func NewDcimService(db *gorm.DB, log *logger.Logger) *DcimService {
-	return &DcimService{db: db, log: log}
+	return &DcimService{
+		db:  db,
+		log: log,
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+}
+
+// ==================== 远程控制API ====================
+
+// ipmiResponse IPMI API响应格式
+type ipmiResponse struct {
+	Result  string          `json:"result"`
+	Message string          `json:"msg"`
+	Data    json.RawMessage `json:"data"`
+}
+
+// bmsResponse BMS API响应格式
+type bmsResponse struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
+
+// dcimClientResponse DCIM Client API响应格式
+type dcimClientResponse struct {
+	Result  string          `json:"result"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
+
+// ipmiAction 调用IPMI HTTP API（物理服务器管理）
+// POST到 {server_url}/index.php?m=api&a={action}
+// 认证：username/password在POST数据中
+func (s *DcimService) ipmiAction(server *model.DcimServer, action string, params map[string]interface{}) (map[string]interface{}, error) {
+	if server.ControlURL == "" {
+		return nil, fmt.Errorf("IPMI control URL not configured for server %d", server.ID)
+	}
+
+	apiURL := strings.TrimRight(server.ControlURL, "/") + "/index.php?m=api&a=" + url.QueryEscape(action)
+
+	form := url.Values{}
+	form.Set("username", server.ControlUser)
+	form.Set("password", server.ControlPass)
+	for k, v := range params {
+		form.Set(k, fmt.Sprintf("%v", v))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("build IPMI request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("IPMI request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, fmt.Errorf("read IPMI response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("IPMI HTTP %d: %s", resp.StatusCode, string(body))
+	}
+
+	var apiResp ipmiResponse
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return nil, fmt.Errorf("parse IPMI response: %w", err)
+	}
+
+	if apiResp.Result != "success" && apiResp.Result != "1" {
+		return nil, fmt.Errorf("IPMI error: %s", apiResp.Message)
+	}
+
+	result := map[string]interface{}{
+		"result":  apiResp.Result,
+		"message": apiResp.Message,
+	}
+	if apiResp.Data != nil {
+		var data interface{}
+		json.Unmarshal(apiResp.Data, &data)
+		result["data"] = data
+	}
+	return result, nil
+}
+
+// bmsAction 调用BMS REST API（云裸金属服务器管理）
+// POST到 {server_url}/bms/source/{server_id}/{action}
+// Headers: access-user, access-token
+func (s *DcimService) bmsAction(server *model.DcimServer, action string, params map[string]interface{}) (map[string]interface{}, error) {
+	if server.ControlURL == "" {
+		return nil, fmt.Errorf("BMS control URL not configured for server %d", server.ID)
+	}
+
+	// 从ControlExtra中提取BMS server_id，如果没有则使用服务器ID
+	serverID := fmt.Sprintf("%d", server.ID)
+	if server.ControlExtra != "" {
+		var extra map[string]interface{}
+		if err := json.Unmarshal([]byte(server.ControlExtra), &extra); err == nil {
+			if sid, ok := extra["bms_server_id"]; ok {
+				serverID = fmt.Sprintf("%v", sid)
+			}
+		}
+	}
+
+	apiURL := strings.TrimRight(server.ControlURL, "/") + "/bms/source/" + serverID + "/" + url.PathEscape(action)
+
+	payload, _ := json.Marshal(params)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(string(payload)))
+	if err != nil {
+		return nil, fmt.Errorf("build BMS request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("access-user", server.ControlUser)
+	req.Header.Set("access-token", server.ControlPass)
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("BMS request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, fmt.Errorf("read BMS response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("BMS HTTP %d: %s", resp.StatusCode, string(body))
+	}
+
+	var apiResp bmsResponse
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return nil, fmt.Errorf("parse BMS response: %w", err)
+	}
+
+	if apiResp.Code != 0 && apiResp.Code != 200 {
+		return nil, fmt.Errorf("BMS error (code=%d): %s", apiResp.Code, apiResp.Message)
+	}
+
+	result := map[string]interface{}{
+		"code":    apiResp.Code,
+		"message": apiResp.Message,
+	}
+	if apiResp.Data != nil {
+		var data interface{}
+		json.Unmarshal(apiResp.Data, &data)
+		result["data"] = data
+	}
+	return result, nil
+}
+
+// dcimClientAction 调用DCIM Client API（上游DCIM管理）
+// POST到 {dcim_client_url}/index.php?a=api&id={dcim_client_id}
+// 参数：func, api_user, api_pass, id, 以及action特定参数
+func (s *DcimService) dcimClientAction(server *model.DcimServer, funcName string, params map[string]interface{}) (map[string]interface{}, error) {
+	if server.ControlURL == "" {
+		return nil, fmt.Errorf("DCIM client URL not configured for server %d", server.ID)
+	}
+
+	// 从ControlExtra中提取dcim_client_id
+	clientID := fmt.Sprintf("%d", server.ID)
+	if server.ControlExtra != "" {
+		var extra map[string]interface{}
+		if err := json.Unmarshal([]byte(server.ControlExtra), &extra); err == nil {
+			if cid, ok := extra["dcim_client_id"]; ok {
+				clientID = fmt.Sprintf("%v", cid)
+			}
+		}
+	}
+
+	apiURL := strings.TrimRight(server.ControlURL, "/") + "/index.php?a=api&id=" + url.QueryEscape(clientID)
+
+	form := url.Values{}
+	form.Set("func", funcName)
+	form.Set("api_user", server.ControlUser)
+	form.Set("api_pass", server.ControlPass)
+	form.Set("id", clientID)
+	for k, v := range params {
+		form.Set(k, fmt.Sprintf("%v", v))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("build DCIM client request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("DCIM client request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, fmt.Errorf("read DCIM client response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("DCIM client HTTP %d: %s", resp.StatusCode, string(body))
+	}
+
+	var apiResp dcimClientResponse
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return nil, fmt.Errorf("parse DCIM client response: %w", err)
+	}
+
+	if apiResp.Result != "success" {
+		return nil, fmt.Errorf("DCIM client error: %s", apiResp.Message)
+	}
+
+	result := map[string]interface{}{
+		"result":  apiResp.Result,
+		"message": apiResp.Message,
+	}
+	if apiResp.Data != nil {
+		var data interface{}
+		json.Unmarshal(apiResp.Data, &data)
+		result["data"] = data
+	}
+	return result, nil
+}
+
+// zjmfCurl 调用zjmf_api（魔方系统API）
+func (s *DcimService) zjmfCurl(server *model.DcimServer, action string, params map[string]interface{}) (map[string]interface{}, error) {
+	if server.ControlURL == "" {
+		return nil, fmt.Errorf("zjmf API URL not configured for server %d", server.ID)
+	}
+
+	apiURL := strings.TrimRight(server.ControlURL, "/") + "/api.php"
+
+	form := url.Values{}
+	form.Set("action", action)
+	for k, v := range params {
+		form.Set(k, fmt.Sprintf("%v", v))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("build zjmf request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("zjmf request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, fmt.Errorf("read zjmf response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("zjmf HTTP %d: %s", resp.StatusCode, string(body))
+	}
+
+	var apiResp struct {
+		Result string          `json:"result"`
+		Msg    string          `json:"msg"`
+		Data   json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return nil, fmt.Errorf("parse zjmf response: %w", err)
+	}
+
+	if apiResp.Result != "success" {
+		return nil, fmt.Errorf("zjmf error: %s", apiResp.Msg)
+	}
+
+	result := map[string]interface{}{
+		"result": apiResp.Result,
+		"msg":    apiResp.Msg,
+	}
+	if apiResp.Data != nil {
+		var data interface{}
+		json.Unmarshal(apiResp.Data, &data)
+		result["data"] = data
+	}
+	return result, nil
+}
+
+// executeServerAction 根据服务器控制方法执行远程操作
+func (s *DcimService) executeServerAction(server *model.DcimServer, action string, params map[string]interface{}) (map[string]interface{}, error) {
+	switch server.ControlMethod {
+	case "ipmi":
+		return s.ipmiAction(server, action, params)
+	case "bms":
+		return s.bmsAction(server, action, params)
+	case "dcim_client":
+		return s.dcimClientAction(server, action, params)
+	case "zjmf_api":
+		return s.zjmfCurl(server, action, params)
+	case "local", "":
+		return nil, nil // 本地模式不执行远程操作
+	default:
+		return nil, fmt.Errorf("unsupported control method: %s", server.ControlMethod)
+	}
 }
 
 // ==================== 物理服务器 ====================
@@ -125,16 +448,41 @@ func (s *DcimService) BootServer(serverID uint, operatorID uint) error {
 		ServerID:   serverID,
 		OperatorID: operatorID,
 		Action:     "boot",
-		Status:     2,
+		Status:     1,
 		Result:     "Server boot initiated",
 	}
 	s.db.Create(opLog)
 
-	// 更新服务器状态
+	// 执行远程控制
+	remoteResult, remoteErr := s.executeServerAction(server, "on", nil)
+
 	now := time.Now()
+	if remoteErr != nil {
+		s.log.Errorf("remote boot failed for server %d: %v", serverID, remoteErr)
+		s.db.Model(opLog).Updates(map[string]interface{}{
+			"status":      3,
+			"error_msg":   remoteErr.Error(),
+			"finished_at": &now,
+		})
+		return fmt.Errorf("remote boot failed: %w", remoteErr)
+	}
+
+	// 更新服务器状态
 	s.db.Model(server).Updates(map[string]interface{}{
 		"status":       1,
 		"power_status": 1,
+	})
+
+	resultMsg := "Server booted successfully"
+	if remoteResult != nil {
+		if msg, ok := remoteResult["message"].(string); ok && msg != "" {
+			resultMsg = msg
+		}
+	}
+	s.db.Model(opLog).Updates(map[string]interface{}{
+		"status":      2,
+		"result":      resultMsg,
+		"finished_at": &now,
 	})
 
 	s.log.Infof("physical server boot: id=%d operator=%d", serverID, operatorID)
@@ -151,9 +499,9 @@ func (s *DcimService) ShutdownServer(serverID uint, force bool, operatorID uint)
 		return errors.New("server is already shut down")
 	}
 
-	action := "shutdown"
+	action := "off"
 	if force {
-		action = "force_shutdown"
+		action = "hard_off"
 	}
 
 	opLog := &model.DcimOperationLog{
@@ -161,14 +509,39 @@ func (s *DcimService) ShutdownServer(serverID uint, force bool, operatorID uint)
 		ServerID:   serverID,
 		OperatorID: operatorID,
 		Action:     action,
-		Status:     2,
+		Status:     1,
 		Result:     "Server shutdown initiated",
 	}
 	s.db.Create(opLog)
 
+	remoteResult, remoteErr := s.executeServerAction(server, action, nil)
+
+	now := time.Now()
+	if remoteErr != nil {
+		s.log.Errorf("remote shutdown failed for server %d: %v", serverID, remoteErr)
+		s.db.Model(opLog).Updates(map[string]interface{}{
+			"status":      3,
+			"error_msg":   remoteErr.Error(),
+			"finished_at": &now,
+		})
+		return fmt.Errorf("remote shutdown failed: %w", remoteErr)
+	}
+
 	s.db.Model(server).Updates(map[string]interface{}{
 		"status":       0,
 		"power_status": 0,
+	})
+
+	resultMsg := "Server shut down successfully"
+	if remoteResult != nil {
+		if msg, ok := remoteResult["message"].(string); ok && msg != "" {
+			resultMsg = msg
+		}
+	}
+	s.db.Model(opLog).Updates(map[string]interface{}{
+		"status":      2,
+		"result":      resultMsg,
+		"finished_at": &now,
 	})
 
 	s.log.Infof("physical server shutdown: id=%d force=%v operator=%d", serverID, force, operatorID)
@@ -190,10 +563,35 @@ func (s *DcimService) RebootServer(serverID uint, operatorID uint) error {
 		ServerID:   serverID,
 		OperatorID: operatorID,
 		Action:     "reboot",
-		Status:     2,
+		Status:     1,
 		Result:     "Server reboot initiated",
 	}
 	s.db.Create(opLog)
+
+	remoteResult, remoteErr := s.executeServerAction(server, "reboot", nil)
+
+	now := time.Now()
+	if remoteErr != nil {
+		s.log.Errorf("remote reboot failed for server %d: %v", serverID, remoteErr)
+		s.db.Model(opLog).Updates(map[string]interface{}{
+			"status":      3,
+			"error_msg":   remoteErr.Error(),
+			"finished_at": &now,
+		})
+		return fmt.Errorf("remote reboot failed: %w", remoteErr)
+	}
+
+	resultMsg := "Server rebooted successfully"
+	if remoteResult != nil {
+		if msg, ok := remoteResult["message"].(string); ok && msg != "" {
+			resultMsg = msg
+		}
+	}
+	s.db.Model(opLog).Updates(map[string]interface{}{
+		"status":      2,
+		"result":      resultMsg,
+		"finished_at": &now,
+	})
 
 	s.log.Infof("physical server reboot: id=%d operator=%d", serverID, operatorID)
 	return nil
@@ -210,7 +608,6 @@ func (s *DcimService) ReinstallServer(serverID uint, os string, operatorID uint)
 		return errors.New("server is not assigned to any user")
 	}
 
-	// 记录操作
 	opLog := &model.DcimOperationLog{
 		ServerType: "physical",
 		ServerID:   serverID,
@@ -227,23 +624,93 @@ func (s *DcimService) ReinstallServer(serverID uint, os string, operatorID uint)
 		"os":     os,
 	})
 
-	// 模拟重装完成
-	go func() {
-		time.Sleep(5 * time.Second)
+	// 执行远程重装
+	params := map[string]interface{}{
+		"os": os,
+	}
+	remoteResult, remoteErr := s.executeServerAction(server, "reinstall", params)
+
+	now := time.Now()
+	if remoteErr != nil {
+		s.log.Errorf("remote reinstall failed for server %d: %v", serverID, remoteErr)
 		s.db.Model(server).Updates(map[string]interface{}{
-			"status": 1,
+			"status": 2, // 故障状态
 		})
-		now := time.Now()
 		s.db.Model(opLog).Updates(map[string]interface{}{
-			"status":      2,
-			"result":      "OS reinstalled successfully",
+			"status":      3,
+			"error_msg":   remoteErr.Error(),
 			"finished_at": &now,
 		})
-		s.log.Infof("physical server reinstall completed: id=%d os=%s", serverID, os)
+		return fmt.Errorf("remote reinstall failed: %w", remoteErr)
+	}
+
+	resultMsg := "OS reinstall initiated"
+	if remoteResult != nil {
+		if msg, ok := remoteResult["message"].(string); ok && msg != "" {
+			resultMsg = msg
+		}
+	}
+
+	// 异步等待重装完成（轮询状态）
+	go func() {
+		s.pollReinstallStatus(server, opLog, os)
 	}()
+
+	s.db.Model(opLog).Updates(map[string]interface{}{
+		"result": resultMsg,
+	})
 
 	s.log.Infof("physical server reinstall started: id=%d os=%s operator=%d", serverID, os, operatorID)
 	return nil
+}
+
+// pollReinstallStatus 轮询重装状态
+func (s *DcimService) pollReinstallStatus(server *model.DcimServer, opLog *model.DcimOperationLog, os string) {
+	maxAttempts := 60 // 最多轮询60次，每次间隔10秒
+	for i := 0; i < maxAttempts; i++ {
+		time.Sleep(10 * time.Second)
+
+		// 查询远程状态
+		result, err := s.executeServerAction(server, "sync", nil)
+		if err != nil {
+			s.log.Warnf("poll reinstall status failed for server %d: %v", server.ID, err)
+			continue
+		}
+
+		if result != nil {
+			if data, ok := result["data"].(map[string]interface{}); ok {
+				if status, ok := data["status"].(string); ok {
+					if status == "running" || status == "online" {
+						// 重装完成
+						finishTime := time.Now()
+						s.db.Model(server).Updates(map[string]interface{}{
+							"status":       1,
+							"power_status": 1,
+						})
+						s.db.Model(opLog).Updates(map[string]interface{}{
+							"status":      2,
+							"result":      "OS reinstalled successfully",
+							"finished_at": &finishTime,
+						})
+						s.log.Infof("physical server reinstall completed: id=%d os=%s", server.ID, os)
+						return
+					}
+				}
+			}
+		}
+	}
+
+	// 超时，标记为失败
+	finishTime := time.Now()
+	s.db.Model(server).Updates(map[string]interface{}{
+		"status": 2, // 故障状态
+	})
+	s.db.Model(opLog).Updates(map[string]interface{}{
+		"status":      3,
+		"error_msg":   "reinstall timeout",
+		"finished_at": &finishTime,
+	})
+	s.log.Errorf("physical server reinstall timeout: id=%d", server.ID)
 }
 
 // RenewServer 续费物理服务器

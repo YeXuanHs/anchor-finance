@@ -43,12 +43,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import request from '@/utils/request'
 
 const loading = ref(false)
 const messages = ref([])
 const showDialog = ref(false)
 const currentMessage = ref<any>(null)
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/messages')
+    messages.value = data.data?.list || data.list || data.data || []
+  } catch (e) { console.error(e) } finally { loading.value = false }
+})
 
 const getTypeTag = (type: string) => {
   const map: Record<string, string> = {

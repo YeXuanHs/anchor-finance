@@ -17,6 +17,12 @@ func NewConfigCertifiHandler(svc *service.ConfigCertifiService, log *logger.Logg
 	return &ConfigCertifiHandler{svc: svc, log: log}
 }
 
+// Get is an alias for GetConfig.
+func (h *ConfigCertifiHandler) Get(c *gin.Context) { h.GetConfig(c) }
+
+// Update is an alias for UpdateConfig.
+func (h *ConfigCertifiHandler) Update(c *gin.Context) { h.UpdateConfig(c) }
+
 // GetConfig returns the certification configuration.
 func (h *ConfigCertifiHandler) GetConfig(c *gin.Context) {
 	cfg, err := h.svc.GetConfig()

@@ -48,11 +48,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import request from '@/utils/request'
 
 const activeTab = ref('available')
 const redeemCode = ref('')
+const loading = ref(false)
 
 interface Coupon {
   id: number
@@ -65,22 +67,29 @@ interface Coupon {
   bg: string
 }
 
-const coupons = ref<Coupon[]>([
-  { id: 1, name: '新用户专享券', description: '适用于所有云服务器产品', value: 50, threshold: 200, expireDate: '2026-08-31', status: 'available', bg: 'linear-gradient(135deg, #0056FF, #4080FF)' },
-  { id: 2, name: '续费优惠券', description: '适用于产品续费', value: 30, threshold: 100, expireDate: '2026-09-15', status: 'available', bg: 'linear-gradient(135deg, #52c41a, #73d13d)' },
-  { id: 3, name: '满减券', description: '全品类通用', value: 100, threshold: 500, expireDate: '2026-08-15', status: 'available', bg: 'linear-gradient(135deg, #fa8c16, #ffc53d)' },
-  { id: 4, name: 'SSL证书优惠', description: '仅限SSL证书产品', value: 20, threshold: 80, expireDate: '2026-07-20', status: 'used', bg: 'linear-gradient(135deg, #722ed1, #b37feb)' },
-  { id: 5, name: '体验券', description: '全品类通用', value: 10, threshold: 50, expireDate: '2026-06-30', status: 'expired', bg: 'linear-gradient(135deg, #8c8c8c, #bfbfbf)' }
-])
+const coupons = ref<Coupon[]>([])
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/coupons')
+    coupons.value = data.data?.list || data.list || data.data || []
+  } catch (e) { console.error(e) } finally { loading.value = false }
+})
 
 const filteredCoupons = computed(() => {
   return coupons.value.filter(c => c.status === activeTab.value)
 })
 
-function handleRedeem() {
+async function handleRedeem() {
   if (!redeemCode.value) { ElMessage.warning('请输入兑换码'); return }
-  ElMessage.success('兑换成功')
-  redeemCode.value = ''
+  try {
+    await request.post('/api/v1/coupons/redeem', { code: redeemCode.value })
+    ElMessage.success('兑换成功')
+    redeemCode.value = ''
+    const { data } = await request.get('/api/v1/coupons')
+    coupons.value = data.data?.list || data.list || data.data || []
+  } catch (e: any) { ElMessage.error(e?.message || '兑换失败，请检查兑换码') }
 }
 
 function handleUse(coupon: Coupon) { ElMessage.info(`使用优惠券：${coupon.name}`) }

@@ -124,6 +124,39 @@ func (s *UserService) GetByID(id uint) (*User, error) {
 	return &user, nil
 }
 
+// GetByPhone fetches a user by phone number.
+func (s *UserService) GetByPhone(phone string) (*User, error) {
+	var user User
+	if err := s.db.Where("phone = ?", phone).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// GetByEmail fetches a user by email.
+func (s *UserService) GetByEmail(email string) (*User, error) {
+	var user User
+	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// ResetPassword resets a user's password by account (phone or email).
+func (s *UserService) ResetPassword(account, newPassword string) error {
+	var user User
+	if err := s.db.Where("phone = ? OR email = ?", account, account).First(&user).Error; err != nil {
+		return errors.New("account not found")
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	return s.db.Model(&user).Update("password", string(hashed)).Error
+}
+
 // UpdateProfile updates nickname, avatar, email, phone.
 func (s *UserService) UpdateProfile(userID uint, req UpdateProfileRequest) (*User, error) {
 	user, err := s.GetByID(userID)
@@ -168,6 +201,28 @@ func (s *UserService) ChangePassword(userID uint, req ChangePasswordRequest) err
 	}
 
 	return s.db.Model(user).Update("password", string(hashed)).Error
+}
+
+// BindPhone binds a phone number to the user account.
+func (s *UserService) BindPhone(userID uint, phone string) error {
+	// Check if phone is already bound to another user
+	var count int64
+	s.db.Model(&User{}).Where("phone = ? AND id != ?", phone, userID).Count(&count)
+	if count > 0 {
+		return errors.New("phone number already bound to another account")
+	}
+	return s.db.Model(&User{}).Where("id = ?", userID).Update("phone", phone).Error
+}
+
+// BindEmail binds an email to the user account.
+func (s *UserService) BindEmail(userID uint, email string) error {
+	// Check if email is already bound to another user
+	var count int64
+	s.db.Model(&User{}).Where("email = ? AND id != ?", email, userID).Count(&count)
+	if count > 0 {
+		return errors.New("email already bound to another account")
+	}
+	return s.db.Model(&User{}).Where("id = ?", userID).Update("email", email).Error
 }
 
 // GetList returns a paginated user list (admin).

@@ -74,6 +74,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import request from '@/utils/request'
 
 const loading = ref(false)
 const products = ref([])
@@ -92,11 +94,14 @@ const showUpgradeDialog = (product: any) => {
   currentProduct.value = product
   selectedPlan.value = ''
   showDialog.value = true
-  // TODO: 获取可用方案列表
+  const res = await request.get(`/api/v1/host/${product.id}/upgrade`)
+  availablePlans.value = res.data.data.plans
 }
 
 const submitUpgrade = async () => {
-  // TODO: 提交升降级请求
+  await request.post(`/api/v1/host/${currentProduct.value.id}/upgrade`, { target_plan_id: selectedPlan.value })
+  ElMessage.success('升降级请求已提交')
+  showDialog.value = false
 }
 </script>
 

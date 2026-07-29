@@ -1,13 +1,22 @@
 package service
 
 import (
+	"crypto/md5"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
 	"time"
+
+	"anchorfinance/internal/model"
+	"anchorfinance/pkg/logger"
+	"anchorfinance/pkg/upstream"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
-
-	"anchorfinance/pkg/logger"
 )
 
 // Host 主机
@@ -59,12 +68,13 @@ type HostOperation struct {
 }
 
 type HostService struct {
-	db  *gorm.DB
-	log *logger.Logger
+	db           *gorm.DB
+	log          *logger.Logger
+	upstreamSvc  *UpstreamService
 }
 
-func NewHostService(db *gorm.DB, log *logger.Logger) *HostService {
-	return &HostService{db: db, log: log}
+func NewHostService(db *gorm.DB, log *logger.Logger, upstreamSvc *UpstreamService) *HostService {
+	return &HostService{db: db, log: log, upstreamSvc: upstreamSvc}
 }
 
 type HostActionRequest struct {
@@ -167,6 +177,19 @@ func (s *HostService) PerformAction(hostID, operatorID uint, req HostActionReque
 			return err
 		}
 
+		// Call upstream API if host has upstream provider configured
+		upstreamErr := s.callUpstreamAction(host, req.Action, req.Params)
+		if upstreamErr != nil {
+			s.log.Errorf("upstream action failed for host %d: %v", hostID, upstreamErr)
+			now := time.Now()
+			tx.Model(operation).Updates(map[string]interface{}{
+				"status":      3,
+				"error_msg":   upstreamErr.Error(),
+				"finished_at": &now,
+			})
+			return fmt.Errorf("upstream action failed: %w", upstreamErr)
+		}
+
 		// Update host status based on action
 		newStatus := host.Status
 		switch req.Action {
@@ -175,7 +198,7 @@ func (s *HostService) PerformAction(hostID, operatorID uint, req HostActionReque
 		case "shutdown":
 			newStatus = 0
 		case "reboot":
-			newStatus = 1 // Will be 1 after reboot
+			newStatus = 1
 		case "reinstall":
 			newStatus = 3 // 维护中
 		}
@@ -243,4 +266,315 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// callUpstreamAction calls the upstream provider API to perform a host action.
+// Returns nil if no upstream is configured (manually managed host).
+func (s *HostService) callUpstreamAction(host *Host, action, params string) error {
+	if host.Metadata == nil {
+		return nil // manually managed host, no upstream
+	}
+
+	providerIDRaw, hasProvider := host.Metadata["upstream_provider_id"]
+	productIDRaw, hasProduct := host.Metadata["upstream_product_id"]
+	if !hasProvider || !hasProduct {
+		return nil // no upstream configured
+	}
+
+	providerID := uint(providerIDRaw.(float64))
+	remoteProductID := fmt.Sprintf("%v", productIDRaw)
+
+	provider, err := s.upstreamSvc.GetProviderByID(providerID)
+	if err != nil {
+		return fmt.Errorf("upstream provider %d not found: %w", providerID, err)
+	}
+
+	client, err := upstream.NewClient(provider)
+	if err != nil {
+		return fmt.Errorf("create upstream client: %w", err)
+	}
+
+	// Use TestConnection as a health check before sending the action
+	connResult, err := client.TestConnection()
+	if err != nil {
+		return fmt.Errorf("upstream connection test failed: %w", err)
+	}
+	if !connResult.OK {
+		return fmt.Errorf("upstream not reachable: %s", connResult.Message)
+	}
+
+	// Dispatch the action to the upstream API based on provider type
+	providerType := strings.ToLower(provider.Type)
+	var actionErr error
+	switch providerType {
+	case "zjmf", "zjmfv3":
+		actionErr = s.callZJMFHostAction(provider, host, remoteProductID, action, params)
+	case "whmcs":
+		actionErr = s.callWHMCSHostAction(provider, host, remoteProductID, action, params)
+	case "v10":
+		actionErr = s.callV10HostAction(provider, host, remoteProductID, action, params)
+	default:
+		actionErr = s.callCustomHostAction(provider, host, remoteProductID, action, params)
+	}
+
+	if actionErr != nil {
+		return fmt.Errorf("upstream action dispatch failed: %w", actionErr)
+	}
+
+	s.log.Infof("upstream action dispatched: host=%d provider=%d remote=%s action=%s",
+		host.ID, providerID, remoteProductID, action)
+	return nil
+}
+
+// callZJMFHostAction dispatches a host action to a ZJMF-compatible panel.
+func (s *HostService) callZJMFHostAction(provider *model.UpstreamProvider, host *Host, remoteID, action, params string) error {
+	apiAction := mapHostActionToZJMF(action)
+	apiURL := strings.TrimRight(provider.APIURL, "/") + "/api.php"
+
+	form := url.Values{}
+	form.Set("action", apiAction)
+	form.Set("vps_id", remoteID)
+
+	// ZJMF sign: md5(action + vps_id + api_key)
+	sign := md5Sum(apiAction + remoteID + provider.APIKey)
+	form.Set("sign", sign)
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Post(apiURL, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+	if err != nil {
+		return fmt.Errorf("zjmf host action request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("zjmf host action http %d: %s", resp.StatusCode, string(body))
+	}
+
+	var apiResp struct {
+		Result string `json:"result"`
+		Msg    string `json:"msg"`
+	}
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return fmt.Errorf("zjmf parse response: %w", err)
+	}
+	if apiResp.Result != "success" {
+		return fmt.Errorf("zjmf host action error: %s", apiResp.Msg)
+	}
+	return nil
+}
+
+// callWHMCSHostAction dispatches a host action to a WHMCS-compatible API.
+func (s *HostService) callWHMCSHostAction(provider *model.UpstreamProvider, host *Host, remoteID, action, params string) error {
+	whmcsAction := mapHostActionToWHMCS(action)
+	if whmcsAction == "" {
+		return fmt.Errorf("whmcs does not support host action: %s", action)
+	}
+
+	cfg := map[string]interface{}{}
+	if provider.Config != nil {
+		cfg = provider.Config
+	}
+	identifier := provider.APIKey
+	if id, ok := cfg["identifier"].(string); ok && id != "" {
+		identifier = id
+	}
+	secret, _ := cfg["secret"].(string)
+
+	form := url.Values{}
+	form.Set("action", whmcsAction)
+	form.Set("identifier", identifier)
+	form.Set("secret", secret)
+	form.Set("responsetype", "json")
+	form.Set("serviceid", remoteID)
+
+	apiURL := strings.TrimRight(provider.APIURL, "/") + "/includes/api.php"
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Post(apiURL, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+	if err != nil {
+		return fmt.Errorf("whmcs host action request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("whmcs host action http %d: %s", resp.StatusCode, string(body))
+	}
+
+	var apiResp struct {
+		Result  string `json:"result"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return fmt.Errorf("whmcs parse response: %w", err)
+	}
+	if apiResp.Result != "success" {
+		return fmt.Errorf("whmcs host action error: %s", apiResp.Message)
+	}
+	return nil
+}
+
+// callV10HostAction dispatches a host action to a V10 panel.
+func (s *HostService) callV10HostAction(provider *model.UpstreamProvider, host *Host, remoteID, action, params string) error {
+	apiPath := mapHostActionToV10(action)
+	if apiPath == "" {
+		return fmt.Errorf("v10 does not support host action: %s", action)
+	}
+
+	payload := map[string]interface{}{
+		"server_id": remoteID,
+	}
+	if params != "" {
+		var extra map[string]interface{}
+		if json.Unmarshal([]byte(params), &extra) == nil {
+			for k, v := range extra {
+				payload[k] = v
+			}
+		}
+	}
+	bodyBytes, _ := json.Marshal(payload)
+
+	token := provider.APIKey
+	if t, ok := provider.Config["token"].(string); ok && t != "" {
+		token = t
+	}
+
+	apiURL := strings.TrimRight(provider.APIURL, "/") + apiPath
+	req, err := http.NewRequest("POST", apiURL, strings.NewReader(string(bodyBytes)))
+	if err != nil {
+		return fmt.Errorf("v10 build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("v10 host action request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("v10 host action http %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var apiResp struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		return fmt.Errorf("v10 parse response: %w", err)
+	}
+	if apiResp.Code != 0 && apiResp.Code != 200 {
+		return fmt.Errorf("v10 host action error: %s", apiResp.Message)
+	}
+	return nil
+}
+
+// callCustomHostAction dispatches a host action to a custom upstream API.
+func (s *HostService) callCustomHostAction(provider *model.UpstreamProvider, host *Host, remoteID, action, params string) error {
+	payload := map[string]interface{}{
+		"action":     action,
+		"server_id":  remoteID,
+		"host_id":    host.ID,
+		"hostname":   host.Hostname,
+		"ip":         host.IP,
+	}
+	if params != "" {
+		var extra map[string]interface{}
+		if json.Unmarshal([]byte(params), &extra) == nil {
+			payload["params"] = extra
+		} else {
+			payload["params"] = params
+		}
+	}
+	bodyBytes, _ := json.Marshal(payload)
+
+	apiURL := strings.TrimRight(provider.APIURL, "/") + fmt.Sprintf("/api/host/%s", action)
+	req, err := http.NewRequest("POST", apiURL, strings.NewReader(string(bodyBytes)))
+	if err != nil {
+		return fmt.Errorf("custom build request: %w", err)
+	}
+	if provider.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+provider.APIKey)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("custom host action request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("custom host action http %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var apiResp map[string]interface{}
+	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		return fmt.Errorf("custom parse response: %w", err)
+	}
+	if success, ok := apiResp["success"].(bool); ok && !success {
+		msg, _ := apiResp["message"].(string)
+		return fmt.Errorf("custom host action error: %s", msg)
+	}
+	return nil
+}
+
+// mapHostActionToZJMF maps host actions to ZJMF API action names.
+func mapHostActionToZJMF(action string) string {
+	switch action {
+	case "boot":
+		return "start"
+	case "shutdown":
+		return "stop"
+	case "reboot":
+		return "restart"
+	case "reinstall":
+		return "reinstall"
+	default:
+		return action
+	}
+}
+
+// mapHostActionToWHMCS maps host actions to WHMCS API action names.
+func mapHostActionToWHMCS(action string) string {
+	switch action {
+	case "boot":
+		return "ModuleStart"
+	case "shutdown":
+		return "ModuleStop"
+	case "reboot":
+		return "ModuleRestart"
+	case "reinstall":
+		return "ModuleReinstall"
+	default:
+		return ""
+	}
+}
+
+// mapHostActionToV10 maps host actions to V10 API paths.
+func mapHostActionToV10(action string) string {
+	switch action {
+	case "boot":
+		return "/api/server/start"
+	case "shutdown":
+		return "/api/server/stop"
+	case "reboot":
+		return "/api/server/restart"
+	case "reinstall":
+		return "/api/server/reinstall"
+	default:
+		return ""
+	}
+}
+
+// md5Sum computes the MD5 hex digest of a string.
+func md5Sum(s string) string {
+	h := md5.New()
+	h.Write([]byte(s))
+	return fmt.Sprintf("%x", h.Sum(nil))
 }

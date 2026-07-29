@@ -1,20 +1,31 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"anchorfinance/internal/service"
+	"anchorfinance/pkg/email"
+	"anchorfinance/pkg/sms"
+
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // CaptchaHandler handles captcha-related HTTP requests.
 type CaptchaHandler struct {
 	captchaService *service.CaptchaService
+	smsSender      *sms.Sender
+	emailSender    *email.Sender
 }
 
 // NewCaptchaHandler creates a new CaptchaHandler.
-func NewCaptchaHandler(captchaService *service.CaptchaService) *CaptchaHandler {
-	return &CaptchaHandler{captchaService: captchaService}
+func NewCaptchaHandler(captchaService *service.CaptchaService, db *gorm.DB) *CaptchaHandler {
+	return &CaptchaHandler{
+		captchaService: captchaService,
+		smsSender:      sms.NewSender(db),
+		emailSender:    email.NewSender(db),
+	}
 }
 
 // smsRequest is the payload for SendSMS.
@@ -60,14 +71,14 @@ func (h *CaptchaHandler) SendSMS(c *gin.Context) {
 		return
 	}
 
-	// TODO: Integrate with SMS gateway to send the code.
-	// The code is returned here for development/testing purposes only.
-	// In production, remove the code from the response.
-	_ = code // In production, send via SMS gateway
+	// Send SMS via configured provider
+	if err := h.smsSender.Send(req.Phone, code); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to send SMS: %v", err)})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "verification code sent",
-		// "code": code, // Uncomment for development only
 	})
 }
 
@@ -86,13 +97,16 @@ func (h *CaptchaHandler) SendEmail(c *gin.Context) {
 		return
 	}
 
-	// TODO: Integrate with email service to send the code.
-	// The code is returned here for development/testing purposes only.
-	// In production, remove the code from the response.
-	_ = code // In production, send via email service
+	// Send email with verification code
+	subject := "验证码"
+	htmlBody := fmt.Sprintf("<p>您的验证码是：<strong>%s</strong></p><p>请在5分钟内完成验证。</p>", code)
+
+	if err := h.emailSender.Send(req.Email, subject, htmlBody); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to send email: %v", err)})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "verification code sent",
-		// "code": code, // Uncomment for development only
 	})
 }

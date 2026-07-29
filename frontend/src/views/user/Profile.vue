@@ -156,12 +156,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Camera, Lock, Iphone, Message } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
-const userId = ref('100001')
+const userId = ref('')
 const saving = ref(false)
 const changingPassword = ref(false)
 const showPasswordDialog = ref(false)
@@ -173,7 +174,20 @@ const profileFormRef = ref<FormInstance>()
 const passwordFormRef = ref<FormInstance>()
 const userInitial = computed(() => (userForm.nickname || '用户').charAt(0))
 
-const userForm = reactive({ nickname: '张三', email: 'zhangsan@example.com', phone: '13800008888' })
+const userForm = reactive({ nickname: '', email: '', phone: '' })
+
+async function fetchProfile() {
+  try {
+    const res = await request.get('/api/v1/user/profile')
+    const profile = res.data?.data || res.data || {}
+    userForm.nickname = profile.nickname || ''
+    userForm.email = profile.email || ''
+    userForm.phone = profile.phone || ''
+    userId.value = profile.id || profile.user_id || ''
+  } catch { /* ignore */ }
+}
+
+onMounted(() => { fetchProfile() })
 const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const bindPhoneForm = reactive({ phone: '', code: '' })
 const bindEmailForm = reactive({ email: '', code: '' })
@@ -213,9 +227,9 @@ async function handleSaveProfile() {
   try {
     await profileFormRef.value.validate()
     saving.value = true
-    await new Promise(resolve => setTimeout(resolve, 800))
+    await request.put('/api/v1/user/profile', { nickname: userForm.nickname, email: userForm.email, phone: userForm.phone })
     ElMessage.success('个人信息已更新')
-  } catch {} finally { saving.value = false }
+  } catch (e: any) { ElMessage.error(e?.message || '保存失败，请重试') } finally { saving.value = false }
 }
 
 async function handleChangePassword() {
@@ -223,13 +237,13 @@ async function handleChangePassword() {
   try {
     await passwordFormRef.value.validate()
     changingPassword.value = true
-    await new Promise(resolve => setTimeout(resolve, 800))
+    await request.post('/api/v1/user/change-password', { oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword })
     showPasswordDialog.value = false
     ElMessage.success('密码已修改')
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
-  } catch {} finally { changingPassword.value = false }
+  } catch (e: any) { ElMessage.error(e?.message || '密码修改失败，请重试') } finally { changingPassword.value = false }
 }
 
 function handleSendPhoneCode() {
@@ -246,8 +260,29 @@ function handleSendEmailCode() {
   ElMessage.success('验证码已发送')
 }
 
-function handleBindPhone() { showPhoneDialog.value = false; ElMessage.success('手机号已绑定') }
-function handleBindEmail() { showEmailDialog.value = false; ElMessage.success('邮箱已绑定') }
+async function handleBindPhone() {
+  if (!bindPhoneForm.phone || !bindPhoneForm.code) { ElMessage.warning('请填写手机号和验证码'); return }
+  try {
+    await request.post('/api/v1/user/bind-phone', { phone: bindPhoneForm.phone, code: bindPhoneForm.code })
+    userForm.phone = bindPhoneForm.phone
+    showPhoneDialog.value = false
+    bindPhoneForm.phone = ''
+    bindPhoneForm.code = ''
+    ElMessage.success('手机号已绑定')
+  } catch { ElMessage.error('绑定失败') }
+}
+
+async function handleBindEmail() {
+  if (!bindEmailForm.email || !bindEmailForm.code) { ElMessage.warning('请填写邮箱和验证码'); return }
+  try {
+    await request.post('/api/v1/user/bind-email', { email: bindEmailForm.email, code: bindEmailForm.code })
+    userForm.email = bindEmailForm.email
+    showEmailDialog.value = false
+    bindEmailForm.email = ''
+    bindEmailForm.code = ''
+    ElMessage.success('邮箱已绑定')
+  } catch { ElMessage.error('绑定失败') }
+}
 function handleAvatarUpload() { ElMessage.info('头像上传功能') }
 </script>
 

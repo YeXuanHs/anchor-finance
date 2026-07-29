@@ -1,0 +1,274 @@
+<template>
+  <div class="add-funds-page">
+    <el-card class="page-card">
+      <template #header>
+        <div class="card-header">
+          <span>账户充值</span>
+          <span class="balance">当前余额：<em>¥{{ balance.toFixed(2) }}</em></span>
+        </div>
+      </template>
+
+      <el-form label-position="top">
+        <el-form-item label="充值金额">
+          <div class="amount-presets">
+            <el-button
+              v-for="preset in presetAmounts"
+              :key="preset"
+              :type="amount === preset ? 'primary' : 'default'"
+              @click="amount = preset"
+            >
+              ¥{{ preset }}
+            </el-button>
+          </div>
+          <el-input-number
+            v-model="amount"
+            :min="1"
+            :max="50000"
+            :precision="2"
+            placeholder="或输入自定义金额"
+            style="width: 100%; margin-top: 12px"
+          />
+        </el-form-item>
+
+        <el-form-item label="支付方式">
+          <div class="payment-methods">
+            <div
+              v-for="method in paymentMethods"
+              :key="method.value"
+              class="payment-method"
+              :class="{ active: paymentMethod === method.value }"
+              @click="paymentMethod = method.value"
+            >
+              <img :src="method.icon" :alt="method.label" class="method-icon" />
+              <span class="method-label">{{ method.label }}</span>
+              <el-icon v-if="paymentMethod === method.value" class="check-icon"><Check /></el-icon>
+            </div>
+          </div>
+        </el-form-item>
+
+        <el-form-item>
+          <el-button type="primary" size="large" :loading="submitting" @click="handleRecharge">
+            确认充值 ¥{{ amount?.toFixed(2) || '0.00' }}
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card class="page-card">
+      <template #header>
+        <div class="card-header">
+          <span>充值记录</span>
+        </div>
+      </template>
+
+      <el-table :data="records" style="width: 100%">
+        <el-table-column prop="created_at" label="时间" width="180" />
+        <el-table-column prop="amount" label="金额">
+          <template #default="{ row }">
+            <span class="text-success">+¥{{ row.amount?.toFixed(2) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="payment_method" label="支付方式" />
+        <el-table-column prop="status" label="状态">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="transaction_no" label="交易号" />
+      </el-table>
+
+      <div class="pagination-wrap">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          @size-change="loadRecords"
+          @current-change="loadRecords"
+        />
+      </div>
+    </el-card>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Check } from '@element-plus/icons-vue'
+import request from '@/utils/request'
+
+const balance = ref(0)
+const amount = ref<number | undefined>(100)
+const paymentMethod = ref('alipay')
+const submitting = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+
+const presetAmounts = [50, 100, 200, 500, 1000, 2000]
+
+const paymentMethods = [
+  { value: 'alipay', label: '支付宝', icon: '/assets/payment/alipay.svg' },
+  { value: 'wechat', label: '微信支付', icon: '/assets/payment/wechat.svg' },
+  { value: 'bank', label: '银行转账', icon: '/assets/payment/bank.svg' }
+]
+
+interface RechargeRecord {
+  id: number
+  created_at: string
+  amount: number
+  payment_method: string
+  status: string
+  transaction_no: string
+}
+
+const records = ref<RechargeRecord[]>([])
+
+const getStatusType = (status: string) => {
+  const map: Record<string, string> = {
+    success: 'success',
+    pending: 'warning',
+    failed: 'danger'
+  }
+  return map[status] || 'info'
+}
+
+const getStatusText = (status: string) => {
+  const map: Record<string, string> = {
+    success: '成功',
+    pending: '处理中',
+    failed: '失败'
+  }
+  return map[status] || status
+}
+
+const handleRecharge = async () => {
+  if (!amount.value || amount.value <= 0) {
+    ElMessage.warning('请输入有效的充值金额')
+    return
+  }
+  submitting.value = true
+  try {
+    const { data } = await request.post('/api/v1/balances/recharge', {
+      amount: amount.value,
+      payment_method: paymentMethod.value
+    })
+    if (data?.data?.pay_url) {
+      window.location.href = data.data.pay_url
+    } else {
+      ElMessage.success('充值请求已提交')
+      loadRecords()
+    }
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '充值失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+const loadRecords = async () => {
+  try {
+    const { data } = await request.get('/api/v1/balances/logs', {
+      params: { page: currentPage.value, page_size: pageSize.value }
+    })
+    records.value = data?.data?.list || data?.data?.items || []
+    total.value = data?.data?.total || 0
+  } catch {
+    records.value = []
+    total.value = 0
+  }
+}
+
+onMounted(async () => {
+  try {
+    const { data } = await request.get('/api/v1/balances')
+    balance.value = data?.data?.balance || 0
+  } catch {}
+  loadRecords()
+})
+</script>
+
+<style scoped lang="scss">
+.add-funds-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.page-card {
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .balance {
+      font-size: 14px;
+      color: #606266;
+
+      em {
+        font-style: normal;
+        font-size: 20px;
+        font-weight: bold;
+        color: #f56c6c;
+      }
+    }
+  }
+}
+
+.amount-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.payment-methods {
+  display: flex;
+  gap: 16px;
+}
+
+.payment-method {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  border: 2px solid #ebeef5;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    border-color: #c0c4cc;
+  }
+
+  &.active {
+    border-color: #409eff;
+    background: #ecf5ff;
+  }
+
+  .method-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .method-label {
+    font-weight: 500;
+  }
+
+  .check-icon {
+    color: #409eff;
+    margin-left: auto;
+  }
+}
+
+.text-success {
+  color: #67c23a;
+  font-weight: bold;
+}
+
+.pagination-wrap {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+</style>

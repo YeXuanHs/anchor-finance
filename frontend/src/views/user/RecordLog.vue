@@ -42,15 +42,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import request from '@/utils/request'
 
 const loading = ref(false)
-const logs = ref([])
-const dateRange = ref([])
+const logs = ref<any[]>([])
+const dateRange = ref<any[]>([])
 const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+
+async function loadData() {
+  loading.value = true
+  try {
+    const res = await request.get('/api/v1/system-logs', {
+      params: {
+        page: currentPage.value,
+        page_size: pageSize.value,
+        keyword: searchKeyword.value || undefined,
+        start_date: dateRange.value?.[0] || undefined,
+        end_date: dateRange.value?.[1] || undefined
+      }
+    })
+    logs.value = res.data?.data || []
+    total.value = res.data?.total || 0
+  } catch { /* ignore */ }
+  loading.value = false
+}
+
+watch([currentPage, pageSize], () => { loadData() })
+onMounted(() => { loadData() })
 </script>
 
 <style scoped lang="scss">

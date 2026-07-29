@@ -15,40 +15,106 @@
 
       <!-- User Card -->
       <div class="user-card">
-        <el-avatar :size="56" class="user-avatar">{{ userInitial }}</el-avatar>
+        <el-avatar :size="48" class="user-avatar">{{ userInitial }}</el-avatar>
         <div class="user-card-info">
           <span class="user-card-name">{{ username }}</span>
           <el-tag type="info" size="small" effect="dark" round>普通用户</el-tag>
         </div>
       </div>
 
-      <!-- Accordion Menu -->
+      <!-- Menu -->
       <el-scrollbar class="sidebar-scroll">
-        <el-collapse v-model="activeMenus" class="menu-collapse">
-          <el-collapse-item
-            v-for="group in menuGroups"
-            :key="group.name"
-            :name="group.name"
-          >
+        <el-menu
+          :default-active="activeMenu"
+          class="sidebar-menu"
+          :collapse="false"
+          @select="handleMenuSelect"
+        >
+          <!-- 快捷入口 -->
+          <el-menu-item index="/user/dashboard">
+            <el-icon><HomeFilled /></el-icon>
+            <span>控制台</span>
+          </el-menu-item>
+          
+          <el-menu-item index="/products">
+            <el-icon><ShoppingCart /></el-icon>
+            <span>订购产品</span>
+          </el-menu-item>
+          
+          <el-menu-item index="/cart">
+            <el-icon><ShoppingCart /></el-icon>
+            <span>购物车</span>
+          </el-menu-item>
+          
+          <!-- 业务管理 -->
+          <el-sub-menu index="business">
             <template #title>
-              <div class="group-title">
-                <el-icon :size="15"><component :is="group.icon" /></el-icon>
-                <span>{{ group.label }}</span>
-              </div>
+              <el-icon><Box /></el-icon>
+              <span>业务管理</span>
             </template>
-            <router-link
-              v-for="item in group.children"
-              :key="item.path"
-              :to="item.path"
-              class="menu-item"
-              :class="{ active: route.path === item.path }"
-              @click="sidebarVisible = false"
-            >
-              <el-icon :size="15"><component :is="item.icon" /></el-icon>
-              <span>{{ item.label }}</span>
-            </router-link>
-          </el-collapse-item>
-        </el-collapse>
+            <el-menu-item index="/user/products">我的服务</el-menu-item>
+            <el-menu-item index="/user/orders">订单管理</el-menu-item>
+            <el-menu-item index="/user/upgrade">产品升降级</el-menu-item>
+          </el-sub-menu>
+          
+          <!-- 财务中心 -->
+          <el-sub-menu index="finance">
+            <template #title>
+              <el-icon><Wallet /></el-icon>
+              <span>财务中心</span>
+            </template>
+            <el-menu-item index="/user/invoices">账单管理</el-menu-item>
+            <el-menu-item index="/user/wallet">充值余额</el-menu-item>
+            <el-menu-item index="/user/coupons">优惠券</el-menu-item>
+          </el-sub-menu>
+          
+          <!-- 支持服务 -->
+          <el-sub-menu index="support">
+            <template #title>
+              <el-icon><Tickets /></el-icon>
+              <span>支持服务</span>
+            </template>
+            <el-menu-item index="/user/tickets">工单列表</el-menu-item>
+            <el-menu-item index="/user/tickets/create">提交工单</el-menu-item>
+          </el-sub-menu>
+          
+          <!-- 资源中心 -->
+          <el-sub-menu index="resources">
+            <template #title>
+              <el-icon><Folder /></el-icon>
+              <span>资源中心</span>
+            </template>
+            <el-menu-item index="/knowledge-base">知识库</el-menu-item>
+            <el-menu-item index="/downloads">下载中心</el-menu-item>
+            <el-menu-item index="/news">新闻动态</el-menu-item>
+          </el-sub-menu>
+          
+          <!-- 推介计划 -->
+          <el-menu-item index="/user/referral">
+            <el-icon><Connection /></el-icon>
+            <span>推介计划</span>
+          </el-menu-item>
+          
+          <!-- 账户设置 -->
+          <el-sub-menu index="account">
+            <template #title>
+              <el-icon><UserFilled /></el-icon>
+              <span>账户设置</span>
+            </template>
+            <el-menu-item index="/user/profile">个人资料</el-menu-item>
+            <el-menu-item index="/user/security">安全设置</el-menu-item>
+            <el-menu-item index="/user/verification">实名认证</el-menu-item>
+            <el-menu-item index="/user/contacts">联系人管理</el-menu-item>
+            <el-menu-item index="/user/oauth-bind">第三方登录</el-menu-item>
+          </el-sub-menu>
+          
+          <!-- 消息中心 -->
+          <el-menu-item index="/user/system-message">
+            <el-icon><Bell /></el-icon>
+            <span>消息中心</span>
+            <el-badge v-if="unreadCount > 0" :value="unreadCount" class="menu-badge" />
+          </el-menu-item>
+        </el-menu>
       </el-scrollbar>
     </aside>
 
@@ -63,14 +129,13 @@
           <!-- Breadcrumb -->
           <el-breadcrumb separator="/">
             <el-breadcrumb-item :to="{ path: '/user/dashboard' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="currentGroup">{{ currentGroup }}</el-breadcrumb-item>
             <el-breadcrumb-item>{{ currentPageName }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
 
         <div class="top-bar-right">
-          <el-badge :value="3" :max="99" class="notify-badge">
-            <el-icon :size="18" class="top-icon"><Bell /></el-icon>
+          <el-badge :value="unreadCount" :max="99" class="notify-badge" :hidden="unreadCount === 0">
+            <el-icon :size="18" class="top-icon" @click="$router.push('/user/system-message')"><Bell /></el-icon>
           </el-badge>
           <el-dropdown trigger="click" @command="handleUserAction">
             <div class="user-trigger">
@@ -108,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import {
@@ -116,138 +181,56 @@ import {
   HomeFilled, Box, ShoppingCart, Wallet, Tickets, Ticket, Connection,
   Postcard, UserFilled, Lock, Folder, Download, Document, Promotion, TrendCharts
 } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
 const sidebarVisible = ref(false)
+const unreadCount = ref(0)
 
 const username = computed(() => userStore.username || '用户')
 const userInitial = computed(() => username.value.charAt(0).toUpperCase())
 
-interface MenuItem {
-  path: string
-  label: string
-  icon: any
-}
-interface MenuGroup {
-  name: string
-  label: string
-  icon: any
-  children: MenuItem[]
-}
-
-const menuGroups: MenuGroup[] = [
-  {
-    name: 'quick',
-    label: '快捷入口',
-    icon: Promotion,
-    children: [
-      { path: '/user/dashboard', label: '首页概览', icon: HomeFilled },
-      { path: '/products', label: '订购产品', icon: ShoppingCart },
-      { path: '/cart', label: '购物车', icon: ShoppingCart },
-      { path: '/user/referral', label: '代理升级', icon: TrendCharts }
-    ]
-  },
-  {
-    name: 'business',
-    label: '业务管理',
-    icon: Box,
-    children: [
-      { path: '/user/products', label: '我的产品', icon: Box },
-      { path: '/user/host', label: '我的主机', icon: Box },
-      { path: '/user/orders', label: '订单管理', icon: Document },
-      { path: '/user/upgrade', label: '升降级', icon: TrendCharts },
-      { path: '/user/dcim', label: 'DCIM管理', icon: Box }
-    ]
-  },
-  {
-    name: 'finance',
-    label: '财务中心',
-    icon: Wallet,
-    children: [
-      { path: '/user/invoices', label: '账单管理', icon: Wallet },
-      { path: '/user/wallet', label: '充值余额', icon: Wallet },
-      { path: '/user/credit-limit', label: '信用额度', icon: Wallet },
-      { path: '/user/coupons', label: '优惠券', icon: Ticket },
-      { path: '/user/contract', label: '合同管理', icon: Document }
-    ]
-  },
-  {
-    name: 'support',
-    label: '支持服务',
-    icon: Tickets,
-    children: [
-      { path: '/user/tickets/create', label: '提交工单', icon: Ticket },
-      { path: '/user/tickets', label: '工单列表', icon: Tickets },
-      { path: '/knowledge-base', label: '知识库', icon: Folder },
-      { path: '/downloads', label: '下载中心', icon: Download }
-    ]
-  },
-  {
-    name: 'account',
-    label: '账户设置',
-    icon: UserFilled,
-    children: [
-      { path: '/user/profile', label: '个人资料', icon: UserFilled },
-      { path: '/user/security', label: '安全设置', icon: Lock },
-      { path: '/user/verification', label: '实名认证', icon: Postcard },
-      { path: '/user/contacts', label: '联系人管理', icon: UserFilled },
-      { path: '/user/oauth-bind', label: '第三方绑定', icon: Connection }
-    ]
-  },
-  {
-    name: 'message',
-    label: '消息中心',
-    icon: Bell,
-    children: [
-      { path: '/user/system-message', label: '系统消息', icon: Bell },
-      { path: '/user/record-log', label: '操作日志', icon: Document }
-    ]
-  },
-  {
-    name: 'referral',
-    label: '推介计划',
-    icon: Connection,
-    children: [
-      { path: '/user/referral', label: '推介概览', icon: Connection }
-    ]
-  }
-]
-
-function findActiveGroup(): string[] {
-  for (const group of menuGroups) {
-    if (group.children.some(c => route.path.startsWith(c.path))) {
-      return [group.name]
-    }
-  }
-  return ['quick']
-}
-const activeMenus = ref<string[]>(findActiveGroup())
-
-watch(() => route.path, () => {
-  activeMenus.value = findActiveGroup()
+// 当前激活的菜单
+const activeMenu = computed(() => {
+  return route.path
 })
 
-const currentGroup = computed(() => {
-  for (const group of menuGroups) {
-    if (group.children.some(c => route.path.startsWith(c.path))) {
-      return group.label
-    }
-  }
-  return ''
-})
+// 当前页面名称
+const pageNameMap: Record<string, string> = {
+  '/user/dashboard': '控制台',
+  '/user/products': '我的服务',
+  '/user/orders': '订单管理',
+  '/user/upgrade': '产品升降级',
+  '/user/invoices': '账单管理',
+  '/user/wallet': '充值余额',
+  '/user/coupons': '优惠券',
+  '/user/tickets': '工单列表',
+  '/user/tickets/create': '提交工单',
+  '/user/referral': '推介计划',
+  '/user/profile': '个人资料',
+  '/user/security': '安全设置',
+  '/user/verification': '实名认证',
+  '/user/contacts': '联系人管理',
+  '/user/oauth-bind': '第三方登录',
+  '/user/system-message': '消息中心',
+  '/user/record-log': '操作日志'
+}
 
 const currentPageName = computed(() => {
-  for (const group of menuGroups) {
-    const item = group.children.find(c => route.path.startsWith(c.path))
-    if (item) return item.label
-  }
-  return '用户中心'
+  return pageNameMap[route.path] || '用户中心'
 })
 
-function handleUserAction(command: string) {
+// 菜单选择
+const handleMenuSelect = (index: string) => {
+  router.push(index)
+  sidebarVisible.value = false
+}
+
+// 用户操作
+const handleUserAction = (command: string) => {
   if (command === 'logout') {
     userStore.logout()
     router.push('/login')
@@ -255,6 +238,22 @@ function handleUserAction(command: string) {
     router.push(`/user/${command}`)
   }
 }
+
+// 获取未读消息数
+const fetchUnreadCount = async () => {
+  try {
+    const { data } = await request.get('/api/v1/user/messages/unread-count')
+    if (data?.data) {
+      unreadCount.value = data.data.count || 0
+    }
+  } catch (error) {
+    // 忽略错误
+  }
+}
+
+onMounted(() => {
+  fetchUnreadCount()
+})
 </script>
 
 <style scoped>
@@ -266,8 +265,8 @@ function handleUserAction(command: string) {
 
 /* ==================== Sidebar ==================== */
 .sidebar {
-  width: 240px;
-  background: #1a3a5c;
+  width: 220px;
+  background: #fff;
   position: fixed;
   top: 0;
   left: 0;
@@ -276,6 +275,7 @@ function handleUserAction(command: string) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-right: 1px solid #e8ecf1;
 }
 
 .sidebar-header {
@@ -283,13 +283,13 @@ function handleUserAction(command: string) {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
 }
 
 .sidebar-close-mobile {
   display: none;
-  color: rgba(255,255,255,0.6);
+  color: #909399;
   cursor: pointer;
 }
 
@@ -306,34 +306,28 @@ function handleUserAction(command: string) {
   height: 32px;
   border-radius: 8px;
   object-fit: contain;
-  transition: transform 0.2s;
-}
-
-.logo:hover .logo-img {
-  transform: scale(1.08);
 }
 
 .logo-text {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.5px;
+  color: #1a2332;
 }
 
 .user-card {
   padding: 20px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  gap: 12px;
+  border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
 }
 
 .user-avatar {
-  background: linear-gradient(135deg, #0056FF, #4080FF);
+  background: linear-gradient(135deg, #409eff, #66b1ff);
   color: #fff;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
@@ -345,94 +339,49 @@ function handleUserAction(command: string) {
 }
 
 .user-card-name {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: #1a2332;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Accordion Menu */
+/* Menu */
 .sidebar-scroll {
   flex: 1;
   overflow: hidden;
 }
 
-.menu-collapse {
-  border: none;
+.sidebar-menu {
+  border-right: none;
 }
 
-.menu-collapse :deep(.el-collapse-item__header) {
-  height: 42px;
-  padding: 0 20px;
-  font-size: 12px;
-  background: transparent;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.45);
+.sidebar-menu :deep(.el-menu-item) {
+  height: 44px;
+  line-height: 44px;
+  font-size: 14px;
 }
 
-.menu-collapse :deep(.el-collapse-item__header:hover) {
-  color: rgba(255,255,255,0.65);
+.sidebar-menu :deep(.el-menu-item.is-active) {
+  background: #ecf5ff;
+  color: #409eff;
 }
 
-.menu-collapse :deep(.el-collapse-item__wrap) {
-  background: transparent;
-  border-bottom: none;
+.sidebar-menu :deep(.el-sub-menu__title) {
+  height: 44px;
+  line-height: 44px;
+  font-size: 14px;
 }
 
-.menu-collapse :deep(.el-collapse-item__content) {
-  padding-bottom: 0;
-}
-
-.group-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 20px 10px 32px;
-  color: rgba(255,255,255,0.65);
-  text-decoration: none;
-  font-size: 13px;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.menu-item:hover {
-  background: rgba(255,255,255,0.06);
-  color: #fff;
-}
-
-.menu-item.active {
-  background: linear-gradient(135deg, #0056FF 0%, #4080FF 100%);
-  color: #fff;
-  font-weight: 500;
-  border-radius: 0;
-}
-
-.menu-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 4px;
-  bottom: 4px;
-  width: 3px;
-  background: #fff;
-  border-radius: 0 2px 2px 0;
+.menu-badge {
+  margin-left: 8px;
 }
 
 /* ==================== Main Area ==================== */
 .main-area {
   flex: 1;
-  margin-left: 240px;
+  margin-left: 220px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -479,7 +428,7 @@ function handleUserAction(command: string) {
 }
 
 .top-icon:hover {
-  color: #0056FF;
+  color: #409eff;
 }
 
 .notify-badge :deep(.el-badge__content) {
@@ -501,7 +450,7 @@ function handleUserAction(command: string) {
 }
 
 .trigger-avatar {
-  background: linear-gradient(135deg, #0056FF, #4080FF);
+  background: linear-gradient(135deg, #409eff, #66b1ff);
   color: #fff;
   font-weight: 600;
   font-size: 12px;

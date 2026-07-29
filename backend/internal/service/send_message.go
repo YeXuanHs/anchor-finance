@@ -2,11 +2,14 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
 
+	"anchorfinance/pkg/email"
 	"anchorfinance/pkg/logger"
+	"anchorfinance/pkg/sms"
 )
 
 // SendMessage 消息发送
@@ -61,12 +64,19 @@ type SendMessageTemplate struct {
 }
 
 type SendMessageService struct {
-	db  *gorm.DB
-	log *logger.Logger
+	db       *gorm.DB
+	log      *logger.Logger
+	emailSnd *email.Sender
+	smsSnd   *sms.Sender
 }
 
 func NewSendMessageService(db *gorm.DB, log *logger.Logger) *SendMessageService {
-	return &SendMessageService{db: db, log: log}
+	return &SendMessageService{
+		db:       db,
+		log:      log,
+		emailSnd: email.NewSender(db),
+		smsSnd:   sms.NewSender(db),
+	}
 }
 
 type SendEmailRequest struct {
@@ -341,6 +351,94 @@ func (s *SendMessageService) RetryFailed(limit int) error {
 	}
 
 	return nil
+}
+
+// ProcessQueue fetches pending items from the send queue and dispatches them.
+// Designed to be called from a cron job.
+func (s *SendMessageService) ProcessQueue(limit int) (processed, succeeded, failed int, err error) {
+	items, err := s.GetQueuePending(limit)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("fetch pending queue: %w", err)
+	}
+
+	for _, item := range items {
+		processed++
+
+		// Mark queue item as processing
+		s.db.Model(&item).Update("status", 1)
+
+		// Load the message
+		msg, err := s.GetByID(item.MessageID)
+		if err != nil {
+			s.markQueueItemFailed(&item, fmt.Sprintf("load message: %v", err))
+			s.MarkFailed(item.MessageID, fmt.Sprintf("queue load error: %v", err))
+			failed++
+			continue
+		}
+
+		// Skip if message is not in pending state
+		if msg.Status != 0 {
+			s.db.Model(&item).Update("status", 2) // mark queue done
+			continue
+		}
+
+		// Mark message as sending
+		s.MarkSending(msg.ID)
+
+		// Dispatch based on message type
+		sendErr := s.dispatchMessage(msg)
+
+		if sendErr != nil {
+			s.markQueueItemFailed(&item, sendErr.Error())
+			s.MarkFailed(msg.ID, sendErr.Error())
+			failed++
+			s.log.Errorf("queue dispatch failed: msg=%d type=%s err=%v", msg.ID, msg.Type, sendErr)
+		} else {
+			// Mark queue item as completed
+			s.db.Model(&item).Updates(map[string]interface{}{
+				"status":    2,
+				"attempts":  gorm.Expr("attempts + 1"),
+			})
+			s.MarkSent(msg.ID)
+			succeeded++
+		}
+	}
+
+	s.log.Infof("queue processed: total=%d succeeded=%d failed=%d", processed, succeeded, failed)
+	return processed, succeeded, failed, nil
+}
+
+// dispatchMessage sends a message through the appropriate channel.
+func (s *SendMessageService) dispatchMessage(msg *SendMessage) error {
+	switch msg.Type {
+	case "email":
+		if s.emailSnd == nil {
+			return errors.New("email sender not configured")
+		}
+		return s.emailSnd.Send(msg.To, msg.Subject, msg.Content)
+
+	case "sms":
+		if s.smsSnd == nil {
+			return errors.New("sms sender not configured")
+		}
+		return s.smsSnd.Send(msg.To, msg.Content)
+
+	case "site_message":
+		// Site messages are stored directly in DB, no external dispatch needed
+		return nil
+
+	default:
+		return fmt.Errorf("unsupported message type: %s", msg.Type)
+	}
+}
+
+// markQueueItemFailed updates a queue item with failure info and increments attempts.
+func (s *SendMessageService) markQueueItemFailed(item *SendMessageQueue, errMsg string) {
+	s.db.Model(item).Updates(map[string]interface{}{
+		"status":   3,
+		"attempts": gorm.Expr("attempts + 1"),
+	})
+	s.log.Errorf("queue item %d failed: %s", item.ID, errMsg)
 }
 
 // Helper functions

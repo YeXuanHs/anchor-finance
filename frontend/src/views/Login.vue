@@ -240,6 +240,7 @@ import {
   ChatboxOutline
 } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/user'
+import request from '@/utils/request'
 
 const router = useRouter()
 const route = useRoute()
@@ -316,8 +317,7 @@ async function handleSendSms() {
   try {
     await smsFormRef.value?.validate(['phone', 'imageCaptcha'])
     sendingSms.value = true
-    // TODO: 调用发送短信API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await request.post('/api/v1/captcha/sms', { phone: smsForm.value.phone })
     message.success('验证码已发送')
     smsCooldown.value = 60
     cooldownTimer = setInterval(() => {
@@ -337,8 +337,9 @@ async function handleSmsLogin() {
   try {
     await smsFormRef.value?.validate()
     loading.value = true
-    // TODO: 调用短信登录API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const res = await request.post('/api/v1/login/sms', { phone: smsForm.value.phone, code: smsForm.value.smsCode })
+    userStore.setToken(res.data.data.token)
+    userStore.setUserInfo(res.data.data.user)
     message.success('登录成功')
     const redirect = (route.query.redirect as string) || '/user/dashboard'
     router.push(redirect)
@@ -350,7 +351,8 @@ async function handleSmsLogin() {
 }
 
 function handleThirdParty(platform: string) {
-  message.info(`${platform} 登录功能开发中`)
+  const redirect = (route.query.redirect as string) || '/user/dashboard'
+  window.location.href = `/api/v1/admin/oauth/${platform}?redirect=${encodeURIComponent(redirect)}`
 }
 </script>
 

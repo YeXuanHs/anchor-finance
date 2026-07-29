@@ -17,6 +17,12 @@ func NewConfigGeneralHandler(svc *service.ConfigGeneralService, log *logger.Logg
 	return &ConfigGeneralHandler{svc: svc, log: log}
 }
 
+// Get is an alias for GetConfig.
+func (h *ConfigGeneralHandler) Get(c *gin.Context) { h.GetConfig(c) }
+
+// Update is an alias for UpdateConfig.
+func (h *ConfigGeneralHandler) Update(c *gin.Context) { h.UpdateConfig(c) }
+
 // GetConfig returns the general site configuration.
 func (h *ConfigGeneralHandler) GetConfig(c *gin.Context) {
 	cfg, err := h.svc.GetConfig()

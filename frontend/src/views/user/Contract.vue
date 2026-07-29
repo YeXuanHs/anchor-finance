@@ -34,9 +34,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import request from '@/utils/request'
+
+const router = useRouter()
 
 const contracts = ref([])
+const loading = ref(false)
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/contracts')
+    contracts.value = data.data?.list || data.list || data.data || []
+  } catch (e) { console.error(e) } finally { loading.value = false }
+})
 
 const getStatusType = (status: string) => {
   const map: Record<string, string> = {
@@ -57,11 +70,11 @@ const getStatusText = (status: string) => {
 }
 
 const viewContract = (contract: any) => {
-  // TODO: 查看合同详情
+  router.push(`/user/contracts/${contract.id}`)
 }
 
 const downloadContract = (contract: any) => {
-  // TODO: 下载合同PDF
+  window.open(`/api/v1/contracts/${contract.id}/download`)
 }
 </script>
 

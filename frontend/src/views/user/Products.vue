@@ -78,11 +78,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, Monitor, Connection, Lock, Coin } from '@element-plus/icons-vue'
+import request from '@/utils/request'
+
+const router = useRouter()
 
 const statusFilter = ref('all')
+const loading = ref(false)
+
+const iconMap: Record<string, any> = { Monitor, Connection, Lock, Coin }
 
 interface ProductSpec { label: string; value: string }
 interface Product {
@@ -97,39 +104,16 @@ interface Product {
   price: string
 }
 
-const products = ref<Product[]>([
-  {
-    id: 1, name: '香港云服务器', domain: 'hk-web-01.anchorfin.com', icon: Monitor,
-    status: 'active', statusText: '运行中',
-    specs: [
-      { label: 'CPU', value: '2核' }, { label: '内存', value: '4GB' },
-      { label: '硬盘', value: '50G SSD' }, { label: '带宽', value: '5Mbps' }
-    ],
-    expiry: '2026-08-25', price: '49'
-  },
-  {
-    id: 2, name: 'OV SSL证书', domain: '*.anchorfin.com', icon: Lock,
-    status: 'active', statusText: '运行中',
-    specs: [
-      { label: '类型', value: '通配符' }, { label: '验证', value: '企业OV' }, { label: '有效期', value: '1年' }
-    ],
-    expiry: '2027-07-20', price: '16.6'
-  },
-  {
-    id: 3, name: '新加坡 VPS', domain: 'sg-api.anchorfin.com', icon: Connection,
-    status: 'suspended', statusText: '已暂停',
-    specs: [
-      { label: 'CPU', value: '2核' }, { label: '内存', value: '4GB' }, { label: '硬盘', value: '60G NVMe' }
-    ],
-    expiry: '2026-07-05', price: '35'
-  },
-  {
-    id: 4, name: '域名注册', domain: 'anchorfin.com', icon: Coin,
-    status: 'expired', statusText: '已过期',
-    specs: [{ label: '后缀', value: '.com' }, { label: '年限', value: '1年' }],
-    expiry: '2026-07-10', price: '7.5'
-  }
-])
+const products = ref<Product[]>([])
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/user/products')
+    const list = data.data?.list || data.list || data.data || []
+    products.value = list.map((p: any) => ({ ...p, icon: iconMap[p.icon] || Monitor }))
+  } catch (e) { console.error(e) } finally { loading.value = false }
+})
 
 const filteredProducts = computed(() => {
   if (statusFilter.value === 'all') return products.value
@@ -143,7 +127,9 @@ function getStatusType(status: string) {
   return map[status] || 'info'
 }
 
-function handleManage(product: Product) { ElMessage.info(`管理产品：${product.name}`) }
+function handleManage(product: Product) {
+  router.push(`/user/products/${product.id}`)
+}
 function handleRenew(product: Product) { ElMessage.info(`续费产品：${product.name}`) }
 function handleReactivate(product: Product) { ElMessage.info(`恢复产品：${product.name}`) }
 </script>

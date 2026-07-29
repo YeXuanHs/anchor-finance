@@ -28,9 +28,19 @@
           </el-radio-group>
         </div>
         <div class="chart-content">
-          <div class="chart-placeholder">
+          <div class="bar-chart" v-if="revenueChartData.length">
+            <div class="bar-chart-row" v-for="item in revenueChartData" :key="item.label">
+              <span class="bar-label">{{ item.label }}</span>
+              <div class="bar-track">
+                <div class="bar-fill" :style="{ width: getBarWidth(item.value) + '%' }">
+                  <span class="bar-value">¥{{ item.value?.toLocaleString() }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-placeholder" v-else>
             <el-icon :size="48" color="#e5e5ea"><TrendCharts /></el-icon>
-            <p>收入趋势图表</p>
+            <p>暂无数据</p>
           </div>
         </div>
       </div>
@@ -40,9 +50,25 @@
           <h3>订单状态分布</h3>
         </div>
         <div class="chart-content">
-          <div class="chart-placeholder">
+          <div class="donut-chart" v-if="orderStatusData.length">
+            <svg viewBox="0 0 36 36" class="donut-svg">
+              <circle v-for="(seg, i) in donutSegments" :key="i"
+                class="donut-segment" cx="18" cy="18" r="15.915"
+                fill="transparent" :stroke="seg.color" stroke-width="3.8"
+                :stroke-dasharray="`${seg.percent} ${100 - seg.percent}`"
+                :stroke-dashoffset="seg.offset" />
+            </svg>
+            <div class="donut-legend">
+              <div class="legend-item" v-for="item in orderStatusData" :key="item.label">
+                <span class="legend-dot" :style="{ background: item.color }"></span>
+                <span class="legend-label">{{ item.label }}</span>
+                <span class="legend-value">{{ item.value }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="chart-placeholder" v-else>
             <el-icon :size="48" color="#e5e5ea"><PieChart /></el-icon>
-            <p>订单状态分布</p>
+            <p>暂无数据</p>
           </div>
         </div>
       </div>
@@ -113,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Wallet, User, Tickets, Monitor, TrendCharts, PieChart } from '@element-plus/icons-vue'
 import request from '@/utils/request'
@@ -127,6 +153,27 @@ const ticketsLoading = ref(false)
 const stats = ref([])
 const recentOrders = ref([])
 const recentTickets = ref([])
+
+const revenueChartData = ref<{ label: string; value: number }[]>([])
+const orderStatusData = ref<{ label: string; value: number; color: string }[]>([])
+
+const statusColors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399']
+
+const getBarWidth = (value: number) => {
+  const max = Math.max(...revenueChartData.value.map(d => d.value), 1)
+  return Math.round((value / max) * 100)
+}
+
+const donutSegments = computed(() => {
+  const total = orderStatusData.value.reduce((sum, d) => sum + d.value, 0) || 1
+  let offset = 25
+  return orderStatusData.value.map(item => {
+    const percent = (item.value / total) * 100
+    const seg = { percent, color: item.color, offset: -offset + '' }
+    offset += percent
+    return seg
+  })
+})
 
 // 获取仪表盘数据
 const fetchDashboard = async () => {
@@ -178,7 +225,21 @@ const fetchRecentTickets = async () => {
 
 // 获取图表数据
 const fetchChartData = async () => {
-  // TODO: 获取图表数据
+  try {
+    const { data } = await request.get('/admin/api/v1/dashboard/chart', { params: { period: chartPeriod.value } })
+    if (data?.data) {
+      const d = data.data
+      if (d.revenue) {
+        revenueChartData.value = d.revenue
+      }
+      if (d.order_status) {
+        orderStatusData.value = d.order_status.map((item: any, i: number) => ({
+          ...item,
+          color: statusColors[i % statusColors.length]
+        }))
+      }
+    }
+  } catch {}
 }
 
 const getOrderStatusText = (status: string) => {
@@ -353,6 +414,102 @@ onMounted(() => {
       }
     }
   }
+}
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.bar-chart-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-label {
+  width: 48px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.bar-track {
+  flex: 1;
+  height: 24px;
+  background: var(--border-color, #f0f0f0);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), #66b1ff);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+  min-width: 60px;
+  transition: width 0.6s ease;
+}
+
+.bar-value {
+  font-size: 11px;
+  color: #fff;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.donut-chart {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 8px 0;
+}
+
+.donut-svg {
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+
+.donut-segment {
+  transition: stroke-dasharray 0.6s ease;
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  color: var(--text-secondary);
+  min-width: 60px;
+}
+
+.legend-value {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .recent-section {

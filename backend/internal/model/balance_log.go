@@ -8,6 +8,7 @@ import (
 type BalanceLog struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
 	UserID      uint      `gorm:"index;not null" json:"user_id"`
+	Type        string    `gorm:"type:varchar(32)" json:"type"` // credit/debit/recharge/refund/admin
 	Amount      float64   `gorm:"type:decimal(12,2);not null" json:"amount"` // positive=credit, negative=debit
 	Balance     float64   `gorm:"type:decimal(12,2);not null" json:"balance"` // balance after transaction
 	RelatedID   uint      `json:"related_id"`

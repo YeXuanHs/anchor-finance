@@ -55,6 +55,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import request from '@/utils/request'
 
 const contacts = ref([])
 const showAddDialog = ref(false)
@@ -81,11 +83,18 @@ const editContact = (contact: any) => {
 }
 
 const deleteContact = async (contact: any) => {
-  // TODO: 调用API删除
+  await ElMessageBox.confirm('确定删除该联系人？', '提示', { type: 'warning' })
+  await request.delete(`/api/v1/contacts/${contact.id}`)
+  ElMessage.success('删除成功')
 }
 
 const submitForm = async () => {
-  // TODO: 调用API保存
+  if (editingContact.value) {
+    await request.put(`/api/v1/contacts/${form.value.id}`, form.value)
+  } else {
+    await request.post('/api/v1/contacts', form.value)
+  }
+  ElMessage.success('保存成功')
   showAddDialog.value = false
 }
 </script>

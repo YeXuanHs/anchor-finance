@@ -141,6 +141,29 @@ func (h *SaleHandler) Disable(c *gin.Context) {
 	response.SuccessMsg(c, "promotion disabled")
 }
 
+// SetStatus enables or disables a sale promotion (admin).
+func (h *SaleHandler) SetStatus(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid promotion id")
+		return
+	}
+
+	var req struct {
+		Status int `json:"status" binding:"required,oneof=0 1"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.saleSvc.SetStatus(uint(id), req.Status); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "promotion status updated")
+}
+
 // GetUsageStats returns usage statistics for a promotion (admin).
 func (h *SaleHandler) GetUsageStats(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -174,4 +197,89 @@ func (h *SaleHandler) GetUsageLogs(c *gin.Context) {
 		return
 	}
 	response.SuccessPage(c, logs, total, page, pageSize)
+}
+
+// GetCommissionLadder returns commission tiers for a promotion (admin).
+func (h *SaleHandler) GetCommissionLadder(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid promotion id")
+		return
+	}
+
+	tiers, err := h.saleSvc.GetCommissionLadder(uint(id))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, tiers)
+}
+
+// SetCommissionLadder replaces commission tiers for a promotion (admin).
+func (h *SaleHandler) SetCommissionLadder(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid promotion id")
+		return
+	}
+
+	var req []service.SaleCommission
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.saleSvc.SetCommissionLadder(uint(id), req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "commission ladder updated")
+}
+
+// CalculateCommission calculates commission for a given amount (admin).
+func (h *SaleHandler) CalculateCommission(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid promotion id")
+		return
+	}
+
+	var req struct {
+		Amount float64 `json:"amount" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	commission, err := h.saleSvc.CalculateCommission(uint(id), req.Amount)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"commission": commission})
+}
+
+// ValidateUsage checks if a user can use a promotion (admin).
+func (h *SaleHandler) ValidateUsage(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid promotion id")
+		return
+	}
+
+	var req struct {
+		UserID uint `json:"user_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	valid, reason, err := h.saleSvc.ValidateUsage(uint(id), req.UserID)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"valid": valid, "reason": reason})
 }

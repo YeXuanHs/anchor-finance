@@ -37,6 +37,20 @@ type AffiliateRecord struct {
 	Affiliate   *Affiliate `gorm:"foreignKey:AffiliateID" json:"affiliate,omitempty"`
 }
 
+// AffiliateVisit 推荐访问记录
+type AffiliateVisit struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	AffiliateID uint      `gorm:"index;not null" json:"affiliate_id"`
+	IP          string    `gorm:"type:varchar(64)" json:"ip"`
+	UserAgent   string    `gorm:"type:text" json:"user_agent"`
+	RefererURL  string    `gorm:"type:varchar(512)" json:"referer_url"`
+	LandingURL  string    `gorm:"type:varchar(512)" json:"landing_url"`
+	Converted   bool      `gorm:"default:false" json:"converted"` // 是否转化为注册
+	UserID      *uint     `gorm:"index" json:"user_id"`          // 转化后的用户ID
+	CreatedAt   time.Time `json:"created_at"`
+	Affiliate   *Affiliate `gorm:"foreignKey:AffiliateID" json:"affiliate,omitempty"`
+}
+
 // AffiliateWithdraw 提现记录
 type AffiliateWithdraw struct {
 	ID          uint       `gorm:"primaryKey" json:"id"`

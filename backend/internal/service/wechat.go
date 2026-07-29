@@ -307,12 +307,36 @@ func (s *WechatService) CreatePayOrder(orderNo string, totalFee int, clientIP, o
 	body, _ := io.ReadAll(resp.Body)
 	s.log.Infof("wechat pay unified order response: %s", string(body))
 
-	// Parse response (simplified)
-	return map[string]string{
-		"prepay_id": "wx_prepay_" + orderNo,
-		"nonce_str": nonceStr,
-		"sign":      params["sign"],
-	}, nil
+	// Parse XML response
+	var result map[string]string
+	result = make(map[string]string)
+	decoder := xml.NewDecoder(bytes.NewReader(body))
+	var currentElement string
+	for {
+		t, err := decoder.Token()
+		if err != nil {
+			break
+		}
+		switch se := t.(type) {
+		case xml.StartElement:
+			currentElement = se.Name.Local
+		case xml.EndElement:
+			currentElement = ""
+		case xml.CharData:
+			if currentElement != "" {
+				result[currentElement] = string(se)
+			}
+		}
+	}
+
+	if result["return_code"] != "SUCCESS" {
+		return nil, fmt.Errorf("wechat pay error: %s", result["return_msg"])
+	}
+	if result["result_code"] != "SUCCESS" {
+		return nil, fmt.Errorf("wechat pay result error: %s - %s", result["err_code"], result["err_code_des"])
+	}
+
+	return result, nil
 }
 
 // HandlePayNotify processes WeChat payment callback.
@@ -491,6 +515,53 @@ func (s *WechatService) signParams(params map[string]string) string {
 
 // verifySign verifies WeChat pay callback signature (simplified).
 func (s *WechatService) verifySign(body []byte) bool {
-	// Simplified verification - in production, parse XML and verify MD5 sign
-	return true
+	// Parse XML to extract sign
+	params := make(map[string]string)
+	decoder := xml.NewDecoder(bytes.NewReader(body))
+	var currentElement string
+	for {
+		t, err := decoder.Token()
+		if err != nil {
+			break
+		}
+		switch se := t.(type) {
+		case xml.StartElement:
+			currentElement = se.Name.Local
+		case xml.EndElement:
+			currentElement = ""
+		case xml.CharData:
+			if currentElement != "" && currentElement != "sign" {
+				params[currentElement] = string(se)
+			}
+		}
+	}
+
+	// Get the sign from the response
+	var receivedSign string
+	decoder2 := xml.NewDecoder(bytes.NewReader(body))
+	var elem string
+	for {
+		t, err := decoder2.Token()
+		if err != nil {
+			break
+		}
+		switch se := t.(type) {
+		case xml.StartElement:
+			elem = se.Name.Local
+		case xml.CharData:
+			if elem == "sign" {
+				receivedSign = string(se)
+			}
+		case xml.EndElement:
+			elem = ""
+		}
+	}
+
+	if receivedSign == "" {
+		return false
+	}
+
+	// Calculate expected sign
+	expectedSign := s.signParams(params)
+	return strings.ToUpper(expectedSign) == strings.ToUpper(receivedSign)
 }

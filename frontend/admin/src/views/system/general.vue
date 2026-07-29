@@ -41,8 +41,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import request from '@/utils/request'
 
 const form = ref({
   site_name: '锚点财务',
@@ -53,10 +54,27 @@ const form = ref({
   currency: 'CNY'
 })
 
-const saveSettings = async () => {
-  // TODO: 保存设置
-  ElMessage.success('保存成功')
+const fetchSettings = async () => {
+  try {
+    const { data } = await request.get('/admin/api/v1/system/general')
+    if (data.data) {
+      form.value = { ...form.value, ...data.data }
+    }
+  } catch {}
 }
+
+const saveSettings = async () => {
+  try {
+    await request.put('/admin/api/v1/system/general', form.value)
+    ElMessage.success('保存成功')
+  } catch {
+    ElMessage.error('保存失败')
+  }
+}
+
+onMounted(() => {
+  fetchSettings()
+})
 </script>
 
 <style scoped lang="scss">

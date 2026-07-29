@@ -67,23 +67,37 @@ type OrderItem struct {
 // Coupon 优惠券
 type Coupon struct {
 	gorm.Model
-	Code           string         `gorm:"type:varchar(64);uniqueIndex;not null" json:"code"`
-	Name           string         `gorm:"type:varchar(128);not null" json:"name"`
-	Description    string         `gorm:"type:text" json:"description"`
-	Type           string         `gorm:"type:varchar(16);not null;default:'percentage'" json:"type"` // percentage/fixed/free/shipping
-	Value          datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"value"`
-	MaxDiscount    datatypes.Decimal `gorm:"type:decimal(20,4)" json:"max_discount"`
-	MinOrderAmount datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"min_order_amount"`
-	MaxUses        int            `gorm:"default:0" json:"max_uses"` // 0=不限
-	UsedCount      int            `gorm:"default:0" json:"used_count"`
-	MaxUsesPerUser int            `gorm:"default:1" json:"max_uses_per_user"`
-	StartDate      *time.Time     `gorm:"index" json:"start_date"`
-	EndDate        *time.Time     `gorm:"index" json:"end_date"`
-	ProductIDs     datatypes.JSON `gorm:"type:jsonb" json:"product_ids"`     // 适用商品ID列表
-	GroupIDs       datatypes.JSON `gorm:"type:jsonb" json:"group_ids"`       // 适用用户组ID列表
+	Code              string         `gorm:"type:varchar(64);uniqueIndex;not null" json:"code"`
+	Name              string         `gorm:"type:varchar(128);not null" json:"name"`
+	Description       string         `gorm:"type:text" json:"description"`
+	Type              string         `gorm:"type:varchar(16);not null;default:'percentage'" json:"type"` // percentage/fixed/override/free
+	Value             datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"value"`
+	MaxDiscount       datatypes.Decimal `gorm:"type:decimal(20,4)" json:"max_discount"`
+	MinOrderAmount    datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"min_order_amount"`
+	MaxUses           int            `gorm:"default:0" json:"max_uses"` // 0=不限
+	UsedCount         int            `gorm:"default:0" json:"used_count"`
+	MaxUsesPerUser    int            `gorm:"default:1" json:"max_uses_per_user"`
+	StartDate         *time.Time     `gorm:"index" json:"start_date"`
+	EndDate           *time.Time     `gorm:"index" json:"end_date"`
+	ProductIDs        datatypes.JSON `gorm:"type:jsonb" json:"product_ids"`        // 适用商品ID列表
+	Cycles            datatypes.JSON `gorm:"type:jsonb" json:"cycles"`             // 适用计费周期列表
+	GroupIDs          datatypes.JSON `gorm:"type:jsonb" json:"group_ids"`          // 适用用户组ID列表
 	ExcludeProductIDs datatypes.JSON `gorm:"type:jsonb" json:"exclude_product_ids"`
-	ApplyOnce      bool           `gorm:"default:false" json:"apply_once"` // 仅首单可用
-	Recurring      bool           `gorm:"default:false" json:"recurring"` // 续费时也享受
-	Status         int16          `gorm:"type:smallint;default:1;not null;index" json:"status"` // 1=启用 0=禁用
-	Orders         []Order        `gorm:"foreignKey:CouponID" json:"orders,omitempty"`
+	OnlyNewClient     bool           `gorm:"default:false" json:"only_new_client"`  // 仅新客户可用
+	OnlyOldClient     bool           `gorm:"default:false" json:"only_old_client"`  // 仅老客户可用
+	OncePerClient     bool           `gorm:"default:false" json:"once_per_client"`  // 每客户仅限一次
+	RequiresExist     *uint          `json:"requires_exist"`                        // 需要已购买的商品ID
+	ApplyOnce         bool           `gorm:"default:false" json:"apply_once"`       // 仅首单可用
+	Recurring         bool           `gorm:"default:false" json:"recurring"`        // 续费时也享受
+	Status            int16          `gorm:"type:smallint;default:1;not null;index" json:"status"` // 1=启用 0=禁用
+	Orders            []Order        `gorm:"foreignKey:CouponID" json:"orders,omitempty"`
+}
+
+// CouponUsageLog 优惠券使用记录
+type CouponUsageLog struct {
+	ID       uint    `gorm:"primaryKey" json:"id"`
+	CouponID uint    `gorm:"index;not null" json:"coupon_id"`
+	UserID   uint    `gorm:"index;not null" json:"user_id"`
+	OrderID  uint    `gorm:"index" json:"order_id"`
+	Discount float64 `gorm:"type:decimal(20,4);not null" json:"discount"`
 }

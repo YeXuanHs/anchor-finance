@@ -238,6 +238,9 @@ func (h *AppStoreHandler) AdminUpdate(c *gin.Context) {
 	response.Success(c, app)
 }
 
+// AdminList is an alias for AdminGetList.
+func (h *AppStoreHandler) AdminList(c *gin.Context) { h.AdminGetList(c) }
+
 // AdminDelete deletes an app (admin).
 // DELETE /admin/apps/:id
 func (h *AppStoreHandler) AdminDelete(c *gin.Context) {

@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"anchorfinance/internal/model"
+	"anchorfinance/internal/service"
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/response"
 
@@ -14,10 +15,15 @@ import (
 type UpstreamHandler struct {
 	db  *gorm.DB
 	log *logger.Logger
+	svc *service.UpstreamService
 }
 
 func NewUpstreamHandler(db *gorm.DB, log *logger.Logger) *UpstreamHandler {
-	return &UpstreamHandler{db: db, log: log}
+	return &UpstreamHandler{
+		db:  db,
+		log: log,
+		svc: service.NewUpstreamService(db, log),
+	}
 }
 
 // GetProviders returns all upstream providers (admin).
@@ -142,13 +148,27 @@ func (h *UpstreamHandler) TestConnection(c *gin.Context) {
 		return
 	}
 
-	// TODO: implement actual connection test based on provider.Type
-	h.log.WithField("provider_id", id).Info("testing upstream connection")
+	result, err := h.svc.TestConnection(uint(id))
+	if err != nil {
+		msg := err.Error()
+		var latency int64
+		if result != nil {
+			latency = result.Latency
+		}
+		response.Success(c, gin.H{
+			"provider_id": id,
+			"status":      "failed",
+			"message":     msg,
+			"latency_ms":  latency,
+		})
+		return
+	}
 
 	response.Success(c, gin.H{
 		"provider_id": id,
 		"status":      "ok",
-		"message":     "connection test passed",
+		"message":     result.Message,
+		"latency_ms":  result.Latency,
 	})
 }
 
@@ -166,20 +186,17 @@ func (h *UpstreamHandler) SyncProducts(c *gin.Context) {
 		return
 	}
 
-	// TODO: implement actual product sync based on provider.Type
-	log := model.UpstreamSyncLog{
-		UpstreamID: uint(id),
-		Action:     "sync_products",
-		Status:     "success",
-		Message:    "sync completed (stub)",
+	synced, err := h.svc.SyncProducts(uint(id))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
 	}
-	h.db.Create(&log)
 
-	h.log.WithField("provider_id", id).Info("upstream product sync triggered")
+	h.log.WithField("provider_id", id).Infof("upstream product sync completed: %d products", synced)
 
 	response.Success(c, gin.H{
 		"provider_id": id,
-		"synced":      0,
+		"synced":      synced,
 		"message":     "sync completed",
 	})
 }

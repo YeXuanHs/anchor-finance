@@ -203,7 +203,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, reactive, h, onMounted } from 'vue'
+import request from '@/utils/request'
 import { useMessage } from 'naive-ui'
 import type { FormInst, FormRules, DataTableColumns } from 'naive-ui'
 import { NTag } from 'naive-ui'
@@ -217,10 +218,10 @@ import {
 
 const message = useMessage()
 
-const balance = ref(12580.50)
-const monthlyRecharge = ref(3000.00)
-const monthlyExpense = ref(1256.80)
-const frozenAmount = ref(500.00)
+const balance = ref(0)
+const monthlyRecharge = ref(0)
+const monthlyExpense = ref(0)
+const frozenAmount = ref(0)
 const searchKeyword = ref('')
 const activeType = ref('all')
 
@@ -269,16 +270,36 @@ interface RecordItem {
   remark: string
 }
 
-const records = ref<RecordItem[]>([
-  { id: 1, time: '2026-07-27 09:30', type: 'recharge', typeLabel: '充值', amount: 500, balance: 12580.50, remark: '支付宝充值' },
-  { id: 2, time: '2026-07-26 15:20', type: 'expense', typeLabel: '消费', amount: -299, balance: 12080.50, remark: '购买产品A' },
-  { id: 3, time: '2026-07-25 10:15', type: 'refund', typeLabel: '退款', amount: 99, balance: 12379.50, remark: '订单取消退款' },
-  { id: 4, time: '2026-07-24 18:45', type: 'expense', typeLabel: '消费', amount: -158, balance: 12280.50, remark: '购买产品B' },
-  { id: 5, time: '2026-07-23 14:00', type: 'withdraw', typeLabel: '提现', amount: -2000, balance: 12438.50, remark: '提现到银行卡' },
-  { id: 6, time: '2026-07-22 08:30', type: 'recharge', typeLabel: '充值', amount: 1000, balance: 14438.50, remark: '微信充值' },
-  { id: 7, time: '2026-07-21 20:10', type: 'expense', typeLabel: '消费', amount: -320, balance: 13438.50, remark: '购买产品C' },
-  { id: 8, time: '2026-07-20 11:25', type: 'recharge', typeLabel: '充值', amount: 2000, balance: 13758.50, remark: '银行卡充值' },
-])
+const records = ref<RecordItem[]>([])
+
+const loading = ref(false)
+
+const fetchWalletData = async () => {
+  loading.value = true
+  try {
+    const [balanceRes, recordsRes] = await Promise.all([
+      request.get('/api/v1/balance'),
+      request.get('/api/v1/balances/logs', { params: { page: pagination.page, page_size: pagination.pageSize } })
+    ])
+    if (balanceRes?.data?.data) {
+      const d = balanceRes.data.data
+      balance.value = d.balance || 0
+      monthlyRecharge.value = d.monthly_recharge || 0
+      monthlyExpense.value = d.monthly_expense || 0
+      frozenAmount.value = d.frozen || 0
+    }
+    if (recordsRes?.data?.data) {
+      records.value = recordsRes.data.data.list || recordsRes.data.data || []
+      pagination.itemCount = recordsRes.data.data.total || records.value.length
+    }
+  } catch (e) {
+    console.error('Failed to fetch wallet data:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchWalletData)
 
 const pagination = reactive({
   page: 1,
@@ -346,8 +367,7 @@ async function handleRecharge() {
   try {
     await rechargeFormRef.value?.validate()
     recharging.value = true
-    // TODO: 调用充值API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const res = await request.post('/api/v1/balances/recharge', { amount: rechargeForm.value.amount, payment_method: rechargeForm.value.payMethod })
     balance.value += rechargeForm.value.amount || 0
     message.success('充值成功')
     showRechargeModal.value = false
@@ -367,8 +387,7 @@ async function handleWithdraw() {
       return
     }
     withdrawing.value = true
-    // TODO: 调用提现API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await request.post('/api/v1/balances/withdraw', { amount: withdrawForm.value.amount, method: withdrawForm.value.account })
     message.success('提现申请已提交')
     showWithdrawModal.value = false
     withdrawForm.value.amount = null

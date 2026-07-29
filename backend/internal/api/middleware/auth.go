@@ -15,6 +15,18 @@ const (
 	ContextKeyIsAdmin = "is_admin"
 )
 
+var defaultJWTManager *auth.JWTManager
+
+// Init sets the default JWT manager used by AuthRequired.
+func Init(jwtMgr *auth.JWTManager) {
+	defaultJWTManager = jwtMgr
+}
+
+// AuthRequired returns a middleware that validates Bearer tokens using the default JWT manager.
+func AuthRequired() gin.HandlerFunc {
+	return JWTAuth(defaultJWTManager)
+}
+
 // JWTAuth returns a middleware that validates Bearer tokens and sets user info in context.
 func JWTAuth(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {

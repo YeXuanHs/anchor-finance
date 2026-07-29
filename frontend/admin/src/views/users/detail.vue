@@ -62,21 +62,36 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import request from '@/utils/request'
 
 const route = useRoute()
+const userId = route.params.id
 
 const user = ref({
-  id: route.params.id,
-  username: '张三',
-  email: 'zhangsan@example.com',
-  phone: '13800138000',
-  balance: 1250.50,
+  id: userId,
+  username: '',
+  email: '',
+  phone: '',
+  balance: 0,
   status: 'active',
-  created_at: '2026-01-15 10:30:00',
-  products: [
-    { name: '云服务器 - 2核4G', status: 'active', expire_date: '2027-01-15' },
-    { name: '虚拟主机 - 企业版', status: 'expired', expire_date: '2026-06-15' }
-  ]
+  created_at: '',
+  products: [] as any[]
+})
+
+const fetchUser = async () => {
+  try {
+    const { data } = await request.get(`/admin/users/${userId}`)
+    if (data?.data) {
+      Object.assign(user.value, data.data)
+    }
+  } catch {
+    ElMessage.error('获取用户信息失败')
+  }
+}
+
+onMounted(() => {
+  fetchUser()
 })
 </script>
 

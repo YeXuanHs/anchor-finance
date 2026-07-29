@@ -56,6 +56,16 @@ func (h *UpgradeHandler) CreateUpgrade(c *gin.Context) {
 	response.Success(c, order)
 }
 
+// GetAvailable is an alias for GetAvailableUpgrades.
+func (h *UpgradeHandler) GetAvailable(c *gin.Context) {
+	h.GetAvailableUpgrades(c)
+}
+
+// Submit is an alias for CreateUpgrade.
+func (h *UpgradeHandler) Submit(c *gin.Context) {
+	h.CreateUpgrade(c)
+}
+
 // GetUpgradeDetail 获取升降级订单详情
 // GET /upgrades/:id
 func (h *UpgradeHandler) GetUpgradeDetail(c *gin.Context) {

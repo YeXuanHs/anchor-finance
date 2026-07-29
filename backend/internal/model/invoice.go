@@ -92,22 +92,3 @@ type Transaction struct {
 	CallbackData  datatypes.JSON `gorm:"type:jsonb" json:"callback_data"` // 网关回调原始数据
 	Metadata      datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
 }
-
-// BalanceLog 余额变动日志
-type BalanceLog struct {
-	gorm.Model
-	UserID      uint           `gorm:"index;not null" json:"user_id"`
-	User        User           `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Type        string         `gorm:"type:varchar(32);not null" json:"type"` // recharge/consume/refund/commission/withdrawal/adjustment/admin
-	Amount      datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"amount"`
-	BalanceBefore datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"balance_before"`
-	BalanceAfter  datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"balance_after"`
-	Currency    string         `gorm:"type:varchar(8);default:'CNY'" json:"currency"`
-	RelID       uint           `gorm:"index" json:"rel_id"`
-	RelType     string         `gorm:"type:varchar(32)" json:"rel_type"` // order/invoice/transaction
-	Description string         `gorm:"type:varchar(512)" json:"description"`
-	AdminID     *uint          `gorm:"index" json:"admin_id"`
-	Admin       *Admin         `gorm:"foreignKey:AdminID" json:"admin,omitempty"`
-	IPAddress   string         `gorm:"type:varchar(64)" json:"ip_address"`
-	Metadata    datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
-}

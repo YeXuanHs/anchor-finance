@@ -10,19 +10,28 @@ import (
 	"time"
 
 	"anchorfinance/internal/model"
+	"anchorfinance/pkg/email"
 	"anchorfinance/pkg/logger"
+	"anchorfinance/pkg/sms"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 type EmailTemplateService struct {
-	db  *gorm.DB
-	log *logger.Logger
+	db       *gorm.DB
+	log      *logger.Logger
+	emailSnd *email.Sender
+	smsSnd   *sms.Sender
 }
 
 func NewEmailTemplateService(db *gorm.DB, log *logger.Logger) *EmailTemplateService {
-	return &EmailTemplateService{db: db, log: log}
+	return &EmailTemplateService{
+		db:       db,
+		log:      log,
+		emailSnd: email.NewSender(db),
+		smsSnd:   sms.NewSender(db),
+	}
 }
 
 type CreateEmailTemplateRequest struct {
@@ -307,10 +316,25 @@ func (s *EmailTemplateService) renderString(tmplStr string, data map[string]inte
 	return buf.String(), nil
 }
 
-// dispatch dispatches a message via the specified type (placeholder).
+// dispatch dispatches a message via the specified type.
 func (s *EmailTemplateService) dispatch(msgType, to, subject, content string) error {
-	s.log.Infof("dispatch[%s] to=%s subject=%s", msgType, to, subject)
-	return nil
+	switch msgType {
+	case "email":
+		if s.emailSnd == nil {
+			return errors.New("email sender not configured")
+		}
+		return s.emailSnd.Send(to, subject, content)
+	case "sms":
+		if s.smsSnd == nil {
+			return errors.New("sms sender not configured")
+		}
+		return s.smsSnd.Send(to, content)
+	case "notice":
+		// In-app notice: already logged by caller
+		return nil
+	default:
+		return fmt.Errorf("unsupported message type: %s", msgType)
+	}
 }
 
 func toJSON(v interface{}) datatypes.JSON {

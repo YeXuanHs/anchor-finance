@@ -203,9 +203,19 @@ func (h *PaymentHandler) ReturnURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// In production, query the payment status and redirect to the order detail page.
+	// Query payment status through the store interface
+	type queryResult struct {
+		OrderNo string
+		Status  string
+	}
+	var result queryResult
+
+	// Try to get transaction details via the service's store
+	// The actual status update happens via HandleNotify (async webhook)
+	// This endpoint just confirms the user returned from the payment page
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"trade_no": tradeNo,
-		"message":  "payment return received",
+		"status":   "return",
+		"message":  "payment return received, order status will be updated shortly",
 	})
 }

@@ -103,3 +103,30 @@ func (h *ReportHandler) GetOrderStats(c *gin.Context) {
 	}
 	response.Success(c, stats)
 }
+
+// GetTopClients returns top clients ranked by spending.
+// GET /admin/reports/top-clients?limit=10&period=month
+func (h *ReportHandler) GetTopClients(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	period := c.DefaultQuery("period", "month")
+
+	data, err := h.reportSvc.GetTopClients(limit, period)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, data)
+}
+
+// GetProductIncome returns income breakdown by product.
+// GET /admin/reports/product-income?period=month
+func (h *ReportHandler) GetProductIncome(c *gin.Context) {
+	period := c.DefaultQuery("period", "month")
+
+	data, err := h.reportSvc.GetProductIncome(period)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, data)
+}

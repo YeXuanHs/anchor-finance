@@ -14,6 +14,13 @@ type Gateway interface {
 	ParseNotify(ctx context.Context, data []byte) (*NotifyResult, error)
 }
 
+// WebhookVerifier is an optional interface for gateways that support
+// cryptographic webhook signature verification. Handlers should prefer
+// VerifyAndParseNotify over ParseNotify when the gateway implements this.
+type WebhookVerifier interface {
+	VerifyAndParseNotify(ctx context.Context, data []byte, headers map[string]string) (*NotifyResult, error)
+}
+
 // PaymentParam contains the parameters needed to create a payment.
 type PaymentParam struct {
 	OrderNo     string

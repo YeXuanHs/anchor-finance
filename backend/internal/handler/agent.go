@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -348,13 +350,7 @@ func (h *AgentHandler) AdminConfirmCommission(c *gin.Context) {
 	response.SuccessMsg(c, "commission confirmed")
 }
 
-// generateAgentNo generates a unique agent number.
+// generateAgentNo generates a unique agent number using timestamp + random suffix.
 func generateAgentNo() string {
-	// Simple timestamp-based generator; replace with a proper sequence in production.
-	return "AG" + strconv.FormatInt(timeNow().UnixMicro(), 36)
-}
-
-func timeNow() *time.Time {
-	t := time.Now()
-	return &t
+	return fmt.Sprintf("AG%s%04d", time.Now().Format("20060102150405"), rand.Intn(10000))
 }

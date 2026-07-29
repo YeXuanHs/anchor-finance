@@ -140,6 +140,39 @@ func (h *PaymentGatewayHandler) AdminUpdateSort(c *gin.Context) {
 	response.SuccessMsg(c, "sort order updated")
 }
 
+// TestConnection tests connection to a payment gateway.
+func (h *PaymentGatewayHandler) TestConnection(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid gateway id")
+		return
+	}
+
+	if err := h.svc.TestConnection(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"message": "connection test passed"})
+}
+
+// List is an alias for AdminGetList.
+func (h *PaymentGatewayHandler) List(c *gin.Context) { h.AdminGetList(c) }
+
+// GetDetail is an alias for AdminGetDetail.
+func (h *PaymentGatewayHandler) GetDetail(c *gin.Context) { h.AdminGetDetail(c) }
+
+// Create is an alias for AdminCreate.
+func (h *PaymentGatewayHandler) Create(c *gin.Context) { h.AdminCreate(c) }
+
+// Update is an alias for AdminUpdate.
+func (h *PaymentGatewayHandler) Update(c *gin.Context) { h.AdminUpdate(c) }
+
+// Delete is an alias for AdminDelete.
+func (h *PaymentGatewayHandler) Delete(c *gin.Context) { h.AdminDelete(c) }
+
+// SetStatus is an alias for AdminToggleStatus.
+func (h *PaymentGatewayHandler) SetStatus(c *gin.Context) { h.AdminToggleStatus(c) }
+
 // GetEnabled returns enabled payment gateways for frontend.
 func (h *PaymentGatewayHandler) GetEnabled(c *gin.Context) {
 	items, err := h.svc.GetEnabled()

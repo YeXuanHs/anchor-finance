@@ -197,6 +197,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import type { FormInst, FormRules, StepsProps } from 'naive-ui'
+import request from '@/utils/request'
 import {
   MailOutline,
   ImageOutline,
@@ -217,6 +218,7 @@ const sendingCode = ref(false)
 const captchaUrl = ref('')
 const cooldown = ref(0)
 let cooldownTimer: ReturnType<typeof setInterval> | null = null
+const resetToken = ref('')
 
 const accountFormRef = ref<FormInst | null>(null)
 const verifyFormRef = ref<FormInst | null>(null)
@@ -307,7 +309,7 @@ const strengthLabel = computed(() => {
 })
 
 function refreshCaptcha() {
-  captchaUrl.value = `/api/captcha?t=${Date.now()}`
+  captchaUrl.value = `/api/v1/captcha/image?t=${Date.now()}`
 }
 
 function startCooldown() {
@@ -333,13 +335,22 @@ async function handleNextStep() {
   try {
     await accountFormRef.value?.validate()
     loading.value = true
-    // TODO: 调用发送验证码API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const account = accountForm.value.account
+    const isEmail = account.includes('@')
+    if (isEmail) {
+      await request.post('/api/v1/captcha/email', { email: account })
+    } else {
+      await request.post('/api/v1/captcha/sms', { phone: account })
+    }
     message.success('验证码已发送')
     currentStep.value = 2
     startCooldown()
-  } catch {
-    message.error('请正确填写账号和验证码')
+  } catch (e: any) {
+    if (e?.response?.data?.message) {
+      message.error(e.response.data.message)
+    } else {
+      message.error('请正确填写账号和验证码')
+    }
   } finally {
     loading.value = false
   }
@@ -349,12 +360,19 @@ async function handleVerifyCode() {
   try {
     await verifyFormRef.value?.validate()
     loading.value = true
-    // TODO: 调用验证码校验API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const { data } = await request.post('/api/v1/password/verify-code', {
+      account: accountForm.value.account,
+      code: verifyForm.value.verifyCode
+    })
+    resetToken.value = data?.data?.token || ''
     message.success('身份验证成功')
     currentStep.value = 3
-  } catch {
-    message.error('验证码错误或已过期')
+  } catch (e: any) {
+    if (e?.response?.data?.message) {
+      message.error(e.response.data.message)
+    } else {
+      message.error('验证码错误或已过期')
+    }
   } finally {
     loading.value = false
   }
@@ -363,12 +381,17 @@ async function handleVerifyCode() {
 async function handleResendCode() {
   sendingCode.value = true
   try {
-    // TODO: 调用重新发送验证码API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const account = accountForm.value.account
+    const isEmail = account.includes('@')
+    if (isEmail) {
+      await request.post('/api/v1/captcha/email', { email: account })
+    } else {
+      await request.post('/api/v1/captcha/sms', { phone: account })
+    }
     message.success('验证码已重新发送')
     startCooldown()
-  } catch {
-    message.error('发送失败，请稍后重试')
+  } catch (e: any) {
+    message.error(e?.response?.data?.message || '发送失败，请稍后重试')
   } finally {
     sendingCode.value = false
   }
@@ -378,13 +401,22 @@ async function handleResetPassword() {
   try {
     await passwordFormRef.value?.validate()
     loading.value = true
-    // TODO: 调用重置密码API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await request.post('/api/v1/password/reset', {
+      account: accountForm.value.account,
+      code: verifyForm.value.verifyCode,
+      token: resetToken.value,
+      new_password: passwordForm.value.newPassword,
+      confirm_password: passwordForm.value.confirmPassword
+    })
     message.success('密码重置成功')
     currentStep.value = 4
     stepStatus.value = 'finish'
-  } catch {
-    message.error('请正确填写新密码')
+  } catch (e: any) {
+    if (e?.response?.data?.message) {
+      message.error(e.response.data.message)
+    } else {
+      message.error('请正确填写新密码')
+    }
   } finally {
     loading.value = false
   }

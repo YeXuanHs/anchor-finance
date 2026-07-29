@@ -28,13 +28,14 @@ type Order struct {
 }
 
 type OrderService struct {
-	db    *gorm.DB
-	log   *logger.Logger
-	invSvc *InvoiceService
+	db      *gorm.DB
+	log     *logger.Logger
+	invSvc  *InvoiceService
+	provSvc *ProvisionService
 }
 
-func NewOrderService(db *gorm.DB, log *logger.Logger, invSvc *InvoiceService) *OrderService {
-	return &OrderService{db: db, log: log, invSvc: invSvc}
+func NewOrderService(db *gorm.DB, log *logger.Logger, invSvc *InvoiceService, provSvc *ProvisionService) *OrderService {
+	return &OrderService{db: db, log: log, invSvc: invSvc, provSvc: provSvc}
 }
 
 type CreateOrderRequest struct {
@@ -166,6 +167,16 @@ func (s *OrderService) Pay(orderID uint) (*Order, error) {
 	}
 
 	s.log.Infof("order paid: %s", order.OrderNo)
+
+	// Trigger auto-provisioning asynchronously
+	if s.provSvc != nil {
+		go func() {
+			if err := s.provSvc.ProvisionOrder(order.ID); err != nil {
+				s.log.Errorf("auto-provision for order %d failed: %v", order.ID, err)
+			}
+		}()
+	}
+
 	return s.GetByID(orderID)
 }
 

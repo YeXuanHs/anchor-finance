@@ -67,6 +67,37 @@ func (h *KnowledgeHandler) GetArticle(c *gin.Context) {
 	response.Success(c, article)
 }
 
+// GetHot returns the most viewed knowledge articles.
+func (h *KnowledgeHandler) GetHot(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if limit < 1 || limit > 50 {
+		limit = 10
+	}
+	articles, err := h.knowledgeSvc.GetHotArticles(limit)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, articles)
+}
+
+// Search searches knowledge articles by keyword.
+func (h *KnowledgeHandler) Search(c *gin.Context) {
+	keyword := c.Query("q")
+	if keyword == "" {
+		keyword = c.Query("keyword")
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	articles, total, err := h.knowledgeSvc.SearchArticles(keyword, page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, articles, total, page, pageSize)
+}
+
 // MarkHelpful marks an article as helpful or not helpful.
 func (h *KnowledgeHandler) MarkHelpful(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)

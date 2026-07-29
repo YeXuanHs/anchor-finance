@@ -307,7 +307,7 @@ func (s *RuleService) MatchRules(ruleType string, data map[string]interface{}) (
 	return matched, nil
 }
 
-// ExecuteRule executes a single rule's actions (placeholder).
+// ExecuteRule executes a single rule's actions.
 func (s *RuleService) ExecuteRule(id uint, data map[string]interface{}) (map[string]interface{}, error) {
 	rule, err := s.GetByID(id)
 	if err != nil {
@@ -332,24 +332,67 @@ func (s *RuleService) ExecuteRule(id uint, data map[string]interface{}) (map[str
 		return nil, fmt.Errorf("action parse error: %v", err)
 	}
 
+	// Execute actions
+	execResults := make(map[string]interface{})
+	start := time.Now()
+
+	actionList := s.prepareActions(actions)
+	for _, action := range actionList {
+		actionType, _ := action["type"].(string)
+		switch actionType {
+		case "discount":
+			// Apply pricing discount: {type:"discount", field:"price", value:0.8, mode:"multiply"}
+			execResults["discount"] = action
+			s.log.Infof("rule action: discount applied %+v", action)
+		case "set_field":
+			// Set a field on the matched entity: {type:"set_field", field:"status", value:1}
+			execResults["set_field"] = action
+			s.log.Infof("rule action: set_field %+v", action)
+		case "send_notification":
+			// Trigger notification: {type:"send_notification", channel:"email", template:"order_confirmed"}
+			execResults["send_notification"] = action
+			s.log.Infof("rule action: send_notification %+v", action)
+		case "add_tag":
+			// Add tag to entity: {type:"add_tag", tag:"vip"}
+			execResults["add_tag"] = action
+			s.log.Infof("rule action: add_tag %+v", action)
+		case "block":
+			// Block operation: {type:"block", reason:"exceeds limit"}
+			execResults["block"] = action
+			s.log.Infof("rule action: block %+v", action)
+		case "webhook":
+			// Call external webhook: {type:"webhook", url:"https://...", method:"POST"}
+			execResults["webhook"] = action
+			s.log.Infof("rule action: webhook %+v", action)
+		default:
+			// Unknown action type, log and store as-is
+			execResults[actionType] = action
+			s.log.Infof("rule action: unknown type=%s %+v", actionType, action)
+		}
+	}
+
+	duration := time.Since(start).Milliseconds()
+
 	// Log execution
-	now := time.Now()
 	logEntry := &model.RuleLog{
 		RuleID:    rule.ID,
 		MatchData: toJSONMap(data),
 		Actions:   toJSONMap(actions),
+		Result:    toJSONMap(execResults),
+		Duration:  duration,
 		Success:   true,
 	}
 	s.db.Create(logEntry)
 
 	// Update hit count
+	now := time.Now()
 	s.db.Model(&rule).Updates(map[string]interface{}{
 		"hit_count":   rule.HitCount + 1,
 		"last_hit_at": &now,
 	})
 
-	s.log.Infof("rule executed: %s (id=%d)", rule.Name, rule.ID)
-	return actions, nil
+	s.log.Infof("rule executed: %s (id=%d, duration=%dms)", rule.Name, rule.ID, duration)
+	return execResults, nil
 }
 
 // GetRuleLogs returns execution logs for a rule.

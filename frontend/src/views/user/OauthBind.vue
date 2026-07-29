@@ -44,7 +44,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import request from '@/utils/request'
 
 const providers = ref([
   {
@@ -77,12 +79,44 @@ const providers = ref([
   }
 ])
 
+onMounted(async () => {
+  try {
+    const { data } = await request.get('/api/v1/oauth/providers')
+    if (data?.data?.list?.length) {
+      providers.value = data.data.list.map((p: any) => ({
+        name: p.slug || p.name,
+        label: p.display_name || p.name,
+        icon: p.icon || `/assets/oauth/${p.slug || p.name}.svg`,
+        bound: false,
+        account: ''
+      }))
+    }
+    // Fetch bound accounts
+    const { data: bindData } = await request.get('/api/v1/oauth/accounts')
+    if (bindData?.data) {
+      const boundMap = new Map(bindData.data.map((b: any) => [b.provider, b]))
+      providers.value.forEach(p => {
+        const bound = boundMap.get(p.name)
+        if (bound) {
+          p.bound = true
+          p.account = bound.username || bound.email || ''
+        }
+      })
+    }
+  } catch (e) {
+    console.error('Failed to fetch OAuth providers:', e)
+  }
+})
+
 const bind = (provider: any) => {
-  // TODO: 跳转到第三方授权页面
+  window.location.href = `/api/v1/oauth/${provider.name}?action=bind`
 }
 
 const unbind = async (provider: any) => {
-  // TODO: 解绑第三方账号
+  await request.post(`/api/v1/oauth/${provider.name}/unbind`)
+  provider.bound = false
+  provider.account = ''
+  ElMessage.success('解绑成功')
 }
 </script>
 

@@ -51,23 +51,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import request from '@/utils/request'
 
 const showAddDialog = ref(false)
 const showConfigDialog = ref(false)
 const currentPayment = ref<any>(null)
 
-const paymentMethods = ref([
-  { id: 1, name: '支付宝', gateway: 'alipay', enabled: true },
-  { id: 2, name: '微信支付', gateway: 'wechat', enabled: true },
-  { id: 3, name: '虎皮椒', gateway: 'xunhupay', enabled: false },
-  { id: 4, name: '易支付', gateway: 'epay', enabled: false },
-  { id: 5, name: 'USDT', gateway: 'usdt', enabled: false },
-  { id: 6, name: 'PayPal', gateway: 'paypal', enabled: false },
-  { id: 7, name: 'Stripe', gateway: 'stripe', enabled: false },
-  { id: 8, name: '余额支付', gateway: 'balance', enabled: true }
-])
+const paymentMethods = ref<any[]>([])
+
+const fetchPaymentMethods = async () => {
+  try {
+    const { data } = await request.get('/admin/payment-gateways')
+    if (data?.data) {
+      paymentMethods.value = data.data
+    }
+  } catch {
+    ElMessage.error('获取支付方式列表失败')
+  }
+}
 
 const configForm = ref({
   app_id: '',
@@ -76,26 +79,49 @@ const configForm = ref({
   callback_url: ''
 })
 
-const togglePayment = (payment: any) => {
-  // TODO: 切换支付方式状态
-  ElMessage.success(`${payment.name} 已${payment.enabled ? '启用' : '禁用'}`)
+const togglePayment = async (payment: any) => {
+  try {
+    await request.put(`/admin/api/v1/system/payment/${payment.id}/toggle`, { enabled: payment.enabled })
+    ElMessage.success(`${payment.name} 已${payment.enabled ? '启用' : '禁用'}`)
+  } catch {
+    payment.enabled = !payment.enabled
+    ElMessage.error('操作失败')
+  }
 }
 
-const editPayment = (payment: any) => {
+const editPayment = async (payment: any) => {
   currentPayment.value = payment
   showConfigDialog.value = true
-  // TODO: 加载配置
+  try {
+    const { data } = await request.get(`/admin/api/v1/system/payment/${payment.id}/config`)
+    if (data.data) {
+      configForm.value = { ...configForm.value, ...data.data }
+    }
+  } catch {}
 }
 
 const deletePayment = async (payment: any) => {
-  // TODO: 删除支付方式
+  try {
+    await ElMessageBox.confirm(`确认删除 ${payment.name}？`, '提示', { type: 'warning' })
+    await request.delete(`/admin/api/v1/system/payment/${payment.id}`)
+    paymentMethods.value = paymentMethods.value.filter((p: any) => p.id !== payment.id)
+    ElMessage.success('删除成功')
+  } catch {}
 }
 
 const saveConfig = async () => {
-  // TODO: 保存配置
-  showConfigDialog.value = false
-  ElMessage.success('配置已保存')
+  try {
+    await request.put(`/admin/api/v1/system/payment/${currentPayment.value.id}/config`, configForm.value)
+    showConfigDialog.value = false
+    ElMessage.success('配置已保存')
+  } catch {
+    ElMessage.error('保存失败')
+  }
 }
+
+onMounted(() => {
+  fetchPaymentMethods()
+})
 </script>
 
 <style scoped lang="scss">

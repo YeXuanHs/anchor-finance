@@ -126,6 +126,16 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 	})
 }
 
+// Redirect is an alias for Login (OAuth redirect).
+func (h *OAuthHandler) Redirect(c *gin.Context) {
+	h.Login(c)
+}
+
+// Unbind is an alias for UnbindAccount.
+func (h *OAuthHandler) Unbind(c *gin.Context) {
+	h.UnbindAccount(c)
+}
+
 // BindAccount binds an OAuth account to the currently authenticated user.
 func (h *OAuthHandler) BindAccount(c *gin.Context) {
 	var req struct {

@@ -30,7 +30,6 @@ type Deps struct {
 	OrdSvc   *service.OrderService
 	InvSvc   *service.InvoiceService
 	TicSvc   *service.TicketService
-	PaySvc   *service.PaymentService
 	CartSvc  *service.CartService
 	OAuthSvc *service.OAuthService
 }
@@ -55,12 +54,14 @@ func NewServer(cfg *config.Config, jwtMgr *auth.JWTManager) *Server {
 	// Initialize all services
 	userSvc := service.NewUserService(dbConn, log)
 	prodSvc := service.NewProductService(dbConn, log)
-	ordSvc := service.NewOrderService(dbConn, log)
 	invSvc := service.NewInvoiceService(dbConn, log)
+	provSvc := service.NewProvisionService(dbConn, log)
+	ordSvc := service.NewOrderService(dbConn, log, invSvc, provSvc)
 	ticSvc := service.NewTicketService(dbConn, log)
-	paySvc := service.NewPaymentService(dbConn, log)
-	cartSvc := service.NewCartService(dbConn, log)
-	oauthSvc := service.NewOAuthService(dbConn, log)
+	couponSvc := service.NewCouponService(dbConn, log)
+	cartSvc := service.NewCartService(dbConn, log, ordSvc, couponSvc)
+	frontendURL := db.GetSystemSetting("frontend_url")
+	oauthSvc := service.NewOAuthService(dbConn, log, userSvc, frontendURL)
 
 	deps := &Deps{
 		DB:       dbConn,
@@ -72,7 +73,6 @@ func NewServer(cfg *config.Config, jwtMgr *auth.JWTManager) *Server {
 		OrdSvc:   ordSvc,
 		InvSvc:   invSvc,
 		TicSvc:   ticSvc,
-		PaySvc:   paySvc,
 		CartSvc:  cartSvc,
 		OAuthSvc: oauthSvc,
 	}
@@ -92,6 +92,7 @@ func NewServer(cfg *config.Config, jwtMgr *auth.JWTManager) *Server {
 
 // setupMiddleware registers global middleware.
 func (s *Server) setupMiddleware() {
+	middleware.Init(s.jwtManager)
 	s.router.Use(middleware.Recovery())
 	s.router.Use(middleware.Logger())
 	s.router.Use(middleware.CORS())
@@ -127,14 +128,17 @@ func (s *Server) setupRoutes() {
 // toV1Deps converts Deps to v1.Deps.
 func (d *Deps) toV1Deps() v1.Deps {
 	return v1.Deps{
-		DB:      d.DB,
-		Log:     d.Log,
-		JWTKey:  d.JWTKey,
-		UserSvc: d.UserSvc,
-		ProdSvc: d.ProdSvc,
-		OrdSvc:  d.OrdSvc,
-		InvSvc:  d.InvSvc,
-		TicSvc:  d.TicSvc,
+		DB:       d.DB,
+		Redis:    d.Redis,
+		Log:      d.Log,
+		JWTKey:   d.JWTKey,
+		UserSvc:  d.UserSvc,
+		ProdSvc:  d.ProdSvc,
+		OrdSvc:   d.OrdSvc,
+		InvSvc:   d.InvSvc,
+		TicSvc:   d.TicSvc,
+		CartSvc:  d.CartSvc,
+		OAuthSvc: d.OAuthSvc,
 	}
 }
 

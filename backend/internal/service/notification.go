@@ -2,11 +2,17 @@ package service
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
+	"net/http"
 	"time"
 
+	"anchorfinance/internal/model"
+	"anchorfinance/pkg/email"
 	"anchorfinance/pkg/logger"
+	"anchorfinance/pkg/sms"
 
 	"gorm.io/gorm"
 )
@@ -41,12 +47,21 @@ type NotificationLog struct {
 }
 
 type NotificationService struct {
-	db  *gorm.DB
-	log *logger.Logger
+	db        *gorm.DB
+	log       *logger.Logger
+	emailSnd  *email.Sender
+	smsSnd    *sms.Sender
+	wechatSvc *WechatService
 }
 
-func NewNotificationService(db *gorm.DB, log *logger.Logger) *NotificationService {
-	return &NotificationService{db: db, log: log}
+func NewNotificationService(db *gorm.DB, log *logger.Logger, wechatSvc *WechatService) *NotificationService {
+	return &NotificationService{
+		db:        db,
+		log:       log,
+		emailSnd:  email.NewSender(db),
+		smsSnd:    sms.NewSender(db),
+		wechatSvc: wechatSvc,
+	}
 }
 
 type SendRequest struct {
@@ -97,8 +112,7 @@ func (s *NotificationService) Send(userID uint, channel, templateCode string, da
 		return err
 	}
 
-	// 实际发送逻辑按 channel 分发（此处为占位）
-	if err := s.dispatch(channel, to, subject, content); err != nil {
+	if err := s.dispatch(channel, to, subject, content, userID); err != nil {
 		now := time.Now()
 		s.db.Model(logEntry).Updates(map[string]interface{}{
 			"status": 3,
@@ -240,9 +254,96 @@ func (s *NotificationService) renderString(tmplStr string, data map[string]inter
 	return buf.String(), nil
 }
 
-// dispatch dispatches a message via the specified channel (placeholder).
-func (s *NotificationService) dispatch(channel, to, subject, content string) error {
-	// 实际实现中按 channel 调用邮件/短信/微信/Webhook SDK
-	s.log.Infof("dispatch[%s] to=%s subject=%s", channel, to, subject)
+// dispatch dispatches a message via the specified channel.
+func (s *NotificationService) dispatch(channel, to, subject, content string, userID uint) error {
+	switch channel {
+	case "email":
+		if s.emailSnd == nil {
+			return errors.New("email sender not configured")
+		}
+		return s.emailSnd.Send(to, subject, content)
+	case "sms":
+		if s.smsSnd == nil {
+			return errors.New("sms sender not configured")
+		}
+		return s.smsSnd.Send(to, content)
+	case "wechat":
+		return s.dispatchWechat(to, subject, content, userID)
+	case "webhook":
+		return s.dispatchWebhook(to, subject, content)
+	case "notice":
+		return nil
+	default:
+		return fmt.Errorf("unsupported notification channel: %s", channel)
+	}
+}
+
+// dispatchWechat sends a WeChat template message to the user.
+func (s *NotificationService) dispatchWechat(to, subject, content string, userID uint) error {
+	if s.wechatSvc == nil {
+		s.log.Warnf("wechat dispatch skipped: wechat service not configured (user=%d)", userID)
+		return nil
+	}
+
+	// Resolve OpenID: use 'to' if provided, otherwise look up from wechat_users table
+	openID := to
+	if openID == "" && userID > 0 {
+		var wechatUser model.WechatUser
+		if err := s.db.Where("user_id = ? AND is_subscribe = true", userID).First(&wechatUser).Error; err != nil {
+			s.log.Warnf("wechat dispatch skipped: no wechat binding for user %d: %v", userID, err)
+			return nil
+		}
+		openID = wechatUser.OpenID
+	}
+
+	if openID == "" {
+		s.log.Warnf("wechat dispatch skipped: no open_id available (user=%d)", userID)
+		return nil
+	}
+
+	data := map[string]string{
+		"first":    subject,
+		"keyword1": content,
+		"keyword2": time.Now().Format("2006-01-02 15:04:05"),
+	}
+
+	if err := s.wechatSvc.SendTemplateMessage(openID, "", data, ""); err != nil {
+		return fmt.Errorf("wechat template message failed: %w", err)
+	}
+	s.log.Infof("wechat dispatch success: open_id=%s user=%d", openID, userID)
+	return nil
+}
+
+// dispatchWebhook sends a notification payload to a webhook URL via HTTP POST.
+func (s *NotificationService) dispatchWebhook(webhookURL, subject, content string) error {
+	if webhookURL == "" {
+		return errors.New("webhook URL is empty")
+	}
+
+	payload := map[string]interface{}{
+		"subject":   subject,
+		"content":   content,
+		"timestamp": time.Now().Unix(),
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal webhook payload: %w", err)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Post(webhookURL, "application/json", bytes.NewReader(jsonData))
+	if err != nil {
+		s.log.Errorf("webhook dispatch failed: url=%s err=%v", webhookURL, err)
+		return fmt.Errorf("webhook request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		s.log.Errorf("webhook dispatch error: url=%s status=%d", webhookURL, resp.StatusCode)
+		return fmt.Errorf("webhook returned status %d", resp.StatusCode)
+	}
+
+	s.log.Infof("webhook dispatch success: url=%s status=%d", webhookURL, resp.StatusCode)
 	return nil
 }

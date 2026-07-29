@@ -144,6 +144,42 @@ func (s *KnowledgeService) MarkHelpful(articleID uint, helpful bool) error {
 	return s.db.Model(&article).UpdateColumn("not_help_count", gorm.Expr("not_help_count + 1")).Error
 }
 
+// GetHotArticles returns the most viewed published articles.
+func (s *KnowledgeService) GetHotArticles(limit int) ([]model.KnowledgeArticle, error) {
+	var articles []model.KnowledgeArticle
+	if err := s.db.Where("is_published = ?", true).
+		Order("view_count DESC").
+		Limit(limit).
+		Find(&articles).Error; err != nil {
+		return nil, err
+	}
+	return articles, nil
+}
+
+// SearchArticles searches published articles by keyword with pagination.
+func (s *KnowledgeService) SearchArticles(keyword string, page, pageSize int) ([]model.KnowledgeArticle, int64, error) {
+	var articles []model.KnowledgeArticle
+	var total int64
+
+	query := s.db.Model(&model.KnowledgeArticle{}).Where("is_published = ?", true)
+	if keyword != "" {
+		q := "%" + keyword + "%"
+		query = query.Where("title LIKE ? OR keywords LIKE ? OR summary LIKE ? OR content LIKE ?", q, q, q, q)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset, limit := Paginate(page, pageSize)
+	if err := query.Offset(offset).Limit(limit).
+		Order("view_count DESC, id DESC").
+		Find(&articles).Error; err != nil {
+		return nil, 0, err
+	}
+	return articles, total, nil
+}
+
 // AdminGetArticles returns all articles (including unpublished) with pagination.
 func (s *KnowledgeService) AdminGetArticles(page, pageSize int, categoryID uint, keyword string) ([]model.KnowledgeArticle, int64, error) {
 	var articles []model.KnowledgeArticle

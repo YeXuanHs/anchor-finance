@@ -80,12 +80,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
 const statusFilter = ref('all')
 const showCreateDialog = ref(false)
+const loading = ref(false)
 
 interface Ticket {
   id: number
@@ -99,14 +101,17 @@ interface Ticket {
   updatedAt: string
 }
 
-const tickets = ref<Ticket[]>([
-  { id: 10001, title: '服务器连接异常', description: '香港云服务器从今天早上开始无法正常SSH连接，已尝试重启但问题依然存在。', status: 'open', statusText: '处理中', department: '技术支持', priority: 'high', priorityText: '高', updatedAt: '2026-07-26 10:30' },
-  { id: 10002, title: 'SSL证书部署咨询', description: '新购买的OV SSL证书不知道如何部署到Nginx服务器上，希望得到指导。', status: 'replied', statusText: '已回复', department: '技术支持', priority: 'medium', priorityText: '中', updatedAt: '2026-07-24 16:20' },
-  { id: 10003, title: '退款申请', description: '新加坡VPS产品不再使用，申请退还剩余费用。', status: 'closed', statusText: '已关闭', department: '财务部门', priority: 'low', priorityText: '低', updatedAt: '2026-07-20 09:00' },
-  { id: 10004, title: '账单异常扣费', description: '7月份账单金额与实际产品价格不符，请核实。', status: 'open', statusText: '处理中', department: '财务部门', priority: 'urgent', priorityText: '紧急', updatedAt: '2026-07-25 14:45' }
-])
+const tickets = ref<Ticket[]>([])
 
 const newTicket = reactive({ title: '', department: '', priority: 'medium', description: '' })
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/tickets')
+    tickets.value = data.data?.list || data.list || data.data || []
+  } catch (e) { console.error(e) } finally { loading.value = false }
+})
 
 const filteredTickets = computed(() => {
   if (statusFilter.value === 'all') return tickets.value
@@ -129,14 +134,24 @@ function getPriorityType(priority: string) {
 
 function handleView(ticket: Ticket) { ElMessage.info(`查看工单：#${ticket.id}`) }
 
-function handleCreateTicket() {
+async function handleCreateTicket() {
   if (!newTicket.title || !newTicket.description) { ElMessage.warning('请填写完整信息'); return }
-  showCreateDialog.value = false
-  ElMessage.success('工单已提交')
-  newTicket.title = ''
-  newTicket.department = ''
-  newTicket.priority = 'medium'
-  newTicket.description = ''
+  try {
+    await request.post('/api/v1/tickets', {
+      title: newTicket.title,
+      department: newTicket.department,
+      priority: newTicket.priority,
+      description: newTicket.description
+    })
+    showCreateDialog.value = false
+    ElMessage.success('工单已提交')
+    newTicket.title = ''
+    newTicket.department = ''
+    newTicket.priority = 'medium'
+    newTicket.description = ''
+    const { data } = await request.get('/api/v1/tickets')
+    tickets.value = data.data?.list || data.list || data.data || []
+  } catch (e: any) { ElMessage.error(e?.message || '提交失败，请重试') }
 }
 </script>
 

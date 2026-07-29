@@ -153,6 +153,24 @@ func (h *BannerHandler) GetActive(c *gin.Context) {
 	response.Success(c, items)
 }
 
+// List is an alias for AdminGetList.
+func (h *BannerHandler) List(c *gin.Context) { h.AdminGetList(c) }
+
+// GetDetail is an alias for AdminGetDetail.
+func (h *BannerHandler) GetDetail(c *gin.Context) { h.AdminGetDetail(c) }
+
+// Create is an alias for AdminCreate.
+func (h *BannerHandler) Create(c *gin.Context) { h.AdminCreate(c) }
+
+// Update is an alias for AdminUpdate.
+func (h *BannerHandler) Update(c *gin.Context) { h.AdminUpdate(c) }
+
+// Delete is an alias for AdminDelete.
+func (h *BannerHandler) Delete(c *gin.Context) { h.AdminDelete(c) }
+
+// SetStatus is an alias for AdminToggleStatus.
+func (h *BannerHandler) SetStatus(c *gin.Context) { h.AdminToggleStatus(c) }
+
 // Click records a banner click and redirects to the link.
 func (h *BannerHandler) Click(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)

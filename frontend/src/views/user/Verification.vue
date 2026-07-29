@@ -129,6 +129,7 @@ import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { CircleCheck, Warning, Upload } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
 const verified = ref(false)
 const submitting = ref(false)
@@ -158,9 +159,15 @@ async function handleSubmit() {
   try {
     await formRef.value.validate()
     submitting.value = true
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    const formData = new FormData()
+    formData.append('realName', form.realName)
+    formData.append('idType', form.idType)
+    formData.append('idNumber', form.idNumber)
+    if (form.idFront) formData.append('idFront', form.idFront)
+    if (form.idBack) formData.append('idBack', form.idBack)
+    await request.post('/api/v1/certification/submit', formData)
     ElMessage.success('认证信息已提交，请等待审核')
-  } catch {} finally { submitting.value = false }
+  } catch (e: any) { ElMessage.error(e?.message || '提交失败，请重试') } finally { submitting.value = false }
 }
 </script>
 

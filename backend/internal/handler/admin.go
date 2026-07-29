@@ -50,15 +50,34 @@ func (h *AdminHandler) Dashboard(c *gin.Context) {
 // Stats returns period-based statistics.
 func (h *AdminHandler) Stats(c *gin.Context) {
 	period := c.DefaultQuery("period", "today")
-	_ = period // date-range filtering in real impl
+
+	var startClause string
+	switch period {
+	case "today":
+		startClause = "CURRENT_DATE"
+	case "week":
+		startClause = "CURRENT_DATE - INTERVAL '7 days'"
+	case "month":
+		startClause = "CURRENT_DATE - INTERVAL '30 days'"
+	case "year":
+		startClause = "CURRENT_DATE - INTERVAL '1 year'"
+	default:
+		startClause = "CURRENT_DATE"
+	}
 
 	var newUsers, newOrders int64
-	h.db.Model(&service.User{}).Where("created_at >= CURDATE()").Count(&newUsers)
-	h.db.Model(&service.Order{}).Where("created_at >= CURDATE()").Count(&newOrders)
+	h.db.Model(&service.User{}).Where("created_at >= "+startClause).Count(&newUsers)
+	h.db.Model(&service.Order{}).Where("created_at >= "+startClause).Count(&newOrders)
+
+	var revenue float64
+	h.db.Model(&service.Invoice{}).Where("status = 1 AND paid_at >= "+startClause).
+		Select("COALESCE(SUM(amount),0)").Scan(&revenue)
 
 	response.Success(c, gin.H{
 		"new_users":  newUsers,
 		"new_orders": newOrders,
+		"revenue":    revenue,
+		"period":     period,
 	})
 }
 

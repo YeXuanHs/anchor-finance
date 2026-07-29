@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"anchorfinance/internal/util"
@@ -32,6 +33,34 @@ type TicketReply struct {
 	IsAdmin   bool      `gorm:"default:false" json:"is_admin"`
 	Content   string    `gorm:"type:text;not null" json:"content"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type TicketAttachment struct {
+	ID           uint   `gorm:"primaryKey" json:"id"`
+	TicketID     uint   `gorm:"index;not null" json:"ticket_id"`
+	ReplyID      *uint  `gorm:"index" json:"reply_id"`
+	FileName     string `gorm:"type:varchar(255);not null" json:"file_name"`
+	FilePath     string `gorm:"type:varchar(512);not null" json:"file_path"`
+	FileSize     int64  `gorm:"not null" json:"file_size"`
+	MimeType     string `gorm:"type:varchar(128)" json:"mime_type"`
+	UploaderID   uint   `gorm:"index;not null" json:"uploader_id"`
+	StorageDriver string `gorm:"type:varchar(32);default:'local'" json:"storage_driver"`
+	StorageKey   string `gorm:"type:varchar(512)" json:"storage_key"`
+	Hash         string `gorm:"type:varchar(64);index" json:"hash"`
+}
+
+func (TicketAttachment) TableName() string { return "attachments" }
+
+type TicketTransferLog struct {
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	TicketID   uint      `gorm:"index;not null" json:"ticket_id"`
+	FromDeptID *uint     `json:"from_dept_id"`
+	ToDeptID   *uint     `json:"to_dept_id"`
+	FromAgentID *uint    `json:"from_agent_id"`
+	ToAgentID  *uint     `json:"to_agent_id"`
+	OperatorID uint      `gorm:"not null" json:"operator_id"`
+	Reason     string    `gorm:"type:text" json:"reason"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type TicketService struct {
@@ -193,4 +222,144 @@ func (s *TicketService) GetList(page, pageSize int, status *int, keyword string)
 		return nil, 0, err
 	}
 	return tickets, total, nil
+}
+
+// UploadAttachment saves an attachment record for a ticket or reply.
+func (s *TicketService) UploadAttachment(ticketID uint, replyID *uint, fileName, filePath string, fileSize int64, mimeType, hash string, uploaderID uint) (*TicketAttachment, error) {
+	var ticket Ticket
+	if err := s.db.First(&ticket, ticketID).Error; err != nil {
+		return nil, errors.New("ticket not found")
+	}
+
+	att := &TicketAttachment{
+		TicketID:   ticketID,
+		ReplyID:    replyID,
+		FileName:   fileName,
+		FilePath:   filePath,
+		FileSize:   fileSize,
+		MimeType:   mimeType,
+		UploaderID: uploaderID,
+		Hash:       hash,
+	}
+
+	if err := s.db.Create(att).Error; err != nil {
+		return nil, err
+	}
+
+	s.log.Infof("attachment uploaded: ticket=%d file=%s size=%d", ticketID, fileName, fileSize)
+	return att, nil
+}
+
+// GetAttachments returns all attachments for a ticket.
+func (s *TicketService) GetAttachments(ticketID uint) ([]TicketAttachment, error) {
+	var attachments []TicketAttachment
+	if err := s.db.Where("ticket_id = ?", ticketID).Order("id ASC").Find(&attachments).Error; err != nil {
+		return nil, err
+	}
+	return attachments, nil
+}
+
+// DeleteAttachment deletes an attachment after verifying uploader ownership.
+func (s *TicketService) DeleteAttachment(id, userID uint) error {
+	var att TicketAttachment
+	if err := s.db.First(&att, id).Error; err != nil {
+		return errors.New("attachment not found")
+	}
+	if att.UploaderID != userID {
+		return errors.New("permission denied")
+	}
+	return s.db.Delete(&att).Error
+}
+
+// MergeTickets merges multiple source tickets into a target ticket.
+// All replies from source tickets are moved to the target; sources are marked as merged.
+func (s *TicketService) MergeTickets(sourceIDs []uint, targetID uint, operatorID uint) error {
+	if len(sourceIDs) == 0 {
+		return errors.New("no source tickets provided")
+	}
+
+	var target Ticket
+	if err := s.db.First(&target, targetID).Error; err != nil {
+		return errors.New("target ticket not found")
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		for _, srcID := range sourceIDs {
+			if srcID == targetID {
+				continue
+			}
+
+			var src Ticket
+			if err := tx.First(&src, srcID).Error; err != nil {
+				return fmt.Errorf("source ticket %d not found", srcID)
+			}
+
+			// Move replies to target ticket
+			if err := tx.Model(&TicketReply{}).Where("ticket_id = ?", srcID).Update("ticket_id", targetID).Error; err != nil {
+				return fmt.Errorf("failed to move replies from ticket %d: %w", srcID, err)
+			}
+
+			// Move attachments to target ticket
+			if err := tx.Model(&TicketAttachment{}).Where("ticket_id = ?", srcID).Update("ticket_id", targetID).Error; err != nil {
+				return fmt.Errorf("failed to move attachments from ticket %d: %w", srcID, err)
+			}
+
+			// Mark source as merged (status=5 = cancelled, merged_into=targetID)
+			if err := tx.Model(&src).Updates(map[string]interface{}{
+				"status":      5,
+				"merged_into": targetID,
+			}).Error; err != nil {
+				return fmt.Errorf("failed to mark ticket %d as merged: %w", srcID, err)
+			}
+		}
+
+		s.log.Infof("tickets merged into %d by operator %d, sources: %v", targetID, operatorID, sourceIDs)
+		return nil
+	})
+}
+
+// TransferTicket transfers a ticket to another department/agent and logs the transfer.
+func (s *TicketService) TransferTicket(ticketID uint, toDeptID *uint, toAgentID *uint, operatorID uint, reason string) error {
+	var ticket Ticket
+	if err := s.db.First(&ticket, ticketID).Error; err != nil {
+		return errors.New("ticket not found")
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		updates := map[string]interface{}{}
+		if toDeptID != nil {
+			updates["department_id"] = *toDeptID
+		}
+		if toAgentID != nil {
+			updates["assignee_id"] = *toAgentID
+		}
+		if len(updates) > 0 {
+			if err := tx.Model(&ticket).Updates(updates).Error; err != nil {
+				return err
+			}
+		}
+
+		log := &TicketTransferLog{
+			TicketID:   ticketID,
+			ToDeptID:   toDeptID,
+			ToAgentID:  toAgentID,
+			OperatorID: operatorID,
+			Reason:     reason,
+		}
+		if err := tx.Create(log).Error; err != nil {
+			return err
+		}
+
+		s.log.Infof("ticket %d transferred by operator %d", ticketID, operatorID)
+		return nil
+	})
+}
+
+// GetTransferLogs returns the transfer history for a ticket.
+func (s *TicketService) GetTransferLogs(ticketID uint) ([]TicketTransferLog, error) {
+	var logs []TicketTransferLog
+	if err := s.db.Where("ticket_id = ?", ticketID).Order("id DESC").Find(&logs).Error; err != nil {
+		return nil, err
+	}
+	return logs, nil
 }

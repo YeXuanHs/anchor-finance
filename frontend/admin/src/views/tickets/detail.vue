@@ -102,6 +102,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import request from '@/utils/request'
 
 const route = useRoute()
 const replyContent = ref('')
@@ -155,21 +157,53 @@ const getPriorityType = (priority: string) => {
   return map[priority] || 'info'
 }
 
+const fetchTicket = async () => {
+  try {
+    const { data } = await request.get(`/admin/api/v1/tickets/${route.params.id}`)
+    if (data.data) {
+      Object.assign(ticket.value, data.data)
+    }
+  } catch {}
+}
+
 const submitReply = async () => {
   if (!replyContent.value.trim()) return
   
   submitting.value = true
-  // TODO: 提交回复
-  submitting.value = false
+  try {
+    await request.post(`/admin/api/v1/tickets/${route.params.id}/reply`, { content: replyContent.value })
+    ElMessage.success('回复成功')
+    replyContent.value = ''
+    fetchTicket()
+  } catch {
+    ElMessage.error('回复失败')
+  } finally {
+    submitting.value = false
+  }
 }
 
 const changeStatus = async (status: string) => {
-  // TODO: 修改状态
+  try {
+    await request.put(`/admin/api/v1/tickets/${route.params.id}/status`, { status })
+    ticket.value.status = status
+    ElMessage.success('状态已更新')
+  } catch {
+    ElMessage.error('操作失败')
+  }
 }
 
-const changePriority = () => {
-  // TODO: 修改优先级
+const changePriority = async () => {
+  try {
+    await request.put(`/admin/api/v1/tickets/${route.params.id}/priority`, { priority: ticket.value.priority })
+    ElMessage.success('优先级已更新')
+  } catch {
+    ElMessage.error('操作失败')
+  }
 }
+
+onMounted(() => {
+  fetchTicket()
+})
 </script>
 
 <style scoped lang="scss">

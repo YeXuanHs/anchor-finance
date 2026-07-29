@@ -17,7 +17,7 @@
         <div class="summary-inner">
           <el-icon :size="28" color="#fa8c16"><Wallet /></el-icon>
           <div class="summary-info">
-            <span class="summary-value">¥1,198.00</span>
+            <span class="summary-value">¥{{ summaryPending }}</span>
             <span class="summary-label">待支付金额</span>
           </div>
         </div>
@@ -26,7 +26,7 @@
         <div class="summary-inner">
           <el-icon :size="28" color="#52c41a"><CircleCheck /></el-icon>
           <div class="summary-info">
-            <span class="summary-value">¥5,688.00</span>
+            <span class="summary-value">¥{{ summaryPaid }}</span>
             <span class="summary-label">已支付金额</span>
           </div>
         </div>
@@ -35,7 +35,7 @@
         <div class="summary-inner">
           <el-icon :size="28" color="#0056FF"><Document /></el-icon>
           <div class="summary-info">
-            <span class="summary-value">12</span>
+            <span class="summary-value">{{ totalInvoices }}</span>
             <span class="summary-label">账单总数</span>
           </div>
         </div>
@@ -75,7 +75,7 @@
       <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="currentPage"
-          :total="50"
+          :total="totalInvoices"
           :page-size="10"
           layout="total, prev, pager, next"
           background
@@ -86,12 +86,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Wallet, CircleCheck, Document } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
 const statusFilter = ref('all')
 const currentPage = ref(1)
+const loading = ref(false)
+const summaryPending = ref('0.00')
+const summaryPaid = ref('0.00')
+const totalInvoices = ref(0)
 
 interface Invoice {
   id: string
@@ -103,14 +108,18 @@ interface Invoice {
   statusText: string
 }
 
-const invoices = ref<Invoice[]>([
-  { id: 'INV2026072601', description: '香港云服务器-月度续费', product: '香港云服务器', amount: '49.00', dueDate: '2026-08-15', status: 'unpaid', statusText: '待支付' },
-  { id: 'INV2026072502', description: 'OV SSL证书-年度续费', product: 'OV SSL证书', amount: '199.00', dueDate: '2026-08-01', status: 'unpaid', statusText: '待支付' },
-  { id: 'INV2026072003', description: '新加坡 VPS-月度续费', product: '新加坡 VPS', amount: '35.00', dueDate: '2026-07-20', status: 'overdue', statusText: '已逾期' },
-  { id: 'INV2026071504', description: '香港云服务器-月度续费', product: '香港云服务器', amount: '49.00', dueDate: '2026-07-15', status: 'paid', statusText: '已支付' },
-  { id: 'INV2026071005', description: '域名注册-首年', product: '域名注册', amount: '9.00', dueDate: '2026-07-10', status: 'paid', statusText: '已支付' },
-  { id: 'INV2026062506', description: '香港云服务器-月度续费', product: '香港云服务器', amount: '49.00', dueDate: '2026-06-25', status: 'paid', statusText: '已支付' }
-])
+const invoices = ref<Invoice[]>([])
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/invoices', { params: { page: currentPage.value } })
+    invoices.value = data.data?.list || data.list || []
+    summaryPending.value = data.data?.summaryPending || '0.00'
+    summaryPaid.value = data.data?.summaryPaid || '0.00'
+    totalInvoices.value = data.data?.total || invoices.value.length
+  } catch (e) { console.error(e) } finally { loading.value = false }
+})
 
 const filteredInvoices = computed(() => {
   if (statusFilter.value === 'all') return invoices.value

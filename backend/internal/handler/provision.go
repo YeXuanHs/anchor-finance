@@ -40,6 +40,11 @@ func (h *ProvisionHandler) GetList(c *gin.Context) {
 	response.SuccessPage(c, modules, total, page, pageSize)
 }
 
+// List is an alias for GetList.
+func (h *ProvisionHandler) List(c *gin.Context) {
+	h.GetList(c)
+}
+
 // GetDetail returns a single provision module by ID.
 // GET /provisions/:id
 func (h *ProvisionHandler) GetDetail(c *gin.Context) {
@@ -157,4 +162,107 @@ func (h *ProvisionHandler) GetLogs(c *gin.Context) {
 		return
 	}
 	response.SuccessPage(c, logs, total, page, pageSize)
+}
+
+// Execute manually triggers provisioning for an order or product.
+// POST /provision/execute
+func (h *ProvisionHandler) Execute(c *gin.Context) {
+	var req struct {
+		OrderID       *uint  `json:"order_id"`
+		UserProductID *uint  `json:"user_product_id"`
+		Action        string `json:"action" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	validActions := map[string]bool{
+		"create": true, "suspend": true, "terminate": true,
+		"unsuspend": true, "rebuild": true, "renew": true,
+	}
+	if !validActions[req.Action] {
+		response.BadRequest(c, "invalid action")
+		return
+	}
+
+	var err error
+	if req.OrderID != nil {
+		err = h.provSvc.ProvisionOrder(*req.OrderID)
+	} else if req.UserProductID != nil {
+		err = h.provSvc.ProvisionProduct(*req.UserProductID, req.Action)
+	} else {
+		response.BadRequest(c, "order_id or user_product_id required")
+		return
+	}
+
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "provisioning triggered")
+}
+
+// Suspend suspends a service.
+// POST /provision/:id/suspend
+func (h *ProvisionHandler) Suspend(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	c.ShouldBindJSON(&req)
+	if req.Reason == "" {
+		req.Reason = "Admin suspended"
+	}
+
+	if err := h.provSvc.SuspendService(uint(id), req.Reason); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "service suspended")
+}
+
+// Terminate terminates a service.
+// POST /provision/:id/terminate
+func (h *ProvisionHandler) Terminate(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	c.ShouldBindJSON(&req)
+	if req.Reason == "" {
+		req.Reason = "Admin terminated"
+	}
+
+	if err := h.provSvc.TerminateService(uint(id), req.Reason); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "service terminated")
+}
+
+// Unsuspend reactivates a suspended service.
+// POST /provision/:id/unsuspend
+func (h *ProvisionHandler) Unsuspend(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	if err := h.provSvc.UnsuspendService(uint(id)); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "service unsuspended")
 }

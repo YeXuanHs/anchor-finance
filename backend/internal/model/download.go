@@ -6,17 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// DownloadCategory 下载分类
-type DownloadCategory struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Name      string    `gorm:"type:varchar(100);not null" json:"name"`
-	ParentID  *uint     `gorm:"index" json:"parent_id"`
-	SortOrder int       `gorm:"default:0" json:"sort_order"`
-	IsActive  bool      `gorm:"default:true" json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
 // DownloadFile 下载文件
 type DownloadFile struct {
 	ID            uint           `gorm:"primaryKey" json:"id"`

@@ -71,6 +71,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/tickets/:id", ticketHandler.GetDetail)
 		user.POST("/tickets/:id/reply", ticketHandler.Reply)
 		user.POST("/tickets/:id/close", ticketHandler.Close)
+		user.POST("/tickets/:id/attachments", ticketHandler.UploadAttachment)
+		user.GET("/tickets/:id/attachments", ticketHandler.GetAttachments)
+		user.DELETE("/tickets/attachments/:id", ticketHandler.DeleteAttachment)
 
 		// 用户产品
 		user.GET("/user/products", productHandler.GetUserProducts)

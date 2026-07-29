@@ -604,6 +604,9 @@ func (h *DcimHandler) GetOperationLogs(c *gin.Context) {
 	response.SuccessPage(c, logs, total, page, pageSize)
 }
 
+// GetDatacenterList is an alias for GetDatacenters.
+func (h *DcimHandler) GetDatacenterList(c *gin.Context) { h.GetDatacenters(c) }
+
 // GetStats 获取DCIM统计信息
 func (h *DcimHandler) GetStats(c *gin.Context) {
 	stats, err := h.dcimSvc.GetStats()
