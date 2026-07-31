@@ -152,18 +152,28 @@ func (h *BalanceHandler) Recharge(c *gin.Context) {
 	}
 
 	// 4. Create the payment via the gateway
-	paymentGW, err := payment.Factory(gw.Code, gw.Config)
+	paymentGW, err := payment.Factory(gw.Gateway, gw.Config)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "payment gateway initialization failed"})
 		return
 	}
 
+	// 如果是易支付或迅虎支付，需要设置支付类型
+	if epayGW, ok := paymentGW.(*payment.EpayGateway); ok {
+		epayGW.SetCode(gw.Code)
+	}
+	if xunhuGW, ok := paymentGW.(*payment.XunhuPayGateway); ok {
+		xunhuGW.SetCode(gw.Code)
+	}
+
 	orderNo := util.GenerateTransactionNo()
 	param := &payment.PaymentParam{
-		OrderNo:  orderNo,
-		Amount:   req.Amount,
-		Subject:  fmt.Sprintf("Balance recharge %.2f", req.Amount),
-		ClientIP: c.ClientIP(),
+		OrderNo:   orderNo,
+		Amount:    req.Amount,
+		Subject:   fmt.Sprintf("余额充值 %.2f元", req.Amount),
+		ReturnURL: fmt.Sprintf("%s/user/balance", getDomain(c)),
+		NotifyURL: fmt.Sprintf("%s/api/v1/payments/notify/%s", getDomain(c), gw.Name),
+		ClientIP:  c.ClientIP(),
 	}
 
 	result, err := paymentGW.CreatePayment(c.Request.Context(), param)
@@ -357,7 +367,7 @@ func (h *BalanceHandler) GetRechargeStatus(c *gin.Context) {
 }
 
 // GetEnabledGateways returns the list of enabled payment gateways for recharge.
-// GET /balances/gateways
+// GET /payments/gateways
 func (h *BalanceHandler) GetEnabledGateways(c *gin.Context) {
 	var gateways []model.PaymentGateway
 	if err := h.db.Where("is_enabled = true").
@@ -368,29 +378,29 @@ func (h *BalanceHandler) GetEnabledGateways(c *gin.Context) {
 	}
 
 	type gatewayInfo struct {
-		ID                  uint    `json:"id"`
-		Name                string  `json:"name"`
-		Code                string  `json:"code"`
-		Description         string  `json:"description"`
-		Icon                string  `json:"icon"`
-		FeeRate             float64 `json:"fee_rate"`
-		MinAmount           float64 `json:"min_amount"`
-		MaxAmount           float64 `json:"max_amount"`
-		SupportedCurrencies string  `json:"supported_currencies"`
+		ID        uint    `json:"id"`
+		Name      string  `json:"name"`
+		Title     string  `json:"title"`
+		Code      string  `json:"code"`
+		Icon      string  `json:"icon"`
+		FeeRate   float64 `json:"fee_rate"`
+		MinAmount float64 `json:"min_amount"`
+		MaxAmount float64 `json:"max_amount"`
 	}
 
 	result := make([]gatewayInfo, len(gateways))
 	for i, gw := range gateways {
+		// 图标根据code自动匹配
+		icon := payment.GetGatewayIcon(gw.Code)
 		result[i] = gatewayInfo{
-			ID:                  gw.ID,
-			Name:                gw.Name,
-			Code:                gw.Code,
-			Description:         gw.Description,
-			Icon:                gw.Icon,
-			FeeRate:             gw.FeeRate,
-			MinAmount:           gw.MinAmount,
-			MaxAmount:           gw.MaxAmount,
-			SupportedCurrencies: gw.SupportedCurrencies,
+			ID:        gw.ID,
+			Name:      gw.Name,
+			Title:     gw.Title,
+			Code:      gw.Code,
+			Icon:      icon,
+			FeeRate:   gw.FeeRate,
+			MinAmount: gw.MinAmount,
+			MaxAmount: gw.MaxAmount,
 		}
 	}
 
@@ -458,4 +468,17 @@ func (h *BalanceHandler) Withdraw(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "withdrawal submitted", "data": gin.H{
 		"amount": req.Amount, "method": req.Method, "status": "pending",
 	}})
+}
+
+// getDomain 从请求中获取域名
+func getDomain(c *gin.Context) string {
+	scheme := "http"
+	if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	host := c.Request.Host
+	if h := c.GetHeader("X-Forwarded-Host"); h != "" {
+		host = h
+	}
+	return fmt.Sprintf("%s://%s", scheme, host)
 }

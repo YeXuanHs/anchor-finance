@@ -17,8 +17,8 @@ type Hook struct {
 	URL         string         `gorm:"type:varchar(512)" json:"url"` // webhook URL
 	Script      string         `gorm:"type:text" json:"script"` // 脚本内容
 	PluginID    *uint          `gorm:"index" json:"plugin_id"`
-	Headers     datatypes.JSON `gorm:"type:jsonb" json:"headers"` // 自定义请求头
-	Params      datatypes.JSON `gorm:"type:jsonb" json:"params"` // 附加参数
+	Headers     datatypes.JSON `gorm:"type:json" json:"headers"` // 自定义请求头
+	Params      datatypes.JSON `gorm:"type:json" json:"params"` // 附加参数
 	Status      int16          `gorm:"type:smallint;default:1;index" json:"status"` // 1=启用 0=禁用
 	IsSystem    bool           `gorm:"default:false" json:"is_system"`
 	Timeout     int            `gorm:"default:30" json:"timeout"` // 超时秒数
@@ -35,7 +35,7 @@ type HookLog struct {
 	HookID     uint           `gorm:"index;not null" json:"hook_id"`
 	Hook       Hook           `gorm:"foreignKey:HookID" json:"hook,omitempty"`
 	Event      string         `gorm:"type:varchar(64);not null;index" json:"event"`
-	Request    datatypes.JSON `gorm:"type:jsonb" json:"request"` // 请求数据
+	Request    datatypes.JSON `gorm:"type:json" json:"request"` // 请求数据
 	Response   string         `gorm:"type:text" json:"response"` // 响应内容
 	StatusCode int            `gorm:"default:0" json:"status_code"`
 	Status     int8           `gorm:"type:smallint;not null" json:"status"` // 1=成功 2=失败 3=超时

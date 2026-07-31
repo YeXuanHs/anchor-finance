@@ -18,7 +18,7 @@ type OAuthAccount struct {
 	Username string         `gorm:"type:varchar(128)" json:"username"`
 	Email    string         `gorm:"type:varchar(255)" json:"email"`
 	Avatar   string         `gorm:"type:varchar(512)" json:"avatar"`
-	RawData  datatypes.JSON `gorm:"type:jsonb" json:"raw_data"`
+	RawData  datatypes.JSON `gorm:"type:json" json:"raw_data"`
 }
 
 // TableName overrides the table name.

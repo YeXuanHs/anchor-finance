@@ -47,7 +47,7 @@ type Invoice struct {
 	Attempts       int            `gorm:"default:0" json:"attempts"`
 	Items          []InvoiceItem  `gorm:"foreignKey:InvoiceID" json:"items,omitempty"`
 	Transactions   []Transaction  `gorm:"foreignKey:InvoiceID" json:"transactions,omitempty"`
-	Metadata       datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
+	Metadata       datatypes.JSON `gorm:"type:json" json:"metadata"`
 }
 
 // InvoiceItem 发票明细
@@ -89,6 +89,6 @@ type Transaction struct {
 	Notes         string         `gorm:"type:text" json:"notes"`
 	AdminNotes    string         `gorm:"type:text" json:"admin_notes"`
 	IPAddress     string         `gorm:"type:varchar(64)" json:"ip_address"`
-	CallbackData  datatypes.JSON `gorm:"type:jsonb" json:"callback_data"` // 网关回调原始数据
-	Metadata      datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
+	CallbackData  datatypes.JSON `gorm:"type:json" json:"callback_data"` // 网关回调原始数据
+	Metadata      datatypes.JSON `gorm:"type:json" json:"metadata"`
 }

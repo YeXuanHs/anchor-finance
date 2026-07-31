@@ -20,7 +20,7 @@ type CartItem struct {
 	Product      Product        `gorm:"foreignKey:ProductID" json:"product"`
 	BillingCycle string         `gorm:"size:32;not null" json:"billing_cycle"`
 	Quantity     int            `gorm:"default:1" json:"quantity"`
-	Config       datatypes.JSON `gorm:"type:jsonb" json:"config"`
+	Config       datatypes.JSON `gorm:"type:json" json:"config"`
 	Domain       string         `gorm:"size:255" json:"domain"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`

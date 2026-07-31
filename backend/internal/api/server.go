@@ -148,12 +148,15 @@ func (d *Deps) toV2Deps() v2.Deps {
 		DB:      d.DB,
 		Log:     d.Log,
 		JWTKey:  d.JWTKey,
+		Redis:   d.Redis,
+		JWTMgr:  nil, // JWTMgr not needed for v2
 		UserSvc: d.UserSvc,
 		ProdSvc: d.ProdSvc,
 		OrdSvc:  d.OrdSvc,
 		InvSvc:  d.InvSvc,
 		TicSvc:  d.TicSvc,
 		CartSvc: d.CartSvc,
+		OAuthSvc: d.OAuthSvc,
 	}
 }
 

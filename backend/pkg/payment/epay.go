@@ -11,157 +11,111 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 )
 
-// EpayGateway implements the Gateway interface for 易支付 (Epay).
-// Epay is an open-source payment gateway widely used in Chinese hosting/IDC industry.
-type EpayGateway struct {
-	PID       string
-	Key       string
-	APIURL    string
-	NotifyURL string
-	ReturnURL string
-}
-
-// EpayConfig is the JSON schema stored in payment_gateways.config.
+// EpayConfig 易支付配置
 type EpayConfig struct {
-	PID       string `json:"pid"`
-	Key       string `json:"key"`
-	APIURL    string `json:"api_url"`
-	NotifyURL string `json:"notify_url"`
-	ReturnURL string `json:"return_url"`
+	PID      string `json:"pid"`       // 商户ID
+	Key      string `json:"key"`       // 商户密钥
+	APIURL   string `json:"api_url"`   // 接口地址，如 https://pay.example.com
 }
 
-// NewEpayGateway creates an Epay gateway from a JSON config string.
+// EpayGateway 易支付接口
+// 支持 type: alipay, wxpay/wechat, qqpay, usdt, bank
+type EpayGateway struct {
+	config *EpayConfig
+	code   string // alipay, wechat, qqpay, usdt, bank
+}
+
+// NewEpayGateway 创建易支付实例
 func NewEpayGateway(configJSON string) (*EpayGateway, error) {
-	var cfg EpayConfig
-	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
-		return nil, fmt.Errorf("epay config parse error: %w", err)
+	var config EpayConfig
+	if err := json.Unmarshal([]byte(configJSON), &config); err != nil {
+		return nil, fmt.Errorf("invalid epay config: %w", err)
 	}
-	if cfg.PID == "" || cfg.Key == "" {
-		return nil, fmt.Errorf("epay pid and key are required")
+	if config.PID == "" || config.Key == "" || config.APIURL == "" {
+		return nil, fmt.Errorf("epay config missing required fields (pid, key, api_url)")
 	}
-	if cfg.APIURL == "" {
-		return nil, fmt.Errorf("epay api_url is required")
-	}
-	// Remove trailing slash
-	cfg.APIURL = strings.TrimRight(cfg.APIURL, "/")
-	return &EpayGateway{
-		PID:       cfg.PID,
-		Key:       cfg.Key,
-		APIURL:    cfg.APIURL,
-		NotifyURL: cfg.NotifyURL,
-		ReturnURL: cfg.ReturnURL,
-	}, nil
+	return &EpayGateway{config: &config}, nil
 }
 
-func (g *EpayGateway) Name() string { return "epay" }
+// SetCode 设置支付类型
+func (g *EpayGateway) SetCode(code string) {
+	g.code = code
+}
+
+func (g *EpayGateway) Name() string { return GatewayEpay }
 
 func (g *EpayGateway) CreatePayment(ctx context.Context, param *PaymentParam) (*PaymentResult, error) {
+	if g.code == "" {
+		return nil, fmt.Errorf("epay code not set")
+	}
+
+	// 易支付 type 映射：wechat -> wxpay（易支付接口用 wxpay 不是 wechat）
+	epayType := g.code
+	if epayType == "wechat" {
+		epayType = "wxpay"
+	}
+
 	params := map[string]string{
-		"pid":          g.PID,
-		"type":         "alipay", // Default to alipay; can be overridden via Extra
+		"pid":          g.config.PID,
+		"type":         epayType, // alipay, wxpay, qqpay, usdt, bank
 		"out_trade_no": param.OrderNo,
-		"notify_url":   g.NotifyURL,
-		"return_url":   g.ReturnURL,
 		"name":         param.Subject,
 		"money":        fmt.Sprintf("%.2f", param.Amount),
+		"notify_url":   param.NotifyURL,
+		"return_url":   param.ReturnURL,
 	}
 
-	// Allow selecting specific payment method via Extra
-	if param.ClientIP != "" {
-		params["clientip"] = param.ClientIP
-	}
-
+	// 生成签名
 	params["sign"] = g.sign(params)
 	params["sign_type"] = "MD5"
 
-	values := url.Values{}
+	// 构建跳转URL（参考 zjmf EpayCore::getPayLink）
+	query := url.Values{}
 	for k, v := range params {
-		values.Set(k, v)
+		query.Set(k, v)
 	}
-
-	payURL := fmt.Sprintf("%s/submit.php?%s", g.APIURL, values.Encode())
+	payURL := fmt.Sprintf("%s/submit.php?%s", strings.TrimRight(g.config.APIURL, "/"), query.Encode())
 
 	return &PaymentResult{
-		TradeNo: param.OrderNo,
-		PayURL:  payURL,
+		Type:    "jump",
+		Data:    payURL,
+		OrderNo: param.OrderNo,
 	}, nil
 }
 
-func (g *EpayGateway) QueryPayment(ctx context.Context, tradeNo string) (*QueryResult, error) {
-	params := map[string]string{
-		"act":          "order",
-		"pid":          g.PID,
-		"out_trade_no": tradeNo,
-	}
-	params["sign"] = g.sign(params)
-	params["sign_type"] = "MD5"
+func (g *EpayGateway) VerifyNotification(ctx context.Context, data map[string]string) (*NotificationResult, error) {
+	// 验证签名
+	sign := data["sign"]
+	delete(data, "sign")
+	delete(data, "sign_type")
 
-	values := url.Values{}
-	for k, v := range params {
-		values.Set(k, v)
+	expectedSign := g.sign(data)
+	if sign != expectedSign {
+		return nil, fmt.Errorf("invalid signature")
 	}
 
-	queryURL := fmt.Sprintf("%s/api.php?%s", g.APIURL, values.Encode())
-	resp, err := http.Get(queryURL)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	var result struct {
-		Code    int    `json:"code"`
-		Status  string `json:"status"`
-		TradeNo string `json:"trade_no"`
-	}
-	json.Unmarshal(body, &result)
-
+	tradeStatus := data["trade_status"]
 	status := "pending"
-	switch result.Status {
-	case "TRADE_SUCCESS":
+	if tradeStatus == "TRADE_SUCCESS" || tradeStatus == "TRADE_FINISHED" {
 		status = "success"
-	case "TRADE_CLOSED":
-		status = "closed"
 	}
 
-	return &QueryResult{TradeNo: tradeNo, Status: status}, nil
-}
+	var amount float64
+	fmt.Sscanf(data["money"], "%f", &amount)
 
-func (g *EpayGateway) Refund(ctx context.Context, param *RefundParam) (*RefundResult, error) {
-	return &RefundResult{
-		RefundNo: param.RefundNo,
-		Status:   "pending", // Epay typically requires manual refund via admin panel
-	}, nil
-}
-
-func (g *EpayGateway) ParseNotify(ctx context.Context, data []byte) (*NotifyResult, error) {
-	form, err := url.ParseQuery(string(data))
-	if err != nil {
-		return nil, fmt.Errorf("parse epay notify: %w", err)
-	}
-
-	tradeNo := form.Get("out_trade_no")
-	tradeStatus := form.Get("trade_status")
-
-	status := "pending"
-	switch tradeStatus {
-	case "TRADE_SUCCESS":
-		status = "success"
-	case "TRADE_CLOSED":
-		status = "closed"
-	}
-
-	return &NotifyResult{
-		TradeNo: tradeNo,
-		OrderNo: tradeNo,
+	return &NotificationResult{
+		OrderNo: data["out_trade_no"],
+		TradeNo: data["trade_no"],
+		Amount:  amount,
 		Status:  status,
-		Sign:    form.Get("sign"),
 	}, nil
 }
 
 func (g *EpayGateway) sign(params map[string]string) string {
+	// 按key排序（参考 zjmf EpayCore::getSign）
 	keys := make([]string, 0, len(params))
 	for k, v := range params {
 		if v != "" && k != "sign" && k != "sign_type" {
@@ -170,17 +124,42 @@ func (g *EpayGateway) sign(params map[string]string) string {
 	}
 	sort.Strings(keys)
 
-	var buf strings.Builder
-	for i, k := range keys {
-		if i > 0 {
-			buf.WriteString("&")
-		}
-		buf.WriteString(k)
-		buf.WriteString("=")
-		buf.WriteString(params[k])
+	// 拼接
+	var parts []string
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%s", k, params[k]))
 	}
-	buf.WriteString(g.Key)
+	str := strings.Join(parts, "&") + g.config.Key
 
-	hash := md5.Sum([]byte(buf.String()))
-	return strings.ToLower(hex.EncodeToString(hash[:]))
+	// MD5
+	h := md5.New()
+	h.Write([]byte(str))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// QueryOrder 查询订单状态（参考 zjmf EpayCore::queryOrder）
+func (g *EpayGateway) QueryOrder(orderNo string) (string, error) {
+	params := map[string]string{
+		"act":          "order",
+		"pid":          g.config.PID,
+		"out_trade_no": orderNo,
+	}
+	params["sign"] = g.sign(params)
+	params["sign_type"] = "MD5"
+
+	query := url.Values{}
+	for k, v := range params {
+		query.Set(k, v)
+	}
+	apiURL := fmt.Sprintf("%s/api.php?%s", strings.TrimRight(g.config.APIURL, "/"), query.Encode())
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	return string(body), nil
 }

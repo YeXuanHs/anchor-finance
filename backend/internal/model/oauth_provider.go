@@ -20,7 +20,7 @@ type OAuthProvider struct {
 	TokenURL    string         `gorm:"type:varchar(512)" json:"token_url"`
 	UserInfoURL string         `gorm:"type:varchar(512)" json:"user_info_url"`
 	Scopes      string         `gorm:"type:varchar(512)" json:"scopes"`
-	Extra       datatypes.JSON `gorm:"type:jsonb" json:"extra"` // 额外配置参数
+	Extra       datatypes.JSON `gorm:"type:json" json:"extra"` // 额外配置参数
 	IsEnabled   bool           `gorm:"default:true" json:"is_enabled"`
 	SortOrder   int            `gorm:"default:0;index" json:"sort_order"`
 	Status      int16          `gorm:"type:smallint;default:1;not null;index" json:"status"` // 1=启用 0=禁用

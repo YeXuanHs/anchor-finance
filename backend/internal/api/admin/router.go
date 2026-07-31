@@ -58,6 +58,11 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/dashboard", adminHandler.Dashboard)
 		admin.GET("/dashboard/stats", adminHandler.Stats)
 
+		// 仪表盘新增接口
+		dashboardHandler := handler.NewDashboardHandler(deps.DB)
+		admin.GET("/dashboard/income-trend", dashboardHandler.GetIncomeTrend)
+		admin.GET("/dashboard/product-distribution", dashboardHandler.GetProductDistribution)
+
 		// 用户管理
 		admin.GET("/users", userHandler.GetUserList)
 		admin.GET("/users/:id", userHandler.GetUserDetail)
@@ -80,15 +85,48 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/orders/:id", orderHandler.GetDetail)
 		admin.POST("/orders/:id/status", orderHandler.UpdateStatus)
 
-		// 账单管理
+		// 账单管理（静态路由必须在参数路由之前注册）
 		admin.GET("/invoices", invoiceHandler.GetList)
+
+		// 账单增强功能
+		invoiceEnhancedSvc := service.NewInvoiceEnhancedService(deps.DB, deps.Log)
+		invoiceEnhancedHandler := handler.NewInvoiceEnhancedHandler(invoiceEnhancedSvc, deps.Log)
+
+		// 静态路由（必须在 /invoices/:id 之前）
+		admin.GET("/invoices/paid", invoiceEnhancedHandler.GetPaidInvoices)
+		admin.GET("/invoices/unpaid", invoiceEnhancedHandler.GetUnpaidInvoices)
+		admin.GET("/invoices/cancelled", invoiceEnhancedHandler.GetCancelledInvoices)
+		admin.GET("/invoices/overdue", invoiceEnhancedHandler.GetOverdueInvoices)
+		admin.GET("/invoices/summary", invoiceEnhancedHandler.GetInvoiceSummary)
+		admin.GET("/invoices/search", invoiceEnhancedHandler.SearchInvoices)
+		admin.GET("/invoices/search-page", invoiceEnhancedHandler.SearchPage)
+		admin.GET("/invoices/renew-list", invoiceEnhancedHandler.GetRenewInvoices)
+		admin.POST("/invoices/combine", invoiceEnhancedHandler.CombineInvoices)
+		admin.POST("/invoices/renew", invoiceEnhancedHandler.CreateRenewInvoice)
+
+		// 参数路由
+		admin.GET("/invoices/status/:status", invoiceEnhancedHandler.GetByStatus)
+		admin.GET("/invoices/combine/user/:user_id", invoiceEnhancedHandler.GetCombineInvoices)
+		admin.DELETE("/invoices/notes/:note_id", invoiceEnhancedHandler.DeleteNote)
+
+		// /invoices/:id 相关路由（必须在最后）
 		admin.GET("/invoices/:id", invoiceHandler.GetDetail)
 		admin.POST("/invoices/:id/cancel", invoiceHandler.Cancel)
+		admin.POST("/invoices/:id/pay", invoiceEnhancedHandler.AddPayInvoice)
+		admin.DELETE("/invoices/:id/pay", invoiceEnhancedHandler.DeletePayInvoice)
+		admin.POST("/invoices/:id/refund", invoiceEnhancedHandler.RefundInvoice)
+		admin.GET("/invoices/:id/refund-page", invoiceEnhancedHandler.GetRefundPage)
+		admin.POST("/invoices/:id/notes", invoiceEnhancedHandler.AddNote)
+		admin.GET("/invoices/:id/notes", invoiceEnhancedHandler.GetNotes)
+		admin.POST("/invoices/:id/email", invoiceEnhancedHandler.SendInvoiceEmail)
+		admin.GET("/invoices/:id/email-template", invoiceEnhancedHandler.InvoiceEmail)
+		admin.GET("/invoices/:id/logs", invoiceEnhancedHandler.GetInvoiceLog)
+		admin.POST("/invoices/:id/duplicate", invoiceEnhancedHandler.DuplicateInvoice)
 
 		// 工单管理
 		admin.GET("/tickets", ticketHandler.GetList)
 		admin.GET("/tickets/:id", ticketHandler.GetDetail)
-		admin.POST("/tickets/:id/reply", ticketHandler.Reply)
+		admin.POST("/tickets/:id/reply", ticketHandler.AdminReply)
 		admin.POST("/tickets/:id/assign", ticketHandler.Assign)
 		admin.POST("/tickets/:id/close", ticketHandler.Close)
 		admin.POST("/tickets/merge", ticketHandler.MergeTickets)
@@ -137,6 +175,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		paymentGwSvc := service.NewPaymentGatewayService(deps.DB, deps.Log)
 		paymentGwHandler := handler.NewPaymentGatewayHandler(paymentGwSvc, deps.Log)
 		admin.GET("/payment-gateways", paymentGwHandler.List)
+		admin.GET("/payment-gateways/supported", paymentGwHandler.GetSupportedInfo)
 		admin.GET("/payment-gateways/:id", paymentGwHandler.GetDetail)
 		admin.POST("/payment-gateways", paymentGwHandler.Create)
 		admin.PUT("/payment-gateways/:id", paymentGwHandler.Update)
@@ -170,6 +209,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// DCIM管理
 		dcimSvc := service.NewDcimService(deps.DB, deps.Log)
 		dcimHandler := handler.NewDcimHandler(dcimSvc, deps.Log)
+		dcimAdvHandler := handler.NewDcimAdvancedHandler(dcimSvc, deps.Log)
 		admin.GET("/dcim/servers", dcimHandler.GetServerList)
 		admin.GET("/dcim/servers/:id", dcimHandler.GetServerDetail)
 		admin.POST("/dcim/servers", dcimHandler.CreateServer)
@@ -180,23 +220,66 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/dcim/servers/:id/reboot", dcimHandler.RebootServer)
 		admin.GET("/dcim/datacenters", dcimHandler.GetDatacenterList)
 
-		// 应用商店
-		appstoreSvc := service.NewAppStoreService(deps.DB, deps.Log)
-		appstoreHandler := handler.NewAppStoreHandler(appstoreSvc, deps.Log)
-		admin.GET("/apps", appstoreHandler.AdminList)
-		admin.POST("/apps", appstoreHandler.AdminCreate)
-		admin.PUT("/apps/:id", appstoreHandler.AdminUpdate)
-		admin.DELETE("/apps/:id", appstoreHandler.AdminDelete)
+		// DCIM高级操作 - KVM/IPMI/BMC
+		admin.GET("/dcim/servers/:id/kvm", dcimAdvHandler.GetKVMURL)
+		admin.GET("/dcim/servers/:id/bmc", dcimAdvHandler.GetBMCInfo)
+		admin.GET("/dcim/servers/:id/novnc", dcimAdvHandler.GetNoVNCURL)
+		// DCIM高级操作 - 救援系统
+		admin.POST("/dcim/servers/:id/rescue", dcimAdvHandler.BootRescue)
+		admin.POST("/dcim/servers/:id/crack-password", dcimAdvHandler.CrackPassword)
+		admin.GET("/dcim/servers/:id/rescue-status", dcimAdvHandler.GetRescueStatus)
+		admin.GET("/dcim/rescue-logs", dcimAdvHandler.GetRescueLogs)
+		// DCIM高级操作 - 流量监控
+		admin.GET("/dcim/servers/:id/traffic", dcimAdvHandler.GetTrafficUsage)
+		admin.GET("/dcim/servers/:id/traffic/chart", dcimAdvHandler.GetTrafficChart)
+		admin.POST("/dcim/servers/:id/traffic/reset", dcimAdvHandler.ResetTrafficCounter)
+		// DCIM高级操作 - 快照
+		admin.POST("/dcim/servers/:id/snapshots", dcimAdvHandler.CreateSnapshot)
+		admin.GET("/dcim/servers/:id/snapshots", dcimAdvHandler.GetSnapshots)
+		admin.POST("/dcim/snapshots/:id/restore", dcimAdvHandler.RestoreSnapshot)
+		admin.DELETE("/dcim/snapshots/:id", dcimAdvHandler.DeleteSnapshot)
+		// DCIM高级操作 - 备份
+		admin.POST("/dcim/servers/:id/backups", dcimAdvHandler.CreateBackup)
+		admin.GET("/dcim/servers/:id/backups", dcimAdvHandler.GetBackups)
+		admin.POST("/dcim/backups/:id/restore", dcimAdvHandler.RestoreBackup)
+		admin.DELETE("/dcim/backups/:id", dcimAdvHandler.DeleteBackup)
+		// DCIM高级操作 - 电源管理
+		admin.GET("/dcim/servers/:id/power", dcimAdvHandler.GetPowerStatus)
+		admin.POST("/dcim/servers/:id/power/refresh", dcimAdvHandler.RefreshPowerStatus)
+		// DCIM高级操作 - 重装增强
+		admin.GET("/dcim/servers/:id/reinstall-status", dcimAdvHandler.GetReinstallStatus)
+		admin.POST("/dcim/servers/:id/cancel-reinstall", dcimAdvHandler.CancelReinstall)
+		admin.GET("/dcim/os-list", dcimAdvHandler.GetOSList)
 
 		// 插件管理
 		pluginSvc := service.NewPluginService(deps.DB, deps.Log)
 		pluginHandler := handler.NewPluginHandler(pluginSvc, deps.Log)
 		admin.GET("/plugins", pluginHandler.List)
+		admin.GET("/plugins/types", pluginHandler.GetTypes)
 		admin.POST("/plugins", pluginHandler.Install)
 		admin.DELETE("/plugins/:id", pluginHandler.Uninstall)
 		admin.POST("/plugins/:id/enable", pluginHandler.Enable)
 		admin.POST("/plugins/:id/disable", pluginHandler.Disable)
 		admin.PUT("/plugins/:id/config", pluginHandler.UpdateConfig)
+		admin.GET("/plugins/type/:type", pluginHandler.GetByType)
+
+		// 服务器模块管理
+		admin.GET("/server-modules", pluginHandler.ListServerModules)
+		admin.POST("/server-modules", pluginHandler.CreateServerModule)
+		admin.PUT("/server-modules/:id", pluginHandler.UpdateServerModule)
+		admin.DELETE("/server-modules/:id", pluginHandler.DeleteServerModule)
+
+		// 服务器分组管理
+		admin.GET("/server-groups", pluginHandler.ListServerGroups)
+		admin.POST("/server-groups", pluginHandler.CreateServerGroup)
+		admin.PUT("/server-groups/:id", pluginHandler.UpdateServerGroup)
+		admin.DELETE("/server-groups/:id", pluginHandler.DeleteServerGroup)
+
+		// OAuth提供商管理
+		admin.GET("/oauth-providers", pluginHandler.ListOAuthProviders)
+		admin.POST("/oauth-providers", pluginHandler.CreateOAuthProvider)
+		admin.PUT("/oauth-providers/:id", pluginHandler.UpdateOAuthProvider)
+		admin.DELETE("/oauth-providers/:id", pluginHandler.DeleteOAuthProvider)
 
 		// 模块供给
 		provisionSvc := service.NewProvisionService(deps.DB, deps.Log)
@@ -213,6 +296,51 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/provision/:id/suspend", provisionHandler.Suspend)
 		admin.POST("/provision/:id/terminate", provisionHandler.Terminate)
 		admin.POST("/provision/:id/unsuspend", provisionHandler.Unsuspend)
+
+		// 模块供给扩展（Provision Module System）
+		pmHandler := handler.NewProvisionModuleHandler(provisionSvc, deps.Log)
+		// 模块管理
+		admin.GET("/provision-modules", pmHandler.GetModules)
+		admin.GET("/provision-modules/default-buttons", pmHandler.GetDefaultButtons)
+		admin.GET("/provision-modules/:id", pmHandler.GetModule)
+		admin.POST("/provision-modules", pmHandler.CreateModule)
+		admin.PUT("/provision-modules/:id", pmHandler.UpdateModule)
+		admin.DELETE("/provision-modules/:id", pmHandler.DeleteModule)
+		admin.POST("/provision-modules/:id/test", pmHandler.TestModule)
+		// 按钮管理
+		admin.GET("/provision-modules/:id/buttons", pmHandler.GetButtons)
+		admin.POST("/provision-modules/buttons", pmHandler.CreateButton)
+		admin.PUT("/provision-modules/buttons/:id", pmHandler.UpdateButton)
+		admin.DELETE("/provision-modules/buttons/:id", pmHandler.DeleteButton)
+		// 自定义函数
+		admin.GET("/provision-modules/:id/functions", pmHandler.GetCustomFunctions)
+		admin.POST("/provision-modules/functions", pmHandler.CreateCustomFunction)
+		admin.POST("/provision-modules/functions/:id/execute", pmHandler.ExecuteCustomFunction)
+		admin.DELETE("/provision-modules/functions/:id", pmHandler.DeleteCustomFunction)
+		// 图表
+		admin.GET("/provision-modules/charts/:host_id", pmHandler.GetCharts)
+		admin.GET("/provision-modules/charts/:host_id/:chart_id", pmHandler.GetChartData)
+		admin.POST("/provision-modules/charts", pmHandler.CreateChart)
+		admin.PUT("/provision-modules/charts/:id", pmHandler.UpdateChart)
+		// 管理端区域
+		admin.GET("/provision-modules/admin-area/:host_id", pmHandler.RenderAdminArea)
+		admin.GET("/provision-modules/admin-area/:host_id/buttons", pmHandler.GetAdminButtons)
+		admin.POST("/provision-modules/admin-area/:host_id/execute", pmHandler.ExecuteAdminButton)
+		// 客户端区域
+		admin.GET("/provision-modules/client-area/:host_id", pmHandler.RenderClientArea)
+		admin.GET("/provision-modules/client-area/:host_id/detail", pmHandler.RenderClientAreaDetail)
+		admin.GET("/provision-modules/client-area/:host_id/buttons", pmHandler.GetClientButtons)
+		admin.POST("/provision-modules/client-area/:host_id/execute", pmHandler.ExecuteClientButton)
+		// 用量追踪
+		admin.GET("/provision-modules/usage/:host_id", pmHandler.GetUsage)
+		admin.PUT("/provision-modules/usage/:host_id", pmHandler.UpdateUsage)
+		admin.GET("/provision-modules/usage/:host_id/check", pmHandler.CheckDefineUsage)
+		admin.GET("/provision-modules/usage/:host_id/traffic", pmHandler.TrafficUsage)
+		// SSL/下载
+		admin.GET("/provision-modules/ssl/:host_id", pmHandler.SSLButton)
+		admin.GET("/provision-modules/download/:host_id/:resource_id", pmHandler.DownloadResource)
+		// 流量包
+		admin.POST("/provision-modules/flow-packet/paid", pmHandler.AfterFlowPacketPaid)
 
 		// 客户分组
 		clientGroupSvc := service.NewClientGroupService(deps.DB)
@@ -235,11 +363,46 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// 用户管理
 		userManageSvc := service.NewUserManageService(deps.DB, deps.Log)
 		userManageHandler := handler.NewUserManageHandler(userManageSvc, deps.Log)
+		// Search & Filter
 		admin.GET("/user-manage/search", userManageHandler.Search)
+		admin.GET("/user-manage/filter", userManageHandler.Filter)
+		admin.GET("/user-manage/summary", userManageHandler.GetSummary)
+		// Client Lifecycle
+		admin.POST("/user-manage", userManageHandler.Create)
+		admin.POST("/user-manage/:id/close", userManageHandler.Close)
+		admin.DELETE("/user-manage/:id", userManageHandler.Delete)
 		admin.POST("/user-manage/:id/ban", userManageHandler.Ban)
 		admin.POST("/user-manage/:id/unban", userManageHandler.Unban)
+		admin.POST("/user-manage/:id/cancel-ban", userManageHandler.CancelBan)
+		// Client Profile
+		admin.GET("/user-manage/:id/profile", userManageHandler.GetProfile)
+		admin.PUT("/user-manage/:id/profile", userManageHandler.UpdateProfile)
+		admin.GET("/user-manage/:id/hosts", userManageHandler.GetHosts)
+		admin.GET("/user-manage/:id/invoices", userManageHandler.GetInvoices)
+		admin.GET("/user-manage/:id/orders", userManageHandler.GetOrders)
+		admin.GET("/user-manage/:id/tickets", userManageHandler.GetTickets)
+		admin.GET("/user-manage/:id/client-logs", userManageHandler.GetLogs)
+		// Client Notes
+		admin.POST("/user-manage/:id/notes", userManageHandler.AddNote)
+		admin.GET("/user-manage/:id/notes", userManageHandler.GetNotes)
+		admin.DELETE("/user-manage/notes/:id", userManageHandler.DeleteNote)
+		// Client Authorization
+		admin.POST("/user-manage/:id/authorize", userManageHandler.Authorize)
+		admin.GET("/user-manage/:id/auth", userManageHandler.GetAuth)
+		// Client Group
+		admin.POST("/user-manage/:id/group", userManageHandler.AssignGroup)
+		admin.DELETE("/user-manage/:id/group/:group_id", userManageHandler.RemoveFromGroup)
+		// Certification
+		admin.GET("/user-manage/:id/certification", userManageHandler.GetCertificationStatus)
+		admin.POST("/user-manage/:id/certification/review", userManageHandler.ReviewCertification)
+		// Cancel Requests
+		admin.GET("/user-manage/cancel-requests", userManageHandler.GetCancelRequests)
+		admin.POST("/user-manage/cancel-requests/:id", userManageHandler.ProcessCancelRequest)
+		// Balance & Password
 		admin.POST("/user-manage/:id/balance", userManageHandler.AdjustBalance)
 		admin.POST("/user-manage/:id/reset-password", userManageHandler.ResetPassword)
+		admin.GET("/user-manage/:id/status", userManageHandler.GetStatus)
+		admin.GET("/user-manage/:id/operation-logs", userManageHandler.GetOperationLogs)
 
 		// 用户备注
 		userRemarkSvc := service.NewUserRemarkService(deps.DB, deps.Log)
@@ -267,6 +430,15 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/menus/:id", menuHandler.Update)
 		admin.DELETE("/menus/:id", menuHandler.Delete)
 		admin.POST("/menus/sort", menuHandler.Sort)
+
+		// 前台导航分组管理
+		navGroupHandler := handler.NewNavGroupHandler(deps.DB)
+		admin.GET("/nav-groups", navGroupHandler.List)
+		admin.POST("/nav-groups", navGroupHandler.Create)
+		admin.PUT("/nav-groups/:id", navGroupHandler.Update)
+		admin.DELETE("/nav-groups/:id", navGroupHandler.Delete)
+		admin.GET("/nav-groups/:id/products", navGroupHandler.GetProducts)
+		admin.PUT("/nav-groups/:id/products", navGroupHandler.UpdateProducts)
 
 		// 日志记录
 		logRecordSvc := service.NewLogRecordService(deps.DB, deps.Log)
@@ -313,6 +485,35 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/messages/:id", sendMsgHandler.GetDetail)
 		admin.GET("/messages/batch/:batch_id", sendMsgHandler.GetByBatchID)
 		admin.POST("/messages/retry-failed", sendMsgHandler.RetryFailed)
+
+		// 短信详细管理
+		smsSvc := service.NewSMSService(deps.DB, deps.Log)
+		smsHandler := handler.NewSMSHandler(smsSvc, deps.Log)
+		// 运营商检测
+		admin.GET("/sms/detect-operator", smsHandler.DetectOperator)
+		admin.GET("/sms/validate-phone", smsHandler.ValidatePhone)
+		// 模板管理
+		admin.GET("/sms/templates", smsHandler.GetTemplates)
+		admin.GET("/sms/templates/:id", smsHandler.GetTemplate)
+		admin.POST("/sms/templates", smsHandler.CreateTemplate)
+		admin.PUT("/sms/templates/:id", smsHandler.UpdateTemplate)
+		admin.DELETE("/sms/templates/:id", smsHandler.DeleteTemplate)
+		// 发送
+		admin.POST("/sms/send", smsHandler.SendSMS)
+		admin.POST("/sms/send-batch", smsHandler.SendBatchSMS)
+		admin.POST("/sms/send-marketing", smsHandler.SendMarketingSMS)
+		// 日志
+		admin.GET("/sms/logs", smsHandler.GetSMSLogs)
+		admin.GET("/sms/logs/:id", smsHandler.GetSMSLog)
+		admin.GET("/sms/logs/phone/:phone", smsHandler.GetSMSLogByPhone)
+		admin.GET("/sms/logs/user/:user_id", smsHandler.GetSMSLogByUser)
+		// 统计
+		admin.GET("/sms/stats", smsHandler.GetSMSStats)
+		admin.GET("/sms/stats/operator", smsHandler.GetOperatorStats)
+		// 批次
+		admin.POST("/sms/batches", smsHandler.CreateBatch)
+		admin.GET("/sms/batches", smsHandler.GetBatches)
+		admin.POST("/sms/batches/:id/execute", smsHandler.ExecuteBatch)
 
 		// 工单部门
 		ticketDeptSvc := service.NewTicketDepartmentService(deps.DB, deps.Log)
@@ -365,6 +566,30 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		configGeneralHandler := handler.NewConfigGeneralHandler(configGeneralSvc, deps.Log)
 		admin.GET("/config/general", configGeneralHandler.Get)
 		admin.PUT("/config/general", configGeneralHandler.Update)
+		admin.GET("/config/email", configGeneralHandler.GetEmailConfig)
+		admin.PUT("/config/email", configGeneralHandler.UpdateEmailConfig)
+		admin.GET("/config/email-support", configGeneralHandler.GetEmailSupport)
+		admin.PUT("/config/email-support", configGeneralHandler.UpdateEmailSupport)
+		admin.GET("/config/affiliate-ladders", configGeneralHandler.GetAffiliateLadders)
+		admin.PUT("/config/affiliate-ladders", configGeneralHandler.UpdateAffiliateLadders)
+		admin.GET("/config/safe", configGeneralHandler.GetSafeConfig)
+		admin.PUT("/config/safe", configGeneralHandler.UpdateSafeConfig)
+		admin.GET("/config/recharge", configGeneralHandler.GetRechargeConfig)
+		admin.PUT("/config/recharge", configGeneralHandler.UpdateRechargeConfig)
+		admin.GET("/config/invoice", configGeneralHandler.GetInvoiceConfig)
+		admin.PUT("/config/invoice", configGeneralHandler.UpdateInvoiceConfig)
+		admin.GET("/config/register", configGeneralHandler.GetRegisterConfig)
+		admin.PUT("/config/register", configGeneralHandler.UpdateRegisterConfig)
+		admin.GET("/config/login", configGeneralHandler.GetLoginConfig)
+		admin.PUT("/config/login", configGeneralHandler.UpdateLoginConfig)
+		admin.GET("/config/api", configGeneralHandler.GetAPIConfig)
+		admin.PUT("/config/api", configGeneralHandler.UpdateAPIConfig)
+		admin.GET("/config/2fa", configGeneralHandler.GetTwoFactorConfig)
+		admin.PUT("/config/2fa", configGeneralHandler.UpdateTwoFactorConfig)
+		admin.GET("/config/debug-mode", configGeneralHandler.GetDebugMode)
+		admin.PUT("/config/debug-mode", configGeneralHandler.SetDebugMode)
+		admin.POST("/config/smtp-test", configGeneralHandler.TestSMTP)
+		admin.POST("/config/sms-test", configGeneralHandler.TestSMS)
 
 		configCertifiSvc := service.NewConfigCertifiService(deps.DB, deps.Log)
 		configCertifiHandler := handler.NewConfigCertifiHandler(configCertifiSvc, deps.Log)
@@ -506,6 +731,23 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/system/logs", systemHandler.GetSystemLog)
 		admin.POST("/system/clear-cache", systemHandler.ClearCache)
 
+		// 验证码配置管理
+		captchaSvc := service.NewCaptchaService(deps.Redis, deps.DB)
+		captchaConfigHandler := handler.NewCaptchaConfigHandler(captchaSvc)
+		admin.GET("/captcha-config", captchaConfigHandler.GetConfigs)
+		admin.PUT("/captcha-config/basic", captchaConfigHandler.UpdateBasicConfig)
+		admin.PUT("/captcha-config/scenes", captchaConfigHandler.UpdateSceneConfig)
+		admin.POST("/captcha-config/init", captchaConfigHandler.InitDefaultConfigs)
+
+		// 系统配置管理（统一配置）
+		configHandler := handler.NewConfigHandler(deps.DB)
+		admin.GET("/config/groups", configHandler.GetGroups)
+		admin.GET("/config/group/:group", configHandler.GetByGroup)
+		admin.GET("/config/all", configHandler.GetAll)
+		admin.PUT("/config/:key", configHandler.UpdateConfig)
+		admin.PUT("/config/batch", configHandler.BatchUpdateConfig)
+		admin.POST("/config/init", configHandler.InitDefaultConfigs)
+
 		// 工单传递
 		ticketDeliverSvc := service.NewTicketDeliverService(deps.DB, deps.Log)
 		ticketDeliverHandler := handler.NewTicketDeliverHandler(ticketDeliverSvc, deps.Log)
@@ -594,6 +836,38 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/api-logs/error-rate", apiLogHandler.GetErrorRate)
 		admin.POST("/api-logs/export", apiLogHandler.Export)
 
+		// ==================== 自定义字段 ====================
+		customFieldSvc := service.NewCustomFieldService(deps.DB, deps.Log)
+		customFieldHandler := handler.NewCustomFieldHandler(customFieldSvc, deps.Log)
+		// 字段管理
+		admin.GET("/custom-fields", customFieldHandler.GetFields)
+		admin.GET("/custom-fields/:id", customFieldHandler.GetFieldDetail)
+		admin.POST("/custom-fields", customFieldHandler.CreateField)
+		admin.PUT("/custom-fields/:id", customFieldHandler.UpdateField)
+		admin.DELETE("/custom-fields/:id", customFieldHandler.DeleteField)
+		admin.POST("/custom-fields/reorder", customFieldHandler.ReorderFields)
+		// 字段值
+		admin.GET("/custom-field-values", customFieldHandler.GetValues)
+		admin.POST("/custom-field-values", customFieldHandler.SaveValues)
+		admin.DELETE("/custom-field-values", customFieldHandler.DeleteValues)
+		admin.GET("/custom-field-values/single", customFieldHandler.GetSingleValue)
+		// 分组管理
+		admin.GET("/custom-field-groups", customFieldHandler.GetGroups)
+		admin.POST("/custom-field-groups", customFieldHandler.CreateGroup)
+		admin.PUT("/custom-field-groups/:id", customFieldHandler.UpdateGroup)
+		admin.DELETE("/custom-field-groups/:id", customFieldHandler.DeleteGroup)
+		// 验证
+		admin.POST("/custom-fields/validate", customFieldHandler.ValidateFields)
+		// 按类型获取
+		admin.GET("/custom-fields/cart", customFieldHandler.GetCartCustomFields)
+		admin.GET("/custom-fields/product/:product_id", customFieldHandler.GetProductCustomFields)
+		admin.GET("/custom-fields/client", customFieldHandler.GetClientCustomFields)
+		admin.GET("/custom-fields/host/:host_id", customFieldHandler.GetHostCustomFields)
+		// 批量操作
+		admin.POST("/custom-fields/copy", customFieldHandler.CopyFields)
+		admin.POST("/custom-fields/import", customFieldHandler.ImportFields)
+		admin.GET("/custom-fields/export", customFieldHandler.ExportFields)
+
 		// 批量续费
 		balSvc := service.NewBalanceService(deps.DB, deps.Log)
 		multiRenewSvc := service.NewMultiRenewService(deps.DB, deps.Log, deps.InvSvc, balSvc)
@@ -662,6 +936,46 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/agents", agentHandler.AdminCreate)
 		admin.PUT("/agents/:id", agentHandler.AdminUpdate)
 		admin.POST("/agents/commissions/:id/confirm", agentHandler.AdminConfirmCommission)
+
+		// ==================== 代理商增强 ====================
+		agentEnhancedSvc := service.NewAgentEnhancedService(deps.DB, deps.Log)
+		agentEnhancedHandler := handler.NewAgentEnhancedHandler(agentEnhancedSvc, deps.Log)
+		// 资源管理
+		admin.GET("/agent/resources", agentEnhancedHandler.GetResourceInfo)
+		admin.POST("/agent/resources", agentEnhancedHandler.PostResourceInfo)
+		admin.GET("/agent/products", agentEnhancedHandler.GetProducts)
+		admin.GET("/agent/hosts", agentEnhancedHandler.GetHostLists)
+		// 巡检
+		admin.GET("/agent/inspections", agentEnhancedHandler.GetInspectionLists)
+		admin.POST("/agent/inspections", agentEnhancedHandler.CreateInspection)
+		admin.GET("/agent/inspections/ips", agentEnhancedHandler.GetInspectionIPs)
+		admin.GET("/agent/inspections/:id", agentEnhancedHandler.GetInspectionDetail)
+		admin.POST("/agent/inspections/:id/upload", agentEnhancedHandler.PostUpload)
+		// 订单与财务
+		admin.GET("/agent/orders", agentEnhancedHandler.GetOrders)
+		admin.GET("/agent/orders/search", agentEnhancedHandler.GetOrderSearchPage)
+		admin.GET("/agent/renews", agentEnhancedHandler.GetRenews)
+		admin.GET("/agent/renews/search", agentEnhancedHandler.GetRenewSearchPage)
+		admin.GET("/agent/income", agentEnhancedHandler.GetIncome)
+		admin.GET("/agent/consumption", agentEnhancedHandler.GetConsumption)
+		admin.GET("/agent/logs", agentEnhancedHandler.GetAgentLogs)
+		// 售后
+		admin.GET("/agent/aftersale/:id", agentEnhancedHandler.GetAfterSaleDetail)
+		admin.POST("/agent/aftersale/:id", agentEnhancedHandler.PostAfterSale)
+		admin.POST("/agent/aftersale/:id/cancel", agentEnhancedHandler.PostUnAfterSale)
+		admin.GET("/agent/refunds/:id", agentEnhancedHandler.GetRefundDetail)
+		admin.POST("/agent/refunds/:id", agentEnhancedHandler.PostRefund)
+		// 工单
+		admin.GET("/agent/tickets", agentEnhancedHandler.GetTickets)
+		// 评价
+		admin.POST("/agent/evaluation", agentEnhancedHandler.PostEvaluation)
+		admin.GET("/agent/run-maps", agentEnhancedHandler.GetRunMapLists)
+		// 令牌管理
+		admin.GET("/agent/token", agentEnhancedHandler.GetToken)
+		admin.POST("/agent/token", agentEnhancedHandler.SetToken)
+		admin.POST("/agent/token/check", agentEnhancedHandler.CheckToken)
+		// 基本信息
+		admin.GET("/agent/base-info", agentEnhancedHandler.GetBaseInfo)
 
 		// ==================== 聚合登录 ====================
 		if deps.JWTMgr != nil {
@@ -1002,6 +1316,49 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/upstream/providers/:id/sync", upstreamHandler.SyncProducts)
 		admin.GET("/upstream/providers/:id/logs", upstreamHandler.GetSyncLogs)
 
+		// ==================== 上游操作 ====================
+		upstreamOpsSvc := service.NewUpstreamService(deps.DB, deps.Log)
+		upstreamOpsHandler := handler.NewUpstreamOpsHandler(upstreamOpsSvc, deps.Log)
+
+		// 电源操作
+		admin.POST("/upstream/:provider_id/host/:host_id/boot", upstreamOpsHandler.Boot)
+		admin.POST("/upstream/:provider_id/host/:host_id/shutdown", upstreamOpsHandler.Shutdown)
+		admin.POST("/upstream/:provider_id/host/:host_id/reboot", upstreamOpsHandler.Reboot)
+		admin.GET("/upstream/:provider_id/host/:host_id/status", upstreamOpsHandler.GetStatus)
+
+		// 控制台
+		admin.POST("/upstream/:provider_id/host/:host_id/vnc", upstreamOpsHandler.VNC)
+		admin.POST("/upstream/:provider_id/host/:host_id/kvm", upstreamOpsHandler.KVM)
+		admin.GET("/upstream/:provider_id/host/:host_id/ipmi/status", upstreamOpsHandler.IPMIStatus)
+		admin.POST("/upstream/:provider_id/host/:host_id/ipmi/on", upstreamOpsHandler.IPMIOn)
+		admin.POST("/upstream/:provider_id/host/:host_id/ipmi/off", upstreamOpsHandler.IPMIOff)
+		admin.POST("/upstream/:provider_id/host/:host_id/ipmi/reboot", upstreamOpsHandler.IPMIReboot)
+		admin.POST("/upstream/:provider_id/host/:host_id/ipmi/vnc", upstreamOpsHandler.IPMIVNC)
+
+		// 重装
+		admin.POST("/upstream/:provider_id/host/:host_id/reinstall", upstreamOpsHandler.Reinstall)
+		admin.GET("/upstream/:provider_id/host/:host_id/reinstall/status", upstreamOpsHandler.GetReinstallStatus)
+		admin.POST("/upstream/:provider_id/host/:host_id/reinstall/cancel", upstreamOpsHandler.CancelReinstall)
+		admin.GET("/upstream/:provider_id/os-list", upstreamOpsHandler.GetOSList)
+		admin.POST("/upstream/:provider_id/host/:host_id/crack-password", upstreamOpsHandler.CrackPassword)
+
+		// DCIM客户端操作
+		admin.GET("/upstream/:provider_id/host/:host_id/dcim/status", upstreamOpsHandler.DcimClientStatus)
+		admin.POST("/upstream/:provider_id/host/:host_id/dcim/on", upstreamOpsHandler.DcimClientOn)
+		admin.POST("/upstream/:provider_id/host/:host_id/dcim/off", upstreamOpsHandler.DcimClientOff)
+		admin.POST("/upstream/:provider_id/host/:host_id/dcim/reboot", upstreamOpsHandler.DcimClientReboot)
+		admin.POST("/upstream/:provider_id/host/:host_id/dcim/vnc", upstreamOpsHandler.DcimClientVNC)
+		admin.POST("/upstream/:provider_id/host/:host_id/dcim/reinstall", upstreamOpsHandler.DcimClientReinstall)
+		admin.POST("/upstream/:provider_id/host/:host_id/dcim/crack-pass", upstreamOpsHandler.DcimClientCrackPass)
+		admin.POST("/upstream/:provider_id/host/:host_id/dcim/reinstall/cancel", upstreamOpsHandler.DcimClientCancelReinstall)
+		admin.GET("/upstream/:provider_id/host/:host_id/dcim/reinstall/status", upstreamOpsHandler.DcimClientReinstallStatus)
+		admin.GET("/upstream/:provider_id/dcim/os-list", upstreamOpsHandler.DcimClientGetOS)
+
+		// 模块按钮
+		admin.POST("/upstream/:provider_id/host/:host_id/module/client-button", upstreamOpsHandler.ModuleClientButton)
+		admin.POST("/upstream/:provider_id/host/:host_id/module/admin-button", upstreamOpsHandler.ModuleAdminButton)
+		admin.GET("/upstream/:provider_id/host/:host_id/module/power-status", upstreamOpsHandler.ModulePowerStatus)
+
 		// ==================== 用户等级 ====================
 		userLevelHandler := handler.NewUserLevelHandler(deps.DB)
 		admin.GET("/user-levels", userLevelHandler.AdminGetList)
@@ -1022,6 +1379,41 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/v10/cart/coupon", v10CartHandler.ApplyCoupon)
 		admin.DELETE("/v10/cart/coupon", v10CartHandler.RemoveCoupon)
 		admin.POST("/v10/cart/checkout", v10CartHandler.Checkout)
+
+		// ==================== V10云管理 ====================
+		couponSvcForV10Cloud := service.NewCouponService(deps.DB, deps.Log)
+		v10CloudSvc := service.NewV10CloudService(deps.DB, deps.Log, deps.OrdSvc, couponSvcForV10Cloud)
+		v10CloudHandler := handler.NewV10CloudHandler(v10CloudSvc, deps.Log)
+
+		// 产品浏览
+		admin.GET("/v10/cloud/products", v10CloudHandler.GetProductList)
+		admin.GET("/v10/cloud/products/:id", v10CloudHandler.GetProductDetail)
+		admin.GET("/v10/cloud/regions", v10CloudHandler.GetRegions)
+		admin.GET("/v10/cloud/os-types", v10CloudHandler.GetOSTypes)
+
+		// 配置选项
+		admin.GET("/v10/cloud/products/:id/config", v10CloudHandler.GetConfigOptions)
+		admin.POST("/v10/cloud/calculate-price", v10CloudHandler.CalculatePrice)
+		admin.GET("/v10/cloud/products/:id/linkage", v10CloudHandler.GetLinkAgeList)
+		admin.GET("/v10/cloud/products/:id/config/filter", v10CloudHandler.FilterConfigOptions)
+
+		// 购物车操作
+		admin.GET("/v10/cloud/cart", v10CloudHandler.GetCartSummary)
+		admin.GET("/v10/cloud/cart/items", v10CloudHandler.GetCartItems)
+		admin.POST("/v10/cloud/cart", v10CloudHandler.AddToCart)
+		admin.PUT("/v10/cloud/cart/:id", v10CloudHandler.UpdateCartItem)
+		admin.POST("/v10/cloud/cart/settle", v10CloudHandler.SettleCart)
+
+		// 订单流程
+		admin.POST("/v10/cloud/orders", v10CloudHandler.CreateOrder)
+		admin.GET("/v10/cloud/orders/:id", v10CloudHandler.GetOrderDetail)
+		admin.POST("/v10/cloud/orders/:id/pay", v10CloudHandler.PayOrder)
+
+		// 主机管理
+		admin.GET("/v10/cloud/hosts/:id", v10CloudHandler.GetHostInfo)
+		admin.GET("/v10/cloud/hosts/:id/config", v10CloudHandler.GetHostConfig)
+		admin.GET("/v10/cloud/hosts/:id/traffic", v10CloudHandler.GetTrafficUsage)
+		admin.GET("/v10/cloud/hosts/:id/os", v10CloudHandler.GetOSList)
 
 		// ==================== 代金券 ====================
 		voucherSvc := service.NewVoucherService(deps.DB, deps.Log)
@@ -1054,17 +1446,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/zjmf-api/:id/test", zjmfHandler.TestConnection)
 		admin.POST("/zjmf-api/:id/sync", zjmfHandler.SyncProducts)
 
-		// ==================== 域名管理 ====================
-		domainSvc := service.NewDomainService(deps.DB, deps.Log)
-		domainHandler := handler.NewDomainHandler(domainSvc, deps.DB, deps.Log)
-		admin.GET("/domains", domainHandler.AdminGetList)
-		admin.GET("/domains/:id", domainHandler.AdminGetDetail)
-		admin.POST("/domains", domainHandler.AdminCreate)
-		admin.PUT("/domains/:id", domainHandler.AdminUpdate)
-		admin.DELETE("/domains/:id", domainHandler.AdminDelete)
-		admin.GET("/domains/transfers", domainHandler.AdminGetTransfers)
-		admin.PUT("/domains/transfers/:id", domainHandler.AdminUpdateTransfer)
-
 		// ==================== SSL证书管理 ====================
 		sslCertSvc := service.NewSSLCertificateService(deps.DB, deps.Log)
 		sslCertHandler := handler.NewSSLCertificateHandler(sslCertSvc, deps.Log)
@@ -1072,6 +1453,120 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/ssl-certificates/:id", sslCertHandler.AdminGetDetail)
 		admin.PUT("/ssl-certificates/:id", sslCertHandler.AdminUpdate)
 		admin.DELETE("/ssl-certificates/:id", sslCertHandler.AdminDelete)
+
+		// ==================== PDF生成 ====================
+		pdfSvc := service.NewPDFService(deps.DB)
+		pdfHandler := handler.NewPDFHandler(pdfSvc)
+		admin.GET("/contracts/:id/pdf", pdfHandler.GenerateContractPDF)
+		admin.GET("/invoices/:id/pdf", pdfHandler.GenerateInvoicePDF)
+		admin.GET("/contracts/:id/pdf/seal", pdfHandler.GenerateContractWithSeal)
+
+		// ==================== 邮件增强 ====================
+		emailEnhancedSvc := service.NewEmailEnhancedService(deps.DB)
+		emailEnhancedHandler := handler.NewEmailEnhancedHandler(emailEnhancedSvc)
+		admin.GET("/email-templates", emailEnhancedHandler.GetTemplates)
+		admin.POST("/email-templates", emailEnhancedHandler.CreateTemplate)
+		admin.PUT("/email-templates/:id", emailEnhancedHandler.UpdateTemplate)
+		admin.DELETE("/email-templates/:id", emailEnhancedHandler.DeleteTemplate)
+		admin.POST("/email/test", emailEnhancedHandler.SendTestEmail)
+		admin.POST("/email/batch", emailEnhancedHandler.SendBatchEmail)
+		admin.GET("/email-logs", emailEnhancedHandler.GetEmailLogs)
+		admin.GET("/email-stats", emailEnhancedHandler.GetEmailStats)
+		admin.GET("/email-support", emailEnhancedHandler.GetSupportConfig)
+		admin.PUT("/email-support", emailEnhancedHandler.UpdateSupportConfig)
+
+		// ==================== 升级增强 ====================
+		upgradeEnhancedSvc := service.NewUpgradeEnhancedService(deps.DB)
+		upgradeEnhancedHandler := handler.NewUpgradeEnhancedHandler(upgradeEnhancedSvc)
+		admin.GET("/upgrade-config/:product_id", upgradeEnhancedHandler.GetUpgradeConfig)
+		admin.POST("/upgrade-config/:host_id", upgradeEnhancedHandler.UpgradeConfigAdmin)
+		admin.GET("/upgrade/check-change/:host_id", upgradeEnhancedHandler.CheckChange)
+		admin.GET("/upgrade/filter-options/:product_id", upgradeEnhancedHandler.FilterConfigOptions)
+		admin.GET("/upgrade/promo/:host_id", upgradeEnhancedHandler.CheckUpgradePromo)
+
+		// ==================== 续费增强 ====================
+		renewEnhancedSvc := service.NewRenewEnhancedService(deps.DB)
+		renewEnhancedHandler := handler.NewRenewEnhancedHandler(renewEnhancedSvc)
+		admin.GET("/renewal/page/:host_id", renewEnhancedHandler.GetRenewalPage)
+		admin.GET("/renewal/price/:host_id", renewEnhancedHandler.GetRenewalPrice)
+		admin.POST("/renewal/submit", renewEnhancedHandler.SubmitRenewal)
+		admin.POST("/renewal/batch", renewEnhancedHandler.BatchRenew)
+		admin.PUT("/renewal/auto-renew/:host_id", renewEnhancedHandler.SetAutoRenew)
+		admin.PUT("/renewal/pay-type/:host_id", renewEnhancedHandler.SetPayType)
+		admin.GET("/renewal/pay-type/:host_id", renewEnhancedHandler.GetPayType)
+		admin.DELETE("/renewal/invoice/:id", renewEnhancedHandler.DeleteRenewInvoice)
+
+		// ==================== 菜单管理增强 ====================
+		menuEnhancedSvc := service.NewMenuEnhancedService(deps.DB)
+		menuEnhancedHandler := handler.NewMenuEnhancedHandler(menuEnhancedSvc)
+		admin.GET("/web-navs", menuEnhancedHandler.GetWebNavs)
+		admin.POST("/web-navs", menuEnhancedHandler.CreateWebNav)
+		admin.PUT("/web-navs/:id", menuEnhancedHandler.UpdateWebNav)
+		admin.DELETE("/web-navs/:id", menuEnhancedHandler.DeleteWebNav)
+		admin.GET("/web-navs/default", menuEnhancedHandler.GetDefaultSenior)
+		admin.GET("/web-navs/list", menuEnhancedHandler.GetWebNavList)
+		admin.POST("/web-navs/list", menuEnhancedHandler.SetWebNavList)
+		admin.GET("/web-navs/:id", menuEnhancedHandler.GetOneNavs)
+		admin.POST("/custom-pages", menuEnhancedHandler.AddCustomPage)
+		admin.POST("/product-pages", menuEnhancedHandler.AddProductPage)
+		admin.GET("/system-nav", menuEnhancedHandler.GetSystemNav)
+		admin.GET("/product-menus", menuEnhancedHandler.GetProductList)
+		admin.POST("/web-pages", menuEnhancedHandler.CreateWebPage)
+		admin.GET("/menu-types", menuEnhancedHandler.GetMenuType)
+		admin.GET("/other-menus", menuEnhancedHandler.GetOtherMenu)
+		admin.DELETE("/two-menus/:id", menuEnhancedHandler.DelTwoMenu)
+		admin.GET("/all-menus", menuEnhancedHandler.GetTypeAllMenu)
+		admin.PUT("/menu-active/:id", menuEnhancedHandler.EditMenuActive)
+		admin.GET("/nav-types", menuEnhancedHandler.GetNavType)
+		admin.GET("/create-web-data", menuEnhancedHandler.GetCreateWebData)
+		admin.GET("/languages", menuEnhancedHandler.GetLang)
+		admin.DELETE("/direct/:id", menuEnhancedHandler.DirectDel)
+		admin.POST("/hook-menus", menuEnhancedHandler.AddHookMenu)
+		admin.DELETE("/hook-menus/:id", menuEnhancedHandler.DelHookMenu)
+		admin.GET("/hook-menus", menuEnhancedHandler.GetHookMenus)
+		admin.POST("/nav-links/:nav_id", menuEnhancedHandler.SaveLinks)
+		admin.DELETE("/nav-links/:nav_id", menuEnhancedHandler.DeleteLinks)
+		admin.GET("/nav-links", menuEnhancedHandler.AllLinks)
+
+		// ==================== 客户跟踪管理 ====================
+		clientTrackHandler := handler.NewClientTrackHandler(deps.DB)
+		admin.GET("/client-tracks", clientTrackHandler.List)
+		admin.GET("/client-tracks/:id", clientTrackHandler.GetDetail)
+		admin.POST("/client-tracks", clientTrackHandler.Create)
+		admin.PUT("/client-tracks/:id", clientTrackHandler.Update)
+		admin.DELETE("/client-tracks/:id", clientTrackHandler.Delete)
+		admin.POST("/client-tracks/:id/remarks", clientTrackHandler.AddRemark)
+		admin.DELETE("/client-tracks/remarks/:id", clientTrackHandler.DeleteRemark)
+		admin.PUT("/client-tracks/status", clientTrackHandler.UpdateTrackStatus)
+		admin.GET("/client-tracks/notes/:uid", clientTrackHandler.GetClientNotes)
+		admin.PUT("/client-tracks/notes/:uid", clientTrackHandler.UpdateClientNotes)
+
+		// ==================== 快递管理 ====================
+		expressHandler := handler.NewExpressHandler(deps.DB)
+		admin.GET("/expresses", expressHandler.List)
+		admin.POST("/expresses", expressHandler.Create)
+		admin.PUT("/expresses/:id", expressHandler.Update)
+		admin.DELETE("/expresses/:id", expressHandler.Delete)
+
+		// ==================== 取消原因管理 ====================
+		cancelReasonHandler := handler.NewCancelReasonHandler(deps.DB)
+		admin.GET("/cancel-reasons", cancelReasonHandler.List)
+		admin.POST("/cancel-reasons", cancelReasonHandler.Create)
+		admin.PUT("/cancel-reasons/:id", cancelReasonHandler.Update)
+		admin.DELETE("/cancel-reasons/:id", cancelReasonHandler.Delete)
+
+		// ==================== 首页基本信息管理 ====================
+		baseInfoHandler := handler.NewBaseInfoHandler(deps.DB)
+		admin.GET("/base-infos", baseInfoHandler.List)
+		admin.POST("/base-infos", baseInfoHandler.Create)
+		admin.PUT("/base-infos/:id", baseInfoHandler.Update)
+		admin.DELETE("/base-infos/:id", baseInfoHandler.Delete)
+
+		// ==================== 用户专属下载管理 ====================
+		userDownloadHandler := handler.NewUserDownloadHandler(deps.DB)
+		admin.GET("/user-downloads", userDownloadHandler.AdminList)
+		admin.POST("/user-downloads", userDownloadHandler.AdminCreate)
+		admin.DELETE("/user-downloads/:id", userDownloadHandler.AdminDelete)
 	}
 }
 

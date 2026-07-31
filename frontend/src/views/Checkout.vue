@@ -185,6 +185,64 @@
       </div>
     </div>
     
+    <!-- 银行转账对话框 -->
+    <el-dialog v-model="bankDialogVisible" title="银行转账信息" width="500px" :close-on-click-modal="false">
+      <div class="bank-transfer-info" v-if="bankInfo">
+        <el-alert type="warning" :closable="false" show-icon>
+          <template #title>
+            请在24小时内完成转账，否则订单将自动取消
+          </template>
+        </el-alert>
+        
+        <div class="bank-info-card">
+          <div class="info-row">
+            <span class="label">收款银行</span>
+            <span class="value">{{ bankInfo.bank_name }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">开户行</span>
+            <span class="value">{{ bankInfo.branch_name }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">账户名</span>
+            <span class="value">{{ bankInfo.account_name }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">账号</span>
+            <span class="value">
+              {{ bankInfo.account_no }}
+              <el-button type="primary" link @click="copyText(bankInfo.account_no)">复制</el-button>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="label">转账金额</span>
+            <span class="value amount">¥{{ bankInfo.amount?.toFixed(2) }}</span>
+          </div>
+          <div class="info-row" v-if="bankInfo.order_no">
+            <span class="label">订单号</span>
+            <span class="value">
+              {{ bankInfo.order_no }}
+              <el-button type="primary" link @click="copyText(bankInfo.order_no)">复制</el-button>
+            </span>
+          </div>
+        </div>
+        
+        <div class="bank-instructions" v-if="bankInfo.instructions">
+          <h4>转账说明</h4>
+          <p>{{ bankInfo.instructions }}</p>
+        </div>
+        
+        <div class="bank-qrcode" v-if="bankInfo.qrcode">
+          <h4>扫码支付</h4>
+          <img :src="bankInfo.qrcode" alt="收款二维码" class="qrcode-img" />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="bankDialogVisible = false">关闭</el-button>
+        <el-button type="primary" @click="router.push('/user/orders')">查看订单</el-button>
+      </template>
+    </el-dialog>
+    
     <SiteFooter />
   </div>
 </template>
@@ -201,6 +259,19 @@ import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'
 
 const router = useRouter()
+
+// 银行转账相关
+const bankDialogVisible = ref(false)
+const bankInfo = ref<any>(null)
+
+// 复制文本
+const copyText = (text: string) => {
+  navigator.clipboard.writeText(text).then(() => {
+    ElMessage.success('已复制')
+  }).catch(() => {
+    ElMessage.error('复制失败')
+  })
+}
 
 // 表单数据
 const contactForm = ref({
@@ -225,10 +296,10 @@ const orderItems = ref<any[]>([])
 
 // 支付方式
 const paymentMethods = ref([
-  { id: 'alipay', name: '支付宝', icon: '/assets/payment/alipay.svg' },
-  { id: 'wechat', name: '微信支付', icon: '/assets/payment/wechat.svg' },
-  { id: 'qqpay', name: 'QQ钱包', icon: '/assets/payment/qqpay.svg' },
-  { id: 'usdt', name: 'USDT', icon: '/assets/payment/usdt.svg' }
+  { id: 'alipay', name: '支付宝', icon: '/assets/payment/alipay.png' },
+  { id: 'wechat', name: '微信支付', icon: '/assets/payment/wechat.png' },
+  { id: 'qqpay', name: 'QQ钱包', icon: '/assets/payment/qqpay.png' },
+  { id: 'usdt', name: 'USDT', icon: '/assets/payment/usdt.png' }
 ])
 
 // 计算属性
@@ -352,8 +423,16 @@ const submitOrder = async () => {
       // 清除购物车中已结算的商品
       localStorage.removeItem('checkout_items')
       
-      // 跳转到支付页面
-      if (data.data.pay_url) {
+      // 判断是否是银行转账
+      if (data.data.type === 'bank_transfer') {
+        try {
+          bankInfo.value = JSON.parse(data.data.bank_info)
+        } catch (e) {
+          bankInfo.value = data.data.bank_info
+        }
+        bankDialogVisible.value = true
+      } else if (data.data.pay_url) {
+        // 其他支付方式跳转
         window.location.href = data.data.pay_url
       } else {
         router.push(`/user/orders/${data.data.order_id}`)
@@ -658,6 +737,84 @@ onMounted(() => {
     
     .payment-methods {
       flex-direction: column;
+    }
+  }
+}
+
+// 银行转账对话框样式
+.bank-transfer-info {
+  .bank-info-card {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px dashed #e9ecef;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .label {
+        color: #666;
+        font-size: 14px;
+      }
+      
+      .value {
+        color: #333;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        
+        &.amount {
+          color: #f56c6c;
+          font-size: 20px;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+  
+  .bank-instructions {
+    margin: 20px 0;
+    padding: 16px;
+    background: #fdf6ec;
+    border-radius: 8px;
+    
+    h4 {
+      margin: 0 0 12px 0;
+      color: #e6a23c;
+      font-size: 14px;
+    }
+    
+    p {
+      margin: 0;
+      color: #666;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  }
+  
+  .bank-qrcode {
+    margin: 20px 0;
+    text-align: center;
+    
+    h4 {
+      margin: 0 0 16px 0;
+      color: #333;
+      font-size: 14px;
+    }
+    
+    .qrcode-img {
+      max-width: 200px;
+      border: 1px solid #eee;
+      border-radius: 8px;
     }
   }
 }

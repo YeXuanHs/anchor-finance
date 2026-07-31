@@ -14,8 +14,8 @@ type ProvisionModule struct {
 	Slug               string         `gorm:"type:varchar(128);uniqueIndex" json:"slug"`
 	Description        string         `gorm:"type:text" json:"description"`
 	Type               string         `gorm:"type:varchar(32);not null;index" json:"type"` // hosting/domain/ssl/vpn/cdn/server/other
-	SupportedProducts  datatypes.JSON `gorm:"type:jsonb" json:"supported_products"`
-	Config             datatypes.JSON `gorm:"type:jsonb" json:"config"`
+	SupportedProducts  datatypes.JSON `gorm:"type:json" json:"supported_products"`
+	Config             datatypes.JSON `gorm:"type:json" json:"config"`
 	ServerURL          string         `gorm:"type:varchar(512)" json:"server_url"`
 	ServerIP           string         `gorm:"type:varchar(64)" json:"server_ip"`
 	APIKey             string         `gorm:"type:varchar(256)" json:"-"`
@@ -34,7 +34,7 @@ type ProvisionModule struct {
 	ProvisionCount     int            `gorm:"default:0" json:"provision_count"`
 	SuccessCount       int            `gorm:"default:0" json:"success_count"`
 	FailCount          int            `gorm:"default:0" json:"fail_count"`
-	Metadata           datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
+	Metadata           datatypes.JSON `gorm:"type:json" json:"metadata"`
 	UpdatedAt          time.Time      `json:"updated_at"`
 }
 
@@ -45,8 +45,8 @@ type ProvisionLog struct {
 	Module     ProvisionModule  `gorm:"foreignKey:ModuleID" json:"module,omitempty"`
 	Action     string           `gorm:"type:varchar(32);not null" json:"action"` // create/suspend/unsuspend/terminate/test
 	Status     int8             `gorm:"type:smallint;default:1;not null" json:"status"` // 1=处理中 2=成功 3=失败
-	Request    datatypes.JSON   `gorm:"type:jsonb" json:"request"`
-	Response   datatypes.JSON   `gorm:"type:jsonb" json:"response"`
+	Request    datatypes.JSON   `gorm:"type:json" json:"request"`
+	Response   datatypes.JSON   `gorm:"type:json" json:"response"`
 	Error      string           `gorm:"type:text" json:"error"`
 	Duration   int              `gorm:"default:0;comment:ms" json:"duration"`
 	AdminID    uint             `gorm:"index" json:"admin_id"`

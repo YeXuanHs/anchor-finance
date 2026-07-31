@@ -53,10 +53,10 @@ type Product struct {
 	Download      bool           `gorm:"default:false" json:"download"`
 	Featured      bool           `gorm:"default:false;index" json:"featured"`
 	Image         string         `gorm:"type:varchar(512)" json:"image"`
-	Images        datatypes.JSON `gorm:"type:jsonb" json:"images"`       // 图片列表
-	ConfigOptions datatypes.JSON `gorm:"type:jsonb" json:"config_options"` // 可配置选项
-	Metadata      datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
-	Tags          datatypes.JSON `gorm:"type:jsonb" json:"tags"`
+	Images        datatypes.JSON `gorm:"type:json" json:"images"`       // 图片列表
+	ConfigOptions datatypes.JSON `gorm:"type:json" json:"config_options"` // 可配置选项
+	Metadata      datatypes.JSON `gorm:"type:json" json:"metadata"`
+	Tags          datatypes.JSON `gorm:"type:json" json:"tags"`
 	UserProducts  []UserProduct  `gorm:"foreignKey:ProductID" json:"user_products,omitempty"`
 }
 
@@ -89,7 +89,7 @@ type UserProduct struct {
 	ProvisioningStatus int16    `gorm:"type:smallint;default:0" json:"provisioning_status"` // 0=待处理 1=处理中 2=成功 3=失败
 	AdminNotes    string         `gorm:"type:text" json:"admin_notes"`
 	Notes         string         `gorm:"type:text" json:"notes"`
-	ConfigOptions datatypes.JSON `gorm:"type:jsonb" json:"config_options"` // 用户自定义配置
-	CustomFields  datatypes.JSON `gorm:"type:jsonb" json:"custom_fields"`
-	Metadata      datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
+	ConfigOptions datatypes.JSON `gorm:"type:json" json:"config_options"` // 用户自定义配置
+	CustomFields  datatypes.JSON `gorm:"type:json" json:"custom_fields"`
+	Metadata      datatypes.JSON `gorm:"type:json" json:"metadata"`
 }

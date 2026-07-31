@@ -35,6 +35,8 @@ type Host struct {
 	BandwidthMbps  int            `gorm:"default:0" json:"bandwidth_mbps"`
 	TrafficGB      int            `gorm:"default:0" json:"traffic_gb"`
 	Location       string         `gorm:"size:256" json:"location"`
+	Rack           string         `gorm:"size:32" json:"rack"`
+	RackPosition   string         `gorm:"size:16" json:"rack_position"`
 	Status         int            `gorm:"default:0;index" json:"status"` // 0=关机 1=运行中 2=故障 3=维护
 	PowerStatus    int            `gorm:"default:0" json:"power_status"`
 	OwnerID        *uint          `gorm:"index" json:"owner_id"`
@@ -44,9 +46,9 @@ type Host struct {
 	ProvisionedAt  *time.Time     `json:"provisioned_at"`
 	Remark         string         `gorm:"type:text" json:"remark"`
 	AdminNotes     string         `gorm:"type:text" json:"admin_notes"`
-	Tags           datatypes.JSON `gorm:"type:jsonb" json:"tags"`
-	Config         datatypes.JSON `gorm:"type:jsonb" json:"config"`
-	Metadata       datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
+	Tags           datatypes.JSON `gorm:"type:json" json:"tags"`
+	Config         datatypes.JSON `gorm:"type:json" json:"config"`
+	Metadata       datatypes.JSON `gorm:"type:json" json:"metadata"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`

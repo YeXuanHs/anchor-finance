@@ -42,8 +42,8 @@ type Order struct {
 	IPAddress     string         `gorm:"type:varchar(64)" json:"ip_address"`
 	Gateway       string         `gorm:"type:varchar(64)" json:"gateway"`
 	CommissionPaid bool          `gorm:"default:false" json:"commission_paid"`
-	ConfigOptions datatypes.JSON `gorm:"type:jsonb" json:"config_options"`
-	CustomFields  datatypes.JSON `gorm:"type:jsonb" json:"custom_fields"`
+	ConfigOptions datatypes.JSON `gorm:"type:json" json:"config_options"`
+	CustomFields  datatypes.JSON `gorm:"type:json" json:"custom_fields"`
 	Items         []OrderItem    `gorm:"foreignKey:OrderID" json:"items,omitempty"`
 }
 
@@ -61,7 +61,7 @@ type OrderItem struct {
 	Discount  datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"discount"`
 	Tax       datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"tax"`
 	Total     datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"total"`
-	Config    datatypes.JSON   `gorm:"type:jsonb" json:"config"`
+	Config    datatypes.JSON   `gorm:"type:json" json:"config"`
 }
 
 // Coupon 优惠券
@@ -79,10 +79,10 @@ type Coupon struct {
 	MaxUsesPerUser    int            `gorm:"default:1" json:"max_uses_per_user"`
 	StartDate         *time.Time     `gorm:"index" json:"start_date"`
 	EndDate           *time.Time     `gorm:"index" json:"end_date"`
-	ProductIDs        datatypes.JSON `gorm:"type:jsonb" json:"product_ids"`        // 适用商品ID列表
-	Cycles            datatypes.JSON `gorm:"type:jsonb" json:"cycles"`             // 适用计费周期列表
-	GroupIDs          datatypes.JSON `gorm:"type:jsonb" json:"group_ids"`          // 适用用户组ID列表
-	ExcludeProductIDs datatypes.JSON `gorm:"type:jsonb" json:"exclude_product_ids"`
+	ProductIDs        datatypes.JSON `gorm:"type:json" json:"product_ids"`        // 适用商品ID列表
+	Cycles            datatypes.JSON `gorm:"type:json" json:"cycles"`             // 适用计费周期列表
+	GroupIDs          datatypes.JSON `gorm:"type:json" json:"group_ids"`          // 适用用户组ID列表
+	ExcludeProductIDs datatypes.JSON `gorm:"type:json" json:"exclude_product_ids"`
 	OnlyNewClient     bool           `gorm:"default:false" json:"only_new_client"`  // 仅新客户可用
 	OnlyOldClient     bool           `gorm:"default:false" json:"only_old_client"`  // 仅老客户可用
 	OncePerClient     bool           `gorm:"default:false" json:"once_per_client"`  // 每客户仅限一次

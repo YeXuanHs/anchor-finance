@@ -21,6 +21,6 @@ type Menu struct {
 	Target    string         `gorm:"type:varchar(16);default:'_self'" json:"target"`  // _self/_blank
 	Badge     string         `gorm:"type:varchar(32)" json:"badge"`                   // 角标文字
 	BadgeType string         `gorm:"type:varchar(16)" json:"badge_type"`              // 角标类型: dot/number/text
-	Extra     datatypes.JSON `gorm:"type:jsonb" json:"extra"`                         // 扩展配置
+	Extra     datatypes.JSON `gorm:"type:json" json:"extra"`                         // 扩展配置
 	IsActive  bool           `gorm:"default:true;index" json:"is_active"`             // 是否启用
 }

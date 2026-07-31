@@ -55,7 +55,7 @@ type DcimServer struct {
 	ControlURL     string         `gorm:"type:varchar(512)" json:"control_url"`                   // 控制面板URL
 	ControlUser    string         `gorm:"type:varchar(128)" json:"control_user"`                  // 控制面板用户名
 	ControlPass    string         `gorm:"type:varchar(256)" json:"-"`                             // 控制面板密码/token
-	ControlExtra   string         `gorm:"type:jsonb" json:"control_extra"`                        // 额外控制参数JSON
+	ControlExtra   string         `gorm:"type:json" json:"control_extra"`                        // 额外控制参数JSON
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
@@ -93,6 +93,47 @@ type DcimCloud struct {
 	Datacenter     *DcimDatacenter `gorm:"foreignKey:DatacenterID" json:"datacenter,omitempty"`
 	Owner          *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
 	ParentServer   *DcimServer    `gorm:"foreignKey:ParentServerID" json:"parent_server,omitempty"`
+}
+
+// DcimSnapshot 服务器快照
+type DcimSnapshot struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	ServerID  uint      `gorm:"index" json:"server_id"`
+	Name      string    `gorm:"type:varchar(256)" json:"name"`
+	SizeGB    int       `json:"size_gb"`
+	Status    string    `gorm:"type:varchar(32)" json:"status"` // creating/available/deleting
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// DcimBackup 服务器备份
+type DcimBackup struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	ServerID  uint      `gorm:"index" json:"server_id"`
+	Name      string    `gorm:"type:varchar(256)" json:"name"`
+	SizeGB    int       `json:"size_gb"`
+	Type      string    `gorm:"type:varchar(32)" json:"type"` // manual/auto
+	Status    string    `gorm:"type:varchar(32)" json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// DcimTrafficLog 流量记录
+type DcimTrafficLog struct {
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	ServerID   uint      `gorm:"index" json:"server_id"`
+	InBytes    int64     `json:"in_bytes"`
+	OutBytes   int64     `json:"out_bytes"`
+	TotalBytes int64     `json:"total_bytes"`
+	RecordedAt time.Time `gorm:"index" json:"recorded_at"`
+}
+
+// DcimRescueLog 救援/密码重置日志
+type DcimRescueLog struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	ServerID  uint      `gorm:"index" json:"server_id"`
+	Action    string    `gorm:"type:varchar(32)" json:"action"` // rescue/crack_pass
+	Status    string    `gorm:"type:varchar(32)" json:"status"`
+	Result    string    `gorm:"type:text" json:"result"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // DcimOperationLog 服务器操作日志

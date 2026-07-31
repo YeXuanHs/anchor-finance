@@ -17,7 +17,7 @@ type ProductInterflow struct {
 	SourceProductID uint         `gorm:"index;not null" json:"source_product_id"`
 	TargetProductID uint         `gorm:"index;not null" json:"target_product_id"`
 	RelationType  string         `gorm:"type:varchar(32);not null;default:'link'" json:"relation_type"` // link/sync/depend/share
-	Config        datatypes.JSON `gorm:"type:jsonb" json:"config"`
+	Config        datatypes.JSON `gorm:"type:json" json:"config"`
 	Status        int16          `gorm:"type:smallint;default:1;not null" json:"status"` // 1=启用 0=禁用
 	Remark        string         `gorm:"type:text" json:"remark"`
 	CreatedAt     time.Time      `json:"created_at"`

@@ -19,13 +19,18 @@ func NewPaymentGatewayHandler(svc *service.PaymentGatewayService, log *logger.Lo
 	return &PaymentGatewayHandler{svc: svc, log: log}
 }
 
-// AdminGetList returns paginated payment gateway list.
-func (h *PaymentGatewayHandler) AdminGetList(c *gin.Context) {
+// List 返回支付方式列表
+func (h *PaymentGatewayHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	status, _ := strconv.Atoi(c.DefaultQuery("status", "-1"))
 
-	items, total, err := h.svc.GetList(page, pageSize, status)
+	var isEnabled *bool
+	if v := c.Query("is_enabled"); v != "" {
+		b := v == "true" || v == "1"
+		isEnabled = &b
+	}
+
+	items, total, err := h.svc.GetList(page, pageSize, isEnabled)
 	if err != nil {
 		response.ServerError(c, err.Error())
 		return
@@ -33,24 +38,24 @@ func (h *PaymentGatewayHandler) AdminGetList(c *gin.Context) {
 	response.SuccessPage(c, items, total, page, pageSize)
 }
 
-// AdminGetDetail returns a single payment gateway by ID.
-func (h *PaymentGatewayHandler) AdminGetDetail(c *gin.Context) {
+// GetDetail 返回单个支付方式详情
+func (h *PaymentGatewayHandler) GetDetail(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid gateway id")
+		response.BadRequest(c, "无效的ID")
 		return
 	}
 
 	item, err := h.svc.GetByID(uint(id))
 	if err != nil {
-		response.NotFound(c, "payment gateway not found")
+		response.NotFound(c, "支付方式不存在")
 		return
 	}
 	response.Success(c, item)
 }
 
-// AdminCreate creates a new payment gateway.
-func (h *PaymentGatewayHandler) AdminCreate(c *gin.Context) {
+// Create 创建支付方式
+func (h *PaymentGatewayHandler) Create(c *gin.Context) {
 	var req service.CreatePaymentGatewayRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
@@ -65,11 +70,11 @@ func (h *PaymentGatewayHandler) AdminCreate(c *gin.Context) {
 	response.Success(c, item)
 }
 
-// AdminUpdate updates a payment gateway.
-func (h *PaymentGatewayHandler) AdminUpdate(c *gin.Context) {
+// Update 更新支付方式
+func (h *PaymentGatewayHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid gateway id")
+		response.BadRequest(c, "无效的ID")
 		return
 	}
 
@@ -87,11 +92,11 @@ func (h *PaymentGatewayHandler) AdminUpdate(c *gin.Context) {
 	response.Success(c, item)
 }
 
-// AdminDelete deletes a payment gateway.
-func (h *PaymentGatewayHandler) AdminDelete(c *gin.Context) {
+// Delete 删除支付方式
+func (h *PaymentGatewayHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid gateway id")
+		response.BadRequest(c, "无效的ID")
 		return
 	}
 
@@ -99,14 +104,14 @@ func (h *PaymentGatewayHandler) AdminDelete(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "payment gateway deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
-// AdminToggleStatus toggles a gateway's enabled/disabled status.
-func (h *PaymentGatewayHandler) AdminToggleStatus(c *gin.Context) {
+// SetStatus 切换启用状态
+func (h *PaymentGatewayHandler) SetStatus(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid gateway id")
+		response.BadRequest(c, "无效的ID")
 		return
 	}
 
@@ -114,37 +119,14 @@ func (h *PaymentGatewayHandler) AdminToggleStatus(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "payment gateway status toggled")
+	response.SuccessMsg(c, "状态已切换")
 }
 
-// AdminUpdateSort updates sort order for a payment gateway.
-func (h *PaymentGatewayHandler) AdminUpdateSort(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		response.BadRequest(c, "invalid gateway id")
-		return
-	}
-
-	var req struct {
-		SortOrder int `json:"sort_order"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	if err := h.svc.UpdateSort(uint(id), req.SortOrder); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	response.SuccessMsg(c, "sort order updated")
-}
-
-// TestConnection tests connection to a payment gateway.
+// TestConnection 测试支付接口
 func (h *PaymentGatewayHandler) TestConnection(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid gateway id")
+		response.BadRequest(c, "无效的ID")
 		return
 	}
 
@@ -152,33 +134,60 @@ func (h *PaymentGatewayHandler) TestConnection(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.Success(c, gin.H{"message": "connection test passed"})
+	response.Success(c, gin.H{"message": "接口测试通过"})
 }
 
-// List is an alias for AdminGetList.
-func (h *PaymentGatewayHandler) List(c *gin.Context) { h.AdminGetList(c) }
-
-// GetDetail is an alias for AdminGetDetail.
-func (h *PaymentGatewayHandler) GetDetail(c *gin.Context) { h.AdminGetDetail(c) }
-
-// Create is an alias for AdminCreate.
-func (h *PaymentGatewayHandler) Create(c *gin.Context) { h.AdminCreate(c) }
-
-// Update is an alias for AdminUpdate.
-func (h *PaymentGatewayHandler) Update(c *gin.Context) { h.AdminUpdate(c) }
-
-// Delete is an alias for AdminDelete.
-func (h *PaymentGatewayHandler) Delete(c *gin.Context) { h.AdminDelete(c) }
-
-// SetStatus is an alias for AdminToggleStatus.
-func (h *PaymentGatewayHandler) SetStatus(c *gin.Context) { h.AdminToggleStatus(c) }
-
-// GetEnabled returns enabled payment gateways for frontend.
+// GetEnabled 返回启用的支付方式（用户前台）
 func (h *PaymentGatewayHandler) GetEnabled(c *gin.Context) {
 	items, err := h.svc.GetEnabled()
 	if err != nil {
 		response.ServerError(c, err.Error())
 		return
 	}
-	response.Success(c, items)
+
+	// 转换为前端需要的格式
+	var result []map[string]interface{}
+	for _, item := range items {
+		result = append(result, map[string]interface{}{
+			"id":    item.ID,
+			"name":  item.Name,
+			"title": item.Title,
+			"code":  item.Code,
+			"icon":  item.Icon,
+		})
+	}
+	response.Success(c, result)
+}
+
+// GetSupportedInfo 返回支持的接口和支付类型
+func (h *PaymentGatewayHandler) GetSupportedInfo(c *gin.Context) {
+	info := h.svc.GetSupportedInfo()
+	response.Success(c, info)
+}
+
+// 以下是路由别名（兼容旧路由）
+func (h *PaymentGatewayHandler) AdminGetList(c *gin.Context)    { h.List(c) }
+func (h *PaymentGatewayHandler) AdminGetDetail(c *gin.Context)  { h.GetDetail(c) }
+func (h *PaymentGatewayHandler) AdminCreate(c *gin.Context)     { h.Create(c) }
+func (h *PaymentGatewayHandler) AdminUpdate(c *gin.Context)     { h.Update(c) }
+func (h *PaymentGatewayHandler) AdminDelete(c *gin.Context)     { h.Delete(c) }
+func (h *PaymentGatewayHandler) AdminToggleStatus(c *gin.Context) { h.SetStatus(c) }
+func (h *PaymentGatewayHandler) AdminUpdateSort(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "无效的ID")
+		return
+	}
+	var req struct {
+		SortOrder int `json:"sort_order"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateSort(uint(id), req.SortOrder); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "排序已更新")
 }

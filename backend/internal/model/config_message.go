@@ -13,7 +13,7 @@ type MessageConfig struct {
 	Channel     string         `gorm:"type:varchar(32);not null;uniqueIndex:idx_msg_channel" json:"channel"` // email/sms/site
 	Name        string         `gorm:"type:varchar(128);not null" json:"name"`
 	Provider    string         `gorm:"type:varchar(64)" json:"provider"` // smtp/aliyun_sms/tencent_sms/custom
-	Config      datatypes.JSON `gorm:"type:jsonb;not null" json:"config"` // 通道配置（加密存储）
+	Config      datatypes.JSON `gorm:"type:json;not null" json:"config"` // 通道配置（加密存储）
 	SenderName  string         `gorm:"type:varchar(128)" json:"sender_name"`
 	SenderAddr  string         `gorm:"type:varchar(255)" json:"sender_addr"`
 	Signature   string         `gorm:"type:varchar(128)" json:"signature"` // 短信签名

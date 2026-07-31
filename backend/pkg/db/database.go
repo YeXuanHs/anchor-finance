@@ -4,43 +4,60 @@ import (
 	"fmt"
 	"time"
 
-	"gorm.io/driver/postgres"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 // Config holds database connection parameters.
 type Config struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
+	Host         string
+	Port         string
+	User         string
+	Password     string
+	DBName       string
+	Charset      string
+	MaxIdleConns int
+	MaxOpenConns int
 }
 
 var dbConn *gorm.DB
 
-// InitDB establishes a PostgreSQL connection using GORM.
+// InitDB establishes a MySQL connection using GORM.
 func InitDB(cfg Config) (*gorm.DB, error) {
+	charset := cfg.Charset
+	if charset == "" {
+		charset = "utf8mb4"
+	}
+
 	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName,
+		"%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=Local",
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, charset,
 	)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect database: %w", err)
+		return nil, fmt.Errorf("连接数据库失败: %w", err)
 	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
+		return nil, fmt.Errorf("获取数据库实例失败: %w", err)
 	}
 
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
+	maxIdle := cfg.MaxIdleConns
+	if maxIdle == 0 {
+		maxIdle = 10
+	}
+	maxOpen := cfg.MaxOpenConns
+	if maxOpen == 0 {
+		maxOpen = 100
+	}
+
+	sqlDB.SetMaxIdleConns(maxIdle)
+	sqlDB.SetMaxOpenConns(maxOpen)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	dbConn = db
@@ -73,16 +90,38 @@ func GetSystemSetting(key string) string {
 		return ""
 	}
 	var s systemSetting
-	if err := dbConn.Where("key = ?", key).First(&s).Error; err != nil {
+	if err := dbConn.Where("`key` = ?", key).First(&s).Error; err != nil {
 		return ""
 	}
 	return s.Value
 }
 
-// SetSystemSetting writes a single setting value to the database.
-func SetSystemSetting(key, value string) error {
+// GetSystemSettings reads all settings from a group.
+func GetSystemSettings(group string) map[string]string {
+	if dbConn == nil {
+		return nil
+	}
+	var settings []systemSetting
+	if err := dbConn.Where("`group` = ?", group).Find(&settings).Error; err != nil {
+		return nil
+	}
+	result := make(map[string]string, len(settings))
+	for _, s := range settings {
+		result[s.Key] = s.Value
+	}
+	return result
+}
+
+// SetSystemSetting updates or creates a setting.
+func SetSystemSetting(key, value, group, desc string) error {
 	if dbConn == nil {
 		return fmt.Errorf("database not initialized")
 	}
-	return dbConn.Where("key = ?", key).Assign(systemSetting{Value: value}).FirstOrCreate(&systemSetting{Key: key}).Error
+	s := systemSetting{Key: key, Value: value}
+	result := dbConn.Where("`key` = ?", key).Assign(map[string]interface{}{
+		"value":  value,
+		"group":  group,
+		"desc":   desc,
+	}).FirstOrCreate(&s)
+	return result.Error
 }

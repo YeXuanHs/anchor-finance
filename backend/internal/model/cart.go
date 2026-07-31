@@ -14,7 +14,7 @@ type ShoppingCart struct {
 	ProductID    uint           `gorm:"index;not null" json:"product_id"`
 	BillingCycle string         `gorm:"type:varchar(32);not null" json:"billing_cycle"`
 	Quantity     int            `gorm:"default:1" json:"quantity"`
-	Config       datatypes.JSON `gorm:"type:jsonb" json:"config"`
+	Config       datatypes.JSON `gorm:"type:json" json:"config"`
 	Domain       string         `gorm:"type:varchar(255)" json:"domain"`
 }
 

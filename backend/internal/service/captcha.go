@@ -1,13 +1,16 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
 	"time"
 
+	"github.com/dchest/captcha"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 const (
@@ -17,31 +20,89 @@ const (
 	rateLimitDuration = 60 * time.Second
 )
 
+// CaptchaType 验证码类型
+type CaptchaType string
+
+const (
+	CaptchaTypeImage  CaptchaType = "image"  // 图形验证码（防人机）
+	CaptchaTypeSMS    CaptchaType = "sms"    // 短信验证码
+	CaptchaTypeEmail  CaptchaType = "email"  // 邮箱验证码
+)
+
 // CaptchaService handles captcha generation and verification.
 type CaptchaService struct {
-	rdb *redis.Client
+	rdb    *redis.Client
+	config *CaptchaConfigService
 }
 
-func NewCaptchaService(rdb *redis.Client) *CaptchaService {
-	return &CaptchaService{rdb: rdb}
+func NewCaptchaService(rdb *redis.Client, db *gorm.DB) *CaptchaService {
+	return &CaptchaService{
+		rdb:    rdb,
+		config: NewCaptchaConfigService(db),
+	}
 }
 
-// GenerateImage generates an image captcha, stores answer in Redis, returns PNG bytes.
-func (s *CaptchaService) GenerateImage(key string) ([]byte, error) {
+// ============ 防人机图形验证码 ============
+
+// GenerateImage generates an image captcha using dchest/captcha library.
+// Returns the captcha ID and PNG image bytes.
+func (s *CaptchaService) GenerateImage(key string) (string, []byte, error) {
 	ctx := context.Background()
-	code := generateNumericCode(6)
 
-	if err := s.rdb.Set(ctx, "captcha:image:"+key, code, captchaTTL).Err(); err != nil {
-		return nil, fmt.Errorf("failed to store captcha: %w", err)
+	// 获取验证码长度配置
+	length := s.config.GetCaptchaLength()
+	if length < 4 {
+		length = 4
 	}
 
-	// Generate a simple PNG image with the code
-	img, err := generateCaptchaImage(code)
-	if err != nil {
-		return nil, err
+	// 生成验证码
+	captchaID := captcha.NewLen(length)
+
+	// Store mapping from our key to captcha ID
+	if err := s.rdb.Set(ctx, "captcha:image:"+key, captchaID, captchaTTL).Err(); err != nil {
+		return "", nil, fmt.Errorf("failed to store captcha mapping: %w", err)
 	}
-	return img, nil
+
+	// Encode captcha to PNG
+	var buf bytes.Buffer
+	if err := captcha.WriteImage(&buf, captchaID, 200, 80); err != nil {
+		return "", nil, fmt.Errorf("failed to generate captcha image: %w", err)
+	}
+
+	return captchaID, buf.Bytes(), nil
 }
+
+// VerifyImage verifies an image captcha against the stored captcha ID.
+func (s *CaptchaService) VerifyImage(key, captchaID, digits string) bool {
+	ctx := context.Background()
+
+	// Check if the captcha ID matches the stored one
+	storedID, err := s.rdb.Get(ctx, "captcha:image:"+key).Result()
+	if err != nil || storedID != captchaID {
+		return false
+	}
+
+	// Verify using dchest/captcha
+	if !captcha.VerifyString(captchaID, digits) {
+		return false
+	}
+
+	// Consume the captcha (one-time use)
+	s.rdb.Del(ctx, "captcha:image:"+key)
+	return true
+}
+
+// ShouldShowCaptcha 检查某个场景是否应该显示验证码
+func (s *CaptchaService) ShouldShowCaptcha(scene string) bool {
+	return s.config.ShouldShowCaptcha(scene)
+}
+
+// GetSceneConfig 获取所有场景配置
+func (s *CaptchaService) GetSceneConfig() map[string]bool {
+	return s.config.GetSceneConfig()
+}
+
+// ============ 短信验证码 ============
 
 // GenerateSMS generates and stores a numeric SMS code.
 func (s *CaptchaService) GenerateSMS(phone string) (string, error) {
@@ -49,7 +110,7 @@ func (s *CaptchaService) GenerateSMS(phone string) (string, error) {
 
 	// Rate limit check
 	if exists, _ := s.rdb.Exists(ctx, "captcha:sms:rl:"+phone).Result(); exists > 0 {
-		return "", fmt.Errorf("please wait before requesting another code")
+		return "", fmt.Errorf("请稍后再请求验证码")
 	}
 
 	code := generateNumericCode(smsCodeLength)
@@ -64,12 +125,28 @@ func (s *CaptchaService) GenerateSMS(phone string) (string, error) {
 	return code, nil
 }
 
+// VerifySMS verifies an SMS code and consumes it (one-time use).
+func (s *CaptchaService) VerifySMS(phone, code string) bool {
+	ctx := context.Background()
+
+	stored, err := s.rdb.Get(ctx, "captcha:sms:"+phone).Result()
+	if err != nil || stored != code {
+		return false
+	}
+
+	// Consume the code
+	s.rdb.Del(ctx, "captcha:sms:"+phone)
+	return true
+}
+
+// ============ 邮箱验证码 ============
+
 // GenerateEmail generates and stores a numeric email code.
 func (s *CaptchaService) GenerateEmail(email string) (string, error) {
 	ctx := context.Background()
 
 	if exists, _ := s.rdb.Exists(ctx, "captcha:email:rl:"+email).Result(); exists > 0 {
-		return "", fmt.Errorf("please wait before requesting another code")
+		return "", fmt.Errorf("请稍后再请求验证码")
 	}
 
 	code := generateNumericCode(emailCodeLength)
@@ -84,33 +161,21 @@ func (s *CaptchaService) GenerateEmail(email string) (string, error) {
 	return code, nil
 }
 
-// Verify checks if the code matches (does NOT consume).
-func (s *CaptchaService) Verify(key, code string) bool {
+// VerifyEmail verifies an email code and consumes it (one-time use).
+func (s *CaptchaService) VerifyEmail(email, code string) bool {
 	ctx := context.Background()
 
-	for _, prefix := range []string{"captcha:image:", "captcha:sms:", "captcha:email:"} {
-		stored, err := s.rdb.Get(ctx, prefix+key).Result()
-		if err == nil && stored == code {
-			return true
-		}
+	stored, err := s.rdb.Get(ctx, "captcha:email:"+email).Result()
+	if err != nil || stored != code {
+		return false
 	}
-	return false
+
+	// Consume the code
+	s.rdb.Del(ctx, "captcha:email:"+email)
+	return true
 }
 
-// CheckAndConsume verifies and deletes the code (one-time use).
-func (s *CaptchaService) CheckAndConsume(key, code string) bool {
-	ctx := context.Background()
-
-	for _, prefix := range []string{"captcha:image:", "captcha:sms:", "captcha:email:"} {
-		redisKey := prefix + key
-		stored, err := s.rdb.Get(ctx, redisKey).Result()
-		if err == nil && stored == code {
-			s.rdb.Del(ctx, redisKey)
-			return true
-		}
-	}
-	return false
-}
+// ============ 工具函数 ============
 
 // generateNumericCode returns a random numeric string of the given length.
 func generateNumericCode(length int) string {
@@ -119,95 +184,14 @@ func generateNumericCode(length int) string {
 	return fmt.Sprintf("%0*d", length, n.Int64())
 }
 
-// generateCaptchaImage creates a simple PNG image with the given code.
-func generateCaptchaImage(code string) ([]byte, error) {
-	width, height := 200, 80
-	img := image.NewRGBA(image.Rect(0, 0, width, height))
+// ============ 配置管理 ============
 
-	// Background
-	draw.Draw(img, img.Bounds(), &image.Uniform{color.RGBA{240, 240, 240, 255}}, image.Point{}, draw.Src)
-
-	// Draw noise lines
-	for i := 0; i < 5; i++ {
-		x1, _ := rand.Int(rand.Reader, big.NewInt(int64(width)))
-		y1, _ := rand.Int(rand.Reader, big.NewInt(int64(height)))
-		x2, _ := rand.Int(rand.Reader, big.NewInt(int64(width)))
-		y2, _ := rand.Int(rand.Reader, big.NewInt(int64(height)))
-		c := color.RGBA{uint8(randInt(100, 200)), uint8(randInt(100, 200)), uint8(randInt(100, 200)), 255}
-		drawLine(img, int(x1.Int64()), int(y1.Int64()), int(x2.Int64()), int(y2.Int64()), c)
-	}
-
-	// Draw characters
-	for i, ch := range code {
-		x := 20 + i*30
-		y := 40 + randInt(-10, 10)
-		c := color.RGBA{uint8(randInt(0, 100)), uint8(randInt(0, 100)), uint8(randInt(0, 100)), 255}
-		drawChar(img, ch, x, y, c)
-	}
-
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+// GetCaptchaConfigService 获取配置服务
+func (s *CaptchaService) GetCaptchaConfigService() *CaptchaConfigService {
+	return s.config
 }
 
-func randInt(min, max int) int {
-	n, _ := rand.Int(rand.Reader, big.NewInt(int64(max-min+1)))
-	return int(n.Int64()) + min
-}
-
-func drawLine(img *image.RGBA, x1, y1, x2, y2 int, c color.RGBA) {
-	steps := max(abs(x2-x1), abs(y2-y1))
-	if steps == 0 {
-		return
-	}
-	for i := 0; i <= steps; i++ {
-		x := x1 + (x2-x1)*i/steps
-		y := y1 + (y2-y1)*i/steps
-		if x >= 0 && x < img.Bounds().Dx() && y >= 0 && y < img.Bounds().Dy() {
-			img.Set(x, y, c)
-		}
-	}
-}
-
-func drawChar(img *image.RGBA, ch rune, x, y int, c color.RGBA) {
-	// Simple dot-based character rendering
-	patterns := map[rune][][2]int{
-		'0': {{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}, {0, 2}, {2, 2}, {0, 3}, {2, 3}, {0, 4}, {1, 4}, {2, 4}},
-		'1': {{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {0, 4}},
-		'2': {{0, 0}, {1, 0}, {2, 0}, {2, 1}, {0, 2}, {1, 2}, {2, 2}, {0, 3}, {0, 4}, {1, 4}, {2, 4}},
-		'3': {{0, 0}, {1, 0}, {2, 0}, {2, 1}, {0, 2}, {1, 2}, {2, 2}, {2, 3}, {0, 4}, {1, 4}, {2, 4}},
-		'4': {{0, 0}, {2, 0}, {0, 1}, {2, 1}, {0, 2}, {1, 2}, {2, 2}, {2, 3}, {2, 4}},
-		'5': {{0, 0}, {1, 0}, {2, 0}, {0, 1}, {0, 2}, {1, 2}, {2, 2}, {2, 3}, {0, 4}, {1, 4}, {2, 4}},
-		'6': {{0, 0}, {1, 0}, {2, 0}, {0, 1}, {0, 2}, {1, 2}, {2, 2}, {0, 3}, {2, 3}, {0, 4}, {1, 4}, {2, 4}},
-		'7': {{0, 0}, {1, 0}, {2, 0}, {2, 1}, {2, 2}, {2, 3}, {2, 4}},
-		'8': {{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}, {0, 2}, {1, 2}, {2, 2}, {0, 3}, {2, 3}, {0, 4}, {1, 4}, {2, 4}},
-		'9': {{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}, {0, 2}, {1, 2}, {2, 2}, {2, 3}, {0, 4}, {1, 4}, {2, 4}},
-	}
-
-	pattern, ok := patterns[ch]
-	if !ok {
-		pattern = patterns['0']
-	}
-
-	for _, p := range pattern {
-		px := x + p[0]*5
-		py := y + p[1]*5
-		for dx := 0; dx < 5; dx++ {
-			for dy := 0; dy < 5; dy++ {
-				ix, iy := px+dx, py+dy
-				if ix >= 0 && ix < img.Bounds().Dx() && iy >= 0 && iy < img.Bounds().Dy() {
-					img.Set(ix, iy, c)
-				}
-			}
-		}
-	}
-}
-
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
+// InitDefaultConfigs 初始化默认配置
+func (s *CaptchaService) InitDefaultConfigs() error {
+	return s.config.InitDefaultConfigs()
 }

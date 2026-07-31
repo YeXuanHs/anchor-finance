@@ -17,8 +17,8 @@ type SalePromotion struct {
 	Name            string         `gorm:"size:256;not null" json:"name"`
 	Code            string         `gorm:"uniqueIndex;size:64" json:"code"`
 	Type            string         `gorm:"size:32;not null;index" json:"type"` // amount_off/percent_off/first_order/free_trial
-	Condition       datatypes.JSON `gorm:"type:jsonb;not null" json:"condition"`
-	Discount        datatypes.JSON `gorm:"type:jsonb;not null" json:"discount"`
+	Condition       datatypes.JSON `gorm:"type:json;not null" json:"condition"`
+	Discount        datatypes.JSON `gorm:"type:json;not null" json:"discount"`
 	StartAt         time.Time      `gorm:"index;not null" json:"start_at"`
 	EndAt           time.Time      `gorm:"index;not null" json:"end_at"`
 	MaxUses         int            `gorm:"default:0" json:"max_uses"`
@@ -38,8 +38,8 @@ type SalePromotion struct {
 	IsDiscount      bool           `gorm:"default:false" json:"is_discount"`
 	UpgradeType     string         `gorm:"type:varchar(32)" json:"upgrade_type"` // percentage, fixed
 	UpgradeValue    float64        `gorm:"type:decimal(20,4)" json:"upgrade_value"`
-	UpgradeOptions  datatypes.JSON `gorm:"type:jsonb" json:"upgrade_options"`
-	AppliesToGroups datatypes.JSON `gorm:"type:jsonb" json:"applies_to_groups"` // user group IDs
+	UpgradeOptions  datatypes.JSON `gorm:"type:json" json:"upgrade_options"`
+	AppliesToGroups datatypes.JSON `gorm:"type:json" json:"applies_to_groups"` // user group IDs
 	Commissions     []SaleCommission `gorm:"foreignKey:PromotionID" json:"commissions,omitempty"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`

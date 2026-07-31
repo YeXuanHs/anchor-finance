@@ -7,7 +7,7 @@ type ClientCareRule struct {
 	ID         uint      `gorm:"primaryKey" json:"id"`
 	Name       string    `gorm:"type:varchar(100);not null" json:"name"`
 	Type       string    `gorm:"type:varchar(50);not null" json:"type"` // birthday, expire, inactive, custom
-	Condition  JSON      `gorm:"type:jsonb" json:"condition"`
+	Condition  JSON      `gorm:"type:json" json:"condition"`
 	TemplateID uint      `gorm:"index" json:"template_id"`
 	Channel    string    `gorm:"type:varchar(20)" json:"channel"`    // email, sms, wechat
 	DaysBefore int       `gorm:"default:0" json:"days_before"`      // 提前几天

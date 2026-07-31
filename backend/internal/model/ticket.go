@@ -46,8 +46,8 @@ type Ticket struct {
 	MergedInto   *uint          `gorm:"index" json:"merged_into"` // 合并目标工单 ID
 	Replies      []TicketReply  `gorm:"foreignKey:TicketID" json:"replies,omitempty"`
 	Attachments  []Attachment   `gorm:"foreignKey:TicketID" json:"attachments,omitempty"`
-	Tags         datatypes.JSON `gorm:"type:jsonb" json:"tags"`
-	Metadata     datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
+	Tags         datatypes.JSON `gorm:"type:json" json:"tags"`
+	Metadata     datatypes.JSON `gorm:"type:json" json:"metadata"`
 }
 
 // TicketReply 工单回复
@@ -64,7 +64,7 @@ type TicketReply struct {
 	IsRead      bool         `gorm:"default:false" json:"is_read"`
 	ReadAt      *time.Time `json:"read_at"`
 	Attachments []Attachment `gorm:"foreignKey:ReplyID" json:"attachments,omitempty"`
-	Metadata    datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
+	Metadata    datatypes.JSON `gorm:"type:json" json:"metadata"`
 }
 
 // Attachment 附件

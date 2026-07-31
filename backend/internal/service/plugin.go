@@ -2,7 +2,7 @@ package service
 
 import (
 	"errors"
-	"time"
+	"fmt"
 
 	"anchorfinance/internal/model"
 	"anchorfinance/pkg/logger"
@@ -10,161 +10,104 @@ import (
 	"gorm.io/gorm"
 )
 
+// PluginService 插件服务
 type PluginService struct {
 	db  *gorm.DB
 	log *logger.Logger
 }
 
+// NewPluginService 创建插件服务
 func NewPluginService(db *gorm.DB, log *logger.Logger) *PluginService {
 	return &PluginService{db: db, log: log}
 }
 
-// GetList returns all plugins with optional enabled filter.
-func (s *PluginService) GetList(page, pageSize int, enabled *bool) ([]model.Plugin, int64, error) {
-	var plugins []model.Plugin
-	var total int64
-
-	query := s.db.Model(&model.Plugin{})
-	if enabled != nil {
-		query = query.Where("enabled = ?", *enabled)
-	}
-
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	offset, limit := Paginate(page, pageSize)
-	if err := query.Offset(offset).Limit(limit).
-		Order("sort_order ASC, id ASC").
-		Find(&plugins).Error; err != nil {
-		return nil, 0, err
-	}
-	return plugins, total, nil
+// CreatePluginRequest 创建插件请求
+type CreatePluginRequest struct {
+	Name        string `json:"name" binding:"required,max=64"`
+	Title       string `json:"title" binding:"required,max=64"`
+	Type        string `json:"type" binding:"required,oneof=mail sms certification gateway oauth server addon"`
+	Description string `json:"description"`
+	Author      string `json:"author"`
+	Version     string `json:"version"`
+	HelpURL     string `json:"help_url"`
+	Config      string `json:"config"`
+	Module      string `json:"module"`
+	IsSystem    bool   `json:"is_system"`
+	IsEnabled   bool   `json:"is_enabled"`
+	SortOrder   int    `json:"sort_order"`
 }
 
-// GetByID returns a single plugin by ID.
-func (s *PluginService) GetByID(id uint) (*model.Plugin, error) {
-	var plugin model.Plugin
-	if err := s.db.First(&plugin, id).Error; err != nil {
+// UpdatePluginRequest 更新插件请求
+type UpdatePluginRequest struct {
+	Title       *string `json:"title"`
+	Description *string `json:"description"`
+	Author      *string `json:"author"`
+	Version     *string `json:"version"`
+	HelpURL     *string `json:"help_url"`
+	Config      *string `json:"config"`
+	IsEnabled   *bool   `json:"is_enabled"`
+	SortOrder   *int    `json:"sort_order"`
+}
+
+// Create 创建插件
+func (s *PluginService) Create(req CreatePluginRequest) (*model.Plugin, error) {
+	var count int64
+	s.db.Model(&model.Plugin{}).Where("name = ?", req.Name).Count(&count)
+	if count > 0 {
+		return nil, errors.New("插件标识名已存在")
+	}
+
+	plugin := model.Plugin{
+		Name:        req.Name,
+		Title:       req.Title,
+		Type:        req.Type,
+		Description: req.Description,
+		Author:      req.Author,
+		Version:     req.Version,
+		HelpURL:     req.HelpURL,
+		Config:      req.Config,
+		Module:      req.Module,
+		IsSystem:    req.IsSystem,
+		IsEnabled:   req.IsEnabled,
+		SortOrder:   req.SortOrder,
+	}
+
+	if err := s.db.Create(&plugin).Error; err != nil {
 		return nil, err
 	}
+
+	s.log.Infof("插件创建成功: id=%d name=%s", plugin.ID, plugin.Name)
 	return &plugin, nil
 }
 
-// Install installs a new plugin.
-func (s *PluginService) Install(req InstallPluginRequest) (*model.Plugin, error) {
-	var existing model.Plugin
-	if err := s.db.Where("slug = ?", req.Slug).First(&existing).Error; err == nil {
-		return nil, errors.New("plugin with this slug already exists")
-	}
-
-	plugin := &model.Plugin{
-		Name:         req.Name,
-		Slug:         req.Slug,
-		Description:  req.Description,
-		Author:       req.Author,
-		Website:      req.Website,
-		Version:      req.Version,
-		License:      req.License,
-		Config:       req.Config,
-		Enabled:      false,
-		Hooks:        req.Hooks,
-		Dependencies: req.Dependencies,
-		SortOrder:    req.SortOrder,
-		Path:         req.Path,
-		Metadata:     req.Metadata,
-		InstalledAt:  time.Now(),
-	}
-	if plugin.Version == "" {
-		plugin.Version = "1.0.0"
-	}
-	if err := s.db.Create(plugin).Error; err != nil {
-		return nil, err
-	}
-
-	s.logPlugin(plugin.ID, 0, "install", "plugin installed")
-	return plugin, nil
-}
-
-// Uninstall soft-deletes a plugin. Core plugins cannot be uninstalled.
-func (s *PluginService) Uninstall(id uint) error {
-	var plugin model.Plugin
-	if err := s.db.First(&plugin, id).Error; err != nil {
-		return err
-	}
-	if plugin.IsCore {
-		return errors.New("core plugin cannot be uninstalled")
-	}
-
-	if plugin.Enabled {
-		if err := s.db.Model(&plugin).Update("enabled", false).Error; err != nil {
-			return err
-		}
-	}
-
-	if err := s.db.Delete(&model.Plugin{}, id).Error; err != nil {
-		return err
-	}
-
-	s.logPlugin(id, 0, "uninstall", "plugin uninstalled")
-	return nil
-}
-
-// Enable enables a plugin.
-func (s *PluginService) Enable(id uint, adminID uint) error {
-	var plugin model.Plugin
-	if err := s.db.First(&plugin, id).Error; err != nil {
-		return err
-	}
-	if plugin.Enabled {
-		return errors.New("plugin already enabled")
-	}
-	if plugin.Status != 1 {
-		return errors.New("plugin status is abnormal")
-	}
-
-	if err := s.db.Model(&plugin).Update("enabled", true).Error; err != nil {
-		return err
-	}
-
-	s.logPlugin(id, adminID, "enable", "plugin enabled")
-	return nil
-}
-
-// Disable disables a plugin.
-func (s *PluginService) Disable(id uint, adminID uint) error {
-	var plugin model.Plugin
-	if err := s.db.First(&plugin, id).Error; err != nil {
-		return err
-	}
-	if !plugin.Enabled {
-		return errors.New("plugin already disabled")
-	}
-	if plugin.IsCore {
-		return errors.New("core plugin cannot be disabled")
-	}
-
-	if err := s.db.Model(&plugin).Update("enabled", false).Error; err != nil {
-		return err
-	}
-
-	s.logPlugin(id, adminID, "disable", "plugin disabled")
-	return nil
-}
-
-// UpdateConfig updates a plugin's configuration.
-func (s *PluginService) UpdateConfig(id uint, req UpdatePluginConfigRequest) (*model.Plugin, error) {
+// Update 更新插件
+func (s *PluginService) Update(id uint, req UpdatePluginRequest) (*model.Plugin, error) {
 	var plugin model.Plugin
 	if err := s.db.First(&plugin, id).Error; err != nil {
 		return nil, err
 	}
 
 	updates := map[string]interface{}{}
+	if req.Title != nil {
+		updates["title"] = *req.Title
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.Author != nil {
+		updates["author"] = *req.Author
+	}
+	if req.Version != nil {
+		updates["version"] = *req.Version
+	}
+	if req.HelpURL != nil {
+		updates["help_url"] = *req.HelpURL
+	}
 	if req.Config != nil {
 		updates["config"] = *req.Config
 	}
-	if req.Hooks != nil {
-		updates["hooks"] = *req.Hooks
+	if req.IsEnabled != nil {
+		updates["is_enabled"] = *req.IsEnabled
 	}
 	if req.SortOrder != nil {
 		updates["sort_order"] = *req.SortOrder
@@ -175,68 +118,381 @@ func (s *PluginService) UpdateConfig(id uint, req UpdatePluginConfigRequest) (*m
 			return nil, err
 		}
 	}
+
 	if err := s.db.First(&plugin, id).Error; err != nil {
 		return nil, err
 	}
 
-	s.logPlugin(id, 0, "config", "plugin config updated")
+	s.log.Infof("插件更新成功: id=%d", id)
 	return &plugin, nil
 }
 
-// GetLogs returns plugin operation logs with pagination.
-func (s *PluginService) GetLogs(page, pageSize int, pluginID *uint) ([]model.PluginLog, int64, error) {
-	var logs []model.PluginLog
-	var total int64
-
-	query := s.db.Model(&model.PluginLog{})
-	if pluginID != nil {
-		query = query.Where("plugin_id = ?", *pluginID)
+// Delete 删除插件
+func (s *PluginService) Delete(id uint) error {
+	var plugin model.Plugin
+	if err := s.db.First(&plugin, id).Error; err != nil {
+		return errors.New("插件不存在")
+	}
+	if plugin.IsSystem {
+		return errors.New("系统内置插件不能删除")
 	}
 
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
+	result := s.db.Delete(&model.Plugin{}, id)
+	if result.Error != nil {
+		return result.Error
 	}
-
-	offset, limit := Paginate(page, pageSize)
-	if err := query.Offset(offset).Limit(limit).
-		Order("id DESC").
-		Find(&logs).Error; err != nil {
-		return nil, 0, err
+	if result.RowsAffected == 0 {
+		return errors.New("插件不存在")
 	}
-	return logs, total, nil
+	s.log.Infof("插件删除成功: id=%d", id)
+	return nil
 }
 
-// logPlugin creates a plugin operation log entry.
-func (s *PluginService) logPlugin(pluginID, adminID uint, action, detail string) {
-	log := &model.PluginLog{
-		PluginID: pluginID,
-		Action:   action,
-		Detail:   detail,
-		AdminID:  adminID,
+// GetByID 根据ID获取插件
+func (s *PluginService) GetByID(id uint) (*model.Plugin, error) {
+	var plugin model.Plugin
+	if err := s.db.First(&plugin, id).Error; err != nil {
+		return nil, err
 	}
-	s.db.Create(log)
+	return &plugin, nil
 }
 
-// ---------- Request DTOs ----------
-
-type InstallPluginRequest struct {
-	Name         string `json:"name" binding:"required,max=128"`
-	Slug         string `json:"slug" binding:"required,max=128"`
-	Description  string `json:"description"`
-	Author       string `json:"author"`
-	Website      string `json:"website"`
-	Version      string `json:"version"`
-	License      string `json:"license"`
-	Config       string `json:"config"`
-	Hooks        string `json:"hooks"`
-	Dependencies string `json:"dependencies"`
-	SortOrder    int    `json:"sort_order"`
-	Path         string `json:"path"`
-	Metadata     string `json:"metadata"`
+// GetByName 根据名称获取插件
+func (s *PluginService) GetByName(name string) (*model.Plugin, error) {
+	var plugin model.Plugin
+	if err := s.db.Where("name = ?", name).First(&plugin).Error; err != nil {
+		return nil, err
+	}
+	return &plugin, nil
 }
 
-type UpdatePluginConfigRequest struct {
-	Config    *string `json:"config"`
-	Hooks     *string `json:"hooks"`
-	SortOrder *int    `json:"sort_order"`
+// GetList 获取插件列表
+func (s *PluginService) GetList(pluginType string, isEnabled *bool) ([]model.Plugin, error) {
+	var plugins []model.Plugin
+	query := s.db.Model(&model.Plugin{})
+
+	if pluginType != "" {
+		query = query.Where("type = ?", pluginType)
+	}
+	if isEnabled != nil {
+		query = query.Where("is_enabled = ?", *isEnabled)
+	}
+
+	if err := query.Order("sort_order ASC, id ASC").Find(&plugins).Error; err != nil {
+		return nil, err
+	}
+	return plugins, nil
+}
+
+// ToggleStatus 切换启用状态
+func (s *PluginService) ToggleStatus(id uint) error {
+	var plugin model.Plugin
+	if err := s.db.First(&plugin, id).Error; err != nil {
+		return err
+	}
+	return s.db.Model(&plugin).Update("is_enabled", !plugin.IsEnabled).Error
+}
+
+// SetEnabled 设置启用状态
+func (s *PluginService) SetEnabled(id uint, enabled bool) error {
+	result := s.db.Model(&model.Plugin{}).Where("id = ?", id).Update("is_enabled", enabled)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("插件不存在")
+	}
+	s.log.Infof("插件状态更新: id=%d enabled=%v", id, enabled)
+	return nil
+}
+
+// UpdateConfig 更新插件配置
+func (s *PluginService) UpdateConfig(id uint, config string) error {
+	result := s.db.Model(&model.Plugin{}).Where("id = ?", id).Update("config", config)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("插件不存在")
+	}
+	s.log.Infof("插件配置更新: id=%d", id)
+	return nil
+}
+
+// GetEnabledByType 获取指定类型的启用插件
+func (s *PluginService) GetEnabledByType(pluginType string) (*model.Plugin, error) {
+	var plugin model.Plugin
+	if err := s.db.Where("type = ? AND is_enabled = true", pluginType).
+		Order("sort_order ASC").
+		First(&plugin).Error; err != nil {
+		return nil, fmt.Errorf("没有启用的%s插件", pluginType)
+	}
+	return &plugin, nil
+}
+
+// GetEnabledList 获取指定类型的启用插件列表
+func (s *PluginService) GetEnabledList(pluginType string) ([]model.Plugin, error) {
+	var plugins []model.Plugin
+	if err := s.db.Where("type = ? AND is_enabled = true", pluginType).
+		Order("sort_order ASC").
+		Find(&plugins).Error; err != nil {
+		return nil, err
+	}
+	return plugins, nil
+}
+
+// InitDefaults 初始化默认插件
+func (s *PluginService) InitDefaults() {
+	var count int64
+	s.db.Model(&model.Plugin{}).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	defaults := []model.Plugin{
+		// 邮件插件
+		{Name: "Smtp", Title: "SMTP邮件", Type: "mail", Description: "SMTP邮件发送", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
+		{Name: "Subemail", Title: "赛邮邮件", Type: "mail", Description: "赛邮邮件服务", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
+		{Name: "Alimail", Title: "阿里云邮件", Type: "mail", Description: "阿里云邮件推送", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 3},
+
+		// 短信插件
+		{Name: "Submail", Title: "赛邮短信", Type: "sms", Description: "赛邮短信服务", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
+		{Name: "Smsbao", Title: "短信宝", Type: "sms", Description: "短信宝短信服务", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
+
+		// 实名认证插件
+		{Name: "Wechat", Title: "微信实名认证", Type: "certification", Description: "腾讯云人脸核身", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
+		{Name: "Idcsmartali", Title: "阿里云实名认证", Type: "certification", Description: "阿里云实人认证", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
+
+		// OAuth登录插件
+		{Name: "Weixin", Title: "微信登录", Type: "oauth", Description: "微信扫码登录", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
+		{Name: "QQ", Title: "QQ登录", Type: "oauth", Description: "QQ互联登录", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
+		{Name: "Alipay", Title: "支付宝登录", Type: "oauth", Description: "支付宝登录", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 3},
+		{Name: "Weibo", Title: "微博登录", Type: "oauth", Description: "微博登录", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 4},
+
+		// 服务器模块（自动开通）
+		{Name: "ProxmoxVE", Title: "ProxmoxVE", Type: "server", Description: "ProxmoxVE虚拟化", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
+		{Name: "NoKVM", Title: "NoKVM", Type: "server", Description: "NoKVM虚拟化", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
+		{Name: "BtHosts", Title: "宝塔主机", Type: "server", Description: "宝塔主机管理", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 3},
+		{Name: "WlKanglePro", Title: "WlKanglePro", Type: "server", Description: "Kangle主机", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 4},
+
+		// 扩展插件
+		{Name: "ExportExcel", Title: "导出Excel", Type: "addon", Description: "数据导出为Excel", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
+		{Name: "ProductDivert", Title: "产品转移", Type: "addon", Description: "产品转移功能", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
+		{Name: "ExpiredIpLog", Title: "过期IP日志", Type: "addon", Description: "过期IP记录", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 3},
+		{Name: "ClientCare", Title: "客户关怀", Type: "addon", Description: "客户关怀系统", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 4},
+	}
+
+	for _, d := range defaults {
+		s.db.Create(&d)
+	}
+
+	s.log.Info("默认插件初始化完成")
+}
+
+// ==================== 服务器模块管理 ====================
+
+// CreateServerModule 创建服务器模块
+func (s *PluginService) CreateServerModule(req model.ServerModule) (*model.ServerModule, error) {
+	var count int64
+	s.db.Model(&model.ServerModule{}).Where("name = ?", req.Name).Count(&count)
+	if count > 0 {
+		return nil, errors.New("服务器模块标识名已存在")
+	}
+
+	if err := s.db.Create(&req).Error; err != nil {
+		return nil, err
+	}
+
+	s.log.Infof("服务器模块创建成功: id=%d name=%s", req.ID, req.Name)
+	return &req, nil
+}
+
+// UpdateServerModule 更新服务器模块
+func (s *PluginService) UpdateServerModule(id uint, updates map[string]interface{}) error {
+	result := s.db.Model(&model.ServerModule{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("服务器模块不存在")
+	}
+	return nil
+}
+
+// DeleteServerModule 删除服务器模块
+func (s *PluginService) DeleteServerModule(id uint) error {
+	result := s.db.Delete(&model.ServerModule{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("服务器模块不存在")
+	}
+	return nil
+}
+
+// GetServerModuleByID 根据ID获取服务器模块
+func (s *PluginService) GetServerModuleByID(id uint) (*model.ServerModule, error) {
+	var module model.ServerModule
+	if err := s.db.First(&module, id).Error; err != nil {
+		return nil, err
+	}
+	return &module, nil
+}
+
+// GetServerModuleList 获取服务器模块列表
+func (s *PluginService) GetServerModuleList(moduleType string) ([]model.ServerModule, error) {
+	var modules []model.ServerModule
+	query := s.db.Model(&model.ServerModule{})
+
+	if moduleType != "" {
+		query = query.Where("module = ?", moduleType)
+	}
+
+	if err := query.Order("sort_order ASC, id ASC").Find(&modules).Error; err != nil {
+		return nil, err
+	}
+	return modules, nil
+}
+
+// ==================== 服务器分组管理 ====================
+
+// CreateServerGroup 创建服务器分组
+func (s *PluginService) CreateServerGroup(req model.ServerGroup) (*model.ServerGroup, error) {
+	var count int64
+	s.db.Model(&model.ServerGroup{}).Where("name = ?", req.Name).Count(&count)
+	if count > 0 {
+		return nil, errors.New("分组名称已存在")
+	}
+
+	if err := s.db.Create(&req).Error; err != nil {
+		return nil, err
+	}
+
+	return &req, nil
+}
+
+// UpdateServerGroup 更新服务器分组
+func (s *PluginService) UpdateServerGroup(id uint, updates map[string]interface{}) error {
+	result := s.db.Model(&model.ServerGroup{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("分组不存在")
+	}
+	return nil
+}
+
+// DeleteServerGroup 删除服务器分组
+func (s *PluginService) DeleteServerGroup(id uint) error {
+	result := s.db.Delete(&model.ServerGroup{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("分组不存在")
+	}
+	return nil
+}
+
+// GetServerGroupList 获取服务器分组列表
+func (s *PluginService) GetServerGroupList() ([]model.ServerGroup, error) {
+	var groups []model.ServerGroup
+	if err := s.db.Order("sort_order ASC, id ASC").Find(&groups).Error; err != nil {
+		return nil, err
+	}
+	return groups, nil
+}
+
+// ==================== OAuth提供商管理 ====================
+
+// CreateOAuthProvider 创建OAuth提供商
+func (s *PluginService) CreateOAuthProvider(req model.OAuthProvider) (*model.OAuthProvider, error) {
+	var count int64
+	s.db.Model(&model.OAuthProvider{}).Where("name = ?", req.Name).Count(&count)
+	if count > 0 {
+		return nil, errors.New("OAuth提供商标识名已存在")
+	}
+
+	if err := s.db.Create(&req).Error; err != nil {
+		return nil, err
+	}
+
+	return &req, nil
+}
+
+// UpdateOAuthProvider 更新OAuth提供商
+func (s *PluginService) UpdateOAuthProvider(id uint, updates map[string]interface{}) error {
+	result := s.db.Model(&model.OAuthProvider{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("OAuth提供商不存在")
+	}
+	return nil
+}
+
+// DeleteOAuthProvider 删除OAuth提供商
+func (s *PluginService) DeleteOAuthProvider(id uint) error {
+	result := s.db.Delete(&model.OAuthProvider{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("OAuth提供商不存在")
+	}
+	return nil
+}
+
+// GetOAuthProviderByID 根据ID获取OAuth提供商
+func (s *PluginService) GetOAuthProviderByID(id uint) (*model.OAuthProvider, error) {
+	var provider model.OAuthProvider
+	if err := s.db.First(&provider, id).Error; err != nil {
+		return nil, err
+	}
+	return &provider, nil
+}
+
+// GetOAuthProviderList 获取OAuth提供商列表
+func (s *PluginService) GetOAuthProviderList() ([]model.OAuthProvider, error) {
+	var providers []model.OAuthProvider
+	if err := s.db.Order("sort_order ASC, id ASC").Find(&providers).Error; err != nil {
+		return nil, err
+	}
+	return providers, nil
+}
+
+// GetEnabledOAuthProviders 获取启用的OAuth提供商
+func (s *PluginService) GetEnabledOAuthProviders() ([]model.OAuthProvider, error) {
+	var providers []model.OAuthProvider
+	if err := s.db.Where("is_enabled = true").
+		Order("sort_order ASC").
+		Find(&providers).Error; err != nil {
+		return nil, err
+	}
+	return providers, nil
+}
+
+// InitDefaultOAuthProviders 初始化默认OAuth提供商
+func (s *PluginService) InitDefaultOAuthProviders() {
+	var count int64
+	s.db.Model(&model.OAuthProvider{}).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	defaults := []model.OAuthProvider{
+		{Name: "Weixin", Title: "微信登录", Description: "微信扫码登录", Icon: "/assets/oauth/weixin.png", IsEnabled: false, SortOrder: 1},
+		{Name: "QQ", Title: "QQ登录", Description: "QQ互联登录", Icon: "/assets/oauth/qq.png", IsEnabled: false, SortOrder: 2},
+		{Name: "Alipay", Title: "支付宝登录", Description: "支付宝登录", Icon: "/assets/oauth/alipay.png", IsEnabled: false, SortOrder: 3},
+		{Name: "Weibo", Title: "微博登录", Description: "微博登录", Icon: "/assets/oauth/weibo.png", IsEnabled: false, SortOrder: 4},
+	}
+
+	for _, d := range defaults {
+		s.db.Create(&d)
+	}
+
+	s.log.Info("默认OAuth提供商初始化完成")
 }

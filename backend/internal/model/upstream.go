@@ -9,7 +9,7 @@ type UpstreamProvider struct {
 	Type      string    `gorm:"type:varchar(50);not null" json:"type"` // manual, v10, zjmfv3, anchor, whmcs
 	APIURL    string    `gorm:"type:varchar(500)" json:"api_url"`
 	APIKey    string    `gorm:"type:varchar(255)" json:"-"`
-	Config    JSON      `gorm:"type:jsonb" json:"config"`
+	Config    JSON      `gorm:"type:json" json:"config"`
 	IsActive  bool      `gorm:"default:true" json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -21,7 +21,7 @@ type UpstreamProduct struct {
 	LocalProductID  uint      `gorm:"index;not null" json:"local_product_id"`
 	UpstreamID      uint      `gorm:"index;not null" json:"upstream_id"`
 	RemoteProductID string    `gorm:"type:varchar(100);not null" json:"remote_product_id"`
-	Config          JSON      `gorm:"type:jsonb" json:"config"`
+	Config          JSON      `gorm:"type:json" json:"config"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

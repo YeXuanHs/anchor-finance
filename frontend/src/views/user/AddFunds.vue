@@ -31,23 +31,24 @@
         </el-form-item>
 
         <el-form-item label="支付方式">
-          <div class="payment-methods">
+          <div class="payment-methods" v-loading="loadingGateways">
             <div
               v-for="method in paymentMethods"
-              :key="method.value"
+              :key="method.id"
               class="payment-method"
-              :class="{ active: paymentMethod === method.value }"
-              @click="paymentMethod = method.value"
+              :class="{ active: paymentMethod === method.name }"
+              @click="paymentMethod = method.name"
             >
-              <img :src="method.icon" :alt="method.label" class="method-icon" />
-              <span class="method-label">{{ method.label }}</span>
-              <el-icon v-if="paymentMethod === method.value" class="check-icon"><Check /></el-icon>
+              <img :src="method.icon || getIconUrl(method.code)" :alt="method.title" class="method-icon" />
+              <span class="method-label">{{ method.title }}</span>
+              <el-icon v-if="paymentMethod === method.name" class="check-icon"><Check /></el-icon>
             </div>
+            <el-empty v-if="!loadingGateways && paymentMethods.length === 0" description="暂无可用支付方式" />
           </div>
         </el-form-item>
 
         <el-form-item>
-          <el-button type="primary" size="large" :loading="submitting" @click="handleRecharge">
+          <el-button type="primary" size="large" :loading="submitting" :disabled="!paymentMethod" @click="handleRecharge">
             确认充值 ¥{{ amount?.toFixed(2) || '0.00' }}
           </el-button>
         </el-form-item>
@@ -100,19 +101,37 @@ import request from '@/utils/request'
 
 const balance = ref(0)
 const amount = ref<number | undefined>(100)
-const paymentMethod = ref('alipay')
+const paymentMethod = ref('')
 const submitting = ref(false)
+const loadingGateways = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
 const presetAmounts = [50, 100, 200, 500, 1000, 2000]
 
-const paymentMethods = [
-  { value: 'alipay', label: '支付宝', icon: '/assets/payment/alipay.svg' },
-  { value: 'wechat', label: '微信支付', icon: '/assets/payment/wechat.svg' },
-  { value: 'bank', label: '银行转账', icon: '/assets/payment/bank.svg' }
-]
+interface PaymentMethod {
+  id: number
+  name: string
+  title: string
+  code: string
+  icon: string
+}
+
+const paymentMethods = ref<PaymentMethod[]>([])
+
+// 获取支付类型图标
+const getIconUrl = (code: string) => {
+  const icons: Record<string, string> = {
+    alipay: '/assets/payment/alipay.png',
+    wechat: '/assets/payment/wechat.png',
+    qqpay: '/assets/payment/qqpay.png',
+    usdt: '/assets/payment/usdt.png',
+    bank: '/assets/payment/bank.png',
+    balance: '/assets/payment/balance.png'
+  }
+  return icons[code] || '/assets/payment/default.png'
+}
 
 interface RechargeRecord {
   id: number
@@ -143,19 +162,42 @@ const getStatusText = (status: string) => {
   return map[status] || status
 }
 
+// 加载支付方式
+const loadPaymentMethods = async () => {
+  loadingGateways.value = true
+  try {
+    const { data } = await request.get('/api/v1/payments/gateways')
+    paymentMethods.value = data?.data || []
+    // 默认选中第一个
+    if (paymentMethods.value.length > 0 && !paymentMethod.value) {
+      paymentMethod.value = paymentMethods.value[0].name
+    }
+  } catch {
+    paymentMethods.value = []
+  } finally {
+    loadingGateways.value = false
+  }
+}
+
 const handleRecharge = async () => {
   if (!amount.value || amount.value <= 0) {
     ElMessage.warning('请输入有效的充值金额')
+    return
+  }
+  if (!paymentMethod.value) {
+    ElMessage.warning('请选择支付方式')
     return
   }
   submitting.value = true
   try {
     const { data } = await request.post('/api/v1/balances/recharge', {
       amount: amount.value,
-      payment_method: paymentMethod.value
+      gateway: paymentMethod.value
     })
     if (data?.data?.pay_url) {
       window.location.href = data.data.pay_url
+    } else if (data?.data?.type === 'bank_transfer') {
+      ElMessage.info('请按照银行转账信息完成汇款后联系客服确认')
     } else {
       ElMessage.success('充值请求已提交')
       loadRecords()
@@ -185,6 +227,7 @@ onMounted(async () => {
     const { data } = await request.get('/api/v1/balances')
     balance.value = data?.data?.balance || 0
   } catch {}
+  loadPaymentMethods()
   loadRecords()
 })
 </script>
@@ -224,7 +267,9 @@ onMounted(async () => {
 
 .payment-methods {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
+  min-height: 80px;
 }
 
 .payment-method {

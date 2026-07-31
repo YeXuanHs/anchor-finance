@@ -9,7 +9,7 @@ type Interflow struct {
 	Description string `gorm:"type:text" json:"description"`
 	IsEnabled   bool   `gorm:"default:true;index" json:"is_enabled"`
 	Priority    int    `gorm:"default:0" json:"priority"`
-	Config      string `gorm:"type:jsonb" json:"config"`
+	Config      string `gorm:"type:json" json:"config"`
 }
 
 // InterflowChatRecord 工单流转聊天记录
@@ -20,7 +20,7 @@ type InterflowChatRecord struct {
 	UserID      uint   `gorm:"index" json:"user_id"`
 	Role        string `gorm:"type:varchar(16);not null" json:"role"` // user/admin/system
 	Content     string `gorm:"type:text;not null" json:"content"`
-	Attachments string `gorm:"type:jsonb" json:"attachments"`
+	Attachments string `gorm:"type:json" json:"attachments"`
 }
 
 // InterflowFunc 工单流转功能
@@ -29,7 +29,7 @@ type InterflowFunc struct {
 	Name        string `gorm:"type:varchar(64);not null" json:"name"`
 	Code        string `gorm:"type:varchar(32);uniqueIndex;not null" json:"code"`
 	Type        string `gorm:"type:varchar(16)" json:"type"`
-	Config      string `gorm:"type:jsonb" json:"config"`
+	Config      string `gorm:"type:json" json:"config"`
 	IsEnabled   bool   `gorm:"default:true" json:"is_enabled"`
 	Description string `gorm:"type:varchar(256)" json:"description"`
 }
@@ -47,8 +47,8 @@ type InterflowKeyword struct {
 type InterflowMatchingExecute struct {
 	gorm.Model
 	Name      string `gorm:"type:varchar(64);not null" json:"name"`
-	Condition string `gorm:"type:jsonb;not null" json:"condition"`
-	Action    string `gorm:"type:jsonb;not null" json:"action"`
+	Condition string `gorm:"type:json;not null" json:"condition"`
+	Action    string `gorm:"type:json;not null" json:"action"`
 	Priority  int    `gorm:"default:0" json:"priority"`
 	IsEnabled bool   `gorm:"default:true" json:"is_enabled"`
 }

@@ -28,7 +28,7 @@ type Deps struct {
 // RegisterRoutes registers all user-facing v1 API routes.
 func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	// ─── 核心 handlers ───
-	captchaSvcForAuth := service.NewCaptchaService(deps.Redis)
+	captchaSvcForAuth := service.NewCaptchaService(deps.Redis, deps.DB)
 	authHandler := handler.NewAuthHandlerWithCaptcha(deps.UserSvc, captchaSvcForAuth, deps.Log, deps.JWTKey)
 	userHandler := handler.NewUserHandlerWithCaptcha(deps.UserSvc, captchaSvcForAuth, deps.Log)
 	productHandler := handler.NewProductHandler(deps.ProdSvc, deps.Log)
@@ -37,8 +37,23 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	ticketHandler := handler.NewTicketHandler(deps.TicSvc, deps.Log)
 	cartHandler := handler.NewCartHandler(deps.CartSvc)
 
+	// ─── V10云 ───
+	couponSvcForV10Cloud := service.NewCouponService(deps.DB, deps.Log)
+	v10CloudSvc := service.NewV10CloudService(deps.DB, deps.Log, deps.OrdSvc, couponSvcForV10Cloud)
+	v10CloudHandler := handler.NewV10CloudHandler(v10CloudSvc, deps.Log)
+
 	// ─── 验证码 ───
-	captchaHandler := handler.NewCaptchaHandler(service.NewCaptchaService(deps.Redis), deps.DB)
+	captchaSvc := service.NewCaptchaService(deps.Redis, deps.DB)
+	captchaHandler := handler.NewCaptchaHandler(captchaSvc, deps.DB)
+	captchaConfigHandler := handler.NewCaptchaConfigHandler(captchaSvc)
+
+	// 初始化极验服务（如果配置了）
+	captchaConfigSvc := service.NewCaptchaConfigService(deps.DB)
+	if captchaConfigSvc.IsGeetestEnabled() {
+		captchaID, captchaKey := captchaConfigSvc.GetGeetestConfig()
+		geetestSvc := service.NewGeetestService(captchaID, captchaKey, deps.Log.Desugar())
+		captchaHandler.SetGeetestService(geetestSvc)
+	}
 
 	// ─── 余额 ───
 	balanceSvc := service.NewBalanceLogService(deps.DB)
@@ -64,6 +79,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	balSvc := service.NewBalanceService(deps.DB, deps.Log)
 	multiRenewSvc := service.NewMultiRenewService(deps.DB, deps.Log, deps.InvSvc, balSvc)
 	multiRenewHandler := handler.NewMultiRenewHandler(multiRenewSvc, deps.Log)
+
+	// ─── 主机增强管理 ───
+	hostEnhancedSvc := service.NewHostEnhancedService(deps.DB, deps.Log, hostSvc, deps.InvSvc, balSvc, upstreamSvc)
+	hostEnhancedHandler := handler.NewHostEnhancedHandler(hostEnhancedSvc, deps.Log)
 
 	// ─── 维护公告 ───
 	maintenanceSvc := service.NewMaintenanceService(deps.DB, deps.Log)
@@ -149,8 +168,28 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 	// 验证码
 	r.POST("/captcha/sms", captchaHandler.SendSMS)
+	r.POST("/captcha/sms/verify", captchaHandler.VerifySMS)
 	r.POST("/captcha/email", captchaHandler.SendEmail)
+	r.POST("/captcha/email/verify", captchaHandler.VerifyEmail)
 	r.GET("/captcha/image", captchaHandler.GetImage)
+	r.GET("/captcha/image/json", captchaHandler.GetImageJSON)
+	r.POST("/captcha/image/verify", captchaHandler.VerifyImage)
+	r.GET("/captcha/status", captchaConfigHandler.GetSceneStatus) // 获取验证码场景状态
+
+	// 极验验证码
+	r.GET("/captcha/geetest/config", captchaHandler.GetGeetestConfig)
+	r.POST("/captcha/geetest/verify", captchaHandler.VerifyGeetest)
+
+	// 公开配置
+	configHandler := handler.NewConfigHandler(deps.DB)
+	r.GET("/config/public", configHandler.GetPublicConfig)
+	r.GET("/config/login", configHandler.GetLoginConfig)
+	r.GET("/config/maintenance", configHandler.GetMaintenanceStatus)
+
+	// 短信验证码（用户端）
+	smsSvcForVerify := service.NewSMSService(deps.DB, deps.Log)
+	smsHandlerForVerify := handler.NewSMSHandler(smsSvcForVerify, deps.Log)
+	r.POST("/sms/send-verify", smsHandlerForVerify.SendVerifyCode)
 
 	// 产品
 	r.GET("/products", productHandler.GetList)
@@ -158,10 +197,30 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.GET("/products/hot", productHandler.GetHot)
 	r.GET("/product-groups", productHandler.GetGroups)
 
+	// 前台导航分组
+	navGroupHandler := handler.NewNavGroupHandler(deps.DB)
+	r.GET("/nav-groups", navGroupHandler.GetPublicNavGroups)
+
 	// 产品配置选项
 	configOptionSvcV1 := service.NewConfigOptionService(deps.DB, deps.Log)
 	configOptionHandlerV1 := handler.NewConfigOptionHandler(configOptionSvcV1, deps.Log)
 	r.GET("/products/:id/config", configOptionHandlerV1.GetProductConfig)
+
+	// 自定义字段（公开：产品字段）
+	customFieldSvc := service.NewCustomFieldService(deps.DB, deps.Log)
+	customFieldHandler := handler.NewCustomFieldHandler(customFieldSvc, deps.Log)
+	r.GET("/custom-fields/product/:product_id", customFieldHandler.GetProductCustomFields)
+	r.GET("/custom-fields/cart", customFieldHandler.GetCartCustomFields)
+
+	// V10云产品（公开）
+	r.GET("/v10/cloud/products", v10CloudHandler.GetProductList)
+	r.GET("/v10/cloud/products/:id", v10CloudHandler.GetProductDetail)
+	r.GET("/v10/cloud/products/:id/config", v10CloudHandler.GetConfigOptions)
+	r.GET("/v10/cloud/products/:id/linkage", v10CloudHandler.GetLinkAgeList)
+	r.GET("/v10/cloud/products/:id/config/filter", v10CloudHandler.FilterConfigOptions)
+	r.GET("/v10/cloud/regions", v10CloudHandler.GetRegions)
+	r.GET("/v10/cloud/os-types", v10CloudHandler.GetOSTypes)
+	r.POST("/v10/cloud/calculate-price", v10CloudHandler.CalculatePrice)
 
 	// 合作伙伴
 	r.GET("/partners", publicHandler.GetPartners)
@@ -215,6 +274,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	// 联系我们
 	r.POST("/contact", publicHandler.SubmitContact)
 
+	// 支付方式（公开，无需登录）
+	r.GET("/payments/gateways", balanceHandler.GetEnabledGateways)
+
 	// ═══════════════════ 需要登录 ═══════════════════
 	auth := r.Group("")
 	auth.Use(middleware.AuthRequired())
@@ -265,11 +327,32 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		auth.DELETE("/cart/clear", cartHandler.ClearCart)
 		auth.POST("/cart/checkout", cartHandler.Checkout)
 
+		// V10云购物车
+		auth.GET("/v10/cloud/cart", v10CloudHandler.GetCartSummary)
+		auth.GET("/v10/cloud/cart/items", v10CloudHandler.GetCartItems)
+		auth.POST("/v10/cloud/cart", v10CloudHandler.AddToCart)
+		auth.PUT("/v10/cloud/cart/:id", v10CloudHandler.UpdateCartItem)
+		auth.POST("/v10/cloud/cart/settle", v10CloudHandler.SettleCart)
+
+		// V10云订单
+		auth.POST("/v10/cloud/orders", v10CloudHandler.CreateOrder)
+		auth.GET("/v10/cloud/orders/:id", v10CloudHandler.GetOrderDetail)
+		auth.POST("/v10/cloud/orders/:id/pay", v10CloudHandler.PayOrder)
+
+		// V10云主机管理
+		auth.GET("/v10/cloud/hosts/:id", v10CloudHandler.GetHostInfo)
+		auth.GET("/v10/cloud/hosts/:id/config", v10CloudHandler.GetHostConfig)
+		auth.GET("/v10/cloud/hosts/:id/traffic", v10CloudHandler.GetTrafficUsage)
+		auth.GET("/v10/cloud/hosts/:id/os", v10CloudHandler.GetOSList)
+
 		// 余额
 		auth.GET("/balances", balanceHandler.GetBalance)
 		auth.GET("/balances/logs", balanceHandler.GetBalanceLogs)
 		auth.POST("/balances/recharge", balanceHandler.Recharge)
 		auth.POST("/balances/withdraw", balanceHandler.Withdraw)
+
+		// 支付方式（用户可见）
+		auth.GET("/payments/gateways", balanceHandler.GetEnabledGateways)
 
 		// 信用额度
 		auth.GET("/credit", creditHandler.GetInfo)
@@ -308,7 +391,138 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		auth.GET("/host/:id/log", serviceDetailHandler.GetServiceLogs)
 		auth.GET("/host/:id/upgrade", upgradeHandler.GetAvailable)
 		auth.POST("/host/:id/upgrade", upgradeHandler.Submit)
+
+		// 主机增强管理 - 续费
+		auth.GET("/host/:id/renewal", hostEnhancedHandler.GetRenewalPage)
+		auth.GET("/host/:id/renewal/price", hostEnhancedHandler.GetRenewalPrice)
+		auth.POST("/host/:id/renewal", hostEnhancedHandler.SubmitRenewal)
+		auth.PUT("/host/:id/auto-renew", hostEnhancedHandler.SetAutoRenew)
+		auth.POST("/host/batch-renew", hostEnhancedHandler.BatchRenew)
+
+		// 主机增强管理 - 转让
+		auth.POST("/host/:id/transfer", hostEnhancedHandler.TransferHost)
+		auth.GET("/host/:id/transfer/history", hostEnhancedHandler.GetTransferHistory)
+
+		// 主机增强管理 - 分类
+		auth.GET("/host/categories", hostEnhancedHandler.GetHostCategories)
+		auth.POST("/host/categories", hostEnhancedHandler.CreateHostCategory)
+		auth.POST("/host/:id/category", hostEnhancedHandler.AssignCategory)
+		auth.DELETE("/host/categories/:category_id", hostEnhancedHandler.DeleteCategory)
+
+		// 主机增强管理 - SSL
+		auth.GET("/host/:id/ssl", hostEnhancedHandler.GetSSLConfig)
+		auth.PUT("/host/:id/ssl", hostEnhancedHandler.SetSSLConfig)
+		auth.POST("/host/:id/ssl/install", hostEnhancedHandler.InstallSSL)
+
+		// 主机增强管理 - 下游/二次验证
+		auth.PUT("/host/:id/downstream", hostEnhancedHandler.SetDownstream)
+		auth.PUT("/host/:id/second-verify", hostEnhancedHandler.SetSecondVerify)
+		auth.POST("/host/:id/second-verify", hostEnhancedHandler.VerifySecond)
+
+		// 主机增强管理 - 流量与电源
+		auth.GET("/host/:id/traffic", hostEnhancedHandler.GetTrafficUsage)
+		auth.GET("/host/:id/traffic/chart", hostEnhancedHandler.GetTrafficChart)
+		auth.POST("/host/:id/power/refresh", hostEnhancedHandler.RefreshPowerStatus)
+
+		// 主机增强管理 - 详情与状态
+		auth.GET("/host/:id/detail", hostEnhancedHandler.GetHostDetail)
+		auth.GET("/host/:id/status", hostEnhancedHandler.GetHostStatus)
+		auth.POST("/host/:id/remark", hostEnhancedHandler.PostRemark)
+		auth.POST("/host/:id/hide", hostEnhancedHandler.HideHost)
+
+		// 主机增强管理 - 取消/终止
+		auth.GET("/host/:id/cancel", hostEnhancedHandler.GetCancelPage)
+		auth.POST("/host/:id/cancel", hostEnhancedHandler.SubmitCancel)
+		auth.DELETE("/host/:id/cancel", hostEnhancedHandler.DeleteCancel)
+
+		// 主机增强管理 - 独立服务器
+		auth.GET("/host/:id/dedicated", hostEnhancedHandler.GetDedicatedServer)
+
+		// 主机增强管理 - 流量包
+		auth.GET("/host/:id/flow-packets", hostEnhancedHandler.GetFlowPackets)
+		auth.POST("/host/:id/flow-packets/:packet_id", hostEnhancedHandler.BuyFlowPacket)
+
+		// 主机增强管理 - 重装增强
+		auth.GET("/host/:id/reinstall/check", hostEnhancedHandler.CheckReinstall)
+		auth.GET("/host/:id/reinstall/status", hostEnhancedHandler.GetReinstallStatus)
+		auth.POST("/host/:id/reinstall/cancel", hostEnhancedHandler.CancelReinstall)
+
+		// 主机增强管理 - 主机充值
+		auth.GET("/host/:id/recharge", hostEnhancedHandler.GetHostRecharge)
+
+		// 模块供给（客户端）
+		provisionSvcForModule := service.NewProvisionService(deps.DB, deps.Log)
+		pmClientHandler := handler.NewProvisionModuleHandler(provisionSvcForModule, deps.Log)
+		auth.GET("/provision/client-area/:host_id", pmClientHandler.RenderClientArea)
+		auth.GET("/provision/client-area/:host_id/detail", pmClientHandler.RenderClientAreaDetail)
+		auth.GET("/provision/client-area/:host_id/buttons", pmClientHandler.GetClientButtons)
+		auth.POST("/provision/client-area/:host_id/execute", pmClientHandler.ExecuteClientButton)
+		auth.GET("/provision/charts/:host_id", pmClientHandler.GetCharts)
+		auth.GET("/provision/charts/:host_id/:chart_id", pmClientHandler.GetChartData)
+		auth.GET("/provision/usage/:host_id", pmClientHandler.GetUsage)
+		auth.GET("/provision/usage/:host_id/traffic", pmClientHandler.TrafficUsage)
+		auth.GET("/provision/ssl/:host_id", pmClientHandler.SSLButton)
+
+		// 主机操作（catch-all，放最后）
 		auth.POST("/host/:id/:action", hostHandler.PerformAction)
+
+		// 魔方云高级操作（用户）
+		dcimCloudSvcV1 := service.NewDcimCloudService(deps.DB, deps.Log)
+		dcimCloudHandlerV1 := handler.NewDcimCloudHandler(dcimCloudSvcV1, deps.Log)
+		auth.GET("/cloud/:id/nat", dcimCloudHandlerV1.GetNATRules)
+		auth.POST("/cloud/:id/nat", dcimCloudHandlerV1.CreateNATRule)
+		auth.PUT("/cloud/nat/:rule_id", dcimCloudHandlerV1.UpdateNATRule)
+		auth.DELETE("/cloud/nat/:rule_id", dcimCloudHandlerV1.DeleteNATRule)
+		auth.GET("/cloud/:id/security-groups", dcimCloudHandlerV1.GetSecurityGroups)
+		auth.POST("/cloud/:id/security-groups", dcimCloudHandlerV1.CreateSecurityGroup)
+		auth.PUT("/cloud/security-groups/:group_id", dcimCloudHandlerV1.UpdateSecurityGroup)
+		auth.DELETE("/cloud/security-groups/:group_id", dcimCloudHandlerV1.DeleteSecurityGroup)
+		auth.GET("/cloud/security-groups/:group_id/rules", dcimCloudHandlerV1.GetSecurityGroupRules)
+		auth.POST("/cloud/security-groups/:group_id/rules", dcimCloudHandlerV1.AddSecurityGroupRule)
+		auth.PUT("/cloud/security-rules/:rule_id", dcimCloudHandlerV1.UpdateSecurityGroupRule)
+		auth.DELETE("/cloud/security-rules/:rule_id", dcimCloudHandlerV1.DeleteSecurityGroupRule)
+		auth.GET("/cloud/isos", dcimCloudHandlerV1.GetISOList)
+		auth.POST("/cloud/:id/mount-iso", dcimCloudHandlerV1.MountISO)
+		auth.POST("/cloud/:id/unmount-iso", dcimCloudHandlerV1.UnmountISO)
+		auth.GET("/cloud/:id/vnc", dcimCloudHandlerV1.GetVNCURL)
+		auth.GET("/cloud/:id/vnc-page", dcimCloudHandlerV1.GetVNCPage)
+		auth.GET("/cloud/:id/charts", dcimCloudHandlerV1.GetResourceChart)
+		auth.GET("/cloud/:id/resources", dcimCloudHandlerV1.GetResourceInfo)
+		auth.GET("/cloud/:id/flow-packets", dcimCloudHandlerV1.GetFlowPackets)
+		auth.POST("/cloud/:id/flow-packets/buy", dcimCloudHandlerV1.BuyFlowPacket)
+		auth.GET("/cloud/:id/flow-usage", dcimCloudHandlerV1.GetFlowPacketUsage)
+		auth.GET("/cloud/:id/status", dcimCloudHandlerV1.GetCloudStatus)
+		auth.POST("/cloud/:id/reset-password", dcimCloudHandlerV1.ResetCloudPassword)
+
+		// DCIM服务器操作（用户端）
+		dcimSvc := service.NewDcimService(deps.DB, deps.Log)
+		dcimAdvHandler := handler.NewDcimAdvancedHandler(dcimSvc, deps.Log)
+		// KVM/远程控制
+		auth.GET("/dcim/server/:id/kvm", dcimAdvHandler.GetKVMURL)
+		auth.GET("/dcim/server/:id/bmc", dcimAdvHandler.GetBMCInfo)
+		auth.GET("/dcim/server/:id/novnc", dcimAdvHandler.GetNoVNCURL)
+		// 救援系统
+		auth.POST("/dcim/server/:id/rescue", dcimAdvHandler.BootRescue)
+		auth.POST("/dcim/server/:id/crack-password", dcimAdvHandler.CrackPassword)
+		auth.GET("/dcim/server/:id/rescue-status", dcimAdvHandler.GetRescueStatus)
+		// 流量监控
+		auth.GET("/dcim/server/:id/traffic", dcimAdvHandler.GetTrafficUsage)
+		auth.GET("/dcim/server/:id/traffic/chart", dcimAdvHandler.GetTrafficChart)
+		// 快照
+		auth.POST("/dcim/server/:id/snapshots", dcimAdvHandler.CreateSnapshot)
+		auth.GET("/dcim/server/:id/snapshots", dcimAdvHandler.GetSnapshots)
+		auth.POST("/dcim/snapshot/:id/restore", dcimAdvHandler.RestoreSnapshot)
+		auth.DELETE("/dcim/snapshot/:id", dcimAdvHandler.DeleteSnapshot)
+		// 备份
+		auth.POST("/dcim/server/:id/backups", dcimAdvHandler.CreateBackup)
+		auth.GET("/dcim/server/:id/backups", dcimAdvHandler.GetBackups)
+		auth.POST("/dcim/backup/:id/restore", dcimAdvHandler.RestoreBackup)
+		auth.DELETE("/dcim/backup/:id", dcimAdvHandler.DeleteBackup)
+		// 电源状态
+		auth.GET("/dcim/server/:id/power", dcimAdvHandler.GetPowerStatus)
+		// 重装状态
+		auth.GET("/dcim/server/:id/reinstall-status", dcimAdvHandler.GetReinstallStatus)
+		auth.GET("/dcim/os-list", dcimAdvHandler.GetOSList)
 
 		// 批量续费
 		auth.POST("/multi-renew", multiRenewHandler.Create)
@@ -336,6 +550,13 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// 代金券
 		auth.GET("/vouchers", voucherHandler.GetUserVouchers)
 
+		// 自定义字段（用户端）
+		auth.GET("/custom-fields/client", customFieldHandler.GetClientCustomFields)
+		auth.GET("/custom-fields/host/:host_id", customFieldHandler.GetHostCustomFields)
+		auth.GET("/custom-field-values", customFieldHandler.GetValues)
+		auth.POST("/custom-field-values", customFieldHandler.SaveValues)
+		auth.POST("/custom-fields/validate", customFieldHandler.ValidateFields)
+
 		// 推介
 		auth.GET("/affiliate/info", affiliateHandler.GetInfo)
 		auth.GET("/affiliate/records", affiliateHandler.GetRecords)
@@ -346,35 +567,46 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	auth.POST("/certification/submit", certHandler.Submit)
 	auth.GET("/certification/status", certHandler.GetStatus)
 
-	// 域名管理
-	domainSvc := service.NewDomainService(deps.DB, deps.Log)
-	domainHandler := handler.NewDomainHandler(domainSvc, deps.DB, deps.Log)
-	r.GET("/domain/check", domainHandler.CheckAvailability)
-	auth.GET("/domains", domainHandler.GetList)
-	auth.GET("/domains/:id", domainHandler.GetDetail)
-	auth.POST("/domains/:id/renew", domainHandler.Renew)
-	auth.GET("/domains/:id/dns", domainHandler.GetDNSRecords)
-	auth.POST("/domains/:id/dns", domainHandler.AddDNSRecord)
-	auth.PUT("/domains/:id/dns/:record_id", domainHandler.UpdateDNSRecord)
-	auth.DELETE("/domains/:id/dns/:record_id", domainHandler.DeleteDNSRecord)
-	auth.POST("/domains/transfer", domainHandler.InitiateTransfer)
-	auth.GET("/domains/transfer", domainHandler.GetTransfers)
+		// SSL证书
+		sslCertSvc := service.NewSSLCertificateService(deps.DB, deps.Log)
+		sslCertHandler := handler.NewSSLCertificateHandler(sslCertSvc, deps.Log)
+		auth.GET("/ssl-certificates", sslCertHandler.GetList)
+		auth.GET("/ssl-certificates/:id", sslCertHandler.GetDetail)
+		auth.POST("/ssl-certificates/order", sslCertHandler.Order)
+		auth.POST("/ssl-certificates/generate-csr", sslCertHandler.GenerateCSR)
+		auth.POST("/ssl-certificates/:id/validate", sslCertHandler.Validate)
+		auth.POST("/ssl-certificates/:id/install", sslCertHandler.Install)
+		auth.POST("/ssl-certificates/:id/renew", sslCertHandler.Renew)
+		auth.POST("/ssl-certificates/:id/revoke", sslCertHandler.Revoke)
 
-	// SSL证书
-	sslCertSvc := service.NewSSLCertificateService(deps.DB, deps.Log)
-	sslCertHandler := handler.NewSSLCertificateHandler(sslCertSvc, deps.Log)
-	auth.GET("/ssl-certificates", sslCertHandler.GetList)
-	auth.GET("/ssl-certificates/:id", sslCertHandler.GetDetail)
-	auth.POST("/ssl-certificates/order", sslCertHandler.Order)
-	auth.POST("/ssl-certificates/generate-csr", sslCertHandler.GenerateCSR)
-	auth.POST("/ssl-certificates/:id/validate", sslCertHandler.Validate)
-	auth.POST("/ssl-certificates/:id/install", sslCertHandler.Install)
-	auth.POST("/ssl-certificates/:id/renew", sslCertHandler.Renew)
-	auth.POST("/ssl-certificates/:id/revoke", sslCertHandler.Revoke)
+		// 客户跟踪
+		auth.GET("/user/tracks", handler.NewClientTrackHandler(deps.DB).GetUserTracks)
 	}
 
 	// SSL证书类型（公开）
 	sslCertSvcPub := service.NewSSLCertificateService(deps.DB, deps.Log)
 	sslCertHandlerPub := handler.NewSSLCertificateHandler(sslCertSvcPub, deps.Log)
 	r.GET("/ssl-certificates/types", sslCertHandlerPub.GetCertificateTypes)
+
+	// 首页基本信息（公开）
+	baseInfoHandlerPub := handler.NewBaseInfoHandler(deps.DB)
+	r.GET("/base-infos", baseInfoHandlerPub.GetActive)
+
+	// 取消原因（公开）
+	cancelReasonHandlerPub := handler.NewCancelReasonHandler(deps.DB)
+	r.GET("/cancel-reasons", cancelReasonHandlerPub.List)
+
+	// 需要登录的接口
+	auth := r.Group("")
+	auth.Use(middleware.AuthMiddleware(deps.JWTMgr))
+	{
+		// 用户专属下载
+		userDownloadHandler := handler.NewUserDownloadHandler(deps.DB)
+		auth.GET("/user/downloads", userDownloadHandler.GetUserDownloads)
+
+		// 用户偏好设置
+		userTasteHandler := handler.NewUserTasteHandler(deps.DB)
+		auth.GET("/user/tastes", userTasteHandler.Get)
+		auth.PUT("/user/tastes", userTasteHandler.Update)
+	}
 }

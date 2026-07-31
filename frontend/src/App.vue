@@ -3,7 +3,14 @@
     <n-message-provider>
       <n-dialog-provider>
         <n-notification-provider>
-          <router-view />
+          <!-- 维护模式提示 -->
+          <div v-if="isMaintenanceMode" class="maintenance-overlay">
+            <div class="maintenance-content">
+              <h2>系统维护中</h2>
+              <p>{{ maintenanceMessage }}</p>
+            </div>
+          </div>
+          <router-view v-else />
         </n-notification-provider>
       </n-dialog-provider>
     </n-message-provider>
@@ -11,7 +18,14 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 import type { GlobalThemeOverrides } from 'naive-ui'
+import { useConfigStore } from '@/stores/config'
+
+const configStore = useConfigStore()
+
+const isMaintenanceMode = computed(() => configStore.config.maintenance_mode)
+const maintenanceMessage = computed(() => '系统维护中，请稍后再访问')
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {
@@ -36,6 +50,11 @@ const themeOverrides: GlobalThemeOverrides = {
     borderRadius: '12px'
   }
 }
+
+onMounted(async () => {
+  // 初始化时获取公开配置
+  await configStore.fetchPublicConfig()
+})
 </script>
 
 <style>
@@ -55,5 +74,34 @@ body {
 #app {
   width: 100%;
   min-height: 100vh;
+}
+
+.maintenance-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.maintenance-content {
+  text-align: center;
+  color: white;
+  padding: 40px;
+}
+
+.maintenance-content h2 {
+  font-size: 36px;
+  margin-bottom: 20px;
+}
+
+.maintenance-content p {
+  font-size: 18px;
+  opacity: 0.9;
 }
 </style>

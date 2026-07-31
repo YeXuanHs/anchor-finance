@@ -19,7 +19,7 @@ type Voucher struct {
 	TotalCount int            `gorm:"default:0" json:"total_count"`                  // 0不限
 	UsedCount  int            `gorm:"default:0" json:"used_count"`
 	UserCount  int            `gorm:"default:1" json:"user_count"` // 每用户可用次数
-	ProductIDs datatypes.JSON `gorm:"type:jsonb" json:"product_ids"`                 // 适用产品，空=全部
+	ProductIDs datatypes.JSON `gorm:"type:json" json:"product_ids"`                 // 适用产品，空=全部
 	StartDate  time.Time      `json:"start_date"`
 	EndDate    time.Time      `json:"end_date"`
 	IsActive   bool           `gorm:"default:true" json:"is_active"`

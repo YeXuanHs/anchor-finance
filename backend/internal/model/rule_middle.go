@@ -19,5 +19,5 @@ type RuleMiddle struct {
 	EditRoleMenu string         `gorm:"type:varchar(256)" json:"edit_role_menu"`
 	Status       int16          `gorm:"type:smallint;default:1;not null;index" json:"status"`
 	SortOrder    int            `gorm:"default:0" json:"sort_order"`
-	Extra        datatypes.JSON `gorm:"type:jsonb" json:"extra"`
+	Extra        datatypes.JSON `gorm:"type:json" json:"extra"`
 }

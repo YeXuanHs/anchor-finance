@@ -13,8 +13,8 @@ type SalePromotion struct {
 	Name          string         `gorm:"type:varchar(256);not null" json:"name"`
 	Code          string         `gorm:"type:varchar(64);uniqueIndex" json:"code"` // 优惠码
 	Type          string         `gorm:"type:varchar(32);not null;index" json:"type"` // amount_off(满减)/percent_off(折扣)/first_order(首单优惠)/free_trial(免费试用)
-	Condition     datatypes.JSON `gorm:"type:jsonb;not null" json:"condition"` // 条件JSON：min_amount(最低消费)/min_quantity(最低数量)/applicable_products(适用商品)/applicable_groups(适用分组)
-	Discount      datatypes.JSON `gorm:"type:jsonb;not null" json:"discount"`  // 优惠JSON：value(优惠值)/max_discount(最大折扣额)/free_product_id(赠送商品)
+	Condition     datatypes.JSON `gorm:"type:json;not null" json:"condition"` // 条件JSON：min_amount(最低消费)/min_quantity(最低数量)/applicable_products(适用商品)/applicable_groups(适用分组)
+	Discount      datatypes.JSON `gorm:"type:json;not null" json:"discount"`  // 优惠JSON：value(优惠值)/max_discount(最大折扣额)/free_product_id(赠送商品)
 	StartAt       time.Time      `gorm:"index;not null" json:"start_at"`
 	EndAt         time.Time      `gorm:"index;not null" json:"end_at"`
 	MaxUses       int            `gorm:"default:0" json:"maxUses"` // 0=不限

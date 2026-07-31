@@ -8,7 +8,7 @@ type SystemLog struct {
 	Level     string    `gorm:"type:varchar(16);not null;index" json:"level"` // debug/info/warn/error
 	Module    string    `gorm:"type:varchar(64);index" json:"module"`
 	Message   string    `gorm:"type:text;not null" json:"message"`
-	Details   string    `gorm:"type:jsonb" json:"details"`
+	Details   string    `gorm:"type:json" json:"details"`
 	UserID    uint      `gorm:"index" json:"user_id"`
 	IP        string    `gorm:"type:varchar(45)" json:"ip"`
 	UserAgent string    `gorm:"type:varchar(256)" json:"user_agent"`

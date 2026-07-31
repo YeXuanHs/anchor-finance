@@ -51,14 +51,50 @@ func (h *TicketHandler) GetDetail(c *gin.Context) {
 		return
 	}
 
-	ticket, replies, err := h.ticketSvc.GetByID(uint(id))
+	ticket, replies, attachments, err := h.ticketSvc.GetByID(uint(id))
 	if err != nil {
 		response.NotFound(c, "ticket not found")
 		return
 	}
+
+	// 获取每个回复的附件
+	replyAttachments := make(map[uint][]service.TicketAttachment)
+	for _, att := range attachments {
+		if att.ReplyID != nil {
+			replyAttachments[*att.ReplyID] = append(replyAttachments[*att.ReplyID], att)
+		}
+	}
+
+	// 构建带附件的回复列表
+	type ReplyWithAttachments struct {
+		service.TicketReply
+		Attachments []service.TicketAttachment `json:"attachments"`
+	}
+
+	repliesWithAttachments := make([]ReplyWithAttachments, 0, len(replies))
+	for _, reply := range replies {
+		atts := replyAttachments[reply.ID]
+		if atts == nil {
+			atts = []service.TicketAttachment{}
+		}
+		repliesWithAttachments = append(repliesWithAttachments, ReplyWithAttachments{
+			TicketReply: reply,
+			Attachments: atts,
+		})
+	}
+
+	// 过滤出工单级别的附件（不属于回复的）
+	ticketAttachments := make([]service.TicketAttachment, 0)
+	for _, att := range attachments {
+		if att.ReplyID == nil {
+			ticketAttachments = append(ticketAttachments, att)
+		}
+	}
+
 	response.Success(c, gin.H{
-		"ticket":  ticket,
-		"replies": replies,
+		"ticket":      ticket,
+		"replies":     repliesWithAttachments,
+		"attachments": ticketAttachments,
 	})
 }
 
@@ -92,6 +128,29 @@ func (h *TicketHandler) Reply(c *gin.Context) {
 	}
 
 	reply, err := h.ticketSvc.Reply(uint(id), userID, false, req)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, reply)
+}
+
+// AdminReply adds an admin reply to a ticket.
+func (h *TicketHandler) AdminReply(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid ticket id")
+		return
+	}
+
+	userID := c.GetUint("user_id")
+	var req service.ReplyTicketRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	reply, err := h.ticketSvc.Reply(uint(id), userID, true, req)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return

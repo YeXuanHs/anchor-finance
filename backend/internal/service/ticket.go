@@ -79,7 +79,8 @@ type CreateTicketRequest struct {
 }
 
 type ReplyTicketRequest struct {
-	Content string `json:"content" binding:"required"`
+	Content       string `json:"content" binding:"required"`
+	AttachmentIDs []uint `json:"attachment_ids"`
 }
 
 // Create opens a new ticket.
@@ -106,19 +107,49 @@ func (s *TicketService) Create(userID uint, req CreateTicketRequest) (*Ticket, e
 	return ticket, nil
 }
 
-// GetByID fetches a ticket with replies.
-func (s *TicketService) GetByID(id uint) (*Ticket, []TicketReply, error) {
+// GetByID fetches a ticket with replies and attachments.
+func (s *TicketService) GetByID(id uint) (*Ticket, []TicketReply, []TicketAttachment, error) {
 	var ticket Ticket
 	if err := s.db.First(&ticket, id).Error; err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	var replies []TicketReply
 	if err := s.db.Where("ticket_id = ?", id).Order("id ASC").Find(&replies).Error; err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return &ticket, replies, nil
+	// 获取工单附件（不属于任何回复的）
+	var attachments []TicketAttachment
+	if err := s.db.Where("ticket_id = ? AND reply_id IS NULL", id).Order("id ASC").Find(&attachments).Error; err != nil {
+		return nil, nil, nil, err
+	}
+
+	// 获取各回复的附件
+	replyAttachments := make(map[uint][]TicketAttachment)
+	var allReplyAttachments []TicketAttachment
+	replyIDs := make([]uint, 0, len(replies))
+	for _, r := range replies {
+		replyIDs = append(replyIDs, r.ID)
+	}
+	if len(replyIDs) > 0 {
+		if err := s.db.Where("ticket_id = ? AND reply_id IN ?", id, replyIDs).Order("id ASC").Find(&allReplyAttachments).Error; err != nil {
+			return nil, nil, nil, err
+		}
+		for _, att := range allReplyAttachments {
+			if att.ReplyID != nil {
+				replyAttachments[*att.ReplyID] = append(replyAttachments[*att.ReplyID], att)
+			}
+		}
+	}
+
+	// 构建带附件的回复列表
+	type ReplyWithAttachments struct {
+		TicketReply
+		Attachments []TicketAttachment `json:"attachments"`
+	}
+
+	return &ticket, replies, attachments, nil
 }
 
 // GetUserTickets returns paginated tickets for a user.
@@ -159,6 +190,16 @@ func (s *TicketService) Reply(ticketID, userID uint, isAdmin bool, req ReplyTick
 		if err := tx.Create(reply).Error; err != nil {
 			return err
 		}
+
+		// 处理附件关联
+		if len(req.AttachmentIDs) > 0 {
+			if err := tx.Model(&Attachment{}).
+				Where("id IN ? AND ticket_id = ?", req.AttachmentIDs, ticketID).
+				Update("reply_id", reply.ID).Error; err != nil {
+				return err
+			}
+		}
+
 		newStatus := 1
 		if isAdmin {
 			newStatus = 1 // replied

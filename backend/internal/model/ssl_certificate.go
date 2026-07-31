@@ -25,10 +25,10 @@ type SSLCertificate struct {
 	CaBundle        string     `gorm:"type:text" json:"ca_bundle"`
 	SANs            string     `gorm:"type:text;column:sans" json:"sans"` // JSON array of additional domains
 	ValidationType  string     `gorm:"type:varchar(32)" json:"validation_type"` // dns, email, http
-	ValidationData  string     `gorm:"type:jsonb" json:"validation_data"`
+	ValidationData  string     `gorm:"type:json" json:"validation_data"`
 	OrderID         string     `gorm:"type:varchar(128)" json:"order_id"`
 	Price           float64    `gorm:"type:decimal(20,4)" json:"price"`
-	Metadata        string     `gorm:"type:jsonb" json:"metadata"`
+	Metadata        string     `gorm:"type:json" json:"metadata"`
 	User            *User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Product         *Product   `gorm:"foreignKey:ProductID" json:"product,omitempty"`
 }

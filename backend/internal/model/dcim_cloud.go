@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -46,4 +47,73 @@ type DcimCloudOperationLog struct {
 	Status     int8      `gorm:"type:smallint;not null" json:"status"` // 1=成功 2=失败
 	ErrorMsg   string    `gorm:"type:text" json:"error_msg"`
 	CreatedAt  time.Time `json:"created_at"`
+}
+
+// CloudNATRule 云服务器NAT端口转发规则
+type CloudNATRule struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	CloudID   uint      `gorm:"index" json:"cloud_id"`
+	Name      string    `gorm:"type:varchar(256)" json:"name"`
+	Protocol  string    `gorm:"type:varchar(16)" json:"protocol"` // tcp/udp
+	ExtPort   int       `gorm:"not null" json:"ext_port"`
+	IntPort   int       `gorm:"not null" json:"int_port"`
+	IntIP     string    `gorm:"type:varchar(45)" json:"int_ip"`
+	Status    string    `gorm:"type:varchar(32)" json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// CloudSecurityGroup 云服务器安全组
+type CloudSecurityGroup struct {
+	ID            uint           `gorm:"primaryKey" json:"id"`
+	CloudID       uint           `gorm:"index" json:"cloud_id"`
+	Name          string         `gorm:"type:varchar(256)" json:"name"`
+	Rules         datatypes.JSON `gorm:"type:json" json:"rules"`
+	DefaultAction string         `gorm:"type:varchar(16)" json:"default_action"` // accept/drop
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+}
+
+// CloudSecurityGroupRule 云服务器安全组规则
+type CloudSecurityGroupRule struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	GroupID   uint      `gorm:"index" json:"group_id"`
+	Direction string    `gorm:"type:varchar(16)" json:"direction"` // in/out
+	Protocol  string    `gorm:"type:varchar(16)" json:"protocol"`
+	PortRange string    `gorm:"type:varchar(32)" json:"port_range"`
+	Source    string    `gorm:"type:varchar(128)" json:"source"`
+	Action    string    `gorm:"type:varchar(16)" json:"action"` // accept/drop
+	Priority  int       `gorm:"default:100" json:"priority"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// CloudISO 可用ISO镜像
+type CloudISO struct {
+	ID     uint   `gorm:"primaryKey" json:"id"`
+	Name   string `gorm:"type:varchar(256)" json:"name"`
+	SizeMB int    `json:"size_mb"`
+	URL    string `gorm:"type:varchar(512)" json:"url"`
+	Status string `gorm:"type:varchar(32)" json:"status"` // available/mounted
+}
+
+// CloudFlowPacket 云服务器流量包
+type CloudFlowPacket struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	CloudID   uint      `gorm:"index" json:"cloud_id"`
+	Name      string    `gorm:"type:varchar(256)" json:"name"`
+	SizeGB    int       `json:"size_gb"`
+	UsedGB    int       `json:"used_gb"`
+	ExpiredAt time.Time `json:"expired_at"`
+	Status    string    `gorm:"type:varchar(32)" json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// CloudChart 云服务器监控数据点
+type CloudChart struct {
+	Timestamp  time.Time `gorm:"primaryKey" json:"timestamp"`
+	CloudID    uint      `gorm:"primaryKey;index" json:"cloud_id"`
+	CPURate    float64   `json:"cpu_rate"`
+	MemoryRate float64   `json:"memory_rate"`
+	DiskRate   float64   `json:"disk_rate"`
+	NetIn      int64     `json:"net_in"`
+	NetOut     int64     `json:"net_out"`
 }

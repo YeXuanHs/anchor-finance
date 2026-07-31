@@ -40,6 +40,6 @@ type WebhookConfig struct {
 	Name     string         `gorm:"type:varchar(100);not null" json:"name"`
 	URL      string         `gorm:"type:varchar(500);not null" json:"url"`
 	Secret   string         `gorm:"type:varchar(100)" json:"secret"`
-	Events   datatypes.JSON `gorm:"type:jsonb" json:"events"` // 监听的事件类型
+	Events   datatypes.JSON `gorm:"type:json" json:"events"` // 监听的事件类型
 	IsActive bool           `gorm:"default:true" json:"is_active"`
 }

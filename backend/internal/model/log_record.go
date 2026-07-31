@@ -17,8 +17,8 @@ type LogRecord struct {
 	TargetID   uint           `gorm:"index" json:"target_id"`                             // 操作目标ID
 	TargetType string         `gorm:"type:varchar(64)" json:"target_type"`                // 操作目标类型
 	Title      string         `gorm:"type:varchar(256)" json:"title"`                     // 操作标题
-	OldData    datatypes.JSON `gorm:"type:jsonb" json:"old_data"`                         // 变更前数据
-	NewData    datatypes.JSON `gorm:"type:jsonb" json:"new_data"`                         // 变更后数据
+	OldData    datatypes.JSON `gorm:"type:json" json:"old_data"`                         // 变更前数据
+	NewData    datatypes.JSON `gorm:"type:json" json:"new_data"`                         // 变更后数据
 	IPAddress  string         `gorm:"type:varchar(64);not null" json:"ip_address"`        // IP地址
 	UserAgent  string         `gorm:"type:varchar(512)" json:"user_agent"`                // 浏览器UA
 	RequestMethod string      `gorm:"type:varchar(10)" json:"request_method"`             // 请求方法

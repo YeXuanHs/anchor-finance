@@ -23,5 +23,5 @@ type Payment struct {
 	Description   string     `gorm:"type:varchar(256)" json:"description"`
 	PaidAt        *time.Time `json:"paid_at"`
 	RefundedAt    *time.Time `json:"refunded_at"`
-	Extra         string     `gorm:"type:jsonb" json:"extra"`
+	Extra         string     `gorm:"type:json" json:"extra"`
 }

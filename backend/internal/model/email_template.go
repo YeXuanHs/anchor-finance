@@ -15,7 +15,7 @@ type EmailTemplate struct {
 	Subject   string         `gorm:"type:varchar(256);not null" json:"subject"`             // 标题
 	Body      string         `gorm:"type:text;not null" json:"body"`                        // 内容（支持Go模板语法）
 	Type      string         `gorm:"type:varchar(16);not null;index" json:"type"`           // email/sms/notice
-	Variables datatypes.JSON `gorm:"type:jsonb" json:"variables"`                          // 可用变量列表
+	Variables datatypes.JSON `gorm:"type:json" json:"variables"`                          // 可用变量列表
 	Format    string         `gorm:"type:varchar(16);default:'html'" json:"format"`         // html/plain
 	Language  string         `gorm:"type:varchar(16);default:'zh-CN'" json:"language"`      // 语言
 	IsSystem  bool           `gorm:"default:false" json:"is_system"`                        // 系统模板不可删除

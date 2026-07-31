@@ -16,7 +16,7 @@ type ConfigOption struct {
 	Type         string         `gorm:"type:varchar(32);default:'text';not null" json:"type"` // text/textarea/number/select/radio/checkbox/switch/color/date/json/slider/quantity
 	Value        string         `gorm:"type:text" json:"value"`
 	DefaultValue string        `gorm:"type:text" json:"default_value"`
-	Options      datatypes.JSON `gorm:"type:jsonb" json:"options"` // 下拉/单选/多选的可选项列表
+	Options      datatypes.JSON `gorm:"type:json" json:"options"` // 下拉/单选/多选的可选项列表
 	Placeholder  string         `gorm:"type:varchar(256)" json:"placeholder"`
 	Tip          string         `gorm:"type:varchar(512)" json:"tip"`
 	Validation   string         `gorm:"type:varchar(256)" json:"validation"` // 验证规则

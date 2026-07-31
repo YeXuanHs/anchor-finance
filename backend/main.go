@@ -23,12 +23,12 @@ import (
 func main() {
 	// 检查是否已安装（config.yaml 是否存在）
 	configPath := filepath.Join("configs", "config.yaml")
-	installed := fileExists(configPath)
-
-	if !installed {
-		// 未安装：只启动安装页面
-		startInstaller()
-		return
+	if !fileExists(configPath) {
+		fmt.Println("========================================")
+		fmt.Println("  锚点财务 - 未检测到配置文件")
+		fmt.Println("  请先运行安装脚本: bash install.sh")
+		fmt.Println("========================================")
+		os.Exit(1)
 	}
 
 	// 已安装：正常启动
@@ -37,8 +37,8 @@ func main() {
 		log.Fatalf("加载配置失败: %v", err)
 	}
 
-	// 连接数据库
-	if err := db.InitDB(cfg.Database); err != nil {
+	// 连接数据库（MySQL）
+	if _, err := db.InitDB(cfg.Database.ToDBConfig()); err != nil {
 		log.Fatalf("数据库初始化失败: %v", err)
 	}
 
@@ -62,15 +62,22 @@ func main() {
 		Output: "stdout",
 	})
 
-	// 从数据库读取 JWT 配置
-	jwtSecret := db.GetSystemSetting("jwt_secret")
+	// JWT 配置（优先从 config.yaml 读取，否则从数据库读取）
+	jwtSecret := cfg.JWT.Secret
+	if jwtSecret == "" {
+		jwtSecret = db.GetSystemSetting("jwt_secret")
+	}
 	if jwtSecret == "" {
 		jwtSecret = "default_secret_please_change"
 	}
-	jwtExpireStr := db.GetSystemSetting("jwt_expire_hours")
-	jwtExpire := 72
-	if v, err := strconv.Atoi(jwtExpireStr); err == nil && v > 0 {
-		jwtExpire = v
+	jwtExpire := cfg.JWT.ExpireHours
+	if jwtExpire == 0 {
+		jwtExpireStr := db.GetSystemSetting("jwt_expire_hours")
+		if v, err := strconv.Atoi(jwtExpireStr); err == nil && v > 0 {
+			jwtExpire = v
+		} else {
+			jwtExpire = 72
+		}
 	}
 	jwtMgr := auth.NewJWTManager(jwtSecret, jwtExpire)
 
@@ -78,50 +85,79 @@ func main() {
 	redisEnabled := db.GetSystemSetting("redis_enabled")
 	if redisEnabled == "true" {
 		if err := db.InitRedisFromDB(); err != nil {
-			logger.Warnf("Redis 初始化失败，将使用内存缓存: %v", err)
+			log.Printf("Redis 初始化失败（非致命）: %v", err)
 		}
 	}
+
+	// 创建 Gin 引擎
+	r := gin.Default()
+
+	// 注册静态资源（前端编译产物）
+	frontendDist := filepath.Join("frontend", "dist")
+	if _, err := os.Stat(frontendDist); err == nil {
+		r.Static("/assets", filepath.Join(frontendDist, "assets"))
+		r.StaticFile("/favicon.ico", filepath.Join(frontendDist, "favicon.ico"))
+		r.StaticFile("/logo.png", filepath.Join(frontendDist, "logo.png"))
+	}
+
+	// 注册 API 路由
+	api.RegisterRoutes(r, jwtMgr)
+
+	// 注册后台管理 API
+	adminPath := db.GetSystemSetting("admin_path")
+	if adminPath == "" {
+		adminPath = "/admin"
+	}
+	api.RegisterAdminRoutes(r, jwtMgr, adminPath)
+
+	// SPA 回退：所有非 API 请求返回前端 index.html
+	r.NoRoute(func(c *gin.Context) {
+		// API 请求返回 404
+		if len(c.Request.URL.Path) >= 4 && c.Request.URL.Path[:4] == "/api" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "接口不存在"})
+			return
+		}
+		// 后台请求返回后台 index.html
+		if len(c.Request.URL.Path) >= len(adminPath) && c.Request.URL.Path[:len(adminPath)] == adminPath {
+			c.File(filepath.Join(frontendDist, "admin", "index.html"))
+			return
+		}
+		// 其他请求返回前台 index.html
+		c.File(filepath.Join(frontendDist, "index.html"))
+	})
 
 	// 启动定时任务
-	go job.Start()
+	job.StartAll()
 
-	// 启动 HTTP 服务
-	srv := api.NewServer(cfg, jwtMgr)
+	// 优雅关闭
 	go func() {
-		addr := fmt.Sprintf(":%d", cfg.Server.Port)
-		logger.Infof("锚点财务服务启动: http://localhost%s", addr)
-		if err := srv.Run(addr); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("服务启动失败: %v", err)
-		}
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
+		log.Println("收到关闭信号，正在停止...")
+		job.StopAll()
+		os.Exit(0)
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	logger.Info("服务正在关闭...")
-}
-
-// startInstaller 启动仅包含安装页面的最小服务
-func startInstaller() {
-	gin.SetMode(gin.ReleaseMode)
-	r := gin.New()
-	r.Use(gin.Recovery())
-
-	installH := api.NewInstallHandler()
-	installH.RegisterRoutes(r)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	// 启动服务
+	host := cfg.Server.Host
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	port := cfg.Server.Port
+	if port == 0 {
+		port = 8080
 	}
 
 	fmt.Printf("========================================\n")
-	fmt.Printf("  锚点财务 - 安装向导\n")
-	fmt.Printf("  请访问: http://localhost:%s/install\n", port)
+	fmt.Printf("  锚点财务 启动成功\n")
+	fmt.Printf("  监听地址: %s:%d\n", host, port)
+	fmt.Printf("  站点地址: http://localhost:%d\n", port)
+	fmt.Printf("  后台地址: http://localhost:%d%s\n", port, adminPath)
 	fmt.Printf("========================================\n")
 
-	if err := r.Run(":" + port); err != nil {
-		log.Fatalf("安装服务启动失败: %v", err)
+	if err := r.Run(fmt.Sprintf("%s:%d", host, port)); err != nil {
+		log.Fatalf("服务启动失败: %v", err)
 	}
 }
 

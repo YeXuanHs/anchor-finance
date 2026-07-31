@@ -20,7 +20,7 @@ type V10CartItem struct {
 	Product      Product        `gorm:"foreignKey:ProductID" json:"product"`
 	BillingCycle string         `gorm:"type:varchar(32);not null" json:"billing_cycle"`
 	Quantity     int            `gorm:"default:1" json:"quantity"`
-	Config       datatypes.JSON `gorm:"type:jsonb" json:"config"`
+	Config       datatypes.JSON `gorm:"type:json" json:"config"`
 	Domain       string         `gorm:"type:varchar(255)" json:"domain"`
 	CouponCode   string         `gorm:"type:varchar(64)" json:"coupon_code"`
 	CreatedAt    time.Time      `json:"created_at"`

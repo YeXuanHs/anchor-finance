@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 	"crypto"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -11,7 +12,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -19,427 +19,297 @@ import (
 	"time"
 )
 
-// AlipayGateway implements the Gateway interface for Alipay (支付宝).
-type AlipayGateway struct {
-	AppID      string
-	PrivateKey string
-	PublicKey  string
-	NotifyURL  string
-	ReturnURL  string
-	GatewayURL string
-	SignType   string // RSA2
-	httpClient *http.Client
+// AliPayConfig 支付宝官方配置
+type AliPayConfig struct {
+	AppID           string `json:"app_id"`            // 应用ID
+	PrivateKey      string `json:"private_key"`       // 应用私钥
+	AlipayPublicKey string `json:"alipay_public_key"` // 支付宝公钥
+	ProductPC       bool   `json:"product_pc"`        // 是否支持PC支付
+	ProductWAP      bool   `json:"product_wap"`       // 是否支持WAP支付
+	ProductQR       bool   `json:"product_qr"`        // 是否支持扫码支付
 }
 
-// AlipayConfig is the JSON schema stored in payment_gateways.config.
-type AlipayConfig struct {
-	AppID      string `json:"app_id"`
-	PrivateKey string `json:"private_key"`
-	PublicKey  string `json:"public_key"`
-	NotifyURL  string `json:"notify_url"`
-	ReturnURL  string `json:"return_url"`
-	GatewayURL string `json:"gateway_url"`
-	SignType   string `json:"sign_type"`
+// AliPayGateway 支付宝官方接口
+type AliPayGateway struct {
+	config *AliPayConfig
 }
 
-// NewAlipayGateway creates an Alipay gateway from a JSON config string.
-func NewAlipayGateway(configJSON string) (*AlipayGateway, error) {
-	var cfg AlipayConfig
-	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
-		return nil, fmt.Errorf("alipay config parse error: %w", err)
+// NewAliPayGateway 创建支付宝官方实例
+func NewAliPayGateway(configJSON string) (*AliPayGateway, error) {
+	var config AliPayConfig
+	if err := json.Unmarshal([]byte(configJSON), &config); err != nil {
+		return nil, fmt.Errorf("invalid alipay config: %w", err)
 	}
-	if cfg.AppID == "" {
-		return nil, fmt.Errorf("alipay app_id is required")
+	if config.AppID == "" || config.PrivateKey == "" || config.AlipayPublicKey == "" {
+		return nil, fmt.Errorf("alipay config missing required fields (app_id, private_key, alipay_public_key)")
 	}
-	if cfg.GatewayURL == "" {
-		cfg.GatewayURL = "https://openapi.alipay.com/gateway.do"
-	}
-	if cfg.SignType == "" {
-		cfg.SignType = "RSA2"
-	}
-	return &AlipayGateway{
-		AppID:      cfg.AppID,
-		PrivateKey: cfg.PrivateKey,
-		PublicKey:  cfg.PublicKey,
-		NotifyURL:  cfg.NotifyURL,
-		ReturnURL:  cfg.ReturnURL,
-		GatewayURL: cfg.GatewayURL,
-		SignType:   cfg.SignType,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
-	}, nil
+	return &AliPayGateway{config: &config}, nil
 }
 
-func (g *AlipayGateway) Name() string { return "alipay" }
+func (g *AliPayGateway) Name() string { return GatewayAliPay }
 
-func (g *AlipayGateway) CreatePayment(ctx context.Context, param *PaymentParam) (*PaymentResult, error) {
+func (g *AliPayGateway) CreatePayment(ctx context.Context, param *PaymentParam) (*PaymentResult, error) {
+	// 根据配置选择支付产品
+	if g.config.ProductPC {
+		return g.pagePay(param)
+	} else if g.config.ProductQR {
+		return g.qrPay(param)
+	} else if g.config.ProductWAP {
+		return g.wapPay(param)
+	}
+	return nil, fmt.Errorf("no payment product configured")
+}
+
+// pagePay PC网页支付
+func (g *AliPayGateway) pagePay(param *PaymentParam) (*PaymentResult, error) {
 	bizContent := map[string]interface{}{
-		"out_trade_no":    param.OrderNo,
-		"total_amount":    fmt.Sprintf("%.2f", param.Amount),
-		"subject":         param.Subject,
-		"product_code":    "QUICK_MSECURITY_PAY",
-		"timeout_express": "30m",
+		"out_trade_no": param.OrderNo,
+		"total_amount": fmt.Sprintf("%.2f", param.Amount),
+		"subject":      param.Subject,
+		"product_code": "FAST_INSTANT_TRADE_PAY",
 	}
 
-	bizJSON, err := json.Marshal(bizContent)
-	if err != nil {
-		return nil, fmt.Errorf("marshal biz_content: %w", err)
-	}
+	params := g.buildCommonParams("alipay.trade.page.pay")
+	params["biz_content"] = marshalJSON(bizContent)
+	params["return_url"] = param.ReturnURL
+	params["notify_url"] = param.NotifyURL
 
-	params := map[string]string{
-		"app_id":      g.AppID,
-		"method":      "alipay.trade.page.pay",
-		"charset":     "utf-8",
-		"sign_type":   g.SignType,
-		"timestamp":   time.Now().Format("2006-01-02 15:04:05"),
-		"version":     "1.0",
-		"biz_content": string(bizJSON),
-		"notify_url":  g.NotifyURL,
-		"return_url":  g.ReturnURL,
-	}
+	// 生成签名
+	params["sign"] = g.sign(params)
 
-	sign, err := g.sign(params)
-	if err != nil {
-		return nil, fmt.Errorf("sign error: %w", err)
+	// 构建跳转URL
+	gatewayURL := "https://openapi.alipay.com/gateway.do"
+	query := url.Values{}
+	for k, v := range params {
+		query.Set(k, v)
 	}
-	params["sign"] = sign
-
-	values := url.Values{}
-	keys := make([]string, 0, len(params))
-	for k := range params {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		values.Set(k, params[k])
-	}
-	payURL := g.GatewayURL + "?" + values.Encode()
+	payURL := fmt.Sprintf("%s?%s", gatewayURL, query.Encode())
 
 	return &PaymentResult{
-		TradeNo: param.OrderNo,
-		PayURL:  payURL,
+		Type:    "jump",
+		Data:    payURL,
+		OrderNo: param.OrderNo,
 	}, nil
 }
 
-// QueryPayment queries the payment status via alipay.trade.query API.
-func (g *AlipayGateway) QueryPayment(ctx context.Context, tradeNo string) (*QueryResult, error) {
-	params := map[string]string{
-		"app_id":      g.AppID,
-		"method":      "alipay.trade.query",
-		"charset":     "utf-8",
-		"sign_type":   g.SignType,
-		"timestamp":   time.Now().Format("2006-01-02 15:04:05"),
-		"version":     "1.0",
-		"biz_content": fmt.Sprintf(`{"out_trade_no":"%s"}`, tradeNo),
-	}
-
-	sign, err := g.sign(params)
-	if err != nil {
-		return nil, fmt.Errorf("sign error: %w", err)
-	}
-	params["sign"] = sign
-
-	values := url.Values{}
-	for k, v := range params {
-		values.Set(k, v)
-	}
-
-	resp, err := g.httpClient.PostForm(g.GatewayURL, values)
-	if err != nil {
-		return nil, fmt.Errorf("alipay query request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response body: %w", err)
-	}
-
-	// Parse with RawMessage to extract the response content for signature verification.
-	var rawResult struct {
-		AlipayTradeQueryResponse json.RawMessage `json:"alipay_trade_query_response"`
-		Sign                     string          `json:"sign"`
-	}
-	if err := json.Unmarshal(body, &rawResult); err != nil {
-		return nil, fmt.Errorf("parse response: %w", err)
-	}
-
-	// Verify response signature against the raw response JSON.
-	if rawResult.Sign != "" {
-		if err := g.verifySign(string(rawResult.AlipayTradeQueryResponse), rawResult.Sign); err != nil {
-			log.Printf("alipay query response signature verification failed: %v", err)
-			return nil, fmt.Errorf("response signature verification failed: %w", err)
-		}
-	}
-
-	var respData struct {
-		Code        string `json:"code"`
-		Msg         string `json:"msg"`
-		SubCode     string `json:"sub_code"`
-		SubMsg      string `json:"sub_msg"`
-		TradeNo     string `json:"trade_no"`
-		TradeStatus string `json:"trade_status"`
-		TotalAmount string `json:"total_amount"`
-		SendPayDate string `json:"send_pay_date"`
-	}
-	if err := json.Unmarshal(rawResult.AlipayTradeQueryResponse, &respData); err != nil {
-		return nil, fmt.Errorf("parse query response: %w", err)
-	}
-
-	if respData.Code != "10000" {
-		return nil, fmt.Errorf("alipay query error: %s - %s (%s)", respData.Code, respData.Msg, respData.SubMsg)
-	}
-
-	status := "pending"
-	switch respData.TradeStatus {
-	case "TRADE_SUCCESS", "TRADE_FINISHED":
-		status = "success"
-	case "TRADE_CLOSED":
-		status = "closed"
-	case "WAIT_BUYER_PAY":
-		status = "pending"
-	}
-
-	var amount float64
-	fmt.Sscanf(respData.TotalAmount, "%f", &amount)
-
-	return &QueryResult{
-		TradeNo: tradeNo,
-		Status:  status,
-		Amount:  amount,
-	}, nil
-}
-
-// Refund processes a refund via alipay.trade.refund API.
-func (g *AlipayGateway) Refund(ctx context.Context, param *RefundParam) (*RefundResult, error) {
+// wapPay 手机网页支付
+func (g *AliPayGateway) wapPay(param *PaymentParam) (*PaymentResult, error) {
 	bizContent := map[string]interface{}{
-		"out_trade_no":   param.TradeNo,
-		"out_request_no": param.RefundNo,
-		"refund_amount":  fmt.Sprintf("%.2f", param.Amount),
-	}
-	if param.Reason != "" {
-		bizContent["refund_reason"] = param.Reason
+		"out_trade_no": param.OrderNo,
+		"total_amount": fmt.Sprintf("%.2f", param.Amount),
+		"subject":      param.Subject,
+		"product_code": "QUICK_WAP_WAY",
 	}
 
-	bizJSON, err := json.Marshal(bizContent)
-	if err != nil {
-		return nil, fmt.Errorf("marshal biz_content: %w", err)
-	}
+	params := g.buildCommonParams("alipay.trade.wap.pay")
+	params["biz_content"] = marshalJSON(bizContent)
+	params["return_url"] = param.ReturnURL
+	params["notify_url"] = param.NotifyURL
 
-	params := map[string]string{
-		"app_id":      g.AppID,
-		"method":      "alipay.trade.refund",
-		"charset":     "utf-8",
-		"sign_type":   g.SignType,
-		"timestamp":   time.Now().Format("2006-01-02 15:04:05"),
-		"version":     "1.0",
-		"biz_content": string(bizJSON),
-	}
+	params["sign"] = g.sign(params)
 
-	sign, err := g.sign(params)
-	if err != nil {
-		return nil, fmt.Errorf("sign error: %w", err)
-	}
-	params["sign"] = sign
-
-	values := url.Values{}
+	gatewayURL := "https://openapi.alipay.com/gateway.do"
+	query := url.Values{}
 	for k, v := range params {
-		values.Set(k, v)
+		query.Set(k, v)
 	}
+	payURL := fmt.Sprintf("%s?%s", gatewayURL, query.Encode())
 
-	resp, err := g.httpClient.PostForm(g.GatewayURL, values)
-	if err != nil {
-		return nil, fmt.Errorf("alipay refund request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response body: %w", err)
-	}
-
-	// Parse with RawMessage to extract the response content for signature verification.
-	var rawResult struct {
-		AlipayTradeRefundResponse json.RawMessage `json:"alipay_trade_refund_response"`
-		Sign                      string          `json:"sign"`
-	}
-	if err := json.Unmarshal(body, &rawResult); err != nil {
-		return nil, fmt.Errorf("parse response: %w", err)
-	}
-
-	// Verify response signature against the raw response JSON.
-	if rawResult.Sign != "" {
-		if err := g.verifySign(string(rawResult.AlipayTradeRefundResponse), rawResult.Sign); err != nil {
-			log.Printf("alipay refund response signature verification failed: %v", err)
-			return nil, fmt.Errorf("response signature verification failed: %w", err)
-		}
-	}
-
-	var respData struct {
-		Code    string `json:"code"`
-		Msg     string `json:"msg"`
-		SubCode string `json:"sub_code"`
-		SubMsg  string `json:"sub_msg"`
-	}
-	if err := json.Unmarshal(rawResult.AlipayTradeRefundResponse, &respData); err != nil {
-		return nil, fmt.Errorf("parse refund response: %w", err)
-	}
-
-	if respData.Code != "10000" {
-		return nil, fmt.Errorf("alipay refund error: %s - %s (%s)", respData.Code, respData.Msg, respData.SubMsg)
-	}
-
-	return &RefundResult{
-		RefundNo: param.RefundNo,
-		Status:   "success",
+	return &PaymentResult{
+		Type:    "jump",
+		Data:    payURL,
+		OrderNo: param.OrderNo,
 	}, nil
 }
 
-// ParseNotify verifies and parses an Alipay async payment notification.
-// It verifies the RSA2 signature against all form params (excluding sign, sign_type, and empty values).
-func (g *AlipayGateway) ParseNotify(ctx context.Context, data []byte) (*NotifyResult, error) {
-	form, err := url.ParseQuery(string(data))
+// qrPay 扫码支付
+func (g *AliPayGateway) qrPay(param *PaymentParam) (*PaymentResult, error) {
+	bizContent := map[string]interface{}{
+		"out_trade_no": param.OrderNo,
+		"total_amount": fmt.Sprintf("%.2f", param.Amount),
+		"subject":      param.Subject,
+		"product_code": "FACE_TO_FACE_PAYMENT",
+	}
+
+	params := g.buildCommonParams("alipay.trade.precreate")
+	params["biz_content"] = marshalJSON(bizContent)
+	params["notify_url"] = param.NotifyURL
+
+	params["sign"] = g.sign(params)
+
+	// 调用支付宝API
+	gatewayURL := "https://openapi.alipay.com/gateway.do"
+	result, err := g.doRequest(gatewayURL, params)
 	if err != nil {
-		return nil, fmt.Errorf("parse notify form: %w", err)
+		return nil, fmt.Errorf("alipay precreate failed: %w", err)
 	}
 
-	sign := form.Get("sign")
-	if sign == "" {
-		return nil, fmt.Errorf("missing sign in notification")
+	// 解析响应
+	response, ok := result["alipay_trade_precreate_response"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid alipay response")
 	}
 
-	// Build verification string: all params except sign, sign_type, and empty values.
-	params := make(map[string]string)
-	for k, v := range form {
-		if k == "sign" || k == "sign_type" {
-			continue
-		}
-		if len(v) > 0 && v[0] != "" {
-			params[k] = v[0]
-		}
+	code, _ := response["code"].(string)
+	if code != "10000" {
+		msg, _ := response["sub_msg"].(string)
+		return nil, fmt.Errorf("alipay error: %s", msg)
 	}
 
-	keys := make([]string, 0, len(params))
-	for k := range params {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	var buf strings.Builder
-	for i, k := range keys {
-		if i > 0 {
-			buf.WriteByte('&')
-		}
-		buf.WriteString(k)
-		buf.WriteByte('=')
-		buf.WriteString(params[k])
+	qrCode, _ := response["qr_code"].(string)
+	if qrCode == "" {
+		return nil, fmt.Errorf("alipay returned empty qr code")
 	}
 
-	// Verify RSA2 signature using the Alipay public key.
-	if err := g.verifySign(buf.String(), sign); err != nil {
-		log.Printf("alipay notify signature verification failed: %v", err)
-		return nil, fmt.Errorf("notification signature verification failed: %w", err)
+	return &PaymentResult{
+		Type:    "url",
+		Data:    qrCode,
+		OrderNo: param.OrderNo,
+	}, nil
+}
+
+func (g *AliPayGateway) VerifyNotification(ctx context.Context, data map[string]string) (*NotificationResult, error) {
+	// 验证签名
+	sign := data["sign"]
+	signType := data["sign_type"]
+	delete(data, "sign")
+	delete(data, "sign_type")
+
+	if !g.verifySign(data, sign, signType) {
+		return nil, fmt.Errorf("invalid alipay signature")
 	}
 
-	// Extract notification fields.
-	tradeNo := form.Get("out_trade_no")
-	alipayTradeNo := form.Get("trade_no")
-	tradeStatus := form.Get("trade_status")
-	totalAmount := form.Get("total_amount")
-
+	// 解析业务参数
+	tradeStatus := data["trade_status"]
 	status := "pending"
-	switch tradeStatus {
-	case "TRADE_SUCCESS", "TRADE_FINISHED":
+	if tradeStatus == "TRADE_SUCCESS" || tradeStatus == "TRADE_FINISHED" {
 		status = "success"
-	case "TRADE_CLOSED":
-		status = "closed"
 	}
 
 	var amount float64
-	fmt.Sscanf(totalAmount, "%f", &amount)
+	fmt.Sscanf(data["total_amount"], "%f", &amount)
 
-	return &NotifyResult{
-		TradeNo: alipayTradeNo,
-		OrderNo: tradeNo,
+	return &NotificationResult{
+		OrderNo: data["out_trade_no"],
+		TradeNo: data["trade_no"],
 		Amount:  amount,
 		Status:  status,
-		Sign:    sign,
 	}, nil
 }
 
-// verifySign verifies an RSA2 (SHA256WithRSA) signature against content using the Alipay public key.
-func (g *AlipayGateway) verifySign(content string, sign string) error {
-	block, _ := pem.Decode([]byte(g.PublicKey))
-	if block == nil {
-		return fmt.Errorf("failed to parse public key PEM")
+// buildCommonParams 构建公共参数
+func (g *AliPayGateway) buildCommonParams(method string) map[string]string {
+	return map[string]string{
+		"app_id":      g.config.AppID,
+		"method":      method,
+		"format":      "JSON",
+		"charset":     "utf-8",
+		"sign_type":   "RSA2",
+		"timestamp":   time.Now().Format("2006-01-02 15:04:05"),
+		"version":     "1.0",
 	}
-
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return fmt.Errorf("parse public key: %w", err)
-	}
-
-	rsaPub, ok := pub.(*rsa.PublicKey)
-	if !ok {
-		return fmt.Errorf("not an RSA public key")
-	}
-
-	sigBytes, err := base64.StdEncoding.DecodeString(sign)
-	if err != nil {
-		return fmt.Errorf("decode signature: %w", err)
-	}
-
-	hashed := sha256.Sum256([]byte(content))
-	if err := rsa.VerifyPKCS1v15(rsaPub, crypto.SHA256, hashed[:], sigBytes); err != nil {
-		return fmt.Errorf("verify signature failed: %w", err)
-	}
-
-	return nil
 }
 
-// sign signs the params using RSA2 (SHA256WithRSA) with the app private key.
-// All non-empty params are sorted alphabetically, joined with &, then signed.
-func (g *AlipayGateway) sign(params map[string]string) (string, error) {
+// sign RSA2签名
+func (g *AliPayGateway) sign(params map[string]string) string {
+	// 按key排序
 	keys := make([]string, 0, len(params))
 	for k, v := range params {
-		if v != "" {
+		if v != "" && k != "sign" {
 			keys = append(keys, k)
 		}
 	}
 	sort.Strings(keys)
 
-	var buf strings.Builder
-	for i, k := range keys {
-		if i > 0 {
-			buf.WriteByte('&')
-		}
-		buf.WriteString(k)
-		buf.WriteByte('=')
-		buf.WriteString(params[k])
+	// 拼接待签名字符串
+	var parts []string
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%s", k, params[k]))
 	}
+	signContent := strings.Join(parts, "&")
 
-	block, _ := pem.Decode([]byte(g.PrivateKey))
+	// 解析私钥
+	block, _ := pem.Decode([]byte(g.config.PrivateKey))
 	if block == nil {
-		return "", fmt.Errorf("failed to parse private key PEM")
+		return ""
+	}
+	privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return ""
 	}
 
-	parsedKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	// SHA256WithRSA签名
+	hash := sha256.Sum256([]byte(signContent))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey.(*rsa.PrivateKey), crypto.SHA256, hash[:])
 	if err != nil {
-		parsedKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			return "", fmt.Errorf("parse private key: %w", err)
+		return ""
+	}
+
+	return base64.StdEncoding.EncodeToString(signature)
+}
+
+// verifySign 验证RSA2签名
+func (g *AliPayGateway) verifySign(params map[string]string, sign string, signType string) bool {
+	// 按key排序
+	keys := make([]string, 0, len(params))
+	for k, v := range params {
+		if v != "" && k != "sign" && k != "sign_type" {
+			keys = append(keys, k)
 		}
 	}
+	sort.Strings(keys)
 
-	privKey, ok := parsedKey.(*rsa.PrivateKey)
-	if !ok {
-		return "", fmt.Errorf("not an RSA private key")
+	// 拼接待验签字符串
+	var parts []string
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%s", k, params[k]))
 	}
+	signContent := strings.Join(parts, "&")
 
-	hashed := sha256.Sum256([]byte(buf.String()))
-	sig, err := rsa.SignPKCS1v15(nil, privKey, crypto.SHA256, hashed[:])
+	// 解析支付宝公钥
+	block, _ := pem.Decode([]byte(g.config.AlipayPublicKey))
+	if block == nil {
+		return false
+	}
+	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		return "", fmt.Errorf("sign error: %w", err)
+		return false
 	}
 
-	return base64.StdEncoding.EncodeToString(sig), nil
+	// 验证签名
+	signBytes, err := base64.StdEncoding.DecodeString(sign)
+	if err != nil {
+		return false
+	}
+
+	hash := sha256.Sum256([]byte(signContent))
+	err = rsa.VerifyPKCS1v15(publicKey.(*rsa.PublicKey), crypto.SHA256, hash[:], signBytes)
+	return err == nil
+}
+
+// doRequest 调用支付宝API
+func (g *AliPayGateway) doRequest(gatewayURL string, params map[string]string) (map[string]interface{}, error) {
+	form := url.Values{}
+	for k, v := range params {
+		form.Set(k, v)
+	}
+
+	resp, err := http.Post(gatewayURL, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("invalid response: %s", string(body))
+	}
+
+	return result, nil
+}
+
+func marshalJSON(v interface{}) string {
+	data, _ := json.Marshal(v)
+	return string(data)
 }

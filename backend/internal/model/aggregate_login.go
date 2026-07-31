@@ -15,7 +15,7 @@ type AggregateLoginProvider struct {
 	APIURL    string         `gorm:"type:varchar(500)" json:"api_url"`             // 聚合登录API地址
 	AppID     string         `gorm:"type:varchar(100)" json:"app_id"`             // 应用ID
 	AppKey    string         `gorm:"type:varchar(255)" json:"app_key"`            // 应用密钥
-	Config    datatypes.JSON `gorm:"type:jsonb" json:"config"`                    // 扩展配置
+	Config    datatypes.JSON `gorm:"type:json" json:"config"`                    // 扩展配置
 	IsActive  bool           `gorm:"default:true" json:"is_active"`               // 是否启用
 	SortOrder int            `gorm:"default:0" json:"sort_order"`                 // 排序权重
 	CreatedAt time.Time      `json:"created_at"`

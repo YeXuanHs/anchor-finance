@@ -17,7 +17,7 @@ type ApiKey struct {
 	Name      string     `gorm:"type:varchar(64);not null" json:"name"`
 	Key       string     `gorm:"type:varchar(64);uniqueIndex;not null" json:"key"`
 	Secret    string     `gorm:"type:varchar(128)" json:"-"`
-	Permissions string   `gorm:"type:jsonb" json:"permissions"`
+	Permissions string   `gorm:"type:json" json:"permissions"`
 	RateLimit int        `gorm:"default:100" json:"rate_limit"`
 	IsActive  bool       `gorm:"default:true;index" json:"is_active"`
 	LastUsedAt *time.Time `json:"last_used_at"`

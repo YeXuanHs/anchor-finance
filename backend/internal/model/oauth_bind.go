@@ -17,7 +17,7 @@ type OAuthBind struct {
 	ExpiresAt    *time.Time `json:"expires_at"`
 	Nickname     string     `gorm:"type:varchar(64)" json:"nickname"`
 	Avatar       string     `gorm:"type:varchar(256)" json:"avatar"`
-	Extra        string     `gorm:"type:jsonb" json:"extra"`
+	Extra        string     `gorm:"type:json" json:"extra"`
 }
 
 // TableName overrides the table name.

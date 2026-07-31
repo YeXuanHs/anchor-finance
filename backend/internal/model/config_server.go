@@ -24,8 +24,8 @@ type ServerConfig struct {
 	IPCount      int            `gorm:"default:1" json:"ip_count"`
 	Location     string         `gorm:"type:varchar(128)" json:"location"`
 	Datacenter   string         `gorm:"type:varchar(128)" json:"datacenter"`
-	OS           datatypes.JSON `gorm:"type:jsonb" json:"os"` // 支持的操作系统列表
-	Features     datatypes.JSON `gorm:"type:jsonb" json:"features"`
+	OS           datatypes.JSON `gorm:"type:json" json:"os"` // 支持的操作系统列表
+	Features     datatypes.JSON `gorm:"type:json" json:"features"`
 	PriceMonthly float64        `gorm:"type:decimal(10,2);default:0" json:"price_monthly"`
 	PriceQuarter float64        `gorm:"type:decimal(10,2);default:0" json:"price_quarter"`
 	PriceSemiAnn float64        `gorm:"type:decimal(10,2);default:0" json:"price_semi_annual"`
@@ -39,7 +39,7 @@ type ServerConfig struct {
 	SortOrder    int            `gorm:"default:0" json:"sort_order"`
 	Status       int16          `gorm:"type:smallint;default:1;not null;index" json:"status"` // 1=启用 0=禁用
 	Remark       string         `gorm:"type:text" json:"remark"`
-	Metadata     datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
+	Metadata     datatypes.JSON `gorm:"type:json" json:"metadata"`
 	Products     []ServerProduct `gorm:"foreignKey:ServerConfigID" json:"products,omitempty"`
 }
 
@@ -50,7 +50,7 @@ type ServerTemplate struct {
 	Code        string         `gorm:"type:varchar(64);uniqueIndex;not null" json:"code"`
 	Type        string         `gorm:"type:varchar(32);not null;index" json:"type"`
 	Description string         `gorm:"type:text" json:"description"`
-	Config      datatypes.JSON `gorm:"type:jsonb;not null" json:"config"` // 模板配置参数
+	Config      datatypes.JSON `gorm:"type:json;not null" json:"config"` // 模板配置参数
 	SortOrder   int            `gorm:"default:0" json:"sort_order"`
 	Status      int16          `gorm:"type:smallint;default:1;not null" json:"status"`
 	CreatedAt   time.Time      `json:"created_at"`

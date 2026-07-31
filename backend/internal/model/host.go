@@ -37,9 +37,9 @@ type Host struct {
 	ProvisionedAt *time.Time    `json:"provisioned_at"`
 	Remark       string         `gorm:"type:text" json:"remark"`
 	AdminNotes   string         `gorm:"type:text" json:"admin_notes"`
-	Tags         datatypes.JSON `gorm:"type:jsonb" json:"tags"`
-	Config       datatypes.JSON `gorm:"type:jsonb" json:"config"` // 主机配置JSON
-	Metadata     datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
+	Tags         datatypes.JSON `gorm:"type:json" json:"tags"`
+	Config       datatypes.JSON `gorm:"type:json" json:"config"` // 主机配置JSON
+	Metadata     datatypes.JSON `gorm:"type:json" json:"metadata"`
 	Operations   []HostOperation `gorm:"foreignKey:HostID" json:"operations,omitempty"`
 }
 

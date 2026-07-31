@@ -8,7 +8,7 @@ type RunMap struct {
 	Name      string     `gorm:"type:varchar(64);not null" json:"name"`
 	Code      string     `gorm:"type:varchar(32);uniqueIndex;not null" json:"code"`
 	Type      string     `gorm:"type:varchar(16);not null" json:"type"` // script/api/webhook
-	Config    string     `gorm:"type:jsonb" json:"config"`
+	Config    string     `gorm:"type:json" json:"config"`
 	IsEnabled bool       `gorm:"default:true;index" json:"is_enabled"`
 	LastRunAt *time.Time `json:"last_run_at"`
 	RunCount  int        `gorm:"default:0" json:"run_count"`

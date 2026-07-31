@@ -20,5 +20,5 @@ type WechatUser struct {
 	Country     string     `gorm:"type:varchar(32)" json:"country"`
 	SubscribeAt *time.Time `json:"subscribe_at"`
 	IsSubscribe bool       `gorm:"default:true" json:"is_subscribe"`
-	Extra       string     `gorm:"type:jsonb" json:"extra"`
+	Extra       string     `gorm:"type:json" json:"extra"`
 }
