@@ -14,8 +14,9 @@ var (
 
 // Claims defines the JWT claims structure.
 type Claims struct {
-	UserID  uint `json:"user_id"`
-	IsAdmin bool `json:"is_admin"`
+	UserID  uint   `json:"user_id"`
+	IsAdmin bool   `json:"is_admin"`
+	IP      string `json:"ip,omitempty"` // IP 绑定（移植自 zjmf home_ip_check）
 	jwt.RegisteredClaims
 }
 
@@ -38,9 +39,15 @@ func NewJWTManager(secret string, expireHour int) *JWTManager {
 
 // GenerateToken creates a new JWT token for a user.
 func (m *JWTManager) GenerateToken(userID uint, isAdmin bool) (string, error) {
+	return m.GenerateTokenWithIP(userID, isAdmin, "")
+}
+
+// GenerateTokenWithIP creates a new JWT token for a user with IP binding.
+func (m *JWTManager) GenerateTokenWithIP(userID uint, isAdmin bool, ip string) (string, error) {
 	claims := Claims{
 		UserID:  userID,
 		IsAdmin: isAdmin,
+		IP:      ip,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(m.expireHour) * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

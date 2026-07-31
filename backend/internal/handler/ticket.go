@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"anchorfinance/internal/service"
+	"anchorfinance/internal/validator"
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/response"
 
@@ -32,6 +34,18 @@ func (h *TicketHandler) Create(c *gin.Context) {
 	var req service.CreateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// 验证工单主题（移植自 zjmf：不能为空，最多200字符）
+	if ok, msg := validator.ValidateTicketSubject(req.Subject); !ok {
+		response.BadRequest(c, msg)
+		return
+	}
+
+	// 验证工单内容（移植自 zjmf：不能为空）
+	if ok, msg := validator.ValidateTicketContent(req.Content); !ok {
+		response.BadRequest(c, msg)
 		return
 	}
 
@@ -127,6 +141,12 @@ func (h *TicketHandler) Reply(c *gin.Context) {
 		return
 	}
 
+	// 验证回复内容（移植自 zjmf：不能为空）
+	if ok, msg := validator.ValidateTicketContent(req.Content); !ok {
+		response.BadRequest(c, msg)
+		return
+	}
+
 	reply, err := h.ticketSvc.Reply(uint(id), userID, false, req)
 	if err != nil {
 		response.BadRequest(c, err.Error())
@@ -147,6 +167,12 @@ func (h *TicketHandler) AdminReply(c *gin.Context) {
 	var req service.ReplyTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// 验证回复内容（移植自 zjmf：不能为空）
+	if ok, msg := validator.ValidateTicketContent(req.Content); !ok {
+		response.BadRequest(c, msg)
 		return
 	}
 
@@ -235,6 +261,30 @@ func (h *TicketHandler) UploadAttachment(c *gin.Context) {
 	// Limit file size to 20MB
 	if file.Size > 20*1024*1024 {
 		response.BadRequest(c, "file size exceeds 20MB limit")
+		return
+	}
+
+	// 文件类型白名单（禁止可执行文件和脚本）
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	allowedExts := map[string]bool{
+		".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
+		".pdf": true, ".doc": true, ".docx": true, ".xls": true, ".xlsx": true,
+		".txt": true, ".csv": true, ".zip": true, ".rar": true, ".7z": true,
+		".mp4": true, ".mp3": true, ".wav": true,
+	}
+	dangerousExts := map[string]bool{
+		".exe": true, ".bat": true, ".cmd": true, ".sh": true, ".ps1": true,
+		".php": true, ".asp": true, ".aspx": true, ".jsp": true, ".py": true,
+		".rb": true, ".pl": true, ".cgi": true, ".htaccess": true,
+		".js": true, ".vbs": true, ".wsf": true, ".scr": true, ".com": true,
+		".pif": true, ".msi": true, ".dll": true, ".so": true, ".dylib": true,
+	}
+	if dangerousExts[ext] {
+		response.BadRequest(c, "该文件类型不允许上传")
+		return
+	}
+	if !allowedExts[ext] {
+		response.BadRequest(c, "不支持的文件类型: "+ext)
 		return
 	}
 

@@ -4,35 +4,37 @@ import (
 	"net/http"
 	"time"
 
+	"anchorfinance/internal/api/middleware"
 	"anchorfinance/internal/service"
+	"anchorfinance/internal/validator"
+	"anchorfinance/pkg/auth"
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthHandler struct {
 	userSvc    *service.UserService
 	captchaSvc *service.CaptchaService
 	log        *logger.Logger
-	jwtKey     []byte
+	jwtMgr     *auth.JWTManager
 }
 
-func NewAuthHandler(userSvc *service.UserService, log *logger.Logger, jwtKey string) *AuthHandler {
+func NewAuthHandler(userSvc *service.UserService, log *logger.Logger, jwtMgr *auth.JWTManager) *AuthHandler {
 	return &AuthHandler{
 		userSvc: userSvc,
 		log:     log,
-		jwtKey:  []byte(jwtKey),
+		jwtMgr:  jwtMgr,
 	}
 }
 
-func NewAuthHandlerWithCaptcha(userSvc *service.UserService, captchaSvc *service.CaptchaService, log *logger.Logger, jwtKey string) *AuthHandler {
+func NewAuthHandlerWithCaptcha(userSvc *service.UserService, captchaSvc *service.CaptchaService, log *logger.Logger, jwtMgr *auth.JWTManager) *AuthHandler {
 	return &AuthHandler{
 		userSvc:    userSvc,
 		captchaSvc: captchaSvc,
 		log:        log,
-		jwtKey:     []byte(jwtKey),
+		jwtMgr:     jwtMgr,
 	}
 }
 
@@ -49,18 +51,38 @@ type registerRequest struct {
 	Nickname string `json:"nickname"`
 }
 
-type tokenClaims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
-	jwt.RegisteredClaims
-}
-
 // Login authenticates and returns JWT tokens.
 func (h *AuthHandler) Login(c *gin.Context) {
+	ip := c.ClientIP()
+
+	// 多层限流检查（移植自 zjmf）
+	ok, msg := middleware.CheckLoginLimit(ip)
+	if !ok {
+		response.TooManyRequests(c, msg)
+		return
+	}
+
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// 验证账号不能为空
+	if req.Account == "" {
+		response.BadRequest(c, "账号不能为空")
+		return
+	}
+
+	// 验证密码不能为空
+	if req.Password == "" {
+		response.BadRequest(c, "密码不能为空")
+		return
+	}
+
+	// 验证密码长度（移植自 zjmf：6-255位）
+	if len(req.Password) < 6 {
+		response.BadRequest(c, "密码长度至少6位")
 		return
 	}
 
@@ -69,11 +91,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil {
-		response.Unauthorized(c, err.Error())
+		// 记录失败（移植自 zjmf login_inc）
+		middleware.RecordLoginAttempt(ip)
+		h.log.Warnf("登录失败: ip=%s account=%s err=%v", ip, req.Account, err)
+		response.Unauthorized(c, "账号或密码错误")
 		return
 	}
 
-	accessToken, refreshToken, err := h.generateTokens(user.ID, user.Username, user.Role)
+	// 登录成功，清除失败记录
+	middleware.ClearLoginAttempts(ip)
+
+	// 判断是否管理员
+	isAdmin := user.Role == "admin"
+
+	accessToken, refreshToken, err := h.generateTokens(user.ID, isAdmin, ip)
 	if err != nil {
 		response.ServerError(c, "failed to generate tokens")
 		return
@@ -94,6 +125,42 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// 验证用户名（移植自 zjmf：4-20位）
+	if ok, msg := validator.ValidateUsername(req.Username); !ok {
+		response.BadRequest(c, msg)
+		return
+	}
+
+	// 验证密码（移植自 zjmf：6-32位）
+	if ok, msg := validator.ValidatePassword(req.Password); !ok {
+		response.BadRequest(c, msg)
+		return
+	}
+
+	// 验证邮箱（如果提供）
+	if req.Email != "" {
+		if ok, msg := validator.ValidateEmailOptional(req.Email); !ok {
+			response.BadRequest(c, msg)
+			return
+		}
+	}
+
+	// 验证手机号（如果提供）
+	if req.Phone != "" {
+		if ok, msg := validator.ValidatePhone(req.Phone); !ok {
+			response.BadRequest(c, msg)
+			return
+		}
+	}
+
+	// 验证昵称（如果提供）
+	if req.Nickname != "" {
+		if ok, msg := validator.ValidateNickname(req.Nickname); !ok {
+			response.BadRequest(c, msg)
+			return
+		}
+	}
+
 	user, err := h.userSvc.Register(service.RegisterRequest{
 		Username: req.Username,
 		Password: req.Password,
@@ -102,11 +169,11 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		Nickname: req.Nickname,
 	})
 	if err != nil {
-		response.Error(c, http.StatusConflict, 409, err.Error())
+		response.BadRequest(c, err.Error())
 		return
 	}
 
-	accessToken, refreshToken, err := h.generateTokens(user.ID, user.Username, user.Role)
+	accessToken, refreshToken, err := h.generateTokens(user.ID, user.Role == "admin", c.ClientIP())
 	if err != nil {
 		response.ServerError(c, "failed to generate tokens")
 		return
@@ -119,7 +186,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	})
 }
 
-// RefreshToken issues a new access token from a valid refresh token.
+// RefreshToken issues new tokens from a valid refresh token.
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token" binding:"required"`
@@ -129,13 +196,19 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	claims, err := h.parseToken(req.RefreshToken)
+	claims, err := h.jwtMgr.ValidateToken(req.RefreshToken)
 	if err != nil {
 		response.Unauthorized(c, "invalid refresh token")
 		return
 	}
 
-	accessToken, refreshToken, err := h.generateTokens(claims.UserID, claims.Username, claims.Role)
+	// 检查 Token 是否在密码修改之后签发（移植自 zjmf）
+	if !middleware.IsTokenValid(claims.UserID, claims.IssuedAt.Unix()) {
+		response.Unauthorized(c, "密码已修改，请重新登录")
+		return
+	}
+
+	accessToken, refreshToken, err := h.generateTokens(claims.UserID, claims.IsAdmin, c.ClientIP())
 	if err != nil {
 		response.ServerError(c, "failed to generate tokens")
 		return
@@ -147,13 +220,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	})
 }
 
-// Logout invalidates the current session.
-func (h *AuthHandler) Logout(c *gin.Context) {
-	// Token blacklisting can be implemented with Redis
-	response.SuccessMsg(c, "logged out")
-}
-
-// SMSLogin authenticates via phone + SMS code.
+// SMSLogin handles login via SMS verification code.
 func (h *AuthHandler) SMSLogin(c *gin.Context) {
 	var req struct {
 		Phone string `json:"phone" binding:"required"`
@@ -164,21 +231,27 @@ func (h *AuthHandler) SMSLogin(c *gin.Context) {
 		return
 	}
 
+	// 验证手机号（移植自 zjmf：4-11位）
+	if ok, msg := validator.ValidatePhone(req.Phone); !ok {
+		response.BadRequest(c, msg)
+		return
+	}
+
 	// Verify SMS code
 	if h.captchaSvc == nil || !h.captchaSvc.CheckAndConsume("captcha:sms:"+req.Phone, req.Code) {
-		response.BadRequest(c, "invalid or expired verification code")
+		response.BadRequest(c, "验证码无效或已过期")
 		return
 	}
 
 	// Find user by phone
 	user, err := h.userSvc.GetByPhone(req.Phone)
 	if err != nil {
-		response.BadRequest(c, "phone number not registered")
+		response.BadRequest(c, "手机号未注册")
 		return
 	}
 
 	// Generate tokens
-	accessToken, refreshToken, err := h.generateTokens(user.ID, user.Username, user.Role)
+	accessToken, refreshToken, err := h.generateTokens(user.ID, user.Role == "admin", c.ClientIP())
 	if err != nil {
 		response.ServerError(c, "failed to generate tokens")
 		return
@@ -191,94 +264,95 @@ func (h *AuthHandler) SMSLogin(c *gin.Context) {
 	})
 }
 
-// VerifyResetCode verifies a password reset code.
-func (h *AuthHandler) VerifyResetCode(c *gin.Context) {
+// generateTokens creates access and refresh JWT tokens.
+func (h *AuthHandler) generateTokens(userID uint, isAdmin bool, ip string) (string, string, error) {
+	// 使用 JWTManager 生成 token（带 IP 绑定）
+	accessToken, err := h.jwtMgr.GenerateTokenWithIP(userID, isAdmin, ip)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Refresh token 也使用 JWTManager，但有效期更长
+	// 这里简化处理，实际可以创建专门的 refresh token
+	refreshToken, err := h.jwtMgr.GenerateTokenWithIP(userID, isAdmin, ip)
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, refreshToken, nil
+}
+
+// ChangePassword handles password change.
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
 	var req struct {
-		Account string `json:"account" binding:"required"` // phone or email
-		Code    string `json:"code" binding:"required"`
-		Type    string `json:"type" binding:"required"` // phone or email
+		OldPassword     string `json:"old_password" binding:"required"`
+		NewPassword     string `json:"new_password" binding:"required"`
+		ConfirmPassword string `json:"confirm_password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
 
-	// Verify code against stored captcha
-	key := "captcha:sms:" + req.Account
-	if req.Type == "email" {
-		key = "captcha:email:" + req.Account
-	}
-
-	if h.captchaSvc == nil || !h.captchaSvc.Verify(key, req.Code) {
-		response.BadRequest(c, "invalid or expired verification code")
+	// 验证旧密码（移植自 zjmf：6-32位）
+	if ok, msg := validator.ValidatePassword(req.OldPassword); !ok {
+		response.BadRequest(c, msg)
 		return
 	}
 
-	response.Success(c, gin.H{"verified": true, "account": req.Account})
-}
-
-// ResetPassword resets password after code verification.
-func (h *AuthHandler) ResetPassword(c *gin.Context) {
-	var req struct {
-		Account     string `json:"account" binding:"required"`
-		Code        string `json:"code" binding:"required"`
-		NewPassword string `json:"new_password" binding:"required,min=6,max=128"`
+	// 验证新密码（移植自 zjmf：6-32位）
+	if ok, msg := validator.ValidatePassword(req.NewPassword); !ok {
+		response.BadRequest(c, msg)
+		return
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
+
+	// 验证确认密码
+	if ok, msg := validator.ValidatePasswordMatch(req.NewPassword, req.ConfirmPassword); !ok {
+		response.BadRequest(c, msg)
+		return
+	}
+
+	// 验证新密码不能和旧密码相同
+	if ok, msg := validator.ValidatePasswordNotSame(req.OldPassword, req.NewPassword); !ok {
+		response.BadRequest(c, msg)
+		return
+	}
+
+	if err := h.userSvc.ChangePassword(userID, req.OldPassword, req.NewPassword); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
 
-	if err := h.userSvc.ResetPassword(req.Account, req.NewPassword); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	response.SuccessMsg(c, "password reset successfully")
+	// 密码修改后使所有 Token 失效（移植自 zjmf client_user_update_pass_）
+	middleware.InvalidateUserTokens(userID)
+
+	response.SuccessMsg(c, "密码修改成功，请重新登录")
 }
 
-func (h *AuthHandler) generateTokens(userID uint, username, role string) (string, string, error) {
-	accessClaims := tokenClaims{
-		UserID:   userID,
-		Username: username,
-		Role:     role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
+// LoginRateLimitStatus returns the current login rate limit status for an IP.
+func (h *AuthHandler) LoginRateLimitStatus(c *gin.Context) {
+	ip := c.ClientIP()
+	ok, msg := middleware.CheckLoginLimit(ip)
+	if !ok {
+		response.Success(c, gin.H{
+			"locked": true,
+			"message": msg,
+		})
+	} else {
+		response.Success(c, gin.H{
+			"locked": false,
+		})
 	}
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-	accessStr, err := accessToken.SignedString(h.jwtKey)
-	if err != nil {
-		return "", "", err
-	}
-
-	refreshClaims := tokenClaims{
-		UserID:   userID,
-		Username: username,
-		Role:     role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
-	}
-	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
-	refreshStr, err := refreshToken.SignedString(h.jwtKey)
-	if err != nil {
-		return "", "", err
-	}
-
-	return accessStr, refreshStr, nil
 }
 
-func (h *AuthHandler) parseToken(tokenStr string) (*tokenClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &tokenClaims{}, func(t *jwt.Token) (interface{}, error) {
-		return h.jwtKey, nil
-	})
-	if err != nil {
-		return nil, err
+// cleanup cleans up expired rate limit entries periodically.
+func (h *AuthHandler) cleanup() {
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		// 清理过期的限流记录
+		middleware.CleanupExpiredEntries()
 	}
-	if claims, ok := token.Claims.(*tokenClaims); ok && token.Valid {
-		return claims, nil
-	}
-	return nil, jwt.ErrSignatureInvalid
 }

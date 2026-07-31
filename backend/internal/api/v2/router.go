@@ -33,7 +33,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	log := deps.Log
 
 	// 初始化处理器
-	authHandler := handler.NewAuthHandler(deps.UserSvc, log, deps.JWTKey)
+	authHandler := handler.NewAuthHandler(deps.UserSvc, log, deps.JWTMgr)
 	userHandler := handler.NewUserHandler(deps.UserSvc, log)
 	productHandler := handler.NewProductHandler(deps.ProdSvc, log)
 	orderHandler := handler.NewOrderHandler(deps.OrdSvc, log)
@@ -71,7 +71,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	certSvc := service.NewCertificationService(deps.DB)
 	certHandler := handler.NewCertificationHandler(certSvc, log)
 
-	oauthHandler := handler.NewOAuthHandler(deps.OAuthSvc, log, deps.JWTKey)
+	oauthHandler := handler.NewOAuthHandler(deps.OAuthSvc, log, deps.JWTMgr)
 
 	upgradeSvc := service.NewUpgradeService(deps.DB)
 	upgradeHandler := handler.NewUpgradeHandler(upgradeSvc, log)

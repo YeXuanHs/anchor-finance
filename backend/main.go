@@ -1,6 +1,7 @@
 package main
 
 import (
+	crand "crypto/rand"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,7 +18,6 @@ import (
 	"anchorfinance/pkg/auth"
 	"anchorfinance/pkg/db"
 	"anchorfinance/pkg/logger"
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -38,7 +38,16 @@ func main() {
 	}
 
 	// 连接数据库（MySQL）
-	if _, err := db.InitDB(cfg.Database.ToDBConfig()); err != nil {
+	if _, err := db.InitDB(db.Config{
+		Host:         cfg.Database.Host,
+		Port:         cfg.Database.Port,
+		User:         cfg.Database.User,
+		Password:     cfg.Database.Password,
+		DBName:       cfg.Database.DBName,
+		Charset:      cfg.Database.Charset,
+		MaxIdleConns: cfg.Database.MaxIdleConns,
+		MaxOpenConns: cfg.Database.MaxOpenConns,
+	}); err != nil {
 		log.Fatalf("数据库初始化失败: %v", err)
 	}
 
@@ -68,7 +77,12 @@ func main() {
 		jwtSecret = db.GetSystemSetting("jwt_secret")
 	}
 	if jwtSecret == "" {
-		jwtSecret = "default_secret_please_change"
+		// 首次启动：生成随机密钥并持久化到数据库
+		jwtSecret = generateRandomSecret(64)
+		if err := db.SetSystemSetting("jwt_secret", jwtSecret, "jwt", "JWT 签名密钥（自动生成）"); err != nil {
+			log.Fatalf("无法保存 JWT 密钥: %v", err)
+		}
+		logger.Warn("已自动生成 JWT 密钥并保存到数据库")
 	}
 	jwtExpire := cfg.JWT.ExpireHours
 	if jwtExpire == 0 {
@@ -85,83 +99,46 @@ func main() {
 	redisEnabled := db.GetSystemSetting("redis_enabled")
 	if redisEnabled == "true" {
 		if err := db.InitRedisFromDB(); err != nil {
-			log.Printf("Redis 初始化失败（非致命）: %v", err)
+			logger.Warnf("Redis 初始化失败（非致命）: %v", err)
 		}
 	}
-
-	// 创建 Gin 引擎
-	r := gin.Default()
-
-	// 注册静态资源（前端编译产物）
-	frontendDist := filepath.Join("frontend", "dist")
-	if _, err := os.Stat(frontendDist); err == nil {
-		r.Static("/assets", filepath.Join(frontendDist, "assets"))
-		r.StaticFile("/favicon.ico", filepath.Join(frontendDist, "favicon.ico"))
-		r.StaticFile("/logo.png", filepath.Join(frontendDist, "logo.png"))
-	}
-
-	// 注册 API 路由
-	api.RegisterRoutes(r, jwtMgr)
-
-	// 注册后台管理 API
-	adminPath := db.GetSystemSetting("admin_path")
-	if adminPath == "" {
-		adminPath = "/admin"
-	}
-	api.RegisterAdminRoutes(r, jwtMgr, adminPath)
-
-	// SPA 回退：所有非 API 请求返回前端 index.html
-	r.NoRoute(func(c *gin.Context) {
-		// API 请求返回 404
-		if len(c.Request.URL.Path) >= 4 && c.Request.URL.Path[:4] == "/api" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "接口不存在"})
-			return
-		}
-		// 后台请求返回后台 index.html
-		if len(c.Request.URL.Path) >= len(adminPath) && c.Request.URL.Path[:len(adminPath)] == adminPath {
-			c.File(filepath.Join(frontendDist, "admin", "index.html"))
-			return
-		}
-		// 其他请求返回前台 index.html
-		c.File(filepath.Join(frontendDist, "index.html"))
-	})
 
 	// 启动定时任务
-	job.StartAll()
+	go job.Start()
 
-	// 优雅关闭
+	// 创建并启动 HTTP 服务（通过 api.NewServer 注册所有路由和中间件）
+	srv := api.NewServer(cfg, jwtMgr)
 	go func() {
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		<-sigChan
-		log.Println("收到关闭信号，正在停止...")
-		job.StopAll()
-		os.Exit(0)
+		host := cfg.Server.Host
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		addr := fmt.Sprintf("%s:%d", host, cfg.Server.Port)
+		logger.Infof("锚点财务服务启动: http://%s", addr)
+		if err := srv.Run(addr); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("服务启动失败: %v", err)
+		}
 	}()
 
-	// 启动服务
-	host := cfg.Server.Host
-	if host == "" {
-		host = "127.0.0.1"
-	}
-	port := cfg.Server.Port
-	if port == 0 {
-		port = 8080
-	}
-
-	fmt.Printf("========================================\n")
-	fmt.Printf("  锚点财务 启动成功\n")
-	fmt.Printf("  监听地址: %s:%d\n", host, port)
-	fmt.Printf("  站点地址: http://localhost:%d\n", port)
-	fmt.Printf("  后台地址: http://localhost:%d%s\n", port, adminPath)
-	fmt.Printf("========================================\n")
-
-	if err := r.Run(fmt.Sprintf("%s:%d", host, port)); err != nil {
-		log.Fatalf("服务启动失败: %v", err)
-	}
+	// 优雅关闭
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	logger.Info("服务正在关闭...")
+	job.StopAll()
 }
 
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+func generateRandomSecret(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+	b := make([]byte, n)
+	crand.Read(b)
+	for i := range b {
+		b[i] = letters[int(b[i])%len(letters)]
+	}
+	return string(b)
 }

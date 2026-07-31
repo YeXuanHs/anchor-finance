@@ -169,3 +169,186 @@ func (h *TicketDeliverHandler) GetLogs(c *gin.Context) {
 	}
 	response.SuccessPage(c, logs, total, page, pageSize)
 }
+
+// ────────────────────────────────────────────────────────────
+// 上游透传管理
+// ────────────────────────────────────────────────────────────
+
+// GetUpstreams returns all upstream configurations.
+func (h *TicketDeliverHandler) GetUpstreams(c *gin.Context) {
+	upstreams, err := h.svc.GetUpstreams()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"upstreams": upstreams})
+}
+
+// GetUpstream returns a single upstream configuration.
+func (h *TicketDeliverHandler) GetUpstream(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid upstream id")
+		return
+	}
+
+	upstream, err := h.svc.GetUpstreamByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "upstream not found")
+		return
+	}
+	response.Success(c, upstream)
+}
+
+// CreateUpstream creates a new upstream configuration.
+func (h *TicketDeliverHandler) CreateUpstream(c *gin.Context) {
+	var req struct {
+		Name        string `json:"name" binding:"required"`
+		Type        string `json:"type" binding:"required"`
+		URL         string `json:"url" binding:"required"`
+		APIKey      string `json:"api_key"`
+		Username    string `json:"username"`
+		Description string `json:"description"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// 验证类型
+	validTypes := map[string]bool{"zjmf": true, "v10": true, "anchorfinance": true}
+	if !validTypes[req.Type] {
+		response.BadRequest(c, "不支持的上游类型，支持: zjmf, v10, anchorfinance")
+		return
+	}
+
+	upstream := &model.TicketUpstream{
+		Name:        req.Name,
+		Type:        req.Type,
+		URL:         req.URL,
+		APIKey:      req.APIKey,
+		Username:    req.Username,
+		Status:      1,
+		Description: req.Description,
+	}
+
+	if err := h.svc.CreateUpstream(upstream); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, upstream)
+}
+
+// UpdateUpstream updates an upstream configuration.
+func (h *TicketDeliverHandler) UpdateUpstream(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid upstream id")
+		return
+	}
+
+	var req struct {
+		Name        *string `json:"name"`
+		Type        *string `json:"type"`
+		URL         *string `json:"url"`
+		APIKey      *string `json:"api_key"`
+		Username    *string `json:"username"`
+		Description *string `json:"description"`
+		Status      *int16  `json:"status"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	updates := make(map[string]interface{})
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+	if req.Type != nil {
+		validTypes := map[string]bool{"zjmf": true, "v10": true, "anchorfinance": true}
+		if !validTypes[*req.Type] {
+			response.BadRequest(c, "不支持的上游类型")
+			return
+		}
+		updates["type"] = *req.Type
+	}
+	if req.URL != nil {
+		updates["url"] = *req.URL
+	}
+	if req.APIKey != nil {
+		updates["api_key"] = *req.APIKey
+	}
+	if req.Username != nil {
+		updates["username"] = *req.Username
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.Status != nil {
+		updates["status"] = *req.Status
+	}
+
+	if err := h.svc.UpdateUpstream(uint(id), updates); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "upstream updated")
+}
+
+// DeleteUpstream deletes an upstream configuration.
+func (h *TicketDeliverHandler) DeleteUpstream(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid upstream id")
+		return
+	}
+
+	if err := h.svc.DeleteUpstream(uint(id)); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "upstream deleted")
+}
+
+// TestUpstreamConnection tests connection to an upstream system.
+func (h *TicketDeliverHandler) TestUpstreamConnection(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid upstream id")
+		return
+	}
+
+	success, message, err := h.svc.TestUpstreamConnection(uint(id))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"success": success,
+		"message": message,
+	})
+}
+
+// GetSupportedTypes returns supported upstream types.
+func (h *TicketDeliverHandler) GetSupportedTypes(c *gin.Context) {
+	types := []map[string]interface{}{
+		{
+			"type":        "anchorfinance",
+			"name":        "锚点财务",
+			"description": "另一个锚点财务实例",
+		},
+		{
+			"type":        "zjmf",
+			"name":        "智简魔方",
+			"description": "智简魔方财务系统",
+		},
+		{
+			"type":        "v10",
+			"name":        "V10",
+			"description": "V10财务系统",
+		},
+	}
+	response.Success(c, gin.H{"types": types})
+}

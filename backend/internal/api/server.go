@@ -21,17 +21,18 @@ import (
 
 // Deps holds all dependencies for route registration.
 type Deps struct {
-	DB       *gorm.DB
-	Redis    *redis.Client
-	Log      *logger.Logger
-	JWTKey   string
-	UserSvc  *service.UserService
-	ProdSvc  *service.ProductService
-	OrdSvc   *service.OrderService
-	InvSvc   *service.InvoiceService
-	TicSvc   *service.TicketService
-	CartSvc  *service.CartService
-	OAuthSvc *service.OAuthService
+	DB         *gorm.DB
+	Redis      *redis.Client
+	Log        *logger.Logger
+	JWTKey     string
+	JWTManager *auth.JWTManager
+	UserSvc    *service.UserService
+	ProdSvc    *service.ProductService
+	OrdSvc     *service.OrderService
+	InvSvc     *service.InvoiceService
+	TicSvc     *service.TicketService
+	CartSvc    *service.CartService
+	OAuthSvc   *service.OAuthService
 }
 
 // Server holds the application server dependencies.
@@ -64,17 +65,18 @@ func NewServer(cfg *config.Config, jwtMgr *auth.JWTManager) *Server {
 	oauthSvc := service.NewOAuthService(dbConn, log, userSvc, frontendURL)
 
 	deps := &Deps{
-		DB:       dbConn,
-		Redis:    rdb,
-		Log:      log,
-		JWTKey:   jwtKey,
-		UserSvc:  userSvc,
-		ProdSvc:  prodSvc,
-		OrdSvc:   ordSvc,
-		InvSvc:   invSvc,
-		TicSvc:   ticSvc,
-		CartSvc:  cartSvc,
-		OAuthSvc: oauthSvc,
+		DB:         dbConn,
+		Redis:      rdb,
+		Log:        log,
+		JWTKey:     jwtKey,
+		JWTManager: jwtMgr,
+		UserSvc:    userSvc,
+		ProdSvc:    prodSvc,
+		OrdSvc:     ordSvc,
+		InvSvc:     invSvc,
+		TicSvc:     ticSvc,
+		CartSvc:    cartSvc,
+		OAuthSvc:   oauthSvc,
 	}
 
 	s := &Server{
@@ -96,6 +98,10 @@ func (s *Server) setupMiddleware() {
 	s.router.Use(middleware.Recovery())
 	s.router.Use(middleware.Logger())
 	s.router.Use(middleware.CORS())
+	s.router.Use(middleware.RequestRateLimit()) // 请求频率限制（移植自 zjmf）
+	s.router.Use(middleware.AuditLogMiddleware()) // 审计日志
+	s.router.Use(middleware.Security(middleware.DefaultSecurityConfig())) // 安全防护（XSS/SQL注入）
+	s.router.Use(middleware.SecurityHeaders()) // 安全响应头
 }
 
 // setupRoutes registers all route groups.
@@ -106,6 +112,15 @@ func (s *Server) setupRoutes() {
 	// Health check
 	s.router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	// Public endpoint to get admin path (for frontend redirection)
+	s.router.GET("/api/admin-path", func(c *gin.Context) {
+		adminPath := db.GetSystemSetting("admin_path")
+		if adminPath == "" {
+			adminPath = "/admin"
+		}
+		c.JSON(http.StatusOK, gin.H{"admin_path": adminPath})
 	})
 
 	// API v1 - 兼容智简魔方
@@ -128,17 +143,18 @@ func (s *Server) setupRoutes() {
 // toV1Deps converts Deps to v1.Deps.
 func (d *Deps) toV1Deps() v1.Deps {
 	return v1.Deps{
-		DB:       d.DB,
-		Redis:    d.Redis,
-		Log:      d.Log,
-		JWTKey:   d.JWTKey,
-		UserSvc:  d.UserSvc,
-		ProdSvc:  d.ProdSvc,
-		OrdSvc:   d.OrdSvc,
-		InvSvc:   d.InvSvc,
-		TicSvc:   d.TicSvc,
-		CartSvc:  d.CartSvc,
-		OAuthSvc: d.OAuthSvc,
+		DB:         d.DB,
+		Redis:      d.Redis,
+		Log:        d.Log,
+		JWTKey:     d.JWTKey,
+		JWTManager: d.JWTManager,
+		UserSvc:    d.UserSvc,
+		ProdSvc:    d.ProdSvc,
+		OrdSvc:     d.OrdSvc,
+		InvSvc:     d.InvSvc,
+		TicSvc:     d.TicSvc,
+		CartSvc:    d.CartSvc,
+		OAuthSvc:   d.OAuthSvc,
 	}
 }
 
@@ -149,7 +165,7 @@ func (d *Deps) toV2Deps() v2.Deps {
 		Log:     d.Log,
 		JWTKey:  d.JWTKey,
 		Redis:   d.Redis,
-		JWTMgr:  nil, // JWTMgr not needed for v2
+		JWTMgr:  d.JWTManager,
 		UserSvc: d.UserSvc,
 		ProdSvc: d.ProdSvc,
 		OrdSvc:  d.OrdSvc,
@@ -171,6 +187,8 @@ func (d *Deps) toAdminDeps() admin.Deps {
 		OrdSvc:  d.OrdSvc,
 		InvSvc:  d.InvSvc,
 		TicSvc:  d.TicSvc,
+		Redis:   d.Redis,
+		JWTMgr:  d.JWTManager,
 	}
 }
 
@@ -179,11 +197,21 @@ func (s *Server) serveStaticFiles() {
 	frontendDir := "frontend"
 	adminDir := "admin"
 
-	// Serve admin static files at /admin
+	// 从数据库读取后台路径
+	adminPath := db.GetSystemSetting("admin_path")
+	if adminPath == "" {
+		adminPath = "/admin"
+	}
+	// 确保以 / 开头
+	if adminPath[0] != '/' {
+		adminPath = "/" + adminPath
+	}
+
+	// Serve admin static files at dynamic admin path
 	if info, err := os.Stat(adminDir); err == nil && info.IsDir() {
-		s.router.Static("/admin", adminDir)
+		s.router.Static(adminPath, adminDir)
 		s.router.NoRoute(func(c *gin.Context) {
-			if len(c.Request.URL.Path) >= 6 && c.Request.URL.Path[:6] == "/admin" {
+			if len(c.Request.URL.Path) >= len(adminPath) && c.Request.URL.Path[:len(adminPath)] == adminPath {
 				indexPath := filepath.Join(adminDir, "index.html")
 				if _, err := os.Stat(indexPath); err == nil {
 					c.File(indexPath)

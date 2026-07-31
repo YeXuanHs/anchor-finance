@@ -25,6 +25,9 @@ Thumbs.db
 backend/configs/config.yaml
 backend/configs/.installed
 
+# Install tools
+backend/tools/
+
 # Logs
 *.log
 logs/

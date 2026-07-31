@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"regexp"
 
 	"anchorfinance/internal/model"
 
@@ -134,4 +135,93 @@ func (h *ConfigHandler) GetMaintenanceStatus(c *gin.Context) {
 			"message": message,
 		},
 	})
+}
+
+// UpdateAdminPath 更新后台路径
+// PUT /admin/config/admin-path
+func (h *ConfigHandler) UpdateAdminPath(c *gin.Context) {
+	var req struct {
+		AdminPath string `json:"admin_path" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		return
+	}
+
+	// 验证后台路径
+	if ok, msg := ValidateAdminPath(req.AdminPath); !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
+	// 确保路径以 / 开头
+	path := req.AdminPath
+	if path[0] != '/' {
+		path = "/" + path
+	}
+
+	// 更新配置
+	if err := h.configService.Set("admin_path", path); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "后台路径更新成功",
+		"admin_path": path,
+	})
+}
+
+// GetAdminPath 获取当前后台路径
+// GET /admin/config/admin-path
+func (h *ConfigHandler) GetAdminPath(c *gin.Context) {
+	path := h.configService.Get("admin_path")
+	if path == "" {
+		path = "/admin"
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"admin_path": path,
+	})
+}
+
+// ValidateAdminPath 验证后台路径（移植自 zjmf）
+func ValidateAdminPath(path string) (bool, string) {
+	if path == "" {
+		return false, "后台路径不能为空"
+	}
+	// 移除开头的 /
+	if path[0] == '/' {
+		path = path[1:]
+	}
+	if len(path) < 2 || len(path) > 32 {
+		return false, "后台路径长度必须在2-32位之间"
+	}
+	// 只允许字母、数字、下划线、连字符
+	matched, _ := regexp.MatchString(`^[a-zA-Z0-9_\-]+$`, path)
+	if !matched {
+		return false, "后台路径只能包含字母、数字、下划线、连字符"
+	}
+	// 不能全为数字
+	allDigits := true
+	for _, c := range path {
+		if c < '0' || c > '9' {
+			allDigits = false
+			break
+		}
+	}
+	if allDigits {
+		return false, "后台路径不能全为数字"
+	}
+	// 不能全为字母
+	allLetters := true
+	for _, c := range path {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+			allLetters = false
+			break
+		}
+	}
+	if allLetters {
+		return false, "后台路径不能全为字母"
+	}
+	return true, ""
 }

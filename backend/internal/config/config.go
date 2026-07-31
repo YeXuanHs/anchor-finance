@@ -1,10 +1,6 @@
 package config
 
-import (
-	"anchorfinance/pkg/db"
-
-	"github.com/spf13/viper"
-)
+import "github.com/spf13/viper"
 
 // Config 仅包含启动所需的最小配置，其余全部存数据库
 type Config struct {
@@ -67,18 +63,4 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
-}
-
-// ToDBConfig converts DatabaseConfig to db.Config
-func (c *DatabaseConfig) ToDBConfig() db.Config {
-	return db.Config{
-		Host:         c.Host,
-		Port:         c.Port,
-		User:         c.User,
-		Password:     c.Password,
-		DBName:       c.DBName,
-		Charset:      c.Charset,
-		MaxIdleConns: c.MaxIdleConns,
-		MaxOpenConns: c.MaxOpenConns,
-	}
 }

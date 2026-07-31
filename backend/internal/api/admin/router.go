@@ -4,8 +4,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
+	"anchorfinance/internal/backup"
 	"anchorfinance/internal/handler"
 	"anchorfinance/internal/api/middleware"
+	"anchorfinance/internal/model"
 	"anchorfinance/internal/service"
 	"anchorfinance/pkg/auth"
 	"anchorfinance/pkg/logger"
@@ -39,7 +41,7 @@ type Deps struct {
 }
 
 func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
-	authHandler := handler.NewAuthHandler(deps.UserSvc, deps.Log, deps.JWTKey)
+	authHandler := handler.NewAuthHandler(deps.UserSvc, deps.Log, deps.JWTMgr)
 	userHandler := handler.NewUserHandler(deps.UserSvc, deps.Log)
 	productHandler := handler.NewProductHandler(deps.ProdSvc, deps.Log)
 	orderHandler := handler.NewOrderHandler(deps.OrdSvc, deps.Log)
@@ -747,6 +749,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/config/:key", configHandler.UpdateConfig)
 		admin.PUT("/config/batch", configHandler.BatchUpdateConfig)
 		admin.POST("/config/init", configHandler.InitDefaultConfigs)
+		admin.GET("/config/admin-path", configHandler.GetAdminPath)
+		admin.PUT("/config/admin-path", configHandler.UpdateAdminPath)
 
 		// 工单传递
 		ticketDeliverSvc := service.NewTicketDeliverService(deps.DB, deps.Log)
@@ -758,6 +762,15 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/ticket-deliver/rules/:id", ticketDeliverHandler.UpdateRule)
 		admin.DELETE("/ticket-deliver/rules/:id", ticketDeliverHandler.DeleteRule)
 		admin.GET("/ticket-deliver/logs", ticketDeliverHandler.GetLogs)
+
+		// 上游透传管理
+		admin.GET("/ticket-deliver/upstreams", ticketDeliverHandler.GetUpstreams)
+		admin.GET("/ticket-deliver/upstreams/types", ticketDeliverHandler.GetSupportedTypes)
+		admin.GET("/ticket-deliver/upstreams/:id", ticketDeliverHandler.GetUpstream)
+		admin.POST("/ticket-deliver/upstreams", ticketDeliverHandler.CreateUpstream)
+		admin.PUT("/ticket-deliver/upstreams/:id", ticketDeliverHandler.UpdateUpstream)
+		admin.DELETE("/ticket-deliver/upstreams/:id", ticketDeliverHandler.DeleteUpstream)
+		admin.POST("/ticket-deliver/upstreams/:id/test", ticketDeliverHandler.TestUpstreamConnection)
 
 		// 工单预设回复
 		ticketPrereplySvc := service.NewTicketPrereplyService(deps.DB, deps.Log)
@@ -1567,6 +1580,23 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/user-downloads", userDownloadHandler.AdminList)
 		admin.POST("/user-downloads", userDownloadHandler.AdminCreate)
 		admin.DELETE("/user-downloads/:id", userDownloadHandler.AdminDelete)
+
+		// ==================== 审计日志 ====================
+		auditLogSvc := model.NewAuditLogService(deps.DB)
+		auditLogHandler := handler.NewAuditLogHandler(auditLogSvc, deps.Log)
+		admin.GET("/audit-logs", auditLogHandler.List)
+		admin.GET("/audit-logs/:id", auditLogHandler.Get)
+		admin.GET("/audit-logs/stats", auditLogHandler.Stats)
+		admin.POST("/audit-logs/clean", auditLogHandler.CleanOldLogs)
+
+		// ==================== 数据库备份 ====================
+		backupSvc := backup.NewService("./backups", deps.Log)
+		backupHandler := handler.NewBackupHandler(backupSvc, deps.Log)
+		admin.GET("/backups", backupHandler.ListBackups)
+		admin.POST("/backups", backupHandler.CreateBackup)
+		admin.DELETE("/backups/:filename", backupHandler.DeleteBackup)
+		admin.POST("/backups/clean", backupHandler.CleanOldBackups)
+		admin.POST("/backups/restore", backupHandler.RestoreBackup)
 	}
 }
 

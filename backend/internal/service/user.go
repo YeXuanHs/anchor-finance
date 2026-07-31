@@ -259,3 +259,22 @@ func Paginate(page, pageSize int) (int, int) {
 	pageSize = int(math.Min(float64(pageSize), 100))
 	return (page - 1) * pageSize, pageSize
 }
+
+// GetLoginLogs returns paginated login logs for a user.
+func (s *UserService) GetLoginLogs(userID uint, page, pageSize int) ([]LoginLog, int64, error) {
+	var logs []LoginLog
+	var total int64
+
+	query := s.db.Model(&LoginLog{}).Where("user_id = ?", userID)
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset, limit := Paginate(page, pageSize)
+	if err := query.Offset(offset).Limit(limit).Order("id DESC").Find(&logs).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return logs, total, nil
+}
