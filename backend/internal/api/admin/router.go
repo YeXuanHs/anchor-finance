@@ -824,6 +824,17 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/system-logs/export", systemLogHandler.Export)
 		admin.POST("/system-logs/clear-by-level", systemLogHandler.ClearByLevel)
 
+		// 日志清理（增强版）
+		logCleanerSvc := service.NewLogCleaner(deps.DB, deps.Log)
+		logCleanerHandler := handler.NewLogCleanerHandler(logCleanerSvc, deps.Log)
+		admin.GET("/log-cleaner/stats", logCleanerHandler.GetStats)
+		admin.POST("/log-cleaner/clean-by-days", logCleanerHandler.CleanByDays)
+		admin.POST("/log-cleaner/clean-by-count", logCleanerHandler.CleanByCount)
+		admin.POST("/log-cleaner/clean-by-module", logCleanerHandler.CleanByModule)
+		admin.POST("/log-cleaner/clean-by-status", logCleanerHandler.CleanByStatus)
+		admin.POST("/log-cleaner/clean-expired", logCleanerHandler.CleanExpired)
+		admin.POST("/log-cleaner/clean-all", logCleanerHandler.CleanAll)
+
 		// API管理
 		apiManageSvc := service.NewAPIManageService(deps.DB, deps.Log)
 		apiManageHandler := handler.NewAPIManageHandler(apiManageSvc, deps.Log)
