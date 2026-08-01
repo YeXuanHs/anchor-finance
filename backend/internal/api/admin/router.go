@@ -842,6 +842,16 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/notifications/reset-event", notifyManageHandler.ResetEvent)
 		admin.POST("/notifications/clean-all", notifyManageHandler.CleanAll)
 
+		// 邮箱后缀白名单
+		emailSuffixSvc := service.NewEmailSuffixWhitelistService(deps.DB, deps.Log)
+		emailSuffixHandler := handler.NewEmailSuffixWhitelistHandler(emailSuffixSvc, deps.Log)
+		admin.GET("/email-suffixes", emailSuffixHandler.List)
+		admin.POST("/email-suffixes", emailSuffixHandler.Add)
+		admin.PUT("/email-suffixes/:id", emailSuffixHandler.Update)
+		admin.DELETE("/email-suffixes/:id", emailSuffixHandler.Delete)
+		admin.POST("/email-suffixes/batch-delete", emailSuffixHandler.BatchDelete)
+		admin.POST("/email-suffixes/import-defaults", emailSuffixHandler.ImportDefaults)
+
 		// API管理
 		apiManageSvc := service.NewAPIManageService(deps.DB, deps.Log)
 		apiManageHandler := handler.NewAPIManageHandler(apiManageSvc, deps.Log)

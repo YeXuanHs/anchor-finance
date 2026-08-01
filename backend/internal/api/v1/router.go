@@ -32,6 +32,12 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	// ─── 核心 handlers ───
 	captchaSvcForAuth := service.NewCaptchaService(deps.Redis, deps.DB)
 	authHandler := handler.NewAuthHandlerWithCaptcha(deps.UserSvc, captchaSvcForAuth, deps.Log, deps.JWTManager)
+	// 邮箱后缀白名单（注册校验）
+	emailSuffixSvc := service.NewEmailSuffixWhitelistService(deps.DB, deps.Log)
+	authHandler.SetEmailSuffixService(emailSuffixSvc)
+	// 邮箱后缀白名单（注册校验）
+	emailSuffixSvc := service.NewEmailSuffixWhitelistService(deps.DB, deps.Log)
+	authHandler.SetEmailSuffixService(emailSuffixSvc)
 	userHandler := handler.NewUserHandlerWithCaptcha(deps.UserSvc, captchaSvcForAuth, deps.Log)
 	productHandler := handler.NewProductHandler(deps.ProdSvc, deps.Log)
 	orderHandler := handler.NewOrderHandlerWithDB(deps.OrdSvc, deps.DB, deps.Log)

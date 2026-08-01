@@ -54,6 +54,7 @@ func main() {
 	// Auto-migrate new models/columns
 	if conn := db.GetDB(); conn != nil {
 		conn.AutoMigrate(&model.TicketTransferLog{})
+		conn.AutoMigrate(&model.EmailSuffixWhitelist{})
 	}
 
 	// 从数据库读取日志配置并初始化

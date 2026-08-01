@@ -15,10 +15,11 @@ import (
 )
 
 type AuthHandler struct {
-	userSvc    *service.UserService
-	captchaSvc *service.CaptchaService
-	log        *logger.Logger
-	jwtMgr     *auth.JWTManager
+	userSvc      *service.UserService
+	captchaSvc   *service.CaptchaService
+	emailSuffixSvc *service.EmailSuffixWhitelistService
+	log          *logger.Logger
+	jwtMgr       *auth.JWTManager
 }
 
 func NewAuthHandler(userSvc *service.UserService, log *logger.Logger, jwtMgr *auth.JWTManager) *AuthHandler {
@@ -36,6 +37,11 @@ func NewAuthHandlerWithCaptcha(userSvc *service.UserService, captchaSvc *service
 		log:        log,
 		jwtMgr:     jwtMgr,
 	}
+}
+
+// SetEmailSuffixService 设置邮箱后缀白名单服务
+func (h *AuthHandler) SetEmailSuffixService(svc *service.EmailSuffixWhitelistService) {
+	h.emailSuffixSvc = svc
 }
 
 type loginRequest struct {
@@ -141,6 +147,11 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if req.Email != "" {
 		if ok, msg := validator.ValidateEmailOptional(req.Email); !ok {
 			response.BadRequest(c, msg)
+			return
+		}
+		// 邮箱后缀白名单校验
+		if h.emailSuffixSvc != nil && !h.emailSuffixSvc.IsAllowed(req.Email) {
+			response.BadRequest(c, "该邮箱后缀不允许注册，请使用其他邮箱")
 			return
 		}
 	}
