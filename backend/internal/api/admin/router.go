@@ -830,6 +830,19 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/system/auth-rules", systemHandler.GetSystemAuthRules)
 		admin.GET("/system/language", systemHandler.GetSystemLanguage)
 
+		// 设置模块
+		settingHandler := handler.NewSettingHandler(deps.Log)
+		admin.GET("/setting/notification", settingHandler.GetNotificationSettings)
+		admin.PUT("/setting/notification", settingHandler.SaveNotificationSettings)
+		admin.GET("/setting/maintenance", settingHandler.GetMaintenanceMode)
+		admin.PUT("/setting/maintenance", settingHandler.SetMaintenanceMode)
+		admin.GET("/setting/cron", settingHandler.GetCronSettings)
+		admin.PUT("/setting/cron", settingHandler.SaveCronSettings)
+		admin.GET("/setting/site", settingHandler.GetSiteSettings)
+		admin.PUT("/setting/site", settingHandler.SaveSiteSettings)
+		admin.GET("/setting/payment", settingHandler.GetPaymentSettings)
+		admin.PUT("/setting/payment", settingHandler.SavePaymentSettings)
+
 		// 验证码配置管理
 		captchaSvc := service.NewCaptchaService(deps.Redis, deps.DB)
 		captchaConfigHandler := handler.NewCaptchaConfigHandler(captchaSvc)
