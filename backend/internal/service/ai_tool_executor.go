@@ -1214,9 +1214,9 @@ func (e *AIToolExecutor) checkUpstreamRefundResult(args map[string]interface{}) 
 				"order_id":  orderID,
 			}
 
-			// 记录内部备注
-			e.addTicketNote(map[string]interface{}{
-				"ticket_id": ticketID,
+	// 记录内部备注
+	e.addTicketNote(map[string]interface{}{
+		"ticket_id": ticketID,
 				"note":      fmt.Sprintf("【自动退款已执行】\n订单号：#%d\n退款金额：¥%.2f\n退款ID：%d\n上游状态：%s", orderID, amount, refundID, upstreamRefundStatus),
 			})
 		}
@@ -1485,8 +1485,8 @@ func intVal(v interface{}) int64 {
 		i, _ := n.Int64()
 		return i
 	}
-	return 0
-}
+		return 0
+	}
 
 // stripTags 移除 HTML 标签
 func stripTags(s string) string {
