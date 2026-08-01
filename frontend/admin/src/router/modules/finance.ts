@@ -105,6 +105,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '定价管理',
             icon: 'ep:price-tag'
           }
+        },
+        {
+          path: 'ai-shopping',
+          name: 'AIShopping',
+          component: () => import('@/views/finance/products/ai-shopping/index.vue'),
+          meta: {
+            title: 'AI购物助手',
+            icon: 'ep:shopping-cart-full'
+          }
         }
       ]
     },
@@ -198,6 +207,24 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '工单状态',
             icon: 'ep:flag'
+          }
+        },
+        {
+          path: 'knowledge-base',
+          name: 'KnowledgeBase',
+          component: () => import('@/views/finance/tickets/knowledge-base/index.vue'),
+          meta: {
+            title: '知识库',
+            icon: 'ep:collection'
+          }
+        },
+        {
+          path: 'ai-auto-reply',
+          name: 'AIAutoReply',
+          component: () => import('@/views/finance/tickets/ai-auto-reply/index.vue'),
+          meta: {
+            title: 'AI自动回复',
+            icon: 'ep:chat-line-round'
           }
         }
       ]
@@ -541,6 +568,24 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '维护模式',
             icon: 'ep:warning'
+          }
+        },
+        {
+          path: 'email-suffixes',
+          name: 'EmailSuffixes',
+          component: () => import('@/views/finance/system/email-suffixes/index.vue'),
+          meta: {
+            title: '邮箱后缀白名单',
+            icon: 'ep:message'
+          }
+        },
+        {
+          path: 'cs-widgets',
+          name: 'CSWidgets',
+          component: () => import('@/views/finance/system/cs-widgets/index.vue'),
+          meta: {
+            title: '客服悬浮窗',
+            icon: 'ep:service'
           }
         }
       ]
