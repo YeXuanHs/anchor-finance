@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/md5"
+	"fmt"
 	"sync"
 	"time"
 
@@ -9,193 +11,163 @@ import (
 	"gorm.io/gorm"
 )
 
-// NotificationLimiter 通知频率限制器
-// 防止失败通知轰炸邮箱
-type NotificationLimiter struct {
-	db          *gorm.DB
-	log         *logger.Logger
-	mu          sync.Mutex
-	lastSent    map[string]time.Time // key -> 上次发送时间
-	counts      map[string]int       // key -> 当前窗口内发送次数
-	windowStart map[string]time.Time // key -> 窗口开始时间
+// Deduplicator 通知去重器
+// 同一个失败事件只通知一次
+type Deduplicator struct {
+	db    *gorm.DB
+	log   *logger.Logger
+	mu    sync.Mutex
+	cache map[string]time.Time // 内存缓存，加速查询
 }
 
-// NewNotificationLimiter 创建通知限制器
-func NewNotificationLimiter(db *gorm.DB, log *logger.Logger) *NotificationLimiter {
-	limiter := &NotificationLimiter{
-		db:          db,
-		log:         log,
-		lastSent:    make(map[string]time.Time),
-		counts:      make(map[string]int),
-		windowStart: make(map[string]time.Time),
+// NewDeduplicator 创建去重器
+func NewDeduplicator(db *gorm.DB, log *logger.Logger) *Deduplicator {
+	d := &Deduplicator{
+		db:    db,
+		log:   log,
+		cache: make(map[string]time.Time),
 	}
 
-	// 启动清理协程
-	go limiter.cleanup()
+	// 确保表存在
+	db.AutoMigrate(&NotifiedEvent{})
 
-	return limiter
+	// 启动时加载最近的记录到缓存
+	d.loadCache()
+
+	// 定期清理过期记录
+	go d.cleanup()
+
+	return d
 }
 
-// CanSend 检查是否可以发送通知
-// key: 通知类型+目标（如 "fail_notify:admin@example.com"）
-// interval: 最小发送间隔
-// maxPerWindow: 窗口内最大发送次数
-// windowSize: 窗口大小
-func (l *NotificationLimiter) CanSend(key string, interval time.Duration, maxPerWindow int, windowSize time.Duration) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+// NotifiedEvent 已通知事件记录
+type NotifiedEvent struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	EventKey  string    `gorm:"type:varchar(128);uniqueIndex;not null" json:"event_key"`
+	CreatedAt time.Time `json:"created_at"`
+}
 
-	now := time.Now()
+func (NotifiedEvent) TableName() string {
+	return "notified_events"
+}
 
-	// 检查最小间隔
-	if lastSend, ok := l.lastSent[key]; ok {
-		if now.Sub(lastSend) < interval {
-			l.log.Debugf("通知被限制: %s, 距上次发送 %v, 需要等待 %v", key, now.Sub(lastSend), interval)
+// ShouldNotify 检查是否应该通知
+// eventKey: 事件唯一标识（如 "host_down:123", "payment_fail:order456"）
+// dedupWindow: 去重时间窗口（如 24小时内同一事件只通知一次）
+func (d *Deduplicator) ShouldNotify(eventKey string, dedupWindow time.Duration) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	// 先检查内存缓存
+	if lastNotify, ok := d.cache[eventKey]; ok {
+		if time.Since(lastNotify) < dedupWindow {
+			d.log.Debugf("事件 %s 在去重窗口内，跳过通知", eventKey)
 			return false
 		}
 	}
 
-	// 检查窗口内发送次数
-	windowStart, ok := l.windowStart[key]
-	if !ok || now.Sub(windowStart) > windowSize {
-		// 新窗口
-		l.windowStart[key] = now
-		l.counts[key] = 0
-	}
-
-	if l.counts[key] >= maxPerWindow {
-		l.log.Debugf("通知被限制: %s, 当前窗口已发送 %d 次, 最大 %d 次", key, l.counts[key], maxPerWindow)
+	// 检查数据库
+	var event NotifiedEvent
+	err := d.db.Where("event_key = ?", eventKey).First(&event).Error
+	if err == nil && time.Since(event.CreatedAt) < dedupWindow {
+		// 更新缓存
+		d.cache[eventKey] = event.CreatedAt
 		return false
 	}
 
 	return true
 }
 
-// RecordSend 记录发送
-func (l *NotificationLimiter) RecordSend(key string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+// RecordNotified 记录已通知
+func (d *Deduplicator) RecordNotified(eventKey string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
-	l.lastSent[key] = time.Now()
-	l.counts[key]++
+	now := time.Now()
+
+	// 更新缓存
+	d.cache[eventKey] = now
+
+	// 写入数据库（存在则更新，不存在则插入）
+	d.db.Where("event_key = ?", eventKey).
+		Assign(NotifiedEvent{CreatedAt: now}).
+		FirstOrCreate(&NotifiedEvent{EventKey: eventKey, CreatedAt: now})
+}
+
+// GenerateEventKey 生成事件唯一标识
+func GenerateEventKey(eventType string, targetID interface{}, detail string) string {
+	raw := fmt.Sprintf("%s:%v:%s", eventType, targetID, detail)
+	hash := md5.Sum([]byte(raw))
+	return fmt.Sprintf("%s:%x", eventType, hash[:8])
+}
+
+// loadCache 加载最近的记录到缓存
+func (d *Deduplicator) loadCache() {
+	var events []NotifiedEvent
+	// 只加载最近7天的记录
+	d.db.Where("created_at >= ?", time.Now().AddDate(0, 0, -7)).Find(&events)
+
+	for _, e := range events {
+		d.cache[e.EventKey] = e.CreatedAt
+	}
+
+	d.log.Infof("加载 %d 条通知记录到缓存", len(events))
 }
 
 // cleanup 定期清理过期记录
-func (l *NotificationLimiter) cleanup() {
-	ticker := time.NewTicker(10 * time.Minute)
+func (d *Deduplicator) cleanup() {
+	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		l.mu.Lock()
-		now := time.Now()
-		for key, lastSend := range l.lastSent {
-			if now.Sub(lastSend) > 1*time.Hour {
-				delete(l.lastSent, key)
-				delete(l.counts, key)
-				delete(l.windowStart, key)
+		// 清理30天前的记录
+		result := d.db.Where("created_at < ?", time.Now().AddDate(0, 0, -30)).Delete(&NotifiedEvent{})
+		if result.Error == nil && result.RowsAffected > 0 {
+			d.log.Infof("清理 %d 条过期通知记录", result.RowsAffected)
+		}
+
+		// 清理内存缓存
+		d.mu.Lock()
+		for key, t := range d.cache {
+			if time.Since(t) > 7*24*time.Hour {
+				delete(d.cache, key)
 			}
 		}
-		l.mu.Unlock()
+		d.mu.Unlock()
 	}
 }
 
-// GetNotificationConfig 获取通知配置
-func (l *NotificationLimiter) GetNotificationConfig() map[string]interface{} {
-	// 从数据库读取配置
-	var config struct {
-		Enabled         bool   `json:"enabled"`
-		MinInterval     int    `json:"min_interval"`      // 最小间隔（秒）
-		MaxPerHour      int    `json:"max_per_hour"`      // 每小时最大发送次数
-		MaxPerDay       int    `json:"max_per_day"`       // 每天最大发送次数
-		NotifyEmails    string `json:"notify_emails"`     // 通知邮箱（逗号分隔）
-		NotifyTypes     string `json:"notify_types"`      // 通知类型（逗号分隔）
-		QuietHoursStart int    `json:"quiet_hours_start"` // 免打扰开始时间（小时）
-		QuietHoursEnd   int    `json:"quiet_hours_end"`   // 免打扰结束时间（小时）
-	}
+// GetStats 获取统计信息
+func (d *Deduplicator) GetStats() map[string]interface{} {
+	var total int64
+	d.db.Model(&NotifiedEvent{}).Count(&total)
 
-	// 默认配置
-	config.Enabled = true
-	config.MinInterval = 300    // 5分钟
-	config.MaxPerHour = 10      // 每小时最多10次
-	config.MaxPerDay = 50       // 每天最多50次
-	config.QuietHoursStart = 23 // 23:00开始免打扰
-	config.QuietHoursEnd = 8    // 08:00结束免打扰
-
-	// 从数据库读取
-	l.db.Table("system_settings").
-		Where("`key` IN ?", []string{
-			"notify_enabled", "notify_min_interval", "notify_max_per_hour",
-			"notify_max_per_day", "notify_emails", "notify_types",
-			"notify_quiet_start", "notify_quiet_end",
-		}).
-		Select("`key`, `value`").
-		Find(nil)
+	var todayCount int64
+	d.db.Model(&NotifiedEvent{}).
+		Where("created_at >= ?", time.Now().Format("2006-01-02")).
+		Count(&todayCount)
 
 	return map[string]interface{}{
-		"enabled":           config.Enabled,
-		"min_interval":      config.MinInterval,
-		"max_per_hour":      config.MaxPerHour,
-		"max_per_day":       config.MaxPerDay,
-		"notify_emails":     config.NotifyEmails,
-		"notify_types":      config.NotifyTypes,
-		"quiet_hours_start": config.QuietHoursStart,
-		"quiet_hours_end":   config.QuietHoursEnd,
+		"total_records":  total,
+		"today_count":    todayCount,
+		"cache_size":     len(d.cache),
 	}
 }
 
-// IsInQuietHours 检查是否在免打扰时间段
-func (l *NotificationLimiter) IsInQuietHours() bool {
-	config := l.GetNotificationConfig()
-	hour := time.Now().Hour()
+// CleanByEventKey 删除指定事件的记录（允许重新通知）
+func (d *Deduplicator) CleanByEventKey(eventKey string) error {
+	d.mu.Lock()
+	delete(d.cache, eventKey)
+	d.mu.Unlock()
 
-	start := config["quiet_hours_start"].(int)
-	end := config["quiet_hours_end"].(int)
-
-	if start < end {
-		return hour >= start && hour < end
-	}
-	// 跨午夜的情况（如 23:00 - 08:00）
-	return hour >= start || hour < end
+	return d.db.Where("event_key = ?", eventKey).Delete(&NotifiedEvent{}).Error
 }
 
-// ShouldNotify 检查是否应该发送通知
-func (l *NotificationLimiter) ShouldNotify(notifyType string) bool {
-	config := l.GetNotificationConfig()
+// CleanAll 清空所有记录
+func (d *Deduplicator) CleanAll() error {
+	d.mu.Lock()
+	d.cache = make(map[string]time.Time)
+	d.mu.Unlock()
 
-	// 检查是否启用
-	if !config["enabled"].(bool) {
-		return false
-	}
-
-	// 检查是否在免打扰时间段
-	if l.IsInQuietHours() {
-		l.log.Debugf("当前在免打扰时间段，跳过通知: %s", notifyType)
-		return false
-	}
-
-	// 检查通知类型是否启用
-	// TODO: 实现类型过滤
-
-	// 检查频率限制
-	key := "fail_notify:" + notifyType
-	minInterval := time.Duration(config["min_interval"].(int)) * time.Second
-	maxPerHour := config["max_per_hour"].(int)
-
-	return l.CanSend(key, minInterval, maxPerHour, 1*time.Hour)
-}
-
-// SendNotification 发送通知（带频率限制）
-func (l *NotificationLimiter) SendNotification(notifyType string, subject string, content string) bool {
-	if !l.ShouldNotify(notifyType) {
-		return false
-	}
-
-	// 记录发送
-	key := "fail_notify:" + notifyType
-	l.RecordSend(key)
-
-	// TODO: 实际发送邮件
-	l.log.Infof("发送通知: type=%s, subject=%s", notifyType, subject)
-
-	return true
+	return d.db.Where("1 = 1").Delete(&NotifiedEvent{}).Error
 }

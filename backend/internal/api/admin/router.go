@@ -835,6 +835,13 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/log-cleaner/clean-expired", logCleanerHandler.CleanExpired)
 		admin.POST("/log-cleaner/clean-all", logCleanerHandler.CleanAll)
 
+		// 通知管理（去重）
+		notifySvc := service.NewNotificationService(deps.DB, deps.Log)
+		notifyManageHandler := handler.NewNotificationHandler(notifySvc, deps.Log)
+		admin.GET("/notifications/stats", notifyManageHandler.GetStats)
+		admin.POST("/notifications/reset-event", notifyManageHandler.ResetEvent)
+		admin.POST("/notifications/clean-all", notifyManageHandler.CleanAll)
+
 		// API管理
 		apiManageSvc := service.NewAPIManageService(deps.DB, deps.Log)
 		apiManageHandler := handler.NewAPIManageHandler(apiManageSvc, deps.Log)
