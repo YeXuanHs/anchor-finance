@@ -55,6 +55,17 @@ func main() {
 	if conn := db.GetDB(); conn != nil {
 		conn.AutoMigrate(&model.TicketTransferLog{})
 		conn.AutoMigrate(&model.EmailSuffixWhitelist{})
+		conn.AutoMigrate(&model.CustomerServiceWidget{})
+		conn.AutoMigrate(&model.CustomerServiceWidgetSetting{})
+		conn.AutoMigrate(&model.KnowledgeBaseCategory{})
+		conn.AutoMigrate(&model.KnowledgeBaseArticle{})
+		conn.AutoMigrate(&model.AIConfig{})
+		conn.AutoMigrate(&model.AITicketAutoReplyConfig{})
+		conn.AutoMigrate(&model.AITicketLog{})
+		conn.AutoMigrate(&model.AIShoppingAssistantConfig{})
+		conn.AutoMigrate(&model.AIShoppingSession{})
+		conn.AutoMigrate(&model.AIShoppingMessage{})
+		conn.AutoMigrate(&model.ProductCatalogConfig{})
 	}
 
 	// 从数据库读取日志配置并初始化

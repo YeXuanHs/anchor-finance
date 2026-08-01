@@ -158,5 +158,13 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		auth.GET("/v10cloud/products", v10CloudHandler.GetProducts)
 		auth.GET("/v10cloud/config-options", v10CloudHandler.GetConfigOptions)
 		auth.POST("/v10cloud/price", v10CloudHandler.CalculatePrice)
+
+		// AI 购物助手会话
+		aiShoppingSvc := service.NewAIShoppingService(deps.DB, deps.Log)
+		aiShoppingHandler := handler.NewAIShoppingHandler(aiShoppingSvc, deps.Log)
+		auth.POST("/ai-shopping/session", aiShoppingHandler.StartSession)
+		auth.POST("/ai-shopping/session/:session_id/message", aiShoppingHandler.SendMessage)
+		auth.POST("/ai-shopping/session/:session_id/close", aiShoppingHandler.CloseSession)
+		auth.GET("/ai-shopping/session/:session_id/messages", aiShoppingHandler.GetSessionMessages)
 	}
 }
