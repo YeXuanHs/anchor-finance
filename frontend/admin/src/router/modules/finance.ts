@@ -85,6 +85,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '用户备注',
             icon: 'ep:edit'
           }
+        },
+        {
+          path: 'authentication',
+          name: 'ClientAuthentication',
+          component: () => import('@/views/finance/clients/authentication/index.vue'),
+          meta: {
+            title: '实名认证',
+            icon: 'ep:stamp'
+          }
         }
       ]
     },
@@ -179,6 +188,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '账单明细',
             icon: 'ep:list'
           }
+        },
+        {
+          path: 'cancel-requests',
+          name: 'CancelRequests',
+          component: () => import('@/views/finance/orders/cancel-requests/index.vue'),
+          meta: {
+            title: '取消请求',
+            icon: 'ep:warning-filled'
+          }
         }
       ]
     },
@@ -252,6 +270,15 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: 'AI自动回复',
             icon: 'ep:chat-line-round'
+          }
+        },
+        {
+          path: 'statistics',
+          name: 'TicketStatistics',
+          component: () => import('@/views/finance/tickets/statistics/index.vue'),
+          meta: {
+            title: '工单统计',
+            icon: 'ep:data-analysis'
           }
         }
       ]
@@ -703,6 +730,69 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '运行映射',
             icon: 'ep:map-location'
+          }
+        },
+        {
+          path: 'system-info',
+          name: 'SystemInfo',
+          component: () => import('@/views/finance/system/system-info/index.vue'),
+          meta: {
+            title: '系统信息',
+            icon: 'ep:info-filled'
+          }
+        },
+        {
+          path: 'database-info',
+          name: 'DatabaseInfo',
+          component: () => import('@/views/finance/system/database-info/index.vue'),
+          meta: {
+            title: '数据库信息',
+            icon: 'ep:coin'
+          }
+        },
+        {
+          path: 'api-management',
+          name: 'ApiManagement',
+          component: () => import('@/views/finance/system/api-management/index.vue'),
+          meta: {
+            title: 'API管理',
+            icon: 'ep:key'
+          }
+        },
+        {
+          path: 'sms-templates',
+          name: 'SmsTemplates',
+          component: () => import('@/views/finance/system/sms-templates/index.vue'),
+          meta: {
+            title: '短信模板',
+            icon: 'ep:message'
+          }
+        },
+        {
+          path: 'security-config',
+          name: 'SecurityConfig',
+          component: () => import('@/views/finance/system/security-config/index.vue'),
+          meta: {
+            title: '安全配置',
+            icon: 'ep:shield'
+          }
+        },
+        {
+          path: 'fund-config',
+          name: 'FundConfig',
+          component: () => import('@/views/finance/system/fund-config/index.vue'),
+          meta: {
+            title: '资金设置',
+            icon: 'ep:wallet'
+          }
+        },
+        {
+          path: 'receipt-config',
+          name: 'ReceiptConfig',
+          component: () => import('@/views/finance/system/receipt-config/index.vue'),
+          meta: {
+            title: '发票设置',
+            icon: 'ep:tickets'
           }
         }
       ]
