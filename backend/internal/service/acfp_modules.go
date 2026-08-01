@@ -58,7 +58,7 @@ func (s *ACFPService) RecordIPChange(hostID, userID uint, oldIP, newIP, oldAssig
 		return nil
 	}
 	history := &model.ACFPIPHistory{
-		HostID:       hostID,
+				HostID:       hostID,
 		UserID:       userID,
 		OldIP:        oldIP,
 		NewIP:        newIP,
@@ -318,7 +318,7 @@ func (s *ACFPService) ScanMinorCerts() (int, error) {
 			continue
 		}
 		birth, err := time.Parse("20060102", c.IDCard[6:14])
-		if err != nil {
+	if err != nil {
 			continue
 		}
 		age := int(time.Since(birth).Hours() / 8760)

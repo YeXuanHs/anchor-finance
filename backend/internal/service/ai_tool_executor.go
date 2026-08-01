@@ -150,6 +150,18 @@ func (e *AIToolExecutor) Execute(toolName string, args map[string]interface{}) s
 	case "check_upstream_refund_result":
 		result = e.checkUpstreamRefundResult(args)
 
+	// 商品导购
+	case "search_products":
+		result = e.searchProducts(args)
+	case "get_product_detail":
+		result = e.getProductDetail(args)
+	case "list_product_groups":
+		result = e.listProductGroups()
+	case "get_group_products":
+		result = e.getGroupProducts(args)
+	case "compare_products":
+		result = e.compareProducts(args)
+
 	default:
 		result = jsonStr(map[string]interface{}{"error": "未知工具: " + toolName})
 	}
@@ -1240,6 +1252,207 @@ func (e *AIToolExecutor) checkHostOwnership(hostID uint) bool {
 	var count int64
 	e.db.Raw("SELECT COUNT(*) FROM host WHERE id = ? AND uid = ?", hostID, e.userID).Scan(&count)
 	return count > 0
+}
+
+// ─── 商品导购工具 ───
+
+func (e *AIToolExecutor) searchProducts(args map[string]interface{}) string {
+	keyword := strVal(args["keyword"])
+	limit := int(args["limit"].(float64))
+	if limit <= 0 {
+		limit = 10
+	}
+
+	type product struct {
+		ID          uint    `json:"id"`
+		Name        string  `json:"name"`
+		Description string  `json:"description"`
+		Price       float64 `json:"price"`
+		GroupName   string  `json:"group_name"`
+	}
+	var products []product
+	q := e.db.Table("products p").
+		Select("p.id, p.name, p.description, p.price, pg.name as group_name").
+		Joins("LEFT JOIN product_groups pg ON p.group_id = pg.id").
+		Where("p.status = ?", 1)
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		q = q.Where("p.name LIKE ? OR p.description LIKE ?", like, like)
+	}
+	q.Limit(limit).Find(&products)
+
+	if len(products) == 0 {
+		return jsonStr(map[string]interface{}{"message": "未找到相关商品", "products": []interface{}{}})
+	}
+
+	var result []map[string]interface{}
+	for _, p := range products {
+		result = append(result, map[string]interface{}{
+			"id":          p.ID,
+			"name":        p.Name,
+			"description": p.Description,
+			"price":       p.Price,
+			"group_name":  p.GroupName,
+		})
+	}
+	return jsonStr(map[string]interface{}{"products": result, "total": len(result)})
+}
+
+func (e *AIToolExecutor) getProductDetail(args map[string]interface{}) string {
+	productID := uint(intVal(args["product_id"]))
+	if productID == 0 {
+		return jsonStr(map[string]interface{}{"error": "商品ID不能为空"})
+	}
+
+	type product struct {
+		ID          uint    `json:"id"`
+		Name        string  `json:"name"`
+		Description string  `json:"description"`
+		Price       float64 `json:"price"`
+		GroupName   string  `json:"group_name"`
+		BillingType string  `json:"billing_type"`
+		SetupFee    float64 `json:"setup_fee"`
+	}
+	var p product
+	err := e.db.Table("products p").
+		Select("p.id, p.name, p.description, p.price, pg.name as group_name, p.billing_type, p.setup_fee").
+		Joins("LEFT JOIN product_groups pg ON p.group_id = pg.id").
+		Where("p.id = ?", productID).
+		First(&p).Error
+	if err != nil {
+		return jsonStr(map[string]interface{}{"error": "商品不存在"})
+	}
+
+	// 获取配置选项
+	type configOption struct {
+		Name  string `json:"name"`
+		Value string `json:"value"`
+		Price string `json:"price"`
+	}
+	var options []configOption
+	e.db.Table("product_config_options").Where("product_id = ?", productID).Find(&options)
+
+	return jsonStr(map[string]interface{}{
+		"id":           p.ID,
+		"name":         p.Name,
+		"description":  p.Description,
+		"price":        p.Price,
+		"group_name":   p.GroupName,
+		"billing_type": p.BillingType,
+		"setup_fee":    p.SetupFee,
+		"options":      options,
+	})
+}
+
+func (e *AIToolExecutor) listProductGroups() string {
+	type group struct {
+		ID          uint   `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		ProductCount int   `json:"product_count"`
+	}
+	var groups []group
+	e.db.Raw(`
+		SELECT pg.id, pg.name, pg.description, COUNT(p.id) as product_count
+		FROM product_groups pg
+		LEFT JOIN products p ON p.group_id = pg.id AND p.status = 1
+		GROUP BY pg.id, pg.name, pg.description
+		ORDER BY pg.sort_order ASC
+	`).Scan(&groups)
+
+	if len(groups) == 0 {
+		return jsonStr(map[string]interface{}{"message": "暂无商品分组", "groups": []interface{}{}})
+	}
+	return jsonStr(map[string]interface{}{"groups": groups})
+}
+
+func (e *AIToolExecutor) getGroupProducts(args map[string]interface{}) string {
+	groupID := uint(intVal(args["group_id"]))
+	if groupID == 0 {
+		return jsonStr(map[string]interface{}{"error": "分组ID不能为空"})
+	}
+
+	type product struct {
+		ID          uint    `json:"id"`
+		Name        string  `json:"name"`
+		Description string  `json:"description"`
+		Price       float64 `json:"price"`
+	}
+	var products []product
+	e.db.Table("products").
+		Select("id, name, description, price").
+		Where("group_id = ? AND status = ?", groupID, 1).
+		Order("sort_order ASC").
+		Find(&products)
+
+	return jsonStr(map[string]interface{}{"products": products, "total": len(products)})
+}
+
+func (e *AIToolExecutor) compareProducts(args map[string]interface{}) string {
+	idsRaw, ok := args["product_ids"].([]interface{})
+	if !ok || len(idsRaw) == 0 {
+		return jsonStr(map[string]interface{}{"error": "请提供要对比的商品ID列表"})
+	}
+
+	var ids []uint
+	for _, id := range idsRaw {
+		if n, ok := id.(float64); ok {
+			ids = append(ids, uint(n))
+		}
+	}
+	if len(ids) < 2 {
+		return jsonStr(map[string]interface{}{"error": "至少需要2个商品进行对比"})
+	}
+
+	type product struct {
+		ID          uint    `json:"id"`
+		Name        string  `json:"name"`
+		Description string  `json:"description"`
+		Price       float64 `json:"price"`
+		GroupName   string  `json:"group_name"`
+		BillingType string  `json:"billing_type"`
+	}
+	var products []product
+	e.db.Table("products p").
+		Select("p.id, p.name, p.description, p.price, pg.name as group_name, p.billing_type").
+		Joins("LEFT JOIN product_groups pg ON p.group_id = pg.id").
+		Where("p.id IN ? AND p.status = ?", ids, 1).
+		Find(&products)
+
+	// 获取每个商品的配置选项
+	type configOption struct {
+		ProductID uint   `json:"product_id"`
+		Name      string `json:"name"`
+		Value     string `json:"value"`
+		Price     string `json:"price"`
+	}
+	var allOptions []configOption
+	e.db.Table("product_config_options").Where("product_id IN ?", ids).Find(&allOptions)
+
+	// 按商品分组配置选项
+	optionsMap := make(map[uint][]map[string]interface{})
+	for _, opt := range allOptions {
+		optionsMap[opt.ProductID] = append(optionsMap[opt.ProductID], map[string]interface{}{
+			"name":  opt.Name,
+			"value": opt.Value,
+			"price": opt.Price,
+		})
+	}
+
+	var result []map[string]interface{}
+	for _, p := range products {
+		result = append(result, map[string]interface{}{
+			"id":           p.ID,
+			"name":         p.Name,
+			"description":  p.Description,
+			"price":        p.Price,
+			"group_name":   p.GroupName,
+			"billing_type": p.BillingType,
+			"options":      optionsMap[p.ID],
+		})
+	}
+
+	return jsonStr(map[string]interface{}{"products": result, "total": len(result)})
 }
 
 func jsonStr(v interface{}) string {

@@ -1686,99 +1686,68 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		}
 
 		// ==================== ACFP 模块（anchor_cloud_finance_pro） ====================
-		acfpSvc := service.NewACFPService(deps.DB, deps.Log)
-		acfpHandler := handler.NewACFPHandler(acfpSvc, deps.Log)
-		acfp := admin.Group("/acfp")
-		{
-			// IP历史
-			acfp.GET("/ip-history/:host_id", acfpHandler.GetIPHistory)
-			// 限量发售
-			acfp.GET("/limited-sale", acfpHandler.ListLimitedSales)
-			acfp.POST("/limited-sale", acfpHandler.SetLimitedSale)
-			acfp.GET("/limited-sale/check/:product_id", acfpHandler.CheckStock)
-			// 价格锁定
-			acfp.GET("/price-lock", acfpHandler.ListPriceLocks)
-			acfp.POST("/price-lock", acfpHandler.SetPriceLock)
-			acfp.DELETE("/price-lock/:id", acfpHandler.DeletePriceLock)
-			// 操作日志
-			acfp.GET("/logs", acfpHandler.ListLogs)
-			acfp.POST("/logs/clean", acfpHandler.CleanLogs)
-			// 定时任务状态
-			acfp.GET("/cron-status", acfpHandler.GetCronStatuses)
-			// 实名认证Pro
-			acfp.GET("/cert-pro/config", acfpHandler.GetCertProConfig)
-			acfp.PUT("/cert-pro/config", acfpHandler.SetCertProConfig)
-			acfp.GET("/cert-pro/minors", acfpHandler.ListMinorCerts)
-			acfp.POST("/cert-pro/scan", acfpHandler.ScanMinorCerts)
-			// 缓存预热
-			acfp.POST("/cache-warm", acfpHandler.WarmCache)
-			// 批量商品修改
-			acfp.GET("/batch-task", acfpHandler.ListBatchTasks)
-			acfp.POST("/batch-task", acfpHandler.CreateBatchTask)
-			acfp.POST("/batch-task/:id/execute", acfpHandler.ExecuteBatchTask)
-			// 状态对账
-			acfp.POST("/status-sync", acfpHandler.RunStatusSync)
-			// 通知去重
-			acfp.GET("/notify/stats", acfpHandler.GetNotifyStats)
-			acfp.POST("/notify/clean", acfpHandler.CleanNotifyEvents)
-		}
-
-		// ==================== ACFP 插件模块（anchor_cloud_finance_pro） ====================
-		acfpSvc := service.NewACFPModulesService(deps.DB, deps.Log)
-		acfpHandler := handler.NewACFPModulesHandler(acfpSvc, deps.Log)
+		acfpModulesSvc := service.NewACFPModulesService(deps.DB, deps.Log)
+		acfpModulesHandler := handler.NewACFPModulesHandler(acfpModulesSvc, deps.Log)
 		acfp := admin.Group("/acfp")
 		{
 			// 通用模块配置
-			acfp.GET("/module/:key", acfpHandler.GetModuleConfig)
-			acfp.POST("/module/:key/toggle", acfpHandler.ToggleModule)
+			acfp.GET("/module/:key", acfpModulesHandler.GetModuleConfig)
+			acfp.POST("/module/:key/toggle", acfpModulesHandler.ToggleModule)
 
 			// 失败通知
-			acfp.GET("/fail-notify/config", acfpHandler.GetFailNotifyConfig)
-			acfp.PUT("/fail-notify/config", acfpHandler.SaveFailNotifyConfig)
+			acfp.GET("/fail-notify/config", acfpModulesHandler.GetFailNotifyConfig)
+			acfp.PUT("/fail-notify/config", acfpModulesHandler.SaveFailNotifyConfig)
 
 			// 状态对账
-			acfp.GET("/status-sync/config", acfpHandler.GetStatusSyncConfig)
-			acfp.PUT("/status-sync/config", acfpHandler.SaveStatusSyncConfig)
-			acfp.GET("/status-sync/cache/:host_id", acfpHandler.GetUpstreamCache)
-			acfp.GET("/status-sync/cron-statuses", acfpHandler.GetCronStatuses)
+			acfp.GET("/status-sync/config", acfpModulesHandler.GetStatusSyncConfig)
+			acfp.PUT("/status-sync/config", acfpModulesHandler.SaveStatusSyncConfig)
+			acfp.GET("/status-sync/cache/:host_id", acfpModulesHandler.GetUpstreamCache)
+			acfp.GET("/status-sync/cron-statuses", acfpModulesHandler.GetCronStatuses)
 
 			// IP 记录
-			acfp.GET("/ip-history", acfpHandler.GetIPHistory)
+			acfp.GET("/ip-history", acfpModulesHandler.GetIPHistory)
 
 			// 限量发售
-			acfp.GET("/limited-sale", acfpHandler.GetLimitedSaleList)
-			acfp.POST("/limited-sale", acfpHandler.AddLimitedSale)
-			acfp.PUT("/limited-sale/:id", acfpHandler.UpdateLimitedSale)
-			acfp.DELETE("/limited-sale/:id", acfpHandler.DeleteLimitedSale)
-			acfp.POST("/limited-sale/:id/reset-quota", acfpHandler.ResetLimitedSaleQuota)
+			acfp.GET("/limited-sale", acfpModulesHandler.GetLimitedSaleList)
+			acfp.POST("/limited-sale", acfpModulesHandler.AddLimitedSale)
+			acfp.PUT("/limited-sale/:id", acfpModulesHandler.UpdateLimitedSale)
+			acfp.DELETE("/limited-sale/:id", acfpModulesHandler.DeleteLimitedSale)
+			acfp.POST("/limited-sale/:id/reset-quota", acfpModulesHandler.ResetLimitedSaleQuota)
 
 			// 价格锁定
-			acfp.GET("/price-lock", acfpHandler.GetPriceLockList)
-			acfp.POST("/price-lock", acfpHandler.SavePriceLock)
-			acfp.DELETE("/price-lock/:id", acfpHandler.DeletePriceLock)
+			acfp.GET("/price-lock", acfpModulesHandler.GetPriceLockList)
+			acfp.POST("/price-lock", acfpModulesHandler.SavePriceLock)
+			acfp.DELETE("/price-lock/:id", acfpModulesHandler.DeletePriceLock)
 
 			// 批量商品修改
-			acfp.POST("/batch-product", acfpHandler.BatchUpdateProducts)
+			acfp.POST("/batch-product", acfpModulesHandler.BatchUpdateProducts)
 
 			// 实名认证 Pro
-			acfp.GET("/cert-pro/config", acfpHandler.GetCertProConfig)
-			acfp.PUT("/cert-pro/config", acfpHandler.SaveCertProConfig)
-			acfp.GET("/cert-pro/reviews", acfpHandler.GetCertReviewList)
-			acfp.POST("/cert-pro/reviews/:id/review", acfpHandler.ReviewCert)
-			acfp.GET("/cert-pro/scan-minors", acfpHandler.ScanMinors)
-			acfp.POST("/cert-pro/reject-minors", acfpHandler.RejectMinors)
+			acfp.GET("/cert-pro/config", acfpModulesHandler.GetCertProConfig)
+			acfp.PUT("/cert-pro/config", acfpModulesHandler.SaveCertProConfig)
+			acfp.GET("/cert-pro/reviews", acfpModulesHandler.GetCertReviewList)
+			acfp.POST("/cert-pro/reviews/:id/review", acfpModulesHandler.ReviewCert)
+			acfp.GET("/cert-pro/scan-minors", acfpModulesHandler.ScanMinors)
+			acfp.POST("/cert-pro/reject-minors", acfpModulesHandler.RejectMinors)
 
 			// 缓存预热
-			acfp.GET("/cache-warm/status", acfpHandler.GetCacheWarmStatus)
-			acfp.POST("/cache-warm/trigger", acfpHandler.TriggerCacheWarm)
+			acfp.GET("/cache-warm/status", acfpModulesHandler.GetCacheWarmStatus)
+			acfp.POST("/cache-warm/trigger", acfpModulesHandler.TriggerCacheWarm)
 
 			// 系统日志
-			acfp.GET("/logs", acfpHandler.GetACFPLogs)
-			acfp.POST("/logs/clean", acfpHandler.CleanACFPLogs)
+			acfp.GET("/logs", acfpModulesHandler.GetACFPLogs)
+			acfp.POST("/logs/clean", acfpModulesHandler.CleanACFPLogs)
 
 			// 业务列表 Pro
-			acfp.GET("/business-list", acfpHandler.GetBusinessList)
-			acfp.POST("/business-list/:host_id/sync", acfpHandler.SyncOneBusiness)
+			acfp.GET("/business-list", acfpModulesHandler.GetBusinessList)
+			acfp.GET("/business-list/:host_id", acfpModulesHandler.GetBusinessRow)
+			acfp.GET("/business-list/:host_id/snapshot", acfpModulesHandler.GetBusinessSnapshot)
+			acfp.POST("/business-list/:host_id/sync", acfpModulesHandler.SyncOneBusiness)
+			acfp.POST("/business-list/:host_id/suspend", acfpModulesHandler.SuspendOneBusiness)
+			acfp.POST("/business-list/:host_id/unsuspend", acfpModulesHandler.UnsuspendOneBusiness)
+			acfp.POST("/business-list/:host_id/delete", acfpModulesHandler.DeleteOneBusiness)
+			acfp.POST("/business-list/:host_id/provision", acfpModulesHandler.ProvisionOneBusiness)
+			acfp.GET("/business-list/stats", acfpModulesHandler.GetBusinessStats)
 		}
 	}
 }

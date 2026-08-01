@@ -42,6 +42,7 @@ func (r *AIToolRegistry) initCategories() {
 		r.buildServerOpsCategory(),
 		r.buildTicketOpsCategory(),
 		r.buildFinanceCategory(),
+		r.buildShoppingCategory(),
 		r.buildGeneralCategory(),
 	}
 	for _, cat := range r.categories {
@@ -583,6 +584,98 @@ func (r *AIToolRegistry) buildFinanceCategory() AIToolCategory {
 							"order_id":  map[string]interface{}{"type": "integer", "description": "订单ID"},
 						},
 						"required": []string{"ticket_id", "order_id"},
+					},
+				},
+				Enabled: true,
+			},
+		},
+	}
+}
+
+func (r *AIToolRegistry) buildShoppingCategory() AIToolCategory {
+	return AIToolCategory{
+		Key:  "shopping",
+		Name: "商品导购",
+		Tools: []AITool{
+			{
+				Name:        "search_products",
+				Description: "搜索商品（按关键词搜索商品名称和描述）",
+				RiskLevel:   "low",
+				Schema: map[string]interface{}{
+					"name":        "search_products",
+					"description": "搜索商品",
+					"parameters": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"keyword": map[string]interface{}{"type": "string", "description": "搜索关键词（如：香港、CN2、轻量）"},
+							"limit":   map[string]interface{}{"type": "integer", "description": "返回数量限制，默认10"},
+						},
+						"required": []string{"keyword"},
+					},
+				},
+				Enabled: true,
+			},
+			{
+				Name:        "get_product_detail",
+				Description: "获取商品详情（价格、配置、描述等）",
+				RiskLevel:   "low",
+				Schema: map[string]interface{}{
+					"name":        "get_product_detail",
+					"description": "获取商品详情",
+					"parameters": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"product_id": map[string]interface{}{"type": "integer", "description": "商品ID"},
+						},
+						"required": []string{"product_id"},
+					},
+				},
+				Enabled: true,
+			},
+			{
+				Name:        "list_product_groups",
+				Description: "列出商品分组（所有可用的商品分类）",
+				RiskLevel:   "low",
+				Schema: map[string]interface{}{
+					"name":        "list_product_groups",
+					"description": "列出商品分组",
+					"parameters": map[string]interface{}{
+						"type":       "object",
+						"properties": map[string]interface{}{},
+					},
+				},
+				Enabled: true,
+			},
+			{
+				Name:        "get_group_products",
+				Description: "获取分组下的商品列表",
+				RiskLevel:   "low",
+				Schema: map[string]interface{}{
+					"name":        "get_group_products",
+					"description": "获取分组下的商品列表",
+					"parameters": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"group_id": map[string]interface{}{"type": "integer", "description": "商品分组ID"},
+						},
+						"required": []string{"group_id"},
+					},
+				},
+				Enabled: true,
+			},
+			{
+				Name:        "compare_products",
+				Description: "对比多个商品的配置和价格",
+				RiskLevel:   "low",
+				Schema: map[string]interface{}{
+					"name":        "compare_products",
+					"description": "对比多个商品",
+					"parameters": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"product_ids": map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "integer"}, "description": "要对比的商品ID列表"},
+						},
+						"required": []string{"product_ids"},
 					},
 				},
 				Enabled: true,

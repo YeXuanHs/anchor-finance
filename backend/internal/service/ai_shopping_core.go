@@ -130,7 +130,16 @@ func (s *AIShoppingCoreService) GetAllProducts(limit int) []map[string]interface
 
 // ─── 聊天会话 ───
 
-func (s *AIShoppingCoreService) Chat(sessionID string, userID uint, message string) (string, error) {
+// ChatRequest 聊天请求
+type ChatRequest struct {
+	SessionID   string `json:"session_id"`
+	UserID      uint   `json:"user_id"`
+	Message     string `json:"message"`
+	PageContext string `json:"page_context"` // 页面上下文（当前浏览的分组/商品）
+}
+
+// Chat 聊天（支持页面上下文和多消息分段）
+func (s *AIShoppingCoreService) Chat(sessionID string, userID uint, message string, pageContext string) (string, error) {
 	// 保存用户消息
 	s.db.Create(&model.AIShoppingChatLog{
 		SessionID: sessionID,
@@ -154,12 +163,12 @@ func (s *AIShoppingCoreService) Chat(sessionID string, userID uint, message stri
 	}
 
 	if systemPrompt == "" {
-		systemPrompt = `你是一个专业的AI购物助手。你的职责是：
-1. 了解客户需求
-2. 根据商品数据推荐合适的产品
-3. 解答产品相关问题
-4. 帮助客户做出购买决策
-回复要简洁友好，重点突出产品优势和价格。`
+		systemPrompt = DefaultShoppingPrompt()
+	}
+
+	// 注入页面上下文
+	if pageContext != "" {
+		systemPrompt += "\n\n## 用户当前浏览上下文\n" + pageContext
 	}
 
 	// 构建消息
@@ -178,6 +187,9 @@ func (s *AIShoppingCoreService) Chat(sessionID string, userID uint, message stri
 		return "抱歉，AI 暂时无法响应，请稍后重试。", nil
 	}
 
+	// 处理多消息分段（[[[MSG]]] 分隔符）
+	reply = s.formatMultiMessage(reply)
+
 	// 保存 AI 回复
 	s.db.Create(&model.AIShoppingChatLog{
 		SessionID: sessionID,
@@ -187,6 +199,54 @@ func (s *AIShoppingCoreService) Chat(sessionID string, userID uint, message stri
 	})
 
 	return reply, nil
+}
+
+// formatMultiMessage 处理多消息分段格式
+// 移植自 mahiru_ai_shopping 的多消息格式：用 [[[MSG]]] 分隔多条消息
+func (s *AIShoppingCoreService) formatMultiMessage(reply string) string {
+	// 如果包含分隔符，保持原样（前端会解析）
+	if strings.Contains(reply, "[[[MSG]]]") {
+		return reply
+	}
+	return reply
+}
+
+// DefaultShoppingPrompt 默认导购提示词
+// 移植自 mahiru_ai_shopping 的 PromptDefaults
+func DefaultShoppingPrompt() string {
+	return `你是购物车里的 AI 导购助手，帮助用户选商品、对比配置、了解价格。
+回答使用简洁、友好的中文，可用 Markdown（列表、加粗、链接、表格）。
+像真人导购一样分多条消息回复。**必须**用单独一行 [[[MSG]]] 分隔每条消息，前后各空一行。示例格式：
+
+好的，帮您查一下～
+
+[[[MSG]]]
+
+找到了！这款很适合您：
+
+[商品名](链接)
+
+[[[MSG]]]
+
+还有其他需求随时告诉我哦
+
+每段 1-3 句，不要把所有内容挤在一大段里。不要用列表把多条消息写在一起。不要用 --- 分隔。
+
+## 核心约束（必须遵守）
+- 面向用户的回复中严禁出现 product_id、商品 ID、内部编号等标识符
+- 推荐商品必须使用 Markdown 可点击链接：[短名称](order_url)
+- 禁止在 [ ] 里换行；禁止在链接标签里写 |（竖线）
+- 禁止只写商品名称而不给链接；禁止编造不存在的商品、价格或配置
+
+## 商品工具（按需调用，禁止臆造）
+- 当你需要查询商品、对比配置或价格时，必须先用工具，不要编造不存在的套餐/价格
+- 搜索关键词规则：只传短词，如「香港」「HK」「轻量」「CN2」
+- 不要一次性索取全站商品；只在用户明确需要时搜索/取详情
+- 工具调用节制：同一需求最多搜索 1～2 次
+
+## 其它
+- 若有「用户当前浏览上下文」，可优先结合当前分组作推荐线索，但仍须用工具核实商品与价格
+- 充值、购买、找回密码等平台操作不确定时，建议用户提交工单或联系人工`
 }
 
 func (s *AIShoppingCoreService) GetChatHistory(sessionID string) []model.AIShoppingChatLog {

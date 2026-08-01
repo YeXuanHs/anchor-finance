@@ -11,6 +11,8 @@
             </div>
           </div>
           <router-view v-else />
+          <!-- AI导购浮窗 -->
+          <AiShoppingWidget />
         </n-notification-provider>
       </n-dialog-provider>
     </n-message-provider>
@@ -21,6 +23,7 @@
 import { ref, computed, onMounted } from 'vue'
 import type { GlobalThemeOverrides } from 'naive-ui'
 import { useConfigStore } from '@/stores/config'
+import AiShoppingWidget from '@/components/AiShoppingWidget.vue'
 
 const configStore = useConfigStore()
 

@@ -780,3 +780,338 @@ func isToolEnabled(toolName string, enabledTools []string) bool {
 func allToolsMapLocal() map[string]ToolDefinition {
 	return allToolsMap()
 }
+
+// ─── 监控模式（人工工单 AI 静默监听 + 自动接管） ───
+
+// ProcessMonitoring 处理监控模式：AI 评估人工工单中客户新消息是否简单到可以自动接管
+// 移植自 mianyu_ai_ticket 的 enqueueMonitoring 逻辑
+func (s *AITicketCoreService) ProcessMonitoring(ticketID uint, content string) MonitoringResult {
+	if s.GetConfig("ai_enabled") != "1" {
+		return MonitoringResult{Action: "skip"}
+	}
+
+	// 检查工单是否处于人工模式
+	mode := s.GetTicketMode(ticketID)
+	if mode != "human" {
+		return MonitoringResult{Action: "skip"}
+	}
+
+	// 构建监控消息
+	ctxSvc := NewTicketContextService(s.db, s.log)
+	contextJson := ctxSvc.BuildContextJson(ticketID, 0)
+	messages := ctxSvc.BuildMessages(ticketID)
+	if len(messages) == 0 {
+		return MonitoringResult{Action: "skip"}
+	}
+
+	// 追加监控指令
+	messages = append(messages, AIChatMessage{
+		Role:    "system",
+		Content: MonitoringPrompt(),
+	})
+
+	// 系统提示词
+	systemPrompt := s.GetConfig("system_prompt")
+	if systemPrompt == "" {
+		systemPrompt = DefaultSystemPrompt()
+	}
+	if strings.Contains(systemPrompt, "{context}") {
+		systemPrompt = strings.Replace(systemPrompt, "{context}", contextJson, 1)
+	} else {
+		systemPrompt += "\n\n## 上下文数据（JSON）\n" + contextJson
+	}
+	messages = append([]AIChatMessage{{Role: "system", Content: systemPrompt}}, messages...)
+
+	// 调用 AI
+	apiKey := s.GetConfig("ai_api_key")
+	baseURL := s.GetConfig("ai_base_url")
+	modelName := s.GetConfig("ai_models")
+	if apiKey == "" || baseURL == "" || modelName == "" {
+		return MonitoringResult{Action: "skip"}
+	}
+
+	enabledTools := s.GetEnabledTools()
+	openAITools := GetOpenAITools(enabledTools)
+
+	reply, _, err := s.callAIWithTools(baseURL, apiKey, modelName, messages, openAITools, ticketID, 0)
+	if err != nil {
+		s.log.Warnf("监控模式 AI 调用失败: %v", err)
+		return MonitoringResult{Action: "skip"}
+	}
+
+	// 判断 AI 是否决定沉默
+	if isStaySilent(reply) {
+		return MonitoringResult{Action: "silent"}
+	}
+
+	// AI 决定接管：切回 AI 模式
+	s.SetTicketMode(ticketID, "ai")
+
+	// 发送接管通知
+	s.SendAITakeoverNotification(ticketID)
+
+	// 写入回复
+	adminID, _ := strconv.Atoi(s.GetConfig("reply_admin_id"))
+	if adminID == 0 {
+		adminID = 1
+	}
+	replySvc := NewTicketReplyService(s.db, s.log)
+	replySvc.PostAdminReply(ticketID, reply, uint(adminID))
+
+	return MonitoringResult{Action: "takeover", Reply: reply}
+}
+
+// MonitoringResult 监控模式结果
+type MonitoringResult struct {
+	Action string `json:"action"` // skip / silent / takeover
+	Reply  string `json:"reply,omitempty"`
+}
+
+// MonitoringPrompt 监控模式指令
+func MonitoringPrompt() string {
+	return `---
+【监控模式指令】
+当前工单处于人工模式，由人工客服负责回复。你现在作为后台监控 AI，需要评估客户最新一条消息：
+
+**判断标准：**
+- 如果这是一个简单的、你有能力独立解决的常规问题（如产品信息查询、续费指引、常见技术问题等），你可以选择接管回复
+- 如果这是一个复杂问题、涉及争议、需要人工判断、或涉及上游/退款等你无法独立处理的问题，请保持沉默
+
+**输出规则：**
+- 如果你决定保持沉默（不接管），只回复 [STAY_SILENT]，不输出任何其他内容
+- 如果你决定接管，直接输出你对客户的回复内容（正常回答即可，系统会自动将工单切回AI模式）
+- 不要解释你的判断理由`
+}
+
+// isStaySilent 判断 AI 回复是否表示"保持沉默"
+func isStaySilent(text string) bool {
+	text = strings.TrimSpace(text)
+	return strings.ToUpper(text) == "[STAY_SILENT]" || strings.HasPrefix(strings.ToUpper(text), "[STAY_SILENT]")
+}
+
+// ─── AI 接管通知（动态开场白） ───
+
+// SendAITakeoverNotification AI 首次回复工单前，动态生成转接提示消息
+// 移植自 mianyu_ai_ticket 的 QueueService.sendAiTakeoverNotification
+func (s *AITicketCoreService) SendAITakeoverNotification(ticketID uint) {
+	// 检查是否已经发送过 AI 接管通知
+	var count int64
+	s.db.Table("ticket_reply").Where("tid = ? AND editor = ?", ticketID, "ai").Count(&count)
+	if count > 0 {
+		return // 已有 AI 回复，不需要再发通知
+	}
+
+	// 获取工单标题
+	var ticket struct {
+		Title string `gorm:"column:title"`
+	}
+	s.db.Table("ticket").Where("id = ?", ticketID).Select("title").First(&ticket)
+	ticketTitle := ticket.Title
+	if ticketTitle == "" {
+		ticketTitle = "用户咨询"
+	}
+
+	// 调用 AI 生成动态开场白
+	apiKey := s.GetConfig("ai_api_key")
+	baseURL := s.GetConfig("ai_base_url")
+	modelName := s.GetConfig("ai_models")
+	if apiKey == "" || baseURL == "" || modelName == "" {
+		return
+	}
+
+	messages := []AIChatMessage{
+		{Role: "system", Content: "你是一个AI智能客服。请生成一段简短友好的开场白（1-2句话），告诉用户你将为他处理工单。语气自然亲切，不要用固定模板，每次都要不同。直接输出消息内容，不要加任何前缀或说明。"},
+		{Role: "user", Content: "工单标题: " + ticketTitle},
+	}
+
+	reply, _, err := s.callAIWithTools(baseURL, apiKey, modelName, messages, nil, ticketID, 0)
+	if err != nil || strings.TrimSpace(reply) == "" {
+		return
+	}
+
+	// 获取管理员信息
+	adminID, _ := strconv.Atoi(s.GetConfig("reply_admin_id"))
+	if adminID == 0 {
+		adminID = 1
+	}
+
+	// 写入开场白
+	s.db.Table("ticket_reply").Create(map[string]interface{}{
+		"tid":         ticketID,
+		"uid":         0,
+		"create_time": time.Now().Unix(),
+		"content":     "<p>" + reply + "</p>",
+		"admin_id":    adminID,
+		"admin":       "AI客服",
+		"attachment":  "",
+		"editor":      "ai",
+	})
+
+	// 更新工单状态
+	s.db.Table("ticket").Where("id = ?", ticketID).Updates(map[string]interface{}{
+		"last_reply_time": time.Now().Unix(),
+		"client_unread":   1,
+	})
+}
+
+// ─── 工具调用日志写入工单内部备注 ───
+
+// SaveToolCallLogAsNote 将工具调用日志保存为工单内部备注（仅管理员可见）
+// 移植自 mianyu_ai_ticket 的 QueueService.saveToolCallLog
+func (s *AITicketCoreService) SaveToolCallLogAsNote(ticketID uint, callLog []ToolCallEntry) {
+	if len(callLog) == 0 {
+		return
+	}
+
+	var lines []string
+	for _, entry := range callLog {
+		status := "OK"
+		if !entry.Success {
+			status = "FAIL"
+		}
+		argsJSON, _ := json.Marshal(entry.Args)
+		argsStr := string(argsJSON)
+		if len(argsStr) > 200 {
+			argsStr = argsStr[:200]
+		}
+		lines = append(lines, fmt.Sprintf("[%s] %s (%dms) args=%s", status, entry.Tool, entry.Elapsed, argsStr))
+	}
+
+	adminID, _ := strconv.Atoi(s.GetConfig("reply_admin_id"))
+	if adminID == 0 {
+		adminID = 1
+	}
+
+	content := "<p><em>[AI工具调用日志]</em></p><pre>" + strings.Join(lines, "\n") + "</pre>"
+
+	s.db.Table("ticket_reply").Create(map[string]interface{}{
+		"tid":         ticketID,
+		"uid":         0,
+		"create_time": time.Now().Unix(),
+		"content":     content,
+		"admin_id":    adminID,
+		"admin":       "系统",
+		"attachment":  "",
+		"editor":      "plain",
+	})
+}
+
+// ─── 自动关单 ───
+
+// AutoCloseTicket AI 自动关闭已解决的工单
+// 移植自 mianyu_ai_ticket 的 auto_close_ticket 工具逻辑
+func (s *AITicketCoreService) AutoCloseTicket(ticketID uint, reason string) error {
+	// 更新工单状态为已关闭
+	err := s.db.Table("ticket").Where("id = ?", ticketID).Updates(map[string]interface{}{
+		"status":       "closed",
+		"close_time":   time.Now().Unix(),
+		"last_reply_time": time.Now().Unix(),
+	}).Error
+	if err != nil {
+		return err
+	}
+
+	// 记录关闭原因
+	if reason != "" {
+		adminID, _ := strconv.Atoi(s.GetConfig("reply_admin_id"))
+		if adminID == 0 {
+			adminID = 1
+		}
+		s.db.Table("ticket_reply").Create(map[string]interface{}{
+			"tid":         ticketID,
+			"uid":         0,
+			"create_time": time.Now().Unix(),
+			"content":     "<p><em>" + reason + "</em></p>",
+			"admin_id":    adminID,
+			"admin":       "AI客服",
+			"attachment":  "",
+			"editor":      "ai",
+		})
+	}
+
+	// 记录日志
+	s.db.Create(&model.AITicketProcessLog{
+		TicketID: ticketID,
+		Event:    "auto_close",
+		Decision: "close",
+		Status:   "success",
+		Message:  reason,
+	})
+
+	return nil
+}
+
+// ─── 跨部门分流 ───
+
+// TransferTicketDepartment AI 将工单转移到其他部门
+// 移植自 mianyu_ai_ticket 的 transfer_ticket_department 工具逻辑
+func (s *AITicketCoreService) TransferTicketDepartment(ticketID uint, targetDeptID uint, reason string) error {
+	// 获取原工单信息
+	var ticket struct {
+		DeptID  uint   `gorm:"column:dptid"`
+		Title   string `gorm:"column:title"`
+		Content string `gorm:"column:content"`
+		UID     uint   `gorm:"column:uid"`
+	}
+	s.db.Table("ticket").Where("id = ?", ticketID).Select("dptid, title, content, uid").First(&ticket)
+
+	if ticket.DeptID == targetDeptID {
+		return nil // 已在目标部门
+	}
+
+	// 记录转移日志
+	s.db.Create(&model.AITicketProcessLog{
+		TicketID: ticketID,
+		Event:    "transfer_dept",
+		Decision: fmt.Sprintf("%d->%d", ticket.DeptID, targetDeptID),
+		Status:   "success",
+		Message:  reason,
+	})
+
+	// 更新工单部门
+	err := s.db.Table("ticket").Where("id = ?", ticketID).Updates(map[string]interface{}{
+		"dptid":          targetDeptID,
+		"last_reply_time": time.Now().Unix(),
+	}).Error
+	if err != nil {
+		return err
+	}
+
+	// 写入转移备注
+	adminID, _ := strconv.Atoi(s.GetConfig("reply_admin_id"))
+	if adminID == 0 {
+		adminID = 1
+	}
+
+	transferNote := fmt.Sprintf("<p><em>[AI部门转移] 从部门 %d 转移到部门 %d</em></p><p>原因：%s</p>", ticket.DeptID, targetDeptID, reason)
+	s.db.Table("ticket_reply").Create(map[string]interface{}{
+		"tid":         ticketID,
+		"uid":         0,
+		"create_time": time.Now().Unix(),
+		"content":     transferNote,
+		"admin_id":    adminID,
+		"admin":       "AI客服",
+		"attachment":  "",
+		"editor":      "ai",
+	})
+
+	return nil
+}
+
+// ─── 队列恢复（处理超时任务） ───
+
+// RecoverStuckJobs 恢复卡住的队列任务
+// 移植自 mianyu_ai_ticket 的 QueueService.recoverStuckJobs
+func (s *AITicketCoreService) RecoverStuckJobs(staleSeconds int) {
+	if staleSeconds <= 0 {
+		staleSeconds = 90
+	}
+	threshold := time.Now().Add(-time.Duration(staleSeconds) * time.Second)
+	s.db.Model(&model.AITicketQueue{}).
+		Where("status = ? AND updated_at < ?", "processing", threshold).
+		Updates(map[string]interface{}{
+			"status":     "pending",
+			"error_msg":  "处理超时已自动恢复",
+			"updated_at": time.Now(),
+		})
+}

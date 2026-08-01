@@ -40,18 +40,19 @@ func (h *AIShoppingCoreHandler) SaveConfig(c *gin.Context) {
 
 // ─── 前台聊天 ───
 
-// Chat 发送消息
+// Chat 发送消息（支持页面上下文）
 func (h *AIShoppingCoreHandler) Chat(c *gin.Context) {
 	sessionID := c.Param("session_id")
 	var req struct {
-		Message string `json:"message" binding:"required"`
+		Message     string `json:"message" binding:"required"`
+		PageContext string `json:"page_context"` // 页面上下文
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "消息不能为空")
 		return
 	}
 	userID := c.GetUint("user_id")
-	reply, err := h.svc.Chat(sessionID, userID, req.Message)
+	reply, err := h.svc.Chat(sessionID, userID, req.Message, req.PageContext)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
