@@ -538,6 +538,12 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/sales/:id/commission-ladder", saleHandler.SetCommissionLadder)
 		admin.POST("/sales/:id/calculate-commission", saleHandler.CalculateCommission)
 		admin.POST("/sales/:id/validate-usage", saleHandler.ValidateUsage)
+		admin.GET("/sales/statistics", saleHandler.GetStatistics)
+		admin.GET("/sales/records", saleHandler.GetSaleRecords)
+		admin.GET("/sales/:id/users", saleHandler.GetSaleUsers)
+		admin.GET("/sales/admin-list", saleHandler.GetAdminList)
+		admin.GET("/sales/status", saleHandler.GetSaleStatus)
+		admin.POST("/sales/status", saleHandler.SetSaleStatus)
 
 		// 消息发送
 		sendMsgSvc := service.NewSendMessageService(deps.DB, deps.Log)

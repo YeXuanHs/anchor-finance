@@ -557,6 +557,31 @@ const router = createRouter({
           path: 'marketplace/chat/:listing_id/:user_id',
           name: 'UserMarketplaceChatDirect',
           component: () => import('@/views/user/MarketplaceChat.vue')
+        },
+        {
+          path: 'marketplace/earnings',
+          name: 'UserMarketplaceEarnings',
+          component: () => import('@/views/user/MarketplaceEarnings.vue')
+        },
+        {
+          path: 'marketplace/transactions',
+          name: 'UserMarketplaceTransactions',
+          component: () => import('@/views/user/MarketplaceTransactions.vue')
+        },
+        {
+          path: 'marketplace/logs',
+          name: 'UserMarketplaceLogs',
+          component: () => import('@/views/user/MarketplaceLogs.vue')
+        },
+        {
+          path: 'credit-bill/:id',
+          name: 'UserCreditBillDetail',
+          component: () => import('@/views/user/CreditBillDetail.vue')
+        },
+        {
+          path: 'credit-used-detail',
+          name: 'UserCreditUsedDetail',
+          component: () => import('@/views/user/CreditUsedDetail.vue')
         }
       ]
     },

@@ -9,7 +9,7 @@ import (
 	"anchorfinance/internal/util"
 	"anchorfinance/pkg/logger"
 
-	"gorm.io/datatypes"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -852,7 +852,7 @@ func (s *OrderService) ApplyCustomPromo(req CreateCustomPromoRequest) (*model.Co
 		Status: 1,
 	}
 	if req.Value > 0 {
-		coupon.Value = datatypes.NewDecimal(req.Value)
+		coupon.Value = decimal.NewFromFloat(req.Value)
 	}
 	if req.Description != "" {
 		coupon.Description = req.Description

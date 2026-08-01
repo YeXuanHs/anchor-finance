@@ -115,7 +115,7 @@
     <el-dialog v-model="withdrawDialogVisible" title="申请提现" width="480px">
       <el-form :model="withdrawForm" label-width="90px">
         <el-form-item label="可提现金额">
-          <span class="current-amount text-success">¥{{ withdrawable.value?.toFixed(2) || '0.00' }}</span>
+          <span class="current-amount text-success">¥{{ withdrawable?.toFixed(2) || '0.00' }}</span>
         </el-form-item>
         <el-form-item label="提现金额" required>
           <el-input-number

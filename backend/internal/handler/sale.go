@@ -283,3 +283,156 @@ func (h *SaleHandler) ValidateUsage(c *gin.Context) {
 	}
 	response.Success(c, gin.H{"valid": valid, "reason": reason})
 }
+
+// GetStatistics 获取销售统计
+func (h *SaleHandler) GetStatistics(c *gin.Context) {
+	saleID, _ := strconv.ParseUint(c.DefaultQuery("sale_id", "0"), 10, 32)
+	timeRange := c.DefaultQuery("time", "month")
+
+	now := time.Now()
+	var startTime time.Time
+
+	switch timeRange {
+	case "today":
+		startTime = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	case "week":
+		startTime = now.AddDate(0, 0, -7)
+	case "month":
+		startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	case "last_month":
+		startTime = time.Date(now.Year(), now.Month()-1, 1, 0, 0, 0, 0, now.Location())
+	case "year":
+		startTime = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+	default:
+		startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	}
+
+	query := h.db.Model(&model.Invoice{}).Where("status = ? AND created_at >= ?", "Paid", startTime)
+	if saleID > 0 {
+		query = query.Where("sale_id = ?", saleID)
+	}
+
+	var totalAmount float64
+	var totalCount int64
+	query.Select("COALESCE(SUM(total), 0)").Scan(&totalAmount)
+	query.Count(&totalCount)
+
+	// 获取本月和上月对比
+	lastMonthStart := time.Date(now.Year(), now.Month()-1, 1, 0, 0, 0, 0, now.Location())
+	lastMonthEnd := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	var lastMonthAmount float64
+	h.db.Model(&model.Invoice{}).Where("status = ? AND created_at >= ? AND created_at < ?", "Paid", lastMonthStart, lastMonthEnd).
+		Select("COALESCE(SUM(total), 0)").Scan(&lastMonthAmount)
+
+	rate := float64(0)
+	if lastMonthAmount > 0 {
+		rate = (totalAmount - lastMonthAmount) / lastMonthAmount * 100
+	}
+
+	response.Success(c, gin.H{
+		"total_amount":   totalAmount,
+		"total_count":    totalCount,
+		"last_month":     lastMonthAmount,
+		"comparison":     rate,
+		"time_range":     timeRange,
+	})
+}
+
+// GetSaleRecords 获取销售记录
+func (h *SaleHandler) GetSaleRecords(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	saleID, _ := strconv.ParseUint(c.DefaultQuery("sale_id", "0"), 10, 32)
+	username := c.Query("username")
+	productName := c.Query("product_name")
+
+	query := h.db.Model(&model.Invoice{}).Where("sale_id > 0")
+	if saleID > 0 {
+		query = query.Where("sale_id = ?", saleID)
+	}
+	if username != "" {
+		query = query.Joins("LEFT JOIN users ON users.id = invoices.user_id").Where("users.username LIKE ?", "%"+username+"%")
+	}
+
+	var total int64
+	query.Count(&total)
+
+	type SaleRecord struct {
+		ID          uint    `json:"id"`
+		InvoiceID   uint    `json:"invoice_id"`
+		UserID      uint    `json:"user_id"`
+		Username    string  `json:"username"`
+		ProductName string  `json:"product_name"`
+		Amount      float64 `json:"amount"`
+		SaleID      uint    `json:"sale_id"`
+		CreatedAt   string  `json:"created_at"`
+	}
+
+	var records []SaleRecord
+	query.Select("invoices.id, invoices.id as invoice_id, invoices.user_id, users.username, '' as product_name, invoices.total as amount, invoices.sale_id, invoices.created_at").
+		Joins("LEFT JOIN users ON users.id = invoices.user_id").
+		Order("invoices.id DESC").
+		Offset((page - 1) * pageSize).Limit(pageSize).
+		Find(&records)
+
+	response.Success(c, gin.H{"list": records, "total": total})
+}
+
+// GetSaleUsers 获取销售关联的用户列表
+func (h *SaleHandler) GetSaleUsers(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	saleID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+
+	var total int64
+	h.db.Model(&model.User{}).Where("sale_id = ?", saleID).Count(&total)
+
+	var users []model.User
+	h.db.Where("sale_id = ?", saleID).Select("id, username, email, phone, created_at").
+		Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&users)
+
+	response.Success(c, gin.H{"list": users, "total": total})
+}
+
+// GetAdminList 获取销售管理员列表
+func (h *SaleHandler) GetAdminList(c *gin.Context) {
+	var admins []struct {
+		ID       uint   `json:"id"`
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Status   int8   `json:"status"`
+	}
+	h.db.Model(&model.User{}).Where("is_sale = 1").
+		Select("id, username, email, status").
+		Find(&admins)
+	response.Success(c, admins)
+}
+
+// SetSaleStatus 设置销售启用状态
+func (h *SaleHandler) SetSaleStatus(c *gin.Context) {
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	// 保存到系统配置
+	value := "0"
+	if req.Enabled {
+		value = "1"
+	}
+	h.db.Where("key = ?", "sale_enabled").Assign(map[string]interface{}{"key": "sale_enabled", "value": value}).
+		FirstOrCreate(&model.SystemConfig{})
+
+	response.Success(c, gin.H{"enabled": req.Enabled})
+}
+
+// GetSaleStatus 获取销售启用状态
+func (h *SaleHandler) GetSaleStatus(c *gin.Context) {
+	var config model.SystemConfig
+	result := h.db.Where("key = ?", "sale_enabled").First(&config)
+	enabled := result.Error == nil && config.Value == "1"
+	response.Success(c, gin.H{"enabled": enabled})
+}
