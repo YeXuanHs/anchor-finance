@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"anchorfinance/pkg/logger"
@@ -314,4 +315,499 @@ func (s *ProductService) UpdateGroup(id uint, req UpdateGroupRequest) (*ProductG
 // DeleteGroup deletes a product group.
 func (s *ProductService) DeleteGroup(id uint) error {
 	return s.db.Delete(&ProductGroup{}, id).Error
+}
+
+// ==================== First Group (一级分组) ====================
+
+// FirstGroupDTO is a lightweight struct for first group queries.
+type FirstGroupDTO struct {
+	ID         uint   `json:"id"`
+	Name       string `json:"name"`
+	Hidden     bool   `json:"hidden"`
+	SortOrder  int    `json:"sort_order"`
+	UpstreamID *uint  `json:"upstream_id"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+func (FirstGroupDTO) TableName() string { return "product_first_groups" }
+
+type CreateFirstGroupRequest struct {
+	Name       string `json:"name" binding:"required,max=128"`
+	Hidden     bool   `json:"hidden"`
+	UpstreamID *uint  `json:"upstream_id"`
+}
+
+type UpdateFirstGroupRequest struct {
+	Name       *string `json:"name"`
+	Hidden     *bool   `json:"hidden"`
+	UpstreamID *uint   `json:"upstream_id"`
+}
+
+// GetFirstGroups returns all first-level groups.
+func (s *ProductService) GetFirstGroups() ([]FirstGroupDTO, error) {
+	var groups []FirstGroupDTO
+	if err := s.db.Table("product_first_groups").Order("sort_order ASC, id ASC").Find(&groups).Error; err != nil {
+		return nil, err
+	}
+	return groups, nil
+}
+
+// CreateFirstGroup creates a new first-level group.
+func (s *ProductService) CreateFirstGroup(req CreateFirstGroupRequest) (*FirstGroupDTO, error) {
+	group := map[string]interface{}{
+		"name":        req.Name,
+		"hidden":      req.Hidden,
+		"sort_order":  0,
+		"upstream_id": req.UpstreamID,
+		"created_at":  time.Now(),
+		"updated_at":  time.Now(),
+	}
+	if err := s.db.Table("product_first_groups").Create(&group).Error; err != nil {
+		return nil, err
+	}
+	var result FirstGroupDTO
+	s.db.Table("product_first_groups").Order("id DESC").First(&result)
+	return &result, nil
+}
+
+// UpdateFirstGroup updates a first-level group.
+func (s *ProductService) UpdateFirstGroup(id uint, req UpdateFirstGroupRequest) error {
+	updates := map[string]interface{}{"updated_at": time.Now()}
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+	if req.Hidden != nil {
+		updates["hidden"] = *req.Hidden
+	}
+	if req.UpstreamID != nil {
+		updates["upstream_id"] = *req.UpstreamID
+	}
+	return s.db.Table("product_first_groups").Where("id = ?", id).Updates(updates).Error
+}
+
+// DeleteFirstGroup deletes a first-level group if it has no child groups.
+func (s *ProductService) DeleteFirstGroup(id uint) error {
+	if id == 1 {
+		return fmt.Errorf("cannot delete the default group")
+	}
+	var count int64
+	s.db.Table("product_groups").Where("first_group_id = ?", id).Count(&count)
+	if count > 0 {
+		return fmt.Errorf("cannot delete group with child groups")
+	}
+	return s.db.Table("product_first_groups").Where("id = ?", id).Delete(nil).Error
+}
+
+// ==================== Sort Management ====================
+
+type SortItem struct {
+	ID       uint `json:"id"`
+	SortOrder int  `json:"sort_order"`
+}
+
+type BatchSortRequest struct {
+	Items []SortItem `json:"items" binding:"required,min=1"`
+}
+
+// UpdateFirstGroupSort batch-updates first-level group sort orders.
+func (s *ProductService) UpdateFirstGroupSort(items []SortItem) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			if err := tx.Table("product_first_groups").Where("id = ?", item.ID).
+				Update("sort_order", item.SortOrder).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// UpdateGroupSort batch-updates second-level group sort orders.
+func (s *ProductService) UpdateGroupSort(items []SortItem) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			if err := tx.Table("product_groups").Where("id = ?", item.ID).
+				Update("sort_order", item.SortOrder).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// UpdateProductSort batch-updates product sort orders.
+func (s *ProductService) UpdateProductSort(items []SortItem) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			if err := tx.Table("products").Where("id = ?", item.ID).
+				Update("sort_order", item.SortOrder).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// ==================== Duplicate Product ====================
+
+type DuplicateProductRequest struct {
+	ExistingProductID uint   `json:"existing_product_id" binding:"required"`
+	NewProductName    string `json:"new_product_name" binding:"required,max=256"`
+}
+
+// DuplicateProduct copies a product along with its pricing, config links, custom fields, and downloads.
+func (s *ProductService) DuplicateProduct(req DuplicateProductRequest) (*Product, error) {
+	src, err := s.GetByID(req.ExistingProductID)
+	if err != nil {
+		return nil, fmt.Errorf("source product not found: %w", err)
+	}
+
+	var newProduct *Product
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Copy the product record (exclude ID, timestamps)
+		newProduct = &Product{
+			GroupID:       src.GroupID,
+			Name:          req.NewProductName,
+			Description:   src.Description,
+			Content:       src.Content,
+			Price:         src.Price,
+			OriginalPrice: src.OriginalPrice,
+			Currency:      src.Currency,
+			BillingCycle:  src.BillingCycle,
+			SetupFee:      src.SetupFee,
+			Stock:         src.Stock,
+			SalesCount:    0,
+			Type:          src.Type,
+			AutoSetup:     src.AutoSetup,
+			StockControl:  src.StockControl,
+			QuantityMin:   src.QuantityMin,
+			QuantityMax:   src.QuantityMax,
+			TrialDays:     src.TrialDays,
+			SortOrder:     0,
+			Status:        0, // 默认下架，待管理员审核
+			Hidden:        true,
+			Download:      src.Download,
+			Featured:      false,
+			Image:         src.Image,
+			Images:        src.Images,
+			ConfigOptions: src.ConfigOptions,
+			Metadata:      src.Metadata,
+			Tags:          src.Tags,
+		}
+		if err := tx.Create(newProduct).Error; err != nil {
+			return err
+		}
+
+		// 2. Copy pricing records
+		var pricings []ProductPricing
+		if err := tx.Where("product_id = ?", src.ID).Find(&pricings).Error; err == nil && len(pricings) > 0 {
+			newPricings := make([]ProductPricing, len(pricings))
+			for i, p := range pricings {
+				newPricings[i] = ProductPricing{
+					ProductID: newProduct.ID,
+					Cycle:     p.Cycle,
+					Price:     p.Price,
+					SetupFee:  p.SetupFee,
+					Currency:  p.Currency,
+					SortOrder: p.SortOrder,
+				}
+			}
+			tx.Create(&newPricings)
+		}
+
+		// 3. Copy config option links (ProductConfigOptionLink)
+		var configLinks []struct {
+			GroupID   uint `gorm:"column:group_id"`
+			SortOrder int  `gorm:"column:sort_order"`
+		}
+		if err := tx.Table("product_config_option_links").Where("product_id = ?", src.ID).
+			Find(&configLinks).Error; err == nil && len(configLinks) > 0 {
+			newLinks := make([]map[string]interface{}, len(configLinks))
+			for i, cl := range configLinks {
+				newLinks[i] = map[string]interface{}{
+					"product_id": newProduct.ID,
+					"group_id":   cl.GroupID,
+					"sort_order": cl.SortOrder,
+					"created_at": time.Now(),
+					"updated_at": time.Now(),
+				}
+			}
+			tx.Table("product_config_option_links").Create(&newLinks)
+		}
+
+		// 4. Copy custom fields
+		var customFields []struct {
+			ID       uint   `gorm:"column:id"`
+			Name     string `gorm:"column:name"`
+			Label    string `gorm:"column:label"`
+			Type     string `gorm:"column:type"`
+			Group    string `gorm:"column:group"`
+			Required bool   `gorm:"column:required"`
+			SortOrder int   `gorm:"column:sort_order"`
+		}
+		if err := tx.Table("custom_fields").Where("`group` = 'product' AND id IN (?)",
+			tx.Table("custom_field_values").Select("field_id").Where("owner_id = ? AND owner_type = 'product'", src.ID),
+		).Find(&customFields).Error; err == nil && len(customFields) > 0 {
+			for _, cf := range customFields {
+				newField := map[string]interface{}{
+					"name":       cf.Name,
+					"label":      cf.Label,
+					"type":       cf.Type,
+					"group":      "product",
+					"required":   cf.Required,
+					"sort_order": cf.SortOrder,
+					"enabled":    true,
+					"created_at": time.Now(),
+					"updated_at": time.Now(),
+				}
+				tx.Table("custom_fields").Create(&newField)
+			}
+		}
+
+		// 5. Copy product-download associations
+		var downloads []ProductDownload
+		if err := tx.Where("product_id = ?", src.ID).Find(&downloads).Error; err == nil && len(downloads) > 0 {
+			newDownloads := make([]ProductDownload, len(downloads))
+			for i, d := range downloads {
+				newDownloads[i] = ProductDownload{
+					ProductID:  newProduct.ID,
+					DownloadID: d.DownloadID,
+				}
+			}
+			tx.Create(&newDownloads)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return newProduct, nil
+}
+
+// ==================== Edit Stock ====================
+
+type EditStockRequest struct {
+	Stock int `json:"stock" binding:"required"`
+}
+
+// EditStock updates a product's stock quantity.
+func (s *ProductService) EditStock(id uint, stock int) error {
+	return s.db.Table("products").Where("id = ?", id).Update("stock", stock).Error
+}
+
+// ==================== Batch Operations ====================
+
+type BatchUpdateRequest struct {
+	IDs    []uint                 `json:"ids" binding:"required,min=1"`
+	Fields map[string]interface{} `json:"fields" binding:"required"`
+}
+
+type BatchDeleteRequest struct {
+	IDs []uint `json:"ids" binding:"required,min=1"`
+}
+
+// BatchUpdate updates multiple products at once.
+func (s *ProductService) BatchUpdate(ids []uint, fields map[string]interface{}) error {
+	allowedFields := map[string]bool{
+		"name": true, "description": true, "price": true, "status": true,
+		"hidden": true, "featured": true, "stock": true, "sort_order": true,
+		"group_id": true, "type": true, "auto_setup": true, "stock_control": true,
+	}
+	safeFields := map[string]interface{}{}
+	for k, v := range fields {
+		if allowedFields[k] {
+			safeFields[k] = v
+		}
+	}
+	if len(safeFields) == 0 {
+		return fmt.Errorf("no valid fields to update")
+	}
+	safeFields["updated_at"] = time.Now()
+	return s.db.Table("products").Where("id IN ?", ids).Updates(safeFields).Error
+}
+
+// BatchDelete soft-deletes multiple products.
+func (s *ProductService) BatchDelete(ids []uint) error {
+	return s.db.Table("products").Where("id IN ?", ids).
+		Update("deleted_at", time.Now()).Error
+}
+
+// ==================== Check Alias ====================
+
+type CheckAliasRequest struct {
+	Alias string `json:"alias" binding:"required"`
+	ID    uint   `json:"id"` // 排除自身
+}
+
+// CheckAlias checks if a group alias is already in use.
+func (s *ProductService) CheckAlias(alias string, excludeID uint) (bool, error) {
+	var count int64
+	query := s.db.Table("product_groups").Where("alias = ?", alias)
+	if excludeID > 0 {
+		query = query.Where("id != ?", excludeID)
+	}
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count == 0, nil
+}
+
+// ==================== Delete Custom Field ====================
+
+// DeleteCustomField deletes a custom field by ID.
+func (s *ProductService) DeleteCustomField(id uint) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// Delete associated values first
+		if err := tx.Table("custom_field_values").Where("field_id = ?", id).Delete(nil).Error; err != nil {
+			return err
+		}
+		// Delete the field
+		return tx.Table("custom_fields").Where("id = ?", id).Delete(nil).Error
+	})
+}
+
+// ==================== Download Management ====================
+
+type ManageDownloadsRequest struct {
+	ProductID  uint `json:"product_id" binding:"required"`
+	AddID      uint `json:"add_id"`      // 要添加的下载文件ID
+	RemoveID   uint `json:"remove_id"`   // 要移除的下载文件ID
+}
+
+type AddDownloadFileRequest struct {
+	ProductID   uint   `json:"product_id" binding:"required"`
+	CategoryID  uint   `json:"category_id" binding:"required"`
+	Title       string `json:"title" binding:"required,max=255"`
+	Description string `json:"description"`
+}
+
+// ManageDownloads adds or removes download file associations for a product.
+func (s *ProductService) ManageDownloads(req ManageDownloadsRequest) (string, error) {
+	if req.AddID > 0 {
+		// Check if already linked
+		var count int64
+		s.db.Table("product_downloads").Where("product_id = ? AND download_id = ?", req.ProductID, req.AddID).Count(&count)
+		if count > 0 {
+			return "already linked", nil
+		}
+		link := map[string]interface{}{
+			"product_id":  req.ProductID,
+			"download_id": req.AddID,
+			"created_at":  time.Now(),
+		}
+		if err := s.db.Table("product_downloads").Create(&link).Error; err != nil {
+			return "", err
+		}
+		return "added", nil
+	}
+	if req.RemoveID > 0 {
+		if err := s.db.Table("product_downloads").Where("product_id = ? AND download_id = ?", req.ProductID, req.RemoveID).Delete(nil).Error; err != nil {
+			return "", err
+		}
+		return "removed", nil
+	}
+	return "", fmt.Errorf("either add_id or remove_id is required")
+}
+
+// GetProductDownloads returns download files linked to a product.
+func (s *ProductService) GetProductDownloads(productID uint) ([]map[string]interface{}, error) {
+	var results []map[string]interface{}
+	err := s.db.Table("download_files df").
+		Select("df.id, df.title, df.description, df.file_path, df.file_size, df.file_type, df.download_count").
+		Joins("JOIN product_downloads pd ON pd.download_id = df.id").
+		Where("pd.product_id = ?", productID).
+		Where("df.deleted_at IS NULL").
+		Scan(&results).Error
+	return results, err
+}
+
+// AddDownloadFile creates a new download file and links it to a product.
+func (s *ProductService) AddDownloadFile(req AddDownloadFileRequest) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		file := map[string]interface{}{
+			"category_id": req.CategoryID,
+			"title":       req.Title,
+			"description": req.Description,
+			"file_path":   "",
+			"file_size":   0,
+			"is_published": true,
+			"created_at":  time.Now(),
+			"updated_at":  time.Now(),
+		}
+		if err := tx.Table("download_files").Create(&file).Error; err != nil {
+			return err
+		}
+		// Get the new file ID
+		var newID uint
+		tx.Table("download_files").Select("MAX(id)").Scan(&newID)
+		link := map[string]interface{}{
+			"product_id":  req.ProductID,
+			"download_id": newID,
+			"created_at":  time.Now(),
+		}
+		return tx.Table("product_downloads").Create(&link).Error
+	})
+}
+
+// ==================== Discount List ====================
+
+type DiscountDTO struct {
+	ID           uint    `json:"id"`
+	ProductID    uint    `json:"product_id"`
+	Cycle        string  `json:"cycle"`
+	Price        float64 `json:"price"`
+	SetupFee     float64 `json:"setup_fee"`
+	Currency     string  `json:"currency"`
+}
+
+// GetDiscountList returns pricing/discount records for a product.
+func (s *ProductService) GetDiscountList(productID uint) ([]DiscountDTO, error) {
+	var list []DiscountDTO
+	if err := s.db.Table("product_pricings").
+		Where("product_id = ?", productID).
+		Order("sort_order ASC, id ASC").
+		Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+// ==================== Get Upstream Price ====================
+
+// GetUpstreamPrice fetches upstream pricing for a product via its linked upstream provider.
+func (s *ProductService) GetUpstreamPrice(productID uint) (map[string]interface{}, error) {
+	// Find the upstream mapping for this product
+	var mapping struct {
+		UpstreamID      uint   `gorm:"column:upstream_id"`
+		RemoteProductID string `gorm:"column:remote_product_id"`
+		Config          string `gorm:"column:config"`
+	}
+	if err := s.db.Table("upstream_products").
+		Where("local_product_id = ?", productID).First(&mapping).Error; err != nil {
+		return nil, fmt.Errorf("no upstream mapping found for product %d", productID)
+	}
+
+	// Find the upstream provider
+	var provider struct {
+		ID     uint   `gorm:"column:id"`
+		Name   string `gorm:"column:name"`
+		Type   string `gorm:"column:type"`
+		APIURL string `gorm:"column:api_url"`
+		APIKey string `gorm:"column:api_key"`
+	}
+	if err := s.db.Table("upstream_providers").
+		Where("id = ? AND is_active = true", mapping.UpstreamID).First(&provider).Error; err != nil {
+		return nil, fmt.Errorf("upstream provider not found")
+	}
+
+	result := map[string]interface{}{
+		"provider_id":       provider.ID,
+		"provider_name":     provider.Name,
+		"provider_type":     provider.Type,
+		"remote_product_id": mapping.RemoteProductID,
+		"config":            mapping.Config,
+	}
+	return result, nil
 }

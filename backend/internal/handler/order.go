@@ -295,3 +295,223 @@ func (h *OrderHandler) UpdateStatus(c *gin.Context) {
 	_ = id // status update via direct DB in real impl
 	response.SuccessMsg(c, "order status updated")
 }
+
+// ---------------------------------------------------------------------------
+// Admin order management endpoints
+// ---------------------------------------------------------------------------
+
+// AdminCreateOrder handles admin creating an order for a user.
+func (h *OrderHandler) AdminCreateOrder(c *gin.Context) {
+	adminID := c.GetUint("admin_id")
+	var req service.AdminCreateOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	order, err := h.orderSvc.AdminCreateOrder(adminID, req)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, order)
+}
+
+// CheckOrder validates whether an order can be executed.
+func (h *OrderHandler) CheckOrder(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid order id")
+		return
+	}
+
+	result, err := h.orderSvc.CheckOrder(uint(id))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
+// BatchUpdate performs batch operations on orders (confirm/cancel/delete).
+func (h *OrderHandler) BatchUpdate(c *gin.Context) {
+	adminID := c.GetUint("admin_id")
+	var req service.BatchUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	processed, err := h.orderSvc.BatchUpdate(adminID, req)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{
+		"action":    req.Action,
+		"processed": processed,
+	})
+}
+
+// Delete soft-deletes an order.
+func (h *OrderHandler) Delete(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid order id")
+		return
+	}
+
+	if err := h.orderSvc.Delete(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "order deleted")
+}
+
+// AddNote adds an admin note to an order.
+func (h *OrderHandler) AddNote(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid order id")
+		return
+	}
+
+	adminID := c.GetUint("admin_id")
+
+	var req struct {
+		Content   string `json:"content" binding:"required"`
+		IsPrivate bool   `json:"is_private"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	note, err := h.orderSvc.AddNote(uint(id), adminID, req.Content, req.IsPrivate)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, note)
+}
+
+// GetNotes returns all notes for an order.
+func (h *OrderHandler) GetNotes(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid order id")
+		return
+	}
+
+	notes, err := h.orderSvc.GetNotes(uint(id))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, notes)
+}
+
+// GetSaleOrders returns sale-related orders.
+func (h *OrderHandler) GetSaleOrders(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	var saleID *uint
+	if s := c.Query("sale_id"); s != "" {
+		v, _ := strconv.ParseUint(s, 10, 64)
+		sid := uint(v)
+		saleID = &sid
+	}
+
+	var status *string
+	if s := c.Query("status"); s != "" {
+		status = &s
+	}
+
+	orders, total, err := h.orderSvc.GetSaleOrders(page, pageSize, saleID, status)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, orders, total, page, pageSize)
+}
+
+// ActivateOrder manually activates an order (opens service without payment).
+func (h *OrderHandler) ActivateOrder(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid order id")
+		return
+	}
+
+	order, err := h.orderSvc.ActivateOrder(uint(id))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, order)
+}
+
+// ChangeStatus changes the status of an order.
+func (h *OrderHandler) ChangeStatus(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid order id")
+		return
+	}
+
+	var req struct {
+		Status int16 `json:"status" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.orderSvc.ChangeStatus(uint(id), req.Status); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "order status changed")
+}
+
+// GetMultiTotal calculates the total price for multiple products.
+func (h *OrderHandler) GetMultiTotal(c *gin.Context) {
+	var req struct {
+		Items      []service.MultiProductItem `json:"items" binding:"required,min=1"`
+		CouponCode string                     `json:"coupon_code"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	result, err := h.orderSvc.GetMultiTotal(req.Items, req.CouponCode)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
+// ApplyCustomPromo creates a custom promo code.
+func (h *OrderHandler) ApplyCustomPromo(c *gin.Context) {
+	var req service.CreateCustomPromoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	promo, err := h.orderSvc.ApplyCustomPromo(req)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, promo)
+}
+
+// SearchPage returns filter configuration for the order search page.
+func (h *OrderHandler) SearchPage(c *gin.Context) {
+	config := h.orderSvc.SearchPageConfig()
+	response.Success(c, config)
+}

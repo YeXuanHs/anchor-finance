@@ -10,12 +10,25 @@ import (
 // JSON 自定义JSON类型，映射PostgreSQL jsonb
 type JSON map[string]interface{}
 
-// ProductGroup 商品分组
+// ProductFirstGroup 一级分组
+type ProductFirstGroup struct {
+	gorm.Model
+	Name     string `gorm:"type:varchar(128);not null" json:"name"`
+	Hidden   bool   `gorm:"default:false" json:"hidden"`
+	SortOrder int   `gorm:"default:0;index;column:sort_order" json:"sort_order"`
+	UpstreamID *uint `json:"upstream_id"`
+}
+
+func (ProductFirstGroup) TableName() string { return "product_first_groups" }
+
+// ProductGroup 商品分组（二级分组）
 type ProductGroup struct {
 	gorm.Model
 	Name        string    `gorm:"type:varchar(128);not null" json:"name"`
 	Description string    `gorm:"type:text" json:"description"`
 	Slug        string    `gorm:"type:varchar(128);uniqueIndex" json:"slug"`
+	Alias       string    `gorm:"type:varchar(128);index" json:"alias"`
+	FirstGroupID *uint    `gorm:"index" json:"first_group_id"` // 关联一级分组
 	ParentID    *uint     `gorm:"index" json:"parent_id"`
 	Parent      *ProductGroup `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
 	Children    []ProductGroup `gorm:"foreignKey:ParentID" json:"children,omitempty"`
@@ -93,3 +106,28 @@ type UserProduct struct {
 	CustomFields  datatypes.JSON `gorm:"type:json" json:"custom_fields"`
 	Metadata      datatypes.JSON `gorm:"type:json" json:"metadata"`
 }
+
+// ProductDownload 产品-下载文件关联
+type ProductDownload struct {
+	ID         uint `gorm:"primaryKey" json:"id"`
+	ProductID  uint `gorm:"index;not null" json:"product_id"`
+	DownloadID uint `gorm:"index;not null" json:"download_id"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+func (ProductDownload) TableName() string { return "product_downloads" }
+
+// ProductPricing 产品定价（多周期价格）
+type ProductPricing struct {
+	ID           uint    `gorm:"primaryKey" json:"id"`
+	ProductID    uint    `gorm:"index;not null" json:"product_id"`
+	Cycle        string  `gorm:"type:varchar(32);not null" json:"cycle"` // monthly/quarterly/semi-annually/annually/biennially/triennially/onetime
+	Price        float64 `gorm:"type:decimal(20,4);not null" json:"price"`
+	SetupFee     float64 `gorm:"type:decimal(20,4);default:0" json:"setup_fee"`
+	Currency     string  `gorm:"type:varchar(8);default:'CNY'" json:"currency"`
+	SortOrder    int     `gorm:"default:0" json:"sort_order"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+func (ProductPricing) TableName() string { return "product_pricings" }

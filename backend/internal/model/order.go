@@ -101,3 +101,19 @@ type CouponUsageLog struct {
 	OrderID  uint    `gorm:"index" json:"order_id"`
 	Discount float64 `gorm:"type:decimal(20,4);not null" json:"discount"`
 }
+
+// OrderNote 订单备注
+type OrderNote struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	OrderID   uint      `gorm:"index;not null" json:"order_id"`
+	Order     Order     `gorm:"foreignKey:OrderID" json:"order,omitempty"`
+	AdminID   uint      `gorm:"index" json:"admin_id"`
+	Content   string    `gorm:"type:text;not null" json:"content"`
+	IsPrivate bool      `gorm:"default:true" json:"is_private"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// TableName overrides the default table name.
+func (OrderNote) TableName() string {
+	return "order_notes"
+}

@@ -44,7 +44,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	authHandler := handler.NewAuthHandler(deps.UserSvc, deps.Log, deps.JWTMgr)
 	userHandler := handler.NewUserHandler(deps.UserSvc, deps.Log)
 	productHandler := handler.NewProductHandler(deps.ProdSvc, deps.Log)
-	orderHandler := handler.NewOrderHandler(deps.OrdSvc, deps.Log)
+	orderHandler := handler.NewOrderHandlerWithDB(deps.OrdSvc, deps.DB, deps.Log)
 	invoiceHandler := handler.NewInvoiceHandler(deps.InvSvc, deps.Log)
 	ticketHandler := handler.NewTicketHandler(deps.TicSvc, deps.Log)
 	adminHandler := handler.NewAdminHandler(deps.DB, deps.UserSvc, deps.OrdSvc, deps.InvSvc, deps.Log)
@@ -77,15 +77,53 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/products", productHandler.Create)
 		admin.PUT("/products/:id", productHandler.Update)
 		admin.DELETE("/products/:id", productHandler.Delete)
+		admin.POST("/products/duplicate", productHandler.DuplicateProduct)
+		admin.PUT("/products/:id/stock", productHandler.EditStock)
+		admin.POST("/products/batch-update", productHandler.BatchUpdate)
+		admin.POST("/products/batch-delete", productHandler.BatchDelete)
+		admin.POST("/products/sort", productHandler.UpdateProductSort)
+		admin.GET("/products/:id/discounts", productHandler.GetDiscountList)
+		admin.GET("/products/:id/downloads", productHandler.GetProductDownloads)
+		admin.POST("/products/:id/upstream-price", productHandler.GetUpstreamPrice)
+
+		// 一级分组
+		admin.GET("/product-first-groups", productHandler.GetFirstGroups)
+		admin.POST("/product-first-groups", productHandler.CreateFirstGroup)
+		admin.PUT("/product-first-groups/:id", productHandler.UpdateFirstGroup)
+		admin.DELETE("/product-first-groups/:id", productHandler.DeleteFirstGroup)
+		admin.POST("/product-first-groups/sort", productHandler.UpdateFirstGroupSort)
+
+		// 二级分组
 		admin.GET("/product-groups", productHandler.GetGroups)
 		admin.POST("/product-groups", productHandler.CreateGroup)
 		admin.PUT("/product-groups/:id", productHandler.UpdateGroup)
 		admin.DELETE("/product-groups/:id", productHandler.DeleteGroup)
+		admin.POST("/product-groups/sort", productHandler.UpdateGroupSort)
+		admin.GET("/product-groups/check-alias", productHandler.CheckAlias)
+
+		// 产品下载管理
+		admin.POST("/product-downloads/manage", productHandler.ManageDownloads)
+		admin.POST("/product-downloads/add-file", productHandler.AddDownloadFile)
+
+		// 产品自定义字段
+		admin.DELETE("/product-custom-fields/:id", productHandler.DeleteCustomField)
 
 		// 订单管理
 		admin.GET("/orders", orderHandler.GetList)
 		admin.GET("/orders/:id", orderHandler.GetDetail)
 		admin.POST("/orders/:id/status", orderHandler.UpdateStatus)
+		admin.POST("/orders", orderHandler.AdminCreateOrder)
+		admin.GET("/orders/:id/check", orderHandler.CheckOrder)
+		admin.POST("/orders/batch", orderHandler.BatchUpdate)
+		admin.DELETE("/orders/:id", orderHandler.Delete)
+		admin.POST("/orders/:id/notes", orderHandler.AddNote)
+		admin.GET("/orders/:id/notes", orderHandler.GetNotes)
+		admin.GET("/orders/sale", orderHandler.GetSaleOrders)
+		admin.POST("/orders/:id/activate", orderHandler.ActivateOrder)
+		admin.POST("/orders/:id/change-status", orderHandler.ChangeStatus)
+		admin.POST("/orders/multi-total", orderHandler.GetMultiTotal)
+		admin.POST("/orders/custom-promo", orderHandler.ApplyCustomPromo)
+		admin.GET("/orders/search-page", orderHandler.SearchPage)
 
 		// 账单管理（静态路由必须在参数路由之前注册）
 		admin.GET("/invoices", invoiceHandler.GetList)
@@ -445,6 +483,18 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/languages/:code/translations", langHandler.SaveTranslations)
 		admin.POST("/languages/:code/import", langHandler.ImportTranslations)
 		admin.GET("/lang-keys", langHandler.GetLangKeys)
+
+		// 优惠码管理
+		promoHandler := handler.NewPromoCodeHandler(deps.DB, deps.Log)
+		admin.GET("/promo-codes", promoHandler.GetList)
+		admin.GET("/promo-codes/:id", promoHandler.GetDetail)
+		admin.POST("/promo-codes", promoHandler.Create)
+		admin.PUT("/promo-codes/:id", promoHandler.Update)
+		admin.DELETE("/promo-codes/:id", promoHandler.Delete)
+		admin.POST("/promo-codes/:id/status", promoHandler.SetStatus)
+		admin.POST("/promo-codes/:id/expire", promoHandler.ExpireImmediately)
+		admin.GET("/promo-codes/auto-generate", promoHandler.AutoGenerate)
+		admin.GET("/promo-codes/:id/logs", promoHandler.GetUsageLogs)
 
 		// 前台导航分组管理
 		navGroupHandler := handler.NewNavGroupHandler(deps.DB)

@@ -116,6 +116,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.GET("/languages", langHandler.GetActiveLanguages)
 	r.GET("/languages/:code/translations", langHandler.GetTranslations)
 
+	// 优惠码验证
+	promoHandler := handler.NewPromoCodeHandler(deps.DB, deps.Log)
+	r.GET("/promo-codes/validate", promoHandler.Validate)
+
 	// 需要认证的路由
 	auth := r.Group("/")
 	auth.Use(middleware.AuthRequired())
