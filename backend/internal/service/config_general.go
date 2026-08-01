@@ -713,3 +713,627 @@ func parseFloat(s string) float64 {
 	fmt.Sscanf(s, "%f", &f)
 	return f
 }
+
+func parseInt(s string) int {
+	if s == "" {
+		return 0
+	}
+	var i int
+	fmt.Sscanf(s, "%d", &i)
+	return i
+}
+
+func intStr(i int) string {
+	return fmt.Sprintf("%d", i)
+}
+
+// ==================== Payment Config ====================
+
+type PaymentConfig struct {
+	AlipayEnabled    bool   `json:"alipay_enabled"`
+	WechatEnabled    bool   `json:"wechat_enabled"`
+	AlipayAppID      string `json:"alipay_app_id"`
+	AlipayPrivateKey string `json:"alipay_private_key"`
+	WechatAppID      string `json:"wechat_app_id"`
+	WechatMchID      string `json:"wechat_mch_id"`
+	WechatAPIKey     string `json:"wechat_api_key"`
+	AutoInvoice      bool   `json:"auto_invoice"`
+}
+
+var paymentConfigKeys = []string{
+	"payment_alipay_enabled", "payment_wechat_enabled",
+	"payment_alipay_app_id", "payment_alipay_private_key",
+	"payment_wechat_app_id", "payment_wechat_mch_id", "payment_wechat_api_key",
+	"payment_auto_invoice",
+}
+
+func (s *ConfigGeneralService) GetPaymentConfig() (*PaymentConfig, error) {
+	var configs []model.SystemConfig
+	if err := s.db.Where("`key` IN ?", paymentConfigKeys).Find(&configs).Error; err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, len(configs))
+	for _, c := range configs {
+		m[c.Key] = c.Value
+	}
+	return &PaymentConfig{
+		AlipayEnabled:    m["payment_alipay_enabled"] == "true",
+		WechatEnabled:    m["payment_wechat_enabled"] == "true",
+		AlipayAppID:      m["payment_alipay_app_id"],
+		AlipayPrivateKey: m["payment_alipay_private_key"],
+		WechatAppID:      m["payment_wechat_app_id"],
+		WechatMchID:      m["payment_wechat_mch_id"],
+		WechatAPIKey:     m["payment_wechat_api_key"],
+		AutoInvoice:      m["payment_auto_invoice"] == "true",
+	}, nil
+}
+
+func (s *ConfigGeneralService) UpdatePaymentConfig(req PaymentConfig) error {
+	configs := map[string]string{
+		"payment_alipay_enabled":     boolStr(req.AlipayEnabled),
+		"payment_wechat_enabled":     boolStr(req.WechatEnabled),
+		"payment_alipay_app_id":      req.AlipayAppID,
+		"payment_alipay_private_key": req.AlipayPrivateKey,
+		"payment_wechat_app_id":      req.WechatAppID,
+		"payment_wechat_mch_id":      req.WechatMchID,
+		"payment_wechat_api_key":     req.WechatAPIKey,
+		"payment_auto_invoice":       boolStr(req.AutoInvoice),
+	}
+	return s.saveConfigMap(configs, "payment")
+}
+
+// ==================== SMS Config ====================
+
+type SmsConfig struct {
+	Provider       string `json:"provider"`
+	AccessKeyID    string `json:"access_key_id"`
+	AccessSecret   string `json:"access_secret"`
+	SignName       string `json:"sign_name"`
+	TemplateCode   string `json:"template_code"`
+	DailyLimit     int    `json:"daily_limit"`
+	PhoneLimit     int    `json:"phone_limit"`
+	Enabled        bool   `json:"enabled"`
+}
+
+var smsConfigKeys = []string{
+	"sms_provider", "sms_access_key_id", "sms_access_secret",
+	"sms_sign_name", "sms_template_code", "sms_daily_limit", "sms_phone_limit",
+	"sms_enabled",
+}
+
+func (s *ConfigGeneralService) GetSmsConfig() (*SmsConfig, error) {
+	var configs []model.SystemConfig
+	if err := s.db.Where("`key` IN ?", smsConfigKeys).Find(&configs).Error; err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, len(configs))
+	for _, c := range configs {
+		m[c.Key] = c.Value
+	}
+	return &SmsConfig{
+		Provider:     m["sms_provider"],
+		AccessKeyID:  m["sms_access_key_id"],
+		AccessSecret: m["sms_access_secret"],
+		SignName:     m["sms_sign_name"],
+		TemplateCode: m["sms_template_code"],
+		DailyLimit:   parseInt(m["sms_daily_limit"]),
+		PhoneLimit:   parseInt(m["sms_phone_limit"]),
+		Enabled:      m["sms_enabled"] == "true",
+	}, nil
+}
+
+func (s *ConfigGeneralService) UpdateSmsConfig(req SmsConfig) error {
+	configs := map[string]string{
+		"sms_provider":       req.Provider,
+		"sms_access_key_id":  req.AccessKeyID,
+		"sms_access_secret":  req.AccessSecret,
+		"sms_sign_name":      req.SignName,
+		"sms_template_code":  req.TemplateCode,
+		"sms_daily_limit":    intStr(req.DailyLimit),
+		"sms_phone_limit":    intStr(req.PhoneLimit),
+		"sms_enabled":        boolStr(req.Enabled),
+	}
+	return s.saveConfigMap(configs, "sms")
+}
+
+// ==================== Security Config ====================
+
+type SecurityConfig struct {
+	RequiredPasswordStrength string `json:"required_password_strength"`
+	InvalidLoginsBanLength   int    `json:"invalid_logins_ban_length"`
+	IPCheckFrontend          bool   `json:"ip_check_frontend"`
+	IPCheckAdmin             bool   `json:"ip_check_admin"`
+	LoginErrorMaxNum         int    `json:"login_error_max_num"`
+}
+
+var securityConfigKeys = []string{
+	"required_pwstrength", "invalid_logins_banlength",
+	"home_ip_check", "admin_ip_check", "login_error_max_num",
+}
+
+func (s *ConfigGeneralService) GetSecurityConfig() (*SecurityConfig, error) {
+	var configs []model.SystemConfig
+	if err := s.db.Where("`key` IN ?", securityConfigKeys).Find(&configs).Error; err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, len(configs))
+	for _, c := range configs {
+		m[c.Key] = c.Value
+	}
+	return &SecurityConfig{
+		RequiredPasswordStrength: m["required_pwstrength"],
+		InvalidLoginsBanLength:   parseInt(m["invalid_logins_banlength"]),
+		IPCheckFrontend:          m["home_ip_check"] == "1",
+		IPCheckAdmin:             m["admin_ip_check"] == "1",
+		LoginErrorMaxNum:         parseInt(m["login_error_max_num"]),
+	}, nil
+}
+
+func (s *ConfigGeneralService) UpdateSecurityConfig(req SecurityConfig) error {
+	configs := map[string]string{
+		"required_pwstrength":   req.RequiredPasswordStrength,
+		"invalid_logins_banlength": intStr(req.InvalidLoginsBanLength),
+		"home_ip_check":         boolToIntStr(req.IPCheckFrontend),
+		"admin_ip_check":        boolToIntStr(req.IPCheckAdmin),
+		"login_error_max_num":   intStr(req.LoginErrorMaxNum),
+	}
+	return s.saveConfigMap(configs, "security")
+}
+
+func boolToIntStr(b bool) string {
+	if b {
+		return "1"
+	}
+	return "0"
+}
+
+// ==================== Local Config ====================
+
+type LocalConfig struct {
+	Charset           string `json:"charset"`
+	DateFormat        string `json:"date_format"`
+	ClientDateFormat  string `json:"client_date_format"`
+	DefaultCountry    string `json:"default_country"`
+	Language          string `json:"language"`
+	AllowUserLanguage bool   `json:"allow_user_language"`
+	TelCCInput        bool   `json:"tel_cc_input"`
+}
+
+var localConfigKeys = []string{
+	"charset", "date_format", "client_date_format",
+	"default_country", "language", "allow_user_language", "tel_cc_input",
+}
+
+func (s *ConfigGeneralService) GetLocalConfig() (*LocalConfig, error) {
+	var configs []model.SystemConfig
+	if err := s.db.Where("`key` IN ?", localConfigKeys).Find(&configs).Error; err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, len(configs))
+	for _, c := range configs {
+		m[c.Key] = c.Value
+	}
+	return &LocalConfig{
+		Charset:           m["charset"],
+		DateFormat:        m["date_format"],
+		ClientDateFormat:  m["client_date_format"],
+		DefaultCountry:    m["default_country"],
+		Language:          m["language"],
+		AllowUserLanguage: m["allow_user_language"] == "true",
+		TelCCInput:        m["tel_cc_input"] == "true",
+	}, nil
+}
+
+func (s *ConfigGeneralService) UpdateLocalConfig(req LocalConfig) error {
+	configs := map[string]string{
+		"charset":            req.Charset,
+		"date_format":        req.DateFormat,
+		"client_date_format": req.ClientDateFormat,
+		"default_country":    req.DefaultCountry,
+		"language":           req.Language,
+		"allow_user_language": boolStr(req.AllowUserLanguage),
+		"tel_cc_input":       boolStr(req.TelCCInput),
+	}
+	return s.saveConfigMap(configs, "local")
+}
+
+// ==================== Affiliate Config ====================
+
+type AffiliateConfig struct {
+	Enabled             bool    `json:"enabled"`
+	BonusDeposit        float64 `json:"bonus_deposit"`
+	Rate                float64 `json:"rate"`
+	Type                int     `json:"type"`
+	CookieDays          int     `json:"cookie_days"`
+	MinWithdraw         float64 `json:"min_withdraw"`
+	RequireAuth         bool    `json:"require_auth"`
+	DelayCommission     int     `json:"delay_commission"`
+	IsReorder           bool    `json:"is_reorder"`
+	ReorderRate         float64 `json:"reorder_rate"`
+	ReorderType         int     `json:"reorder_type"`
+	IsRenew             bool    `json:"is_renew"`
+	RenewRate           float64 `json:"renew_rate"`
+	RenewType           int     `json:"renew_type"`
+	Invited             bool    `json:"invited"`
+	InvitedMoney        float64 `json:"invited_money"`
+	InvitedType         int     `json:"invited_type"`
+}
+
+var affiliateConfigKeys = []string{
+	"affiliate_enabled", "affiliate_bonusde_posit", "affiliate_bates", "affiliate_type",
+	"affiliate_cookie", "affiliate_withdraw", "affiliate_is_authentication",
+	"affiliate_delay_commission", "affiliate_is_reorder", "affiliate_reorder", "affiliate_reorder_type",
+	"affiliate_is_renew", "affiliate_renew", "affiliate_renew_type",
+	"affiliate_invited", "affiliate_invited_money", "affiliate_invited_type",
+}
+
+func (s *ConfigGeneralService) GetAffiliateConfig() (*AffiliateConfig, error) {
+	var configs []model.SystemConfig
+	if err := s.db.Where("`key` IN ?", affiliateConfigKeys).Find(&configs).Error; err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, len(configs))
+	for _, c := range configs {
+		m[c.Key] = c.Value
+	}
+	return &AffiliateConfig{
+		Enabled:         m["affiliate_enabled"] == "1",
+		BonusDeposit:    parseFloat(m["affiliate_bonusde_posit"]),
+		Rate:            parseFloat(m["affiliate_bates"]),
+		Type:            parseInt(m["affiliate_type"]),
+		CookieDays:      parseInt(m["affiliate_cookie"]),
+		MinWithdraw:     parseFloat(m["affiliate_withdraw"]),
+		RequireAuth:     m["affiliate_is_authentication"] == "1",
+		DelayCommission: parseInt(m["affiliate_delay_commission"]),
+		IsReorder:       m["affiliate_is_reorder"] == "1",
+		ReorderRate:     parseFloat(m["affiliate_reorder"]),
+		ReorderType:     parseInt(m["affiliate_reorder_type"]),
+		IsRenew:         m["affiliate_is_renew"] == "1",
+		RenewRate:       parseFloat(m["affiliate_renew"]),
+		RenewType:       parseInt(m["affiliate_renew_type"]),
+		Invited:         m["affiliate_invited"] == "1",
+		InvitedMoney:    parseFloat(m["affiliate_invited_money"]),
+		InvitedType:     parseInt(m["affiliate_invited_type"]),
+	}, nil
+}
+
+func (s *ConfigGeneralService) UpdateAffiliateConfig(req AffiliateConfig) error {
+	configs := map[string]string{
+		"affiliate_enabled":           boolOneStr(req.Enabled),
+		"affiliate_bonusde_posit":     fmt.Sprintf("%.2f", req.BonusDeposit),
+		"affiliate_bates":             fmt.Sprintf("%.2f", req.Rate),
+		"affiliate_type":              intStr(req.Type),
+		"affiliate_cookie":            intStr(req.CookieDays),
+		"affiliate_withdraw":          fmt.Sprintf("%.2f", req.MinWithdraw),
+		"affiliate_is_authentication": boolOneStr(req.RequireAuth),
+		"affiliate_delay_commission":  intStr(req.DelayCommission),
+		"affiliate_is_reorder":        boolOneStr(req.IsReorder),
+		"affiliate_reorder":           fmt.Sprintf("%.2f", req.ReorderRate),
+		"affiliate_reorder_type":      intStr(req.ReorderType),
+		"affiliate_is_renew":          boolOneStr(req.IsRenew),
+		"affiliate_renew":             fmt.Sprintf("%.2f", req.RenewRate),
+		"affiliate_renew_type":        intStr(req.RenewType),
+		"affiliate_invited":           boolOneStr(req.Invited),
+		"affiliate_invited_money":     fmt.Sprintf("%.2f", req.InvitedMoney),
+		"affiliate_invited_type":      intStr(req.InvitedType),
+	}
+	return s.saveConfigMap(configs, "affiliate")
+}
+
+func boolOneStr(b bool) string {
+	if b {
+		return "1"
+	}
+	return "0"
+}
+
+// ==================== Captcha Config ====================
+
+type CaptchaConfigData struct {
+	Enabled               bool   `json:"enabled"`
+	Length                int    `json:"length"`
+	Combination           int    `json:"combination"`
+	RegisterEmailCaptcha  bool   `json:"register_email_captcha"`
+	RegisterPhoneCaptcha  bool   `json:"register_phone_captcha"`
+	LoginPhoneCaptcha     bool   `json:"login_phone_captcha"`
+	LoginEmailCaptcha     bool   `json:"login_email_captcha"`
+	LoginCodeCaptcha      bool   `json:"login_code_captcha"`
+	LoginIDCaptcha        bool   `json:"login_id_captcha"`
+	LoginAdminCaptcha     bool   `json:"login_admin_captcha"`
+}
+
+var captchaConfigKeys = []string{
+	"is_captcha", "captcha_length", "captcha_combination",
+	"allow_register_email_captcha", "allow_register_phone_captcha",
+	"allow_login_phone_captcha", "allow_login_email_captcha",
+	"allow_login_code_captcha", "allow_login_id_captcha",
+	"allow_login_admin_captcha",
+}
+
+func (s *ConfigGeneralService) GetCaptchaConfig() (*CaptchaConfigData, error) {
+	var configs []model.SystemConfig
+	if err := s.db.Where("`key` IN ?", captchaConfigKeys).Find(&configs).Error; err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, len(configs))
+	for _, c := range configs {
+		m[c.Key] = c.Value
+	}
+	return &CaptchaConfigData{
+		Enabled:              m["is_captcha"] != "0",
+		Length:               parseInt(m["captcha_length"]),
+		Combination:          parseInt(m["captcha_combination"]),
+		RegisterEmailCaptcha: m["allow_register_email_captcha"] != "0",
+		RegisterPhoneCaptcha: m["allow_register_phone_captcha"] != "0",
+		LoginPhoneCaptcha:    m["allow_login_phone_captcha"] != "0",
+		LoginEmailCaptcha:    m["allow_login_email_captcha"] != "0",
+		LoginCodeCaptcha:     m["allow_login_code_captcha"] != "0",
+		LoginIDCaptcha:       m["allow_login_id_captcha"] != "0",
+		LoginAdminCaptcha:    m["allow_login_admin_captcha"] != "0",
+	}, nil
+}
+
+func (s *ConfigGeneralService) UpdateCaptchaConfig(req CaptchaConfigData) error {
+	configs := map[string]string{
+		"is_captcha":                  boolOneStr(req.Enabled),
+		"captcha_length":              intStr(req.Length),
+		"captcha_combination":         intStr(req.Combination),
+		"allow_register_email_captcha": boolOneStr(req.RegisterEmailCaptcha),
+		"allow_register_phone_captcha": boolOneStr(req.RegisterPhoneCaptcha),
+		"allow_login_phone_captcha":   boolOneStr(req.LoginPhoneCaptcha),
+		"allow_login_email_captcha":   boolOneStr(req.LoginEmailCaptcha),
+		"allow_login_code_captcha":    boolOneStr(req.LoginCodeCaptcha),
+		"allow_login_id_captcha":      boolOneStr(req.LoginIDCaptcha),
+		"allow_login_admin_captcha":   boolOneStr(req.LoginAdminCaptcha),
+	}
+	return s.saveConfigMap(configs, "captcha")
+}
+
+// ==================== Buy Product Config ====================
+
+type BuyProductConfig struct {
+	MustBindPhone     bool   `json:"must_bind_phone"`
+	RequireRealName   bool   `json:"require_real_name"`
+	OrderPageStyle    string `json:"order_page_style"`
+}
+
+var buyProductConfigKeys = []string{
+	"buy_product_must_bind_phone", "certifi_isrealname", "order_page_style",
+}
+
+func (s *ConfigGeneralService) GetBuyProductConfig() (*BuyProductConfig, error) {
+	var configs []model.SystemConfig
+	if err := s.db.Where("`key` IN ?", buyProductConfigKeys).Find(&configs).Error; err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, len(configs))
+	for _, c := range configs {
+		m[c.Key] = c.Value
+	}
+	return &BuyProductConfig{
+		MustBindPhone:   m["buy_product_must_bind_phone"] == "1",
+		RequireRealName: m["certifi_isrealname"] == "1",
+		OrderPageStyle:  m["order_page_style"],
+	}, nil
+}
+
+func (s *ConfigGeneralService) UpdateBuyProductConfig(req BuyProductConfig) error {
+	configs := map[string]string{
+		"buy_product_must_bind_phone": boolOneStr(req.MustBindPhone),
+		"certifi_isrealname":         boolOneStr(req.RequireRealName),
+		"order_page_style":           req.OrderPageStyle,
+	}
+	return s.saveConfigMap(configs, "buy_product")
+}
+
+// ==================== Second Verify Config ====================
+
+type SecondVerifyConfig struct {
+	HomeEnabled      bool     `json:"home_enabled"`
+	HomeActions      []string `json:"home_actions"`
+	HomeActionTypes  []string `json:"home_action_types"`
+	AdminEnabled     bool     `json:"admin_enabled"`
+	AdminActions     []string `json:"admin_actions"`
+}
+
+var secondVerifyConfigKeys = []string{
+	"second_verify_home", "second_verify_action_home", "second_verify_action_home_type",
+	"second_verify_admin", "second_verify_action_admin",
+}
+
+func (s *ConfigGeneralService) GetSecondVerifyConfig() (*SecondVerifyConfig, error) {
+	var configs []model.SystemConfig
+	if err := s.db.Where("`key` IN ?", secondVerifyConfigKeys).Find(&configs).Error; err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, len(configs))
+	for _, c := range configs {
+		m[c.Key] = c.Value
+	}
+
+	homeActions := splitCSV(m["second_verify_action_home"])
+	homeActionTypes := splitCSV(m["second_verify_action_home_type"])
+	adminActions := splitCSV(m["second_verify_action_admin"])
+
+	return &SecondVerifyConfig{
+		HomeEnabled:     m["second_verify_home"] != "0",
+		HomeActions:     homeActions,
+		HomeActionTypes: homeActionTypes,
+		AdminEnabled:    m["second_verify_admin"] != "0",
+		AdminActions:    adminActions,
+	}, nil
+}
+
+func (s *ConfigGeneralService) UpdateSecondVerifyConfig(req SecondVerifyConfig) error {
+	configs := map[string]string{
+		"second_verify_home":            boolOneStr(req.HomeEnabled),
+		"second_verify_action_home":     joinCSV(req.HomeActions),
+		"second_verify_action_home_type": joinCSV(req.HomeActionTypes),
+		"second_verify_admin":           boolOneStr(req.AdminEnabled),
+		"second_verify_action_admin":    joinCSV(req.AdminActions),
+	}
+	return s.saveConfigMap(configs, "second_verify")
+}
+
+func splitCSV(s string) []string {
+	if s == "" {
+		return []string{}
+	}
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+func joinCSV(items []string) string {
+	return strings.Join(items, ",")
+}
+
+// ==================== Nav Group ====================
+
+type NavGroupReq struct {
+	ID       uint   `json:"id"`
+	Groupname string `json:"groupname"`
+	FaIcon   string `json:"fa_icon"`
+}
+
+type NavGroup struct {
+	ID        uint   `json:"id"`
+	Groupname string `json:"groupname"`
+	FaIcon    string `json:"fa_icon"`
+	Order     int    `json:"order"`
+}
+
+func (s *ConfigGeneralService) GetNavGroups() ([]NavGroup, error) {
+	var groups []NavGroup
+	if err := s.db.Table("nav_groups").Order("`order` ASC").Find(&groups).Error; err != nil {
+		return nil, err
+	}
+	return groups, nil
+}
+
+func (s *ConfigGeneralService) CreateNavGroup(req NavGroupReq) error {
+	var maxOrder int
+	s.db.Table("nav_groups").Select("COALESCE(MAX(`order`), 0)").Scan(&maxOrder)
+	return s.db.Table("nav_groups").Create(map[string]interface{}{
+		"groupname": req.Groupname,
+		"fa_icon":   req.FaIcon,
+		"order":     maxOrder + 1,
+	}).Error
+}
+
+func (s *ConfigGeneralService) UpdateNavGroup(req NavGroupReq) error {
+	return s.db.Table("nav_groups").Where("id = ?", req.ID).Updates(map[string]interface{}{
+		"groupname": req.Groupname,
+		"fa_icon":   req.FaIcon,
+	}).Error
+}
+
+func (s *ConfigGeneralService) DeleteNavGroup(id, toID uint) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Table("nav_groups").Where("id = ?", id).Delete(nil).Error; err != nil {
+			return err
+		}
+		if toID > 0 {
+			if err := tx.Table("nav_group_user").Where("groupid = ?", id).Update("groupid", toID).Error; err != nil {
+				return err
+			}
+			if err := tx.Table("products").Where("groupid = ?", id).Update("groupid", toID).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// ==================== Language Config ====================
+
+type LanguageConfig struct {
+	Languages       []LanguageItem `json:"languages"`
+	CurrentLanguage string         `json:"current_language"`
+}
+
+type LanguageItem struct {
+	Name   string `json:"name"`
+	NameZH string `json:"name_zh"`
+}
+
+func (s *ConfigGeneralService) GetLanguageConfig() (*LanguageConfig, error) {
+	var cfg model.SystemConfig
+	if err := s.db.Where("`key` = ?", "language").First(&cfg).Error; err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+	langs := []LanguageItem{
+		{Name: "zh-cn", NameZH: "简体中文"},
+		{Name: "en", NameZH: "English"},
+		{Name: "ja", NameZH: "日本語"},
+	}
+	return &LanguageConfig{
+		Languages:       langs,
+		CurrentLanguage: cfg.Value,
+	}, nil
+}
+
+func (s *ConfigGeneralService) SetAdminLanguage(lang string) error {
+	return s.saveSingleKey("language", lang, "local")
+}
+
+// ==================== Header/Footer Config ====================
+
+type HeaderFooterConfig struct {
+	Header string `json:"header"`
+	Footer string `json:"footer"`
+}
+
+func (s *ConfigGeneralService) GetHeaderFooter() (*HeaderFooterConfig, error) {
+	var configs []model.SystemConfig
+	if err := s.db.Where("`key` IN ?", []string{"header", "footer"}).Find(&configs).Error; err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, len(configs))
+	for _, c := range configs {
+		m[c.Key] = c.Value
+	}
+	return &HeaderFooterConfig{
+		Header: m["header"],
+		Footer: m["footer"],
+	}, nil
+}
+
+func (s *ConfigGeneralService) UpdateHeaderFooter(req HeaderFooterConfig) error {
+	configs := map[string]string{
+		"header": req.Header,
+		"footer": req.Footer,
+	}
+	return s.saveConfigMap(configs, "general")
+}
+
+// ==================== New Login Page Config ====================
+
+type NewLoginPageConfig struct {
+	AllowNewLoginTemplate []string `json:"allow_new_login_template"`
+}
+
+func (s *ConfigGeneralService) GetNewLoginPageConfig() (*NewLoginPageConfig, error) {
+	var cfg model.SystemConfig
+	if err := s.db.Where("`key` = ?", "allow_new_login_template").First(&cfg).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return &NewLoginPageConfig{AllowNewLoginTemplate: []string{"default"}}, nil
+		}
+		return nil, err
+	}
+	templates := splitCSV(cfg.Value)
+	if len(templates) == 0 {
+		templates = []string{"default"}
+	}
+	return &NewLoginPageConfig{AllowNewLoginTemplate: templates}, nil
+}
+
+func (s *ConfigGeneralService) UpdateNewLoginPageConfig(req NewLoginPageConfig) error {
+	return s.saveSingleKey("allow_new_login_template", joinCSV(req.AllowNewLoginTemplate), "login")
+}
