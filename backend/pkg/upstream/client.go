@@ -17,8 +17,25 @@ type RemoteProduct struct {
 	BillingCycle  string                 `json:"billing_cycle"`
 	Type          string                 `json:"type"`
 	Stock         int                    `json:"stock"`
+	GroupID       string                 `json:"group_id,omitempty"`
+	GroupName     string                 `json:"group_name,omitempty"`
 	ConfigOptions map[string]interface{} `json:"config_options,omitempty"`
 	Metadata      map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// RemoteProductGroup represents a product group from upstream.
+type RemoteProductGroup struct {
+	GroupID      string `json:"group_id"`
+	Name         string `json:"name"`
+	ParentID     string `json:"parent_id,omitempty"`
+	ProductCount int    `json:"product_count"`
+}
+
+// UpstreamProductsResult contains products with group structure.
+type UpstreamProductsResult struct {
+	Products []RemoteProduct      `json:"products"`
+	Groups   []RemoteProductGroup `json:"groups"`
+	Currency string               `json:"currency"`
 }
 
 // ConnectionResult holds the result of a connection test.
@@ -30,13 +47,12 @@ type ConnectionResult struct {
 
 // Client defines the interface every upstream provider must implement.
 type Client interface {
-	// TestConnection sends a lightweight request to verify credentials and reachability.
 	TestConnection() (*ConnectionResult, error)
-	// FetchProducts retrieves the product catalogue from the upstream.
 	FetchProducts() ([]RemoteProduct, error)
+	FetchProductsWithGroups() (*UpstreamProductsResult, error)
+	FetchProductsByGroup(groupID string) ([]RemoteProduct, error)
 }
 
-// NewClient returns the appropriate Client implementation for the given provider.
 func NewClient(provider *model.UpstreamProvider) (Client, error) {
 	switch provider.Type {
 	case "zjmf", "zjmfv3":
@@ -52,7 +68,6 @@ func NewClient(provider *model.UpstreamProvider) (Client, error) {
 	}
 }
 
-// httpClient is a shared helper with a configured timeout.
 func newHTTPTimeout() time.Duration {
 	return 15 * time.Second
 }

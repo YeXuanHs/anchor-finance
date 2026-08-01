@@ -1357,6 +1357,16 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/upstream/providers/:id/sync", upstreamHandler.SyncProducts)
 		admin.GET("/upstream/providers/:id/logs", upstreamHandler.GetSyncLogs)
 
+		// 上游产品对接（分组+多线程）
+		admin.GET("/upstream/providers/:id/products", upstreamHandler.GetUpstreamProducts)
+		admin.GET("/upstream/providers/:id/groups", upstreamHandler.GetUpstreamGroups)
+		admin.GET("/upstream/local-groups", upstreamHandler.GetLocalGroups)
+		admin.POST("/upstream/local-groups", upstreamHandler.CreateLocalGroup)
+		admin.POST("/upstream/dock/products", upstreamHandler.DockProducts)
+		admin.POST("/upstream/dock/group", upstreamHandler.DockGroup)
+		admin.POST("/upstream/products/:product_id/sync", upstreamHandler.SyncSingleProduct)
+		admin.POST("/upstream/providers/:id/sync-all", upstreamHandler.SyncAllProducts)
+
 		// ==================== 上游操作 ====================
 		upstreamOpsSvc := service.NewUpstreamService(deps.DB, deps.Log)
 		upstreamOpsHandler := handler.NewUpstreamOpsHandler(upstreamOpsSvc, deps.Log)

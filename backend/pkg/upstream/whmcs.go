@@ -150,3 +150,19 @@ func (c *whmcsClient) FetchProducts() ([]RemoteProduct, error) {
 	}
 	return products, nil
 }
+
+func (c *whmcsClient) FetchProductsWithGroups() (*UpstreamProductsResult, error) {
+	products, err := c.FetchProducts()
+	if err != nil {
+		return nil, err
+	}
+	return &UpstreamProductsResult{
+		Products: products,
+		Groups:   []RemoteProductGroup{},
+		Currency: "USD",
+	}, nil
+}
+
+func (c *whmcsClient) FetchProductsByGroup(groupID string) ([]RemoteProduct, error) {
+	return c.FetchProducts()
+}

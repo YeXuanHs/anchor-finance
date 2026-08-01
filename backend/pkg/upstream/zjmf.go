@@ -14,7 +14,6 @@ import (
 	"anchorfinance/internal/model"
 )
 
-// zjmfClient implements Client for 智简魔方 (ZJMF) compatible panels.
 type zjmfClient struct {
 	baseURL string
 	apiKey  string
@@ -33,14 +32,12 @@ func newZJMFClient(p *model.UpstreamProvider) *zjmfClient {
 	}
 }
 
-// zjmfAPIResponse is the common envelope returned by ZJMF-style APIs.
 type zjmfAPIResponse struct {
 	Result string          `json:"result"`
 	Msg    string          `json:"msg"`
 	Data   json.RawMessage `json:"data"`
 }
 
-// zjmfSign computes the ZJMF API signature: md5(sorted_params + api_key).
 func (c *zjmfClient) zjmfSign(params map[string]string) string {
 	keys := make([]string, 0, len(params))
 	for k := range params {
@@ -57,7 +54,6 @@ func (c *zjmfClient) zjmfSign(params map[string]string) string {
 	return fmt.Sprintf("%x", md5.Sum([]byte(sb.String())))
 }
 
-// doRequest builds a signed ZJMF API request and returns the parsed response.
 func (c *zjmfClient) doRequest(action string, extraParams map[string]string) (*zjmfAPIResponse, error) {
 	params := map[string]string{
 		"action": action,
@@ -96,7 +92,6 @@ func (c *zjmfClient) doRequest(action string, extraParams map[string]string) (*z
 	return &apiResp, nil
 }
 
-// TestConnection calls a lightweight ZJMF API endpoint to verify credentials.
 func (c *zjmfClient) TestConnection() (*ConnectionResult, error) {
 	start := time.Now()
 
@@ -117,7 +112,6 @@ func (c *zjmfClient) TestConnection() (*ConnectionResult, error) {
 	}, nil
 }
 
-// FetchProducts retrieves the product list from a ZJMF panel.
 func (c *zjmfClient) FetchProducts() ([]RemoteProduct, error) {
 	resp, err := c.doRequest("getproducts", nil)
 	if err != nil {
@@ -128,17 +122,20 @@ func (c *zjmfClient) FetchProducts() ([]RemoteProduct, error) {
 	}
 
 	var raw []struct {
-		ID          int     `json:"id"`
-		Name        string  `json:"name"`
-		Description string  `json:"description"`
-		Price       float64 `json:"price"`
-		Currency    string  `json:"currency"`
-		Billing     string  `json:"billingcycle"`
-		Type        string  `json:"type"`
-		Stock       int     `json:"stock"`
+		ID       int     `json:"id"`
+		Name     string  `json:"name"`
+		Desc     string  `json:"description"`
+		Price    float64 `json:"price"`
+		Currency string  `json:"currency"`
+		Billing  string  `json:"billingcycle"`
+		Type     string  `json:"type"`
+		Stock    int     `json:"stock"`
+		GID      int     `json:"gid"`
+		GroupName string `json:"groupname"`
 	}
 	if err := json.Unmarshal(resp.Data, &raw); err != nil {
-		return nil, fmt.Errorf("zjmf parse products: %w", err)
+		// 尝试分组结构
+		return c.parseGroupedProducts(resp.Data)
 	}
 
 	products := make([]RemoteProduct, 0, len(raw))
@@ -147,16 +144,211 @@ func (c *zjmfClient) FetchProducts() ([]RemoteProduct, error) {
 		if currency == "" {
 			currency = "CNY"
 		}
+		groupID := ""
+		if p.GID > 0 {
+			groupID = fmt.Sprintf("%d", p.GID)
+		}
 		products = append(products, RemoteProduct{
 			RemoteID:     fmt.Sprintf("%d", p.ID),
 			Name:         p.Name,
-			Description:  p.Description,
+			Description:  p.Desc,
 			Price:        p.Price,
 			Currency:     currency,
 			BillingCycle: p.Billing,
 			Type:         p.Type,
 			Stock:        p.Stock,
+			GroupID:      groupID,
+			GroupName:    p.GroupName,
 		})
 	}
 	return products, nil
+}
+
+// parseGroupedProducts 解析分组结构的产品列表
+func (c *zjmfClient) parseGroupedProducts(data json.RawMessage) ([]RemoteProduct, error) {
+	var grouped []struct {
+		ID       int    `json:"id"`
+		Name     string `json:"name"`
+		Products []struct {
+			ID       int     `json:"id"`
+			Name     string  `json:"name"`
+			Desc     string  `json:"description"`
+			Price    float64 `json:"price"`
+			Currency string  `json:"currency"`
+			Billing  string  `json:"billingcycle"`
+			Type     string  `json:"type"`
+			Stock    int     `json:"stock"`
+		} `json:"products"`
+	}
+	if err := json.Unmarshal(data, &grouped); err != nil {
+		return nil, fmt.Errorf("parse grouped products: %w", err)
+	}
+
+	var products []RemoteProduct
+	for _, g := range grouped {
+		for _, p := range g.Products {
+			currency := p.Currency
+			if currency == "" {
+				currency = "CNY"
+			}
+			products = append(products, RemoteProduct{
+				RemoteID:     fmt.Sprintf("%d", p.ID),
+				Name:         p.Name,
+				Description:  p.Desc,
+				Price:        p.Price,
+				Currency:     currency,
+				BillingCycle: p.Billing,
+				Type:         p.Type,
+				Stock:        p.Stock,
+				GroupID:      fmt.Sprintf("%d", g.ID),
+				GroupName:    g.Name,
+			})
+		}
+	}
+	return products, nil
+}
+
+func (c *zjmfClient) FetchProductsWithGroups() (*UpstreamProductsResult, error) {
+	resp, err := c.doRequest("getproducts", nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Result != "success" {
+		return nil, fmt.Errorf("zjmf api error: %s", resp.Msg)
+	}
+
+	// 先尝试分组结构
+	var grouped []struct {
+		ID       int    `json:"id"`
+		Name     string `json:"name"`
+		Products []struct {
+			ID       int     `json:"id"`
+			Name     string  `json:"name"`
+			Desc     string  `json:"description"`
+			Price    float64 `json:"price"`
+			Currency string  `json:"currency"`
+			Billing  string  `json:"billingcycle"`
+			Type     string  `json:"type"`
+			Stock    int     `json:"stock"`
+		} `json:"products"`
+	}
+
+	if err := json.Unmarshal(resp.Data, &grouped); err == nil && len(grouped) > 0 && len(grouped[0].Products) > 0 {
+		result := &UpstreamProductsResult{
+			Groups:   make([]RemoteProductGroup, 0, len(grouped)),
+			Products: make([]RemoteProduct, 0),
+			Currency: "CNY",
+		}
+		for _, g := range grouped {
+			result.Groups = append(result.Groups, RemoteProductGroup{
+				GroupID:      fmt.Sprintf("%d", g.ID),
+				Name:         g.Name,
+				ProductCount: len(g.Products),
+			})
+			for _, p := range g.Products {
+				currency := p.Currency
+				if currency == "" {
+					currency = "CNY"
+				}
+				result.Products = append(result.Products, RemoteProduct{
+					RemoteID:     fmt.Sprintf("%d", p.ID),
+					Name:         p.Name,
+					Description:  p.Desc,
+					Price:        p.Price,
+					Currency:     currency,
+					BillingCycle: p.Billing,
+					Type:         p.Type,
+					Stock:        p.Stock,
+					GroupID:      fmt.Sprintf("%d", g.ID),
+					GroupName:    g.Name,
+				})
+			}
+		}
+		return result, nil
+	}
+
+	// 平铺结构
+	var flat []struct {
+		ID        int     `json:"id"`
+		Name      string  `json:"name"`
+		Desc      string  `json:"description"`
+		Price     float64 `json:"price"`
+		Currency  string  `json:"currency"`
+		Billing   string  `json:"billingcycle"`
+		Type      string  `json:"type"`
+		Stock     int     `json:"stock"`
+		GID       int     `json:"gid"`
+		GroupName string  `json:"groupname"`
+	}
+	if err := json.Unmarshal(resp.Data, &flat); err != nil {
+		return nil, fmt.Errorf("parse products: %w", err)
+	}
+
+	groupMap := make(map[string]*RemoteProductGroup)
+	result := &UpstreamProductsResult{
+		Products: make([]RemoteProduct, 0, len(flat)),
+		Groups:   make([]RemoteProductGroup, 0),
+		Currency: "CNY",
+	}
+
+	for _, p := range flat {
+		currency := p.Currency
+		if currency == "" {
+			currency = "CNY"
+		}
+		groupID := ""
+		if p.GID > 0 {
+			groupID = fmt.Sprintf("%d", p.GID)
+		}
+		if p.GroupName == "" {
+			p.GroupName = "未分组"
+		}
+
+		if groupID != "" {
+			if _, exists := groupMap[groupID]; !exists {
+				groupMap[groupID] = &RemoteProductGroup{
+					GroupID: groupID,
+					Name:    p.GroupName,
+				}
+			}
+			groupMap[groupID].ProductCount++
+		}
+
+		result.Products = append(result.Products, RemoteProduct{
+			RemoteID:     fmt.Sprintf("%d", p.ID),
+			Name:         p.Name,
+			Description:  p.Desc,
+			Price:        p.Price,
+			Currency:     currency,
+			BillingCycle: p.Billing,
+			Type:         p.Type,
+			Stock:        p.Stock,
+			GroupID:      groupID,
+			GroupName:    p.GroupName,
+		})
+		if currency != "" {
+			result.Currency = currency
+		}
+	}
+
+	for _, g := range groupMap {
+		result.Groups = append(result.Groups, *g)
+	}
+
+	return result, nil
+}
+
+func (c *zjmfClient) FetchProductsByGroup(groupID string) ([]RemoteProduct, error) {
+	all, err := c.FetchProducts()
+	if err != nil {
+		return nil, err
+	}
+
+	var filtered []RemoteProduct
+	for _, p := range all {
+		if p.GroupID == groupID {
+			filtered = append(filtered, p)
+		}
+	}
+	return filtered, nil
 }

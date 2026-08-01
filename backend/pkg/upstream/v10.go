@@ -131,3 +131,19 @@ func (c *v10Client) FetchProducts() ([]RemoteProduct, error) {
 	}
 	return products, nil
 }
+
+func (c *v10Client) FetchProductsWithGroups() (*UpstreamProductsResult, error) {
+	products, err := c.FetchProducts()
+	if err != nil {
+		return nil, err
+	}
+	return &UpstreamProductsResult{
+		Products: products,
+		Groups:   []RemoteProductGroup{},
+		Currency: "CNY",
+	}, nil
+}
+
+func (c *v10Client) FetchProductsByGroup(groupID string) ([]RemoteProduct, error) {
+	return c.FetchProducts()
+}

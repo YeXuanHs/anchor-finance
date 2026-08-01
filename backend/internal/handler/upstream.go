@@ -225,3 +225,167 @@ func (h *UpstreamHandler) GetSyncLogs(c *gin.Context) {
 	}
 	response.SuccessPage(c, logs, total, page, pageSize)
 }
+
+// GetUpstreamProducts 获取上游产品列表（含分组）
+func (h *UpstreamHandler) GetUpstreamProducts(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid provider id")
+		return
+	}
+
+	result, err := h.svc.GetUpstreamProducts(uint(id))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
+// GetUpstreamGroups 获取上游分组列表
+func (h *UpstreamHandler) GetUpstreamGroups(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid provider id")
+		return
+	}
+
+	groups, err := h.svc.GetUpstreamGroups(uint(id))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, groups)
+}
+
+// GetLocalGroups 获取本地分组列表
+func (h *UpstreamHandler) GetLocalGroups(c *gin.Context) {
+	groups, err := h.svc.GetLocalGroups()
+	if err != nil {
+		response.ServerError(c, "获取失败")
+		return
+	}
+
+	response.Success(c, groups)
+}
+
+// CreateLocalGroup 创建本地分组
+func (h *UpstreamHandler) CreateLocalGroup(c *gin.Context) {
+	var req struct {
+		Name string `json:"name" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	group, err := h.svc.CreateLocalGroup(req.Name)
+	if err != nil {
+		response.ServerError(c, "创建失败")
+		return
+	}
+
+	response.Success(c, group)
+}
+
+// DockProducts 对接指定产品（支持多线程）
+func (h *UpstreamHandler) DockProducts(c *gin.Context) {
+	var req struct {
+		ProviderID   uint     `json:"provider_id" binding:"required"`
+		LocalGroupID uint     `json:"local_group_id" binding:"required"`
+		ProductIDs   []string `json:"product_ids" binding:"required"`
+		Percent      float64  `json:"percent"`
+		Concurrency  int      `json:"concurrency"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	if req.Percent <= 0 {
+		req.Percent = 120
+	}
+	if req.Concurrency <= 0 {
+		req.Concurrency = 10
+	}
+
+	config := service.DockConfig{
+		ProviderID:   req.ProviderID,
+		LocalGroupID: req.LocalGroupID,
+		Percent:      req.Percent,
+		Concurrency:  req.Concurrency,
+	}
+
+	result, err := h.svc.DockProducts(config, req.ProductIDs)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
+// DockGroup 对接整个分组
+func (h *UpstreamHandler) DockGroup(c *gin.Context) {
+	var req struct {
+		ProviderID   uint    `json:"provider_id" binding:"required"`
+		GroupID      string  `json:"group_id" binding:"required"`
+		LocalGroupID uint    `json:"local_group_id" binding:"required"`
+		Percent      float64 `json:"percent"`
+		Concurrency  int     `json:"concurrency"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	if req.Percent <= 0 {
+		req.Percent = 120
+	}
+	if req.Concurrency <= 0 {
+		req.Concurrency = 10
+	}
+
+	result, err := h.svc.DockGroup(req.ProviderID, req.GroupID, req.LocalGroupID, req.Percent, req.Concurrency)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
+// SyncSingleProduct 同步单个产品
+func (h *UpstreamHandler) SyncSingleProduct(c *gin.Context) {
+	productID, err := strconv.ParseUint(c.Param("product_id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid product id")
+		return
+	}
+
+	if err := h.svc.SyncSingleProduct(uint(productID)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "同步成功")
+}
+
+// SyncAllProducts 同步所有对接产品
+func (h *UpstreamHandler) SyncAllProducts(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid provider id")
+		return
+	}
+
+	synced, err := h.svc.SyncAllProducts(uint(id))
+	if err != nil {
+		response.ServerError(c, "同步失败")
+		return
+	}
+
+	response.Success(c, gin.H{"synced": synced})
+}
