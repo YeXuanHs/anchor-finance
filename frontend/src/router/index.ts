@@ -582,6 +582,21 @@ const router = createRouter({
           path: 'credit-used-detail',
           name: 'UserCreditUsedDetail',
           component: () => import('@/views/user/CreditUsedDetail.vue')
+        },
+        {
+          path: 'other-server',
+          name: 'UserOtherServer',
+          component: () => import('@/views/user/OtherServer.vue')
+        },
+        {
+          path: 'ddos/overview',
+          name: 'DdosOverview',
+          component: () => import('@/views/user/DdosOverview.vue')
+        },
+        {
+          path: 'ddos/my-ip',
+          name: 'DdosMyIp',
+          component: () => import('@/views/user/DdosMyIp.vue')
         }
       ]
     },

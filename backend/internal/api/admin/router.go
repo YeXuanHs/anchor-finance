@@ -1241,6 +1241,20 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/credit/bills", creditHandler.AdminGetBills)
 		admin.POST("/credit/bills/:id/waive-fee", creditHandler.AdminWaiveLateFee)
 
+		// 信用额度 - 用户管理
+		admin.GET("/credit/clients", creditHandler.AdminGetClientList)
+		admin.POST("/credit/users/enable", creditHandler.AdminEnableCredit)
+		admin.POST("/credit/users/:id/disable", creditHandler.AdminDisableCredit)
+		admin.PUT("/credit/users/:id/settings", creditHandler.AdminUpdateCreditSettings)
+
+		// 信用额度 - 用户账单
+		admin.GET("/credit/users/:id/invoices", creditHandler.AdminGetUserCreditInvoices)
+		admin.GET("/credit/invoices/:id/items", creditHandler.AdminGetCreditInvoiceSubItems)
+
+		// 信用额度 - 全局配置
+		admin.GET("/credit/config", creditHandler.AdminGetGlobalCreditConfig)
+		admin.PUT("/credit/config", creditHandler.AdminUpdateGlobalCreditConfig)
+
 		// ==================== 货币 ====================
 		currencyHandler := handler.NewCurrencyHandler(deps.DB)
 		admin.GET("/currencies", currencyHandler.GetAll)

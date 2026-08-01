@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -535,4 +536,244 @@ func (h *CreditHandler) AdminWaiveLateFee(c *gin.Context) {
 	}
 
 	response.Success(c, bill)
+}
+
+// ─────────────────────── Admin Client List ───────────────────────
+
+// AdminGetClientList returns all credit-enabled users with search/filter/sort.
+// GET /admin/credit/clients
+func (h *CreditHandler) AdminGetClientList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	keyword := c.Query("keyword")
+	paymentStatus := c.Query("payment_status")
+	order := c.DefaultQuery("order", "id")
+	sort := c.DefaultQuery("sort", "desc")
+
+	items, total, err := h.creditSvc.GetClientList(page, pageSize, keyword, paymentStatus, order, sort)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.SuccessPage(c, items, total, page, pageSize)
+}
+
+// ─────────────────────── Admin Enable/Disable Credit ───────────────────────
+
+// adminEnableCreditRequest is the payload for AdminEnableCredit.
+type adminEnableCreditRequest struct {
+	UserID           uint    `json:"user_id" binding:"required"`
+	Limit            float64 `json:"limit" binding:"required,gte=0"`
+	BillGenerationDay int    `json:"bill_generation_day" binding:"omitempty,min=1,max=28"`
+	RepaymentPeriod  int     `json:"repayment_period" binding:"omitempty,min=1,max=60"`
+}
+
+// AdminEnableCredit enables credit for a user.
+// POST /admin/credit/users/enable
+func (h *CreditHandler) AdminEnableCredit(c *gin.Context) {
+	var req adminEnableCreditRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Verify user exists
+	var user model.User
+	if err := h.db.First(&user, req.UserID).Error; err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+
+	billDay := req.BillGenerationDay
+	if billDay == 0 {
+		billDay = 1
+	}
+	repayPeriod := req.RepaymentPeriod
+	if repayPeriod == 0 {
+		repayPeriod = 15
+	}
+
+	if err := h.creditSvc.EnableCredit(req.UserID, req.Limit, billDay, repayPeriod); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	// Log the action
+	adminID := getUserID(c)
+	credit, _ := h.creditSvc.GetByUserID(req.UserID)
+	if credit != nil {
+		log := model.CreditLog{
+			UserID:      req.UserID,
+			Type:        "adjust",
+			Amount:      req.Limit,
+			Balance:     credit.Available,
+			AdminID:     &adminID,
+			Remark:      fmt.Sprintf("Credit enabled with limit %.2f", req.Limit),
+			RelatedType: "admin_enable",
+		}
+		h.db.Create(&log)
+	}
+
+	response.SuccessMsg(c, "credit enabled")
+}
+
+// AdminDisableCredit disables credit for a user.
+// POST /admin/credit/users/:id/disable
+func (h *CreditHandler) AdminDisableCredit(c *gin.Context) {
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	// Verify user exists
+	var user model.User
+	if err := h.db.First(&user, userID).Error; err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+
+	if err := h.creditSvc.DisableCredit(uint(userID)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Log the action
+	adminID := getUserID(c)
+	log := model.CreditLog{
+		UserID:      uint(userID),
+		Type:        "adjust",
+		Amount:      0,
+		Balance:     0,
+		AdminID:     &adminID,
+		Remark:      "Credit disabled",
+		RelatedType: "admin_disable",
+	}
+	h.db.Create(&log)
+
+	response.SuccessMsg(c, "credit disabled")
+}
+
+// adminUpdateCreditSettingsRequest is the payload for AdminUpdateCreditSettings.
+type adminUpdateCreditSettingsRequest struct {
+	Limit            *float64 `json:"limit" binding:"omitempty,gte=0"`
+	BillGenerationDay *int    `json:"bill_generation_day" binding:"omitempty,min=1,max=28"`
+	RepaymentPeriod  *int     `json:"repayment_period" binding:"omitempty,min=1,max=60"`
+}
+
+// AdminUpdateCreditSettings updates credit settings for a user.
+// PUT /admin/credit/users/:id/settings
+func (h *CreditHandler) AdminUpdateCreditSettings(c *gin.Context) {
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	var req adminUpdateCreditSettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Verify user exists
+	var user model.User
+	if err := h.db.First(&user, userID).Error; err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+
+	if err := h.creditSvc.UpdateUserCreditSettings(uint(userID), req.Limit, req.BillGenerationDay, req.RepaymentPeriod); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Log the action
+	adminID := getUserID(c)
+	log := model.CreditLog{
+		UserID:      uint(userID),
+		Type:        "adjust",
+		Amount:      0,
+		Balance:     0,
+		AdminID:     &adminID,
+		Remark:      "Credit settings updated",
+		RelatedType: "admin_update_settings",
+	}
+	h.db.Create(&log)
+
+	response.SuccessMsg(c, "credit settings updated")
+}
+
+// ─────────────────────── Admin User Credit Invoices ───────────────────────
+
+// AdminGetUserCreditInvoices returns credit invoices for a specific user.
+// GET /admin/credit/users/:id/invoices
+func (h *CreditHandler) AdminGetUserCreditInvoices(c *gin.Context) {
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	status := c.Query("status")
+
+	items, total, err := h.creditSvc.GetUserCreditInvoices(uint(userID), page, pageSize, status)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.SuccessPage(c, items, total, page, pageSize)
+}
+
+// AdminGetCreditInvoiceSubItems returns sub-items under a credit invoice.
+// GET /admin/credit/invoices/:id/items
+func (h *CreditHandler) AdminGetCreditInvoiceSubItems(c *gin.Context) {
+	billID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid bill id")
+		return
+	}
+
+	items, err := h.creditSvc.GetCreditInvoiceSubItems(uint(billID))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, items)
+}
+
+// ─────────────────────── Admin Global Credit Config ───────────────────────
+
+// AdminGetGlobalCreditConfig returns the global credit limit configuration.
+// GET /admin/credit/config
+func (h *CreditHandler) AdminGetGlobalCreditConfig(c *gin.Context) {
+	config, err := h.creditSvc.GetGlobalCreditConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, config)
+}
+
+// AdminUpdateGlobalCreditConfig updates the global credit limit configuration.
+// PUT /admin/credit/config
+func (h *CreditHandler) AdminUpdateGlobalCreditConfig(c *gin.Context) {
+	var config service.GlobalCreditConfig
+	if err := c.ShouldBindJSON(&config); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.creditSvc.UpdateGlobalCreditConfig(&config); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "global credit config updated")
 }

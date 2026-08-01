@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"anchorfinance/internal/model"
@@ -516,4 +518,465 @@ func (s *CreditService) GetUsageSummary(userID uint) (map[string]interface{}, er
 		"unpaid_bills":   unpaidBills,
 		"overdue_amount": overdueAmount,
 	}, nil
+}
+
+// ─────────────────────── Admin Client Management ───────────────────────
+
+// CreditClientItem represents a credit-enabled user in the client list.
+type CreditClientItem struct {
+	ID                  uint    `json:"id"`
+	UserID              uint    `json:"user_id"`
+	Username            string  `json:"username"`
+	Email               string  `json:"email"`
+	Phone               string  `json:"phone"`
+	CreditLimit         float64 `json:"credit_limit"`
+	CreditUsed          float64 `json:"credit_used"`
+	CreditAvailable     float64 `json:"credit_available"`
+	AmountToBeSettled   float64 `json:"amount_to_be_settled"`
+	CreditLimitUnpaid   float64 `json:"credit_limit_unpaid"`
+	PaymentStatus       string  `json:"payment_status"`
+	BillGenerationDay   int     `json:"bill_generation_day"`
+	RepaymentPeriod     int     `json:"repayment_period"`
+	CreatedAt           string  `json:"created_at"`
+}
+
+// GetClientList returns all credit-enabled users with search/filter/sort.
+func (s *CreditService) GetClientList(page, pageSize int, keyword, paymentStatus string, order, sort string) ([]CreditClientItem, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	// Sub-query: get all credit-enabled user IDs
+	creditQuery := s.db.Model(&model.CreditLimit{}).Select("user_id")
+
+	if paymentStatus != "" {
+		// Filter by payment status - get user IDs with matching status
+		now := time.Now()
+		billQuery := s.db.Model(&model.CreditBill{}).Select("DISTINCT user_id")
+		switch paymentStatus {
+		case "prepayment":
+			billQuery = billQuery.Where("status = ? AND created_at >= ?", "paid", beginningOfMonth())
+		case "paid":
+			billQuery = billQuery.Where("status = ? AND remaining_amount <= 0", "paid")
+		case "unpaid":
+			billQuery = billQuery.Where("status IN ? AND due_date > ?", []string{"unpaid", "partial"}, now)
+		case "overdue":
+			billQuery = billQuery.Where("status IN ? AND due_date <= ?", []string{"unpaid", "partial", "overdue"}, now)
+		}
+		var userIDs []uint
+		billQuery.Pluck("user_id", &userIDs)
+		if len(userIDs) == 0 {
+			return []CreditClientItem{}, 0, nil
+		}
+		creditQuery = creditQuery.Where("user_id IN ?", userIDs)
+	}
+
+	var total int64
+	creditQuery.Count(&total)
+
+	// Get paginated credit limits
+	var credits []model.CreditLimit
+	offset := (page - 1) * pageSize
+	query := s.db.Model(&model.CreditLimit{})
+	if paymentStatus != "" {
+		var userIDs []uint
+		creditQuery.Pluck("user_id", &userIDs)
+		query = query.Where("user_id IN ?", userIDs)
+	}
+
+	if err := query.Offset(offset).Limit(pageSize).Find(&credits).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var items []CreditClientItem
+	for _, credit := range credits {
+		var user model.User
+		s.db.First(&user, credit.UserID)
+
+		// Apply keyword filter
+		if keyword != "" {
+			match := false
+			if containsIgnoreCase(user.Username, keyword) || containsIgnoreCase(user.Email, keyword) || containsIgnoreCase(user.Phone, keyword) {
+				match = true
+			}
+			if !match {
+				continue
+			}
+		}
+
+		// Calculate amounts
+		amountToBeSettled := s.getAmountToBeSettled(credit.UserID)
+		unpaid := s.getUnpaidAmount(credit.UserID)
+		used := amountToBeSettled + unpaid
+		available := credit.Limit - used
+		if available < 0 {
+			available = 0
+		}
+
+		paymentStatusStr := s.getUserPaymentStatus(credit.UserID)
+
+		items = append(items, CreditClientItem{
+			ID:                credit.ID,
+			UserID:            credit.UserID,
+			Username:          user.Username,
+			Email:             user.Email,
+			Phone:             user.Phone,
+			CreditLimit:       credit.Limit,
+			CreditUsed:        used,
+			CreditAvailable:   available,
+			AmountToBeSettled: amountToBeSettled,
+			CreditLimitUnpaid: unpaid,
+			PaymentStatus:     paymentStatusStr,
+			BillGenerationDay: credit.BillGenerationDay,
+			RepaymentPeriod:   credit.RepaymentPeriod,
+			CreatedAt:         credit.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	// Handle sorting for computed fields
+	if order == "payment_status" || order == "amount_to_be_settled" || order == "credit_limit_unpaid" || order == "credit_available" {
+		sortField := order
+		sortDir := sort
+		sortClientItems(items, sortField, sortDir)
+	}
+
+	return items, total, nil
+}
+
+func (s *CreditService) getAmountToBeSettled(userID uint) float64 {
+	var total float64
+	s.db.Model(&model.CreditBill{}).
+		Where("user_id = ? AND status = ?", userID, "paid").
+		Select("COALESCE(SUM(total_amount), 0)").
+		Scan(&total)
+	return total
+}
+
+func (s *CreditService) getUnpaidAmount(userID uint) float64 {
+	var total float64
+	s.db.Model(&model.CreditBill{}).
+		Where("user_id = ? AND status IN ?", userID, []string{"unpaid", "partial", "overdue"}).
+		Select("COALESCE(SUM(remaining_amount + late_fee), 0)").
+		Scan(&total)
+	return total
+}
+
+func (s *CreditService) getUserPaymentStatus(userID uint) string {
+	now := time.Now()
+	var bill model.CreditBill
+	err := s.db.Where("user_id = ?", userID).Order("id DESC").First(&bill).Error
+	if err != nil {
+		return ""
+	}
+	switch bill.Status {
+	case "paid":
+		return "paid"
+	case "partial":
+		return "partial"
+	case "overdue":
+		return "overdue"
+	default: // unpaid
+		if now.After(bill.DueDate) {
+			return "overdue"
+		}
+		return "unpaid"
+	}
+}
+
+func containsIgnoreCase(s, substr string) bool {
+	return len(s) >= len(substr) &&
+		strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+func sortClientItems(items []CreditClientItem, field, dir string) {
+	sort.Slice(items, func(i, j int) bool {
+		var less bool
+		switch field {
+		case "payment_status":
+			less = items[i].PaymentStatus < items[j].PaymentStatus
+		case "amount_to_be_settled":
+			less = items[i].AmountToBeSettled < items[j].AmountToBeSettled
+		case "credit_limit_unpaid":
+			less = items[i].CreditLimitUnpaid < items[j].CreditLimitUnpaid
+		case "credit_available":
+			less = items[i].CreditAvailable < items[j].CreditAvailable
+		default:
+			return false
+		}
+		if dir == "desc" {
+			return !less
+		}
+		return less
+	})
+}
+
+func beginningOfMonth() time.Time {
+	now := time.Now()
+	return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+}
+
+// EnableCredit enables credit for a user with initial settings.
+func (s *CreditService) EnableCredit(userID uint, limit float64, billDay, repayPeriod int) error {
+	if billDay < 1 || billDay > 28 {
+		billDay = 1
+	}
+	if repayPeriod < 1 || repayPeriod > 60 {
+		repayPeriod = 15
+	}
+
+	var credit model.CreditLimit
+	err := s.db.Where("user_id = ?", userID).First(&credit).Error
+	if err == gorm.ErrRecordNotFound {
+		credit = model.CreditLimit{
+			UserID:            userID,
+			Limit:             limit,
+			Available:         limit,
+			BillGenerationDay: billDay,
+			RepaymentPeriod:   repayPeriod,
+		}
+		return s.db.Create(&credit).Error
+	}
+	if err != nil {
+		return err
+	}
+
+	// Already exists, update
+	return s.db.Model(&credit).Updates(map[string]interface{}{
+		"limit":               limit,
+		"available":           limit - credit.Used,
+		"bill_generation_day": billDay,
+		"repayment_period":    repayPeriod,
+	}).Error
+}
+
+// DisableCredit disables credit for a user.
+func (s *CreditService) DisableCredit(userID uint) error {
+	result := s.db.Model(&model.CreditLimit{}).Where("user_id = ?", userID).Delete(&model.CreditLimit{})
+	if result.RowsAffected == 0 {
+		return errors.New("user credit not found")
+	}
+	return result.Error
+}
+
+// UpdateUserCreditSettings updates user credit settings (limit, repayment date, bill time).
+func (s *CreditService) UpdateUserCreditSettings(userID uint, limit *float64, billDay *int, repayPeriod *int) error {
+	var credit model.CreditLimit
+	if err := s.db.Where("user_id = ?", userID).First(&credit).Error; err != nil {
+		return errors.New("user credit not found")
+	}
+
+	updates := map[string]interface{}{}
+	if limit != nil {
+		updates["limit"] = *limit
+		updates["available"] = *limit - credit.Used
+	}
+	if billDay != nil {
+		if *billDay < 1 || *billDay > 28 {
+			return errors.New("bill generation day must be between 1 and 28")
+		}
+		updates["bill_generation_day"] = *billDay
+	}
+	if repayPeriod != nil {
+		if *repayPeriod < 1 || *repayPeriod > 60 {
+			return errors.New("repayment period must be between 1 and 60 days")
+		}
+		updates["repayment_period"] = *repayPeriod
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return s.db.Model(&credit).Updates(updates).Error
+}
+
+// CreditInvoiceItem represents a credit invoice in the list.
+type CreditInvoiceItem struct {
+	ID              uint    `json:"id"`
+	UserID          uint    `json:"user_id"`
+	Username        string  `json:"username"`
+	TotalAmount     float64 `json:"total_amount"`
+	PaidAmount      float64 `json:"paid_amount"`
+	RemainingAmount float64 `json:"remaining_amount"`
+	LateFee         float64 `json:"late_fee"`
+	Status          string  `json:"status"`
+	PaymentStatus   string  `json:"payment_status"`
+	DueDate         string  `json:"due_date"`
+	PaidDate        string  `json:"paid_date"`
+	CreatedAt       string  `json:"created_at"`
+	BillMonth       string  `json:"bill_month"`
+	DueDays         int     `json:"due_days"`
+}
+
+// GetUserCreditInvoices returns credit limit invoices for a specific user.
+func (s *CreditService) GetUserCreditInvoices(userID uint, page, pageSize int, status string) ([]CreditInvoiceItem, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	query := s.db.Model(&model.CreditBill{}).Where("user_id = ?", userID)
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var bills []model.CreditBill
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&bills).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var items []CreditInvoiceItem
+	now := time.Now()
+	for _, bill := range bills {
+		paymentStatus := bill.Status
+		dueDays := 0
+		if bill.Status == "unpaid" && now.After(bill.DueDate) {
+			paymentStatus = "overdue"
+			dueDays = int(now.Sub(bill.DueDate).Hours() / 24)
+		}
+
+		paidDate := ""
+		if bill.Status == "paid" {
+			paidDate = bill.UpdatedAt.Format("2006-01-02 15:04:05")
+		}
+
+		var user model.User
+		s.db.First(&user, bill.UserID)
+
+		items = append(items, CreditInvoiceItem{
+			ID:              bill.ID,
+			UserID:          bill.UserID,
+			Username:        user.Username,
+			TotalAmount:     bill.TotalAmount,
+			PaidAmount:      bill.PaidAmount,
+			RemainingAmount: bill.RemainingAmount,
+			LateFee:         bill.LateFee,
+			Status:          bill.Status,
+			PaymentStatus:   paymentStatus,
+			DueDate:         bill.DueDate.Format("2006-01-02 15:04:05"),
+			PaidDate:        paidDate,
+			CreatedAt:       bill.CreatedAt.Format("2006-01-02 15:04:05"),
+			BillMonth:       bill.BillMonth,
+			DueDays:         dueDays,
+		})
+	}
+
+	return items, total, nil
+}
+
+// GetCreditInvoiceSubItems returns sub-items under a credit invoice.
+func (s *CreditService) GetCreditInvoiceSubItems(billID uint) ([]model.CreditBillItem, error) {
+	var items []model.CreditBillItem
+	if err := s.db.Where("bill_id = ?", billID).Order("id ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+// ─────────────────────── Global Credit Config ───────────────────────
+
+// GlobalCreditConfig represents the global credit limit configuration.
+type GlobalCreditConfig struct {
+	Enabled                  bool    `json:"enabled"`
+	DefaultLimit             float64 `json:"default_limit"`
+	BillGenerationDay        int     `json:"bill_generation_day"`
+	RepaymentPeriod          int     `json:"repayment_period"`
+	LateFeeEnabled           bool    `json:"late_fee_enabled"`
+	LateFeeDailyPercent      float64 `json:"late_fee_daily_percent"`
+}
+
+// GetGlobalCreditConfig returns the global credit limit configuration.
+func (s *CreditService) GetGlobalCreditConfig() (*GlobalCreditConfig, error) {
+	config := &GlobalCreditConfig{
+		Enabled:             true,
+		DefaultLimit:        0,
+		BillGenerationDay:   1,
+		RepaymentPeriod:     15,
+		LateFeeEnabled:      false,
+		LateFeeDailyPercent: 0.05,
+	}
+
+	// Read from config_options table
+	var options []model.ConfigOption
+	if err := s.db.Where("`group` = ?", "credit_limit").Find(&options).Error; err != nil {
+		return config, nil
+	}
+
+	for _, opt := range options {
+		switch opt.Code {
+		case "shd_credit_limit":
+			config.Enabled = opt.Value == "1"
+		case "shd_credit_limit_amount":
+			config.DefaultLimit = parseFloat(opt.Value)
+		case "shd_credit_limit_bill_generation_date":
+			config.BillGenerationDay = parseInt(opt.Value)
+		case "shd_credit_limit_bill_repayment_period":
+			config.RepaymentPeriod = parseInt(opt.Value)
+		case "shd_credit_limit_liquidated_damages":
+			config.LateFeeEnabled = opt.Value == "1"
+		case "shd_credit_limit_liquidated_damages_percent":
+			config.LateFeeDailyPercent = parseFloat(opt.Value)
+		}
+	}
+
+	return config, nil
+}
+
+// UpdateGlobalCreditConfig updates the global credit limit configuration.
+func (s *CreditService) UpdateGlobalCreditConfig(config *GlobalCreditConfig) error {
+	options := map[string]string{
+		"shd_credit_limit":                          boolToIntStr(config.Enabled),
+		"shd_credit_limit_amount":                   fmt.Sprintf("%.2f", config.DefaultLimit),
+		"shd_credit_limit_bill_generation_date":     fmt.Sprintf("%d", config.BillGenerationDay),
+		"shd_credit_limit_bill_repayment_period":    fmt.Sprintf("%d", config.RepaymentPeriod),
+		"shd_credit_limit_liquidated_damages":       boolToIntStr(config.LateFeeEnabled),
+		"shd_credit_limit_liquidated_damages_percent": fmt.Sprintf("%.2f", config.LateFeeDailyPercent),
+	}
+
+	for code, value := range options {
+		var opt model.ConfigOption
+		err := s.db.Where("code = ?", code).First(&opt).Error
+		if err == gorm.ErrRecordNotFound {
+			opt = model.ConfigOption{
+				Group: "credit_limit",
+				Code:  code,
+				Name:  code,
+				Type:  "text",
+				Value: value,
+			}
+			s.db.Create(&opt)
+		} else if err == nil {
+			s.db.Model(&opt).Update("value", value)
+		}
+	}
+
+	return nil
+}
+
+func parseFloat(s string) float64 {
+	var f float64
+	fmt.Sscanf(s, "%f", &f)
+	return f
+}
+
+func parseInt(s string) int {
+	var i int
+	fmt.Sscanf(s, "%d", &i)
+	return i
+}
+
+func boolToIntStr(b bool) string {
+	if b {
+		return "1"
+	}
+	return "0"
 }
