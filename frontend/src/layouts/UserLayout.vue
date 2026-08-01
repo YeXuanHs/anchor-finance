@@ -121,6 +121,7 @@ import {
   Postcard, UserFilled, Lock, Folder, Download, Document, Promotion, TrendCharts, Shop
 } from '@element-plus/icons-vue'
 import request from '@/utils/http'
+import LanguageSwitcher from '@/components/LanguageSwitch.vue'
 
 const router = useRouter()
 const route = useRoute()

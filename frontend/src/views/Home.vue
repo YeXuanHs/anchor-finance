@@ -28,6 +28,7 @@
           </template>
         </nav>
         <div class="header-actions">
+          <LanguageSwitch />
           <el-button text class="login-btn" @click="$router.push('/login')">
             <el-icon :size="16" style="margin-right: 4px;"><User /></el-icon>
             登录
@@ -283,6 +284,7 @@ import {
   Promotion, OfficeBuilding, ShoppingBag, DataLine
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import LanguageSwitch from '@/components/LanguageSwitch.vue'
 
 const carouselRef = ref()
 const scrolled = ref(false)
