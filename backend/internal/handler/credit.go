@@ -777,3 +777,80 @@ func (h *CreditHandler) AdminUpdateGlobalCreditConfig(c *gin.Context) {
 
 	response.SuccessMsg(c, "global credit config updated")
 }
+
+// Delete disables credit for a user (admin).
+// DELETE /admin/credit/users/:uid
+func (h *CreditHandler) Delete(c *gin.Context) {
+	uid, err := strconv.ParseUint(c.Param("uid"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	// Check user exists
+	var user model.User
+	if err := h.db.First(&user, uid).Error; err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+
+	// Disable credit
+	if err := h.db.Model(&model.User{}).Where("id = ?", uid).
+		Update("is_open_credit_limit", 0).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "credit disabled successfully")
+}
+
+// GetSearch performs advanced search on credit invoices (admin).
+// GET /admin/credit/search
+func (h *CreditHandler) GetSearch(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	query := h.db.Model(&model.Invoice{}).Where("use_credit_limit = ?", 1)
+
+	// Apply filters
+	if uid := c.Query("uid"); uid != "" {
+		query = query.Where("uid = ?", uid)
+	}
+	if status := c.Query("status"); status != "" {
+		query = query.Where("status = ?", status)
+	}
+	if paymentStatus := c.Query("payment_status"); paymentStatus != "" {
+		switch paymentStatus {
+		case "Paid":
+			query = query.Where("status = ?", "Paid")
+		case "Unpaid":
+			query = query.Where("status = ? AND due_time > ?", "Unpaid", time.Now().Unix())
+		case "Overdue":
+			query = query.Where("status = ? AND due_time <= ?", "Unpaid", time.Now().Unix())
+		}
+	}
+	if startTime := c.Query("start_time"); startTime != "" {
+		query = query.Where("created_at >= ?", startTime)
+	}
+	if endTime := c.Query("end_time"); endTime != "" {
+		query = query.Where("created_at <= ?", endTime)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var invoices []model.Invoice
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&invoices).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.SuccessPage(c, invoices, total, page, pageSize)
+}

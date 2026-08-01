@@ -616,3 +616,165 @@ func (h *DcimHandler) GetStats(c *gin.Context) {
 	}
 	response.Success(c, stats)
 }
+
+// ListFlowPacket returns flow packets for a server.
+// GET /dcim/servers/:id/flow-packets
+func (h *DcimHandler) ListFlowPacket(c *gin.Context) {
+	serverID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid server id")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	packets, total, err := h.dcimSvc.ListFlowPackets(uint(serverID), page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, packets, total, page, pageSize)
+}
+
+// AddFlowPacket creates a new flow packet.
+// POST /dcim/servers/:id/flow-packets
+func (h *DcimHandler) AddFlowPacket(c *gin.Context) {
+	serverID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid server id")
+		return
+	}
+
+	var req struct {
+		Name  string  `json:"name" binding:"required"`
+		Flow  float64 `json:"flow" binding:"required,gt=0"`
+		Price float64 `json:"price" binding:"required,gte=0"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	packet, err := h.dcimSvc.AddFlowPacket(uint(serverID), req.Name, req.Flow, req.Price)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, packet)
+}
+
+// EditFlowPacket updates a flow packet.
+// PUT /dcim/flow-packets/:id
+func (h *DcimHandler) EditFlowPacket(c *gin.Context) {
+	packetID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid packet id")
+		return
+	}
+
+	var req struct {
+		Name   string   `json:"name"`
+		Flow   *float64 `json:"flow"`
+		Price  *float64 `json:"price"`
+		Status *int     `json:"status"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.dcimSvc.EditFlowPacket(uint(packetID), req.Name, req.Flow, req.Price, req.Status); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "flow packet updated")
+}
+
+// DelFlowPacket deletes a flow packet.
+// DELETE /dcim/flow-packets/:id
+func (h *DcimHandler) DelFlowPacket(c *gin.Context) {
+	packetID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid packet id")
+		return
+	}
+
+	if err := h.dcimSvc.DeleteFlowPacket(uint(packetID)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "flow packet deleted")
+}
+
+// AssignServer assigns a server to a user.
+// POST /dcim/servers/:id/assign
+func (h *DcimHandler) AssignServer(c *gin.Context) {
+	serverID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid server id")
+		return
+	}
+
+	var req struct {
+		UserID    uint `json:"user_id" binding:"required"`
+		ProductID uint `json:"product_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.dcimSvc.AssignServer(uint(serverID), req.UserID, req.ProductID); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "server assigned")
+}
+
+// GetSalesServer returns servers available for sale.
+// GET /dcim/sales-servers
+func (h *DcimHandler) GetSalesServer(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	servers, total, err := h.dcimSvc.GetSalesServers(page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, servers, total, page, pageSize)
+}
+
+// NovncPage returns NoVNC connection info.
+// GET /dcim/servers/:id/novnc
+func (h *DcimHandler) NovncPage(c *gin.Context) {
+	serverID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid server id")
+		return
+	}
+
+	info, err := h.dcimSvc.GetNovncInfo(uint(serverID))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, info)
+}
+
+// RefreshServerStatus refreshes the status of a server.
+// POST /dcim/servers/:id/refresh
+func (h *DcimHandler) RefreshServerStatus(c *gin.Context) {
+	serverID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid server id")
+		return
+	}
+
+	if err := h.dcimSvc.RefreshServerStatus(uint(serverID)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "server status refreshed")
+}

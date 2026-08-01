@@ -441,3 +441,97 @@ func (h *TicketHandler) GetTransferLogs(c *gin.Context) {
 	}
 	response.Success(c, logs)
 }
+
+// AddNote adds an admin note to a ticket (admin).
+// POST /tickets/:id/notes
+func (h *TicketHandler) AddNote(c *gin.Context) {
+	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid ticket id")
+		return
+	}
+
+	var req struct {
+		Content string `json:"content" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if len(req.Content) > 10000 {
+		response.BadRequest(c, "content too long (max 10000 chars)")
+		return
+	}
+
+	adminID := c.GetUint("user_id")
+	note, err := h.ticketSvc.AddNote(uint(ticketID), adminID, req.Content)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, note)
+}
+
+// DeleteNote deletes a ticket note (admin).
+// DELETE /tickets/notes/:id
+func (h *TicketHandler) DeleteNote(c *gin.Context) {
+	noteID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid note id")
+		return
+	}
+
+	if err := h.ticketSvc.DeleteNote(uint(noteID)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "note deleted")
+}
+
+// DeleteReply deletes a ticket reply (admin).
+// DELETE /tickets/replies/:id
+func (h *TicketHandler) DeleteReply(c *gin.Context) {
+	replyID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid reply id")
+		return
+	}
+
+	if err := h.ticketSvc.DeleteReply(uint(replyID)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "reply deleted")
+}
+
+// GetTicketDetailHost returns hosts associated with a ticket's user (admin).
+// GET /tickets/:id/hosts
+func (h *TicketHandler) GetTicketDetailHost(c *gin.Context) {
+	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid ticket id")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	hosts, total, err := h.ticketSvc.GetTicketDetailHost(uint(ticketID), page, pageSize)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, hosts, total, page, pageSize)
+}
+
+// TicketStatistics returns ticket statistics (admin).
+// GET /tickets/statistics
+func (h *TicketHandler) TicketStatistics(c *gin.Context) {
+	stats, err := h.ticketSvc.GetTicketStatistics()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, stats)
+}

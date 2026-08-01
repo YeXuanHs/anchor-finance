@@ -94,6 +94,87 @@ export const financeRoutes: AppRouteRecord = {
             title: '实名认证',
             icon: 'ep:stamp'
           }
+        },
+        {
+          path: 'resources',
+          name: 'ClientResources',
+          component: () => import('@/views/finance/clients/resources/index.vue'),
+          meta: {
+            title: '资源管理',
+            icon: 'ep:box'
+          }
+        },
+        {
+          path: 'resource-pool',
+          name: 'ResourcePool',
+          component: () => import('@/views/finance/clients/resource-pool/index.vue'),
+          meta: {
+            title: '资源池管理',
+            icon: 'ep:coin'
+          }
+        },
+        {
+          path: 'sales-statistics',
+          name: 'SalesStatistics',
+          component: () => import('@/views/finance/clients/sales-statistics/index.vue'),
+          meta: {
+            title: '销售统计',
+            icon: 'ep:data-analysis'
+          }
+        },
+        {
+          path: 'custom-fields',
+          name: 'CustomFields',
+          component: () => import('@/views/finance/clients/custom-fields/index.vue'),
+          meta: {
+            title: '自定义字段',
+            icon: 'ep:edit'
+          }
+        },
+        {
+          path: 'affiliate-config',
+          name: 'AffiliateConfig',
+          component: () => import('@/views/finance/clients/affiliate-config/index.vue'),
+          meta: {
+            title: '推介计划配置',
+            icon: 'ep:connection'
+          }
+        },
+        {
+          path: 'notification-log',
+          name: 'NotificationLog',
+          component: () => import('@/views/finance/clients/notification-log/index.vue'),
+          meta: {
+            title: '通知日志',
+            icon: 'ep:bell'
+          }
+        },
+        {
+          path: 'attachments',
+          name: 'ClientAttachments',
+          component: () => import('@/views/finance/clients/attachments/index.vue'),
+          meta: {
+            title: '附件管理',
+            icon: 'ep:paperclip'
+          }
+        },
+        {
+          path: 'crm',
+          name: 'ClientCRM',
+          component: () => import('@/views/finance/clients/crm/index.vue'),
+          meta: {
+            title: '客户CRM',
+            icon: 'ep:user'
+          }
+        },
+        {
+          path: 'email-view',
+          name: 'EmailView',
+          component: () => import('@/views/finance/clients/email-view/index.vue'),
+          meta: {
+            title: '邮件查看',
+            icon: 'ep:message'
+          }
         }
       ]
     },
@@ -150,6 +231,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '高级配置项',
             icon: 'ep:setting'
           }
+        },
+        {
+          path: 'traffic-config',
+          name: 'TrafficConfig',
+          component: () => import('@/views/finance/products/traffic-config/index.vue'),
+          meta: {
+            title: '流量包配置',
+            icon: 'ep:connection'
+          }
         }
       ]
     },
@@ -196,6 +286,15 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '取消请求',
             icon: 'ep:warning-filled'
+          }
+        },
+        {
+          path: 'traffic-orders',
+          name: 'TrafficOrders',
+          component: () => import('@/views/finance/orders/traffic-orders/index.vue'),
+          meta: {
+            title: '流量包订单',
+            icon: 'ep:connection'
           }
         }
       ]

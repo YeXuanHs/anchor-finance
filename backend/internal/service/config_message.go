@@ -210,3 +210,145 @@ func (s *ConfigMessageService) GetEnabledChannels() ([]model.MessageConfig, erro
 	}
 	return items, nil
 }
+
+// MessageTemplate represents a message template.
+type MessageTemplate struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	Channel     string `json:"channel"`
+	Subject     string `json:"subject"`
+	Content     string `json:"content"`
+	Description string `json:"description"`
+	Variables   string `json:"variables"`
+	Status      int    `json:"status"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+}
+
+// CreateTemplate creates a new message template.
+func (s *ConfigMessageService) CreateTemplate(name, channel, subject, content, description, variables string) (*MessageTemplate, error) {
+	template := map[string]interface{}{
+		"name":        name,
+		"channel":     channel,
+		"subject":     subject,
+		"content":     content,
+		"description": description,
+		"variables":   variables,
+		"status":      1,
+		"created_at":  time.Now(),
+		"updated_at":  time.Now(),
+	}
+	if err := s.db.Table("message_templates").Create(&template).Error; err != nil {
+		return nil, err
+	}
+
+	return &MessageTemplate{
+		Name:        name,
+		Channel:     channel,
+		Subject:     subject,
+		Content:     content,
+		Description: description,
+		Variables:   variables,
+		Status:      1,
+	}, nil
+}
+
+// UpdateTemplate updates a message template.
+func (s *ConfigMessageService) UpdateTemplate(id, name, subject, content, description string, variables string, status *int) error {
+	updates := map[string]interface{}{
+		"updated_at": time.Now(),
+	}
+	if name != "" {
+		updates["name"] = name
+	}
+	if subject != "" {
+		updates["subject"] = subject
+	}
+	if content != "" {
+		updates["content"] = content
+	}
+	if description != "" {
+		updates["description"] = description
+	}
+	if variables != "" {
+		updates["variables"] = variables
+	}
+	if status != nil {
+		updates["status"] = *status
+	}
+
+	result := s.db.Table("message_templates").Where("id = ?", id).Updates(updates)
+	if result.RowsAffected == 0 {
+		return errors.New("template not found")
+	}
+	return result.Error
+}
+
+// DeleteTemplate deletes a message template.
+func (s *ConfigMessageService) DeleteTemplate(id string) error {
+	result := s.db.Table("message_templates").Where("id = ?", id).Delete(nil)
+	if result.RowsAffected == 0 {
+		return errors.New("template not found")
+	}
+	return result.Error
+}
+
+// GetTemplateDesc returns template description and variables.
+func (s *ConfigMessageService) GetTemplateDesc(id string) (map[string]interface{}, error) {
+	var template MessageTemplate
+	if err := s.db.Table("message_templates").Where("id = ?", id).First(&template).Error; err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"description": template.Description,
+		"variables":   template.Variables,
+		"content":     template.Content,
+	}, nil
+}
+
+// SetSmsTemplate sets an SMS template.
+func (s *ConfigMessageService) SetSmsTemplate(templateID, smsContent string) error {
+	updates := map[string]interface{}{
+		"sms_content": smsContent,
+		"updated_at":  time.Now(),
+	}
+	result := s.db.Table("message_templates").Where("id = ? AND channel = ?", templateID, "sms").Updates(updates)
+	if result.RowsAffected == 0 {
+		return errors.New("SMS template not found")
+	}
+	return result.Error
+}
+
+// BeforeSendMessageCheck checks if a message can be sent.
+func (s *ConfigMessageService) BeforeSendMessageCheck(channel, templateID string, userID uint) (map[string]interface{}, error) {
+	// Check channel config
+	var config model.MessageConfig
+	if err := s.db.Where("channel = ?", channel).First(&config).Error; err != nil {
+		return nil, errors.New("message channel not found")
+	}
+
+	if !config.IsEnabled {
+		return map[string]interface{}{"can_send": false, "reason": "channel disabled"}, nil
+	}
+
+	// Check rate limits
+	if config.RateLimit > 0 {
+		var recentCount int64
+		s.db.Table("message_logs").Where("channel = ? AND created_at > ?", channel, time.Now().Add(-time.Minute)).Count(&recentCount)
+		if int(recentCount) >= config.RateLimit {
+			return map[string]interface{}{"can_send": false, "reason": "rate limit exceeded"}, nil
+		}
+	}
+
+	// Check daily limits
+	if config.DailyLimit > 0 {
+		today := time.Now().Format("2006-01-02")
+		var dailyCount int64
+		s.db.Table("message_logs").Where("channel = ? AND DATE(created_at) = ?", channel, today).Count(&dailyCount)
+		if int(dailyCount) >= config.DailyLimit {
+			return map[string]interface{}{"can_send": false, "reason": "daily limit exceeded"}, nil
+		}
+	}
+
+	return map[string]interface{}{"can_send": true, "reason": ""}, nil
+}

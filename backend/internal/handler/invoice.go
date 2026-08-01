@@ -11,12 +11,18 @@ import (
 )
 
 type InvoiceHandler struct {
-	invoiceSvc *service.InvoiceService
-	log        *logger.Logger
+	invoiceSvc  *service.InvoiceService
+	enhancedSvc *service.InvoiceEnhancedService
+	log         *logger.Logger
 }
 
 func NewInvoiceHandler(invoiceSvc *service.InvoiceService, log *logger.Logger) *InvoiceHandler {
 	return &InvoiceHandler{invoiceSvc: invoiceSvc, log: log}
+}
+
+// SetEnhancedService sets the enhanced invoice service (called from router after init).
+func (h *InvoiceHandler) SetEnhancedService(svc *service.InvoiceEnhancedService) {
+	h.enhancedSvc = svc
 }
 
 // GetDetail returns a single invoice.
@@ -97,6 +103,407 @@ func (h *InvoiceHandler) GetList(c *gin.Context) {
 	}
 
 	invoices, total, err := h.invoiceSvc.GetList(page, pageSize, status, userID)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, invoices, total, page, pageSize)
+}
+
+// CombineInvoices merges multiple unpaid invoices into one (admin).
+func (h *InvoiceHandler) CombineInvoices(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	var req struct {
+		InvoiceIDs []uint `json:"invoice_ids" binding:"required,min=2"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	combined, err := h.enhancedSvc.CombineInvoices(req.InvoiceIDs)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, combined)
+}
+
+// GetCombineInvoices returns invoices eligible for combining for a user (admin).
+func (h *InvoiceHandler) GetCombineInvoices(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	userID, err := strconv.ParseUint(c.Query("user_id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user_id")
+		return
+	}
+
+	invoices, err := h.enhancedSvc.GetCombineInvoices(uint(userID))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, invoices)
+}
+
+// InvoiceLog returns the operation log for an invoice (admin).
+func (h *InvoiceHandler) InvoiceLog(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	logs, err := h.enhancedSvc.GetInvoiceLog(uint(id))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, logs)
+}
+
+// Duplicate duplicates an invoice (admin).
+func (h *InvoiceHandler) Duplicate(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	newInvoice, err := h.enhancedSvc.DuplicateInvoice(uint(id))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, newInvoice)
+}
+
+// Option updates invoice options like dates, status, payment method, notes (admin).
+func (h *InvoiceHandler) Option(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	var req struct {
+		DueDate   *string `json:"due_date"`
+		Status    *int    `json:"status"`
+		Payment   *string `json:"payment"`
+		Notes     *string `json:"notes"`
+		InvoiceNo *string `json:"invoice_no"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	invoice, err := h.invoiceSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "invoice not found")
+		return
+	}
+
+	adminID := c.GetUint("admin_id")
+	updates := map[string]interface{}{}
+	detail := ""
+
+	if req.DueDate != nil {
+		updates["due_date"] = *req.DueDate
+		detail += "due_date updated; "
+	}
+	if req.Status != nil {
+		updates["status"] = *req.Status
+		detail += "status updated; "
+	}
+	if req.Payment != nil {
+		updates["payment"] = *req.Payment
+		detail += "payment updated; "
+	}
+	if req.Notes != nil {
+		updates["notes"] = *req.Notes
+		detail += "notes updated; "
+	}
+	if req.InvoiceNo != nil {
+		updates["invoice_no"] = *req.InvoiceNo
+		detail += "invoice_no updated; "
+	}
+
+	if len(updates) > 0 {
+		if err := h.invoiceSvc.UpdateInvoice(uint(id), updates); err != nil {
+			response.BadRequest(c, err.Error())
+			return
+		}
+		h.enhancedSvc.LogAction(uint(id), adminID, "option_updated", detail, c.ClientIP())
+	}
+
+	inv, _ := h.invoiceSvc.GetByID(uint(id))
+	response.Success(c, inv)
+}
+
+// AddPayInvoicePage returns page data for adding credit payment to an invoice (admin).
+func (h *InvoiceHandler) AddPayInvoicePage(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	inv, err := h.invoiceSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "invoice not found")
+		return
+	}
+
+	user, err := h.invoiceSvc.GetUser(inv.UserID)
+	if err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"invoice":       inv,
+		"user_credit":   user.Balance,
+		"surplus":       inv.Amount,
+		"invoice_credit": 0.0,
+	})
+}
+
+// DeletePayInvoice removes credit payment from an invoice (admin).
+func (h *InvoiceHandler) DeletePayInvoice(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	if err := h.enhancedSvc.DeletePayInvoice(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	adminID := c.GetUint("admin_id")
+	h.enhancedSvc.LogAction(uint(id), adminID, "payment_deleted", "payment record deleted", c.ClientIP())
+	response.SuccessMsg(c, "payment deleted")
+}
+
+// InvoicePayAfterHandle handles post-payment processing (admin).
+func (h *InvoiceHandler) InvoicePayAfterHandle(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	inv, err := h.invoiceSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "invoice not found")
+		return
+	}
+
+	if inv.Status != 1 {
+		response.BadRequest(c, "invoice is not paid")
+		return
+	}
+
+	if h.enhancedSvc != nil {
+		adminID := c.GetUint("admin_id")
+		h.enhancedSvc.LogAction(uint(id), adminID, "pay_after_handle", "post-payment processing triggered", c.ClientIP())
+	}
+
+	response.Success(c, gin.H{
+		"invoice_id": id,
+		"status":     "processed",
+	})
+}
+
+// BatchStatus updates status for multiple invoices (admin).
+func (h *InvoiceHandler) BatchStatus(c *gin.Context) {
+	var req struct {
+		InvoiceIDs []uint `json:"invoice_ids" binding:"required"`
+		Status     int    `json:"status" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	for _, id := range req.InvoiceIDs {
+		if err := h.invoiceSvc.UpdateInvoice(id, map[string]interface{}{"status": req.Status}); err != nil {
+			h.log.Errorf("failed to update invoice %d status: %v", id, err)
+		}
+	}
+
+	response.SuccessMsg(c, "invoices status updated")
+}
+
+// MarkPaid marks invoices as paid (admin).
+func (h *InvoiceHandler) MarkPaid(c *gin.Context) {
+	var req struct {
+		InvoiceIDs []uint `json:"invoice_ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	for _, id := range req.InvoiceIDs {
+		if err := h.invoiceSvc.MarkPaid(id); err != nil {
+			h.log.Errorf("failed to mark invoice %d as paid: %v", id, err)
+		}
+	}
+
+	response.SuccessMsg(c, "invoices marked as paid")
+}
+
+// MarkUnpaid marks invoices as unpaid (admin).
+func (h *InvoiceHandler) MarkUnpaid(c *gin.Context) {
+	var req struct {
+		InvoiceIDs []uint `json:"invoice_ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	for _, id := range req.InvoiceIDs {
+		if err := h.invoiceSvc.UpdateInvoice(id, map[string]interface{}{"status": 0, "paid_at": nil}); err != nil {
+			h.log.Errorf("failed to mark invoice %d as unpaid: %v", id, err)
+		}
+	}
+
+	response.SuccessMsg(c, "invoices marked as unpaid")
+}
+
+// BatchDelete deletes multiple invoices (admin).
+func (h *InvoiceHandler) BatchDelete(c *gin.Context) {
+	var req struct {
+		InvoiceIDs []uint `json:"invoice_ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	for _, id := range req.InvoiceIDs {
+		if err := h.invoiceSvc.DeleteInvoice(id); err != nil {
+			h.log.Errorf("failed to delete invoice %d: %v", id, err)
+		}
+	}
+
+	response.SuccessMsg(c, "invoices deleted")
+}
+
+// SendInvoiceEmail sends invoice email (admin).
+func (h *InvoiceHandler) SendInvoiceEmail(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	email := c.Query("email")
+	if err := h.enhancedSvc.SendInvoiceEmail(uint(id), email); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "invoice email sent")
+}
+
+// Refund processes a refund for an invoice (admin).
+func (h *InvoiceHandler) Refund(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	var req struct {
+		Amount float64 `json:"amount" binding:"required,gt=0"`
+		Reason string  `json:"reason"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	refund, err := h.enhancedSvc.RefundInvoice(uint(id), req.Amount, req.Reason)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, refund)
+}
+
+// GetSummary returns invoice summary statistics (admin).
+func (h *InvoiceHandler) GetSummary(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	summary, err := h.enhancedSvc.GetInvoiceSummary()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, summary)
+}
+
+// GetRenewInvoices returns renewal invoices (admin).
+func (h *InvoiceHandler) GetRenewInvoices(c *gin.Context) {
+	if h.enhancedSvc == nil {
+		response.ServerError(c, "enhanced service not available")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	invoices, total, err := h.enhancedSvc.GetRenewInvoices(page, pageSize)
 	if err != nil {
 		response.ServerError(c, err.Error())
 		return

@@ -310,3 +310,154 @@ func (s *TicketDepartmentService) Enable(id uint) error {
 func (s *TicketDepartmentService) Disable(id uint) error {
 	return s.db.Model(&TicketDepartment{}).Where("id = ?", id).Update("status", 0).Error
 }
+
+// CustomParam represents a custom field definition.
+type CustomParam struct {
+	ID          uint   `json:"id"`
+	Type        string `json:"type"`
+	RelID       uint   `json:"rel_id"`
+	FieldName   string `json:"field_name"`
+	FieldType   string `json:"field_type"`
+	Description string `json:"description"`
+	FieldOption string `json:"field_option"`
+	RegExpr     string `json:"reg_expr"`
+	AdminOnly   int8   `json:"admin_only"`
+	Required    int8   `json:"required"`
+	SortOrder   int    `json:"sort_order"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// AddCustomParam adds a custom field to a department.
+func (s *TicketDepartmentService) AddCustomParam(deptID uint, fieldName, fieldType, description, fieldOption, regExpr string, adminOnly, required int8, sortOrder int) (*CustomParam, error) {
+	// Check department exists
+	var dept TicketDepartment
+	if err := s.db.First(&dept, deptID).Error; err != nil {
+		return nil, errors.New("department not found")
+	}
+
+	// Check duplicate field name
+	var count int64
+	s.db.Table("custom_fields").Where("field_name = ? AND type = ? AND rel_id = ?", fieldName, "ticket", deptID).Count(&count)
+	if count > 0 {
+		return nil, errors.New("field name already exists")
+	}
+
+	field := map[string]interface{}{
+		"type":         "ticket",
+		"rel_id":       deptID,
+		"field_name":   fieldName,
+		"field_type":   fieldType,
+		"description":  description,
+		"field_option": fieldOption,
+		"reg_expr":     regExpr,
+		"admin_only":   adminOnly,
+		"required":     required,
+		"sort_order":   sortOrder,
+		"created_at":   time.Now(),
+		"updated_at":   time.Now(),
+	}
+	if err := s.db.Table("custom_fields").Create(&field).Error; err != nil {
+		return nil, err
+	}
+
+	return &CustomParam{
+		Type:        "ticket",
+		RelID:       deptID,
+		FieldName:   fieldName,
+		FieldType:   fieldType,
+		Description: description,
+		FieldOption: fieldOption,
+		RegExpr:     regExpr,
+		AdminOnly:   adminOnly,
+		Required:    required,
+		SortOrder:   sortOrder,
+	}, nil
+}
+
+// GetCustomParam returns a custom field by ID.
+func (s *TicketDepartmentService) GetCustomParam(fieldID uint) (*CustomParam, error) {
+	var field CustomParam
+	if err := s.db.Table("custom_fields").Where("id = ?", fieldID).First(&field).Error; err != nil {
+		return nil, err
+	}
+	return &field, nil
+}
+
+// EditCustomParam updates a custom field.
+func (s *TicketDepartmentService) EditCustomParam(fieldID, deptID uint, fieldName, fieldType, description, fieldOption, regExpr string, adminOnly, required int8, sortOrder int) error {
+	// Check duplicate field name (excluding current)
+	var count int64
+	s.db.Table("custom_fields").Where("field_name = ? AND type = ? AND rel_id = ? AND id <> ?", fieldName, "ticket", deptID, fieldID).Count(&count)
+	if count > 0 {
+		return errors.New("field name already exists")
+	}
+
+	updates := map[string]interface{}{
+		"field_name":   fieldName,
+		"field_type":   fieldType,
+		"description":  description,
+		"field_option": fieldOption,
+		"reg_expr":     regExpr,
+		"admin_only":   adminOnly,
+		"required":     required,
+		"sort_order":   sortOrder,
+		"updated_at":   time.Now(),
+	}
+	return s.db.Table("custom_fields").Where("id = ?", fieldID).Updates(updates).Error
+}
+
+// DeleteCustomParam deletes a custom field and its values.
+func (s *TicketDepartmentService) DeleteCustomParam(fieldID uint) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// Delete field values
+		if err := tx.Table("custom_field_values").Where("field_id = ?", fieldID).Delete(nil).Error; err != nil {
+			return err
+		}
+		// Delete field definition
+		return tx.Table("custom_fields").Where("id = ?", fieldID).Delete(nil).Error
+	})
+}
+
+// MoveUp moves a department up in sort order.
+func (s *TicketDepartmentService) MoveUp(deptID uint) error {
+	var dept TicketDepartment
+	if err := s.db.First(&dept, deptID).Error; err != nil {
+		return errors.New("department not found")
+	}
+
+	// Find the previous department
+	var prev TicketDepartment
+	if err := s.db.Where("sort_order < ?", dept.SortOrder).Order("sort_order DESC").First(&prev).Error; err != nil {
+		return nil // Already at top
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// Swap sort orders
+		if err := tx.Model(&dept).Update("sort_order", prev.SortOrder).Error; err != nil {
+			return err
+		}
+		return tx.Model(&prev).Update("sort_order", dept.SortOrder).Error
+	})
+}
+
+// MoveDown moves a department down in sort order.
+func (s *TicketDepartmentService) MoveDown(deptID uint) error {
+	var dept TicketDepartment
+	if err := s.db.First(&dept, deptID).Error; err != nil {
+		return errors.New("department not found")
+	}
+
+	// Find the next department
+	var next TicketDepartment
+	if err := s.db.Where("sort_order > ?", dept.SortOrder).Order("sort_order ASC").First(&next).Error; err != nil {
+		return nil // Already at bottom
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// Swap sort orders
+		if err := tx.Model(&dept).Update("sort_order", next.SortOrder).Error; err != nil {
+			return err
+		}
+		return tx.Model(&next).Update("sort_order", dept.SortOrder).Error
+	})
+}

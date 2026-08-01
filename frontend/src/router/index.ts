@@ -225,6 +225,11 @@ const router = createRouter({
       component: () => import('@/views/solutions/hosting.vue')
     },
     {
+      path: '/solutions/highbuild',
+      name: 'SolutionHighbuild',
+      component: () => import('@/views/solutions/HighBuild.vue')
+    },
+    {
       path: '/aup',
       name: 'Aup',
       component: () => import('@/views/Aup.vue')

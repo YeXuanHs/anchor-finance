@@ -89,3 +89,129 @@ func (h *ConfigMessageHandler) GetEnabled(c *gin.Context) {
 	}
 	response.Success(c, items)
 }
+
+// CreateTemplate creates a new message template.
+// POST /config/messages/templates
+func (h *ConfigMessageHandler) CreateTemplate(c *gin.Context) {
+	var req struct {
+		Name        string `json:"name" binding:"required"`
+		Channel     string `json:"channel" binding:"required"`
+		Subject     string `json:"subject"`
+		Content     string `json:"content" binding:"required"`
+		Description string `json:"description"`
+		Variables   string `json:"variables"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	template, err := h.svc.CreateTemplate(req.Name, req.Channel, req.Subject, req.Content, req.Description, req.Variables)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, template)
+}
+
+// UpdateTemplate updates an existing message template.
+// PUT /config/messages/templates/:id
+func (h *ConfigMessageHandler) UpdateTemplate(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.BadRequest(c, "template id is required")
+		return
+	}
+
+	var req struct {
+		Name        string `json:"name"`
+		Subject     string `json:"subject"`
+		Content     string `json:"content"`
+		Description string `json:"description"`
+		Variables   string `json:"variables"`
+		Status      *int   `json:"status"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.UpdateTemplate(id, req.Name, req.Subject, req.Content, req.Description, req.Variables, req.Status); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "template updated")
+}
+
+// DeleteTemplate deletes a message template.
+// DELETE /config/messages/templates/:id
+func (h *ConfigMessageHandler) DeleteTemplate(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.BadRequest(c, "template id is required")
+		return
+	}
+
+	if err := h.svc.DeleteTemplate(id); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "template deleted")
+}
+
+// GetTemplateDesc returns template description and variables.
+// GET /config/messages/templates/:id/desc
+func (h *ConfigMessageHandler) GetTemplateDesc(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.BadRequest(c, "template id is required")
+		return
+	}
+
+	desc, err := h.svc.GetTemplateDesc(id)
+	if err != nil {
+		response.NotFound(c, "template not found")
+		return
+	}
+	response.Success(c, desc)
+}
+
+// SetSmsTemplate sets an SMS template.
+// POST /config/messages/sms-template
+func (h *ConfigMessageHandler) SetSmsTemplate(c *gin.Context) {
+	var req struct {
+		TemplateID string `json:"template_id" binding:"required"`
+		SmsContent string `json:"sms_content" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.SetSmsTemplate(req.TemplateID, req.SmsContent); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "SMS template set")
+}
+
+// BeforeSendMessageCheck checks if a message can be sent.
+// POST /config/messages/check
+func (h *ConfigMessageHandler) BeforeSendMessageCheck(c *gin.Context) {
+	var req struct {
+		Channel    string `json:"channel" binding:"required"`
+		TemplateID string `json:"template_id"`
+		UserID     uint   `json:"user_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	result, err := h.svc.BeforeSendMessageCheck(req.Channel, req.TemplateID, req.UserID)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, result)
+}

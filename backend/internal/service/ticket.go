@@ -404,3 +404,164 @@ func (s *TicketService) GetTransferLogs(ticketID uint) ([]TicketTransferLog, err
 	}
 	return logs, nil
 }
+
+// TicketNote is the service-level struct for ticket notes.
+type TicketNote struct {
+	ID        uint      `json:"id"`
+	TicketID  uint      `json:"ticket_id"`
+	AdminID   uint      `json:"admin_id"`
+	AdminName string    `json:"admin_name"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// AddNote adds an admin note to a ticket.
+func (s *TicketService) AddNote(ticketID, adminID uint, content string) (*TicketNote, error) {
+	var ticket struct{ ID uint }
+	if err := s.db.Table("tickets").Select("id").Where("id = ?", ticketID).First(&ticket).Error; err != nil {
+		return nil, errors.New("ticket not found")
+	}
+
+	note := map[string]interface{}{
+		"ticket_id":  ticketID,
+		"admin_id":   adminID,
+		"content":    content,
+		"created_at": time.Now(),
+		"updated_at": time.Now(),
+	}
+	if err := s.db.Table("ticket_notes").Create(&note).Error; err != nil {
+		return nil, err
+	}
+
+	var adminName string
+	s.db.Table("admins").Select("username").Where("id = ?", adminID).Scan(&adminName)
+
+	return &TicketNote{
+		TicketID:  ticketID,
+		AdminID:   adminID,
+		AdminName: adminName,
+		Content:   content,
+		CreatedAt: time.Now(),
+	}, nil
+}
+
+// DeleteNote deletes a ticket note.
+func (s *TicketService) DeleteNote(noteID uint) error {
+	result := s.db.Table("ticket_notes").Where("id = ?", noteID).Delete(nil)
+	if result.RowsAffected == 0 {
+		return errors.New("note not found")
+	}
+	return result.Error
+}
+
+// DeleteReply deletes a ticket reply.
+func (s *TicketService) DeleteReply(replyID uint) error {
+	result := s.db.Table("ticket_replies").Where("id = ?", replyID).Delete(nil)
+	if result.RowsAffected == 0 {
+		return errors.New("reply not found")
+	}
+	return result.Error
+}
+
+// HostInfo represents a host associated with a ticket user.
+type HostInfo struct {
+	ID            uint    `json:"id"`
+	UserID        uint    `json:"user_id"`
+	ProductID     uint    `json:"product_id"`
+	ProductName   string  `json:"product_name"`
+	Domain        string  `json:"domain"`
+	Status        string  `json:"status"`
+	BillingCycle  string  `json:"billing_cycle"`
+	Amount        float64 `json:"amount"`
+	NextDueDate   string  `json:"next_due_date"`
+	CreatedAt     string  `json:"created_at"`
+}
+
+// GetTicketDetailHost returns hosts associated with a ticket's user.
+func (s *TicketService) GetTicketDetailHost(ticketID uint, page, pageSize int) ([]HostInfo, int64, error) {
+	var ticket struct{ UserID uint }
+	if err := s.db.Table("tickets").Select("user_id").Where("id = ?", ticketID).First(&ticket).Error; err != nil {
+		return nil, 0, errors.New("ticket not found")
+	}
+
+	var total int64
+	s.db.Table("hosts").Where("user_id = ?", ticket.UserID).Count(&total)
+
+	var hosts []HostInfo
+	offset := (page - 1) * pageSize
+	s.db.Table("hosts h").
+		Select("h.id, h.user_id, h.product_id, p.name as product_name, h.domain, h.status, h.billing_cycle, h.amount, h.next_due_date, h.created_at").
+		Joins("LEFT JOIN products p ON p.id = h.product_id").
+		Where("h.user_id = ?", ticket.UserID).
+		Order("h.id DESC").
+		Offset(offset).Limit(pageSize).
+		Find(&hosts)
+
+	return hosts, total, nil
+}
+
+// TicketStatistics represents ticket statistics.
+type TicketStatistics struct {
+	Total       int64            `json:"total"`
+	Open        int64            `json:"open"`
+	Replied     int64            `json:"replied"`
+	Closed      int64            `json:"closed"`
+	Pending     int64            `json:"pending"`
+	TodayOpen   int64            `json:"today_open"`
+	TodayClosed int64            `json:"today_closed"`
+	WeekOpen    int64            `json:"week_open"`
+	MonthOpen   int64            `json:"month_open"`
+	ByDept      []DeptStat       `json:"by_dept"`
+	ByPriority  []PriorityStat   `json:"by_priority"`
+}
+
+type DeptStat struct {
+	DeptID   uint   `json:"dept_id"`
+	DeptName string `json:"dept_name"`
+	Count    int64  `json:"count"`
+}
+
+type PriorityStat struct {
+	Priority string `json:"priority"`
+	Count    int64  `json:"count"`
+}
+
+// GetTicketStatistics returns ticket statistics.
+func (s *TicketService) GetTicketStatistics() (*TicketStatistics, error) {
+	stats := &TicketStatistics{}
+
+	// Total count
+	s.db.Table("tickets").Count(&stats.Total)
+
+	// Status counts
+	s.db.Table("tickets").Where("status = 0").Count(&stats.Open)
+	s.db.Table("tickets").Where("status = 1").Count(&stats.Replied)
+	s.db.Table("tickets").Where("status = 2").Count(&stats.Closed)
+	s.db.Table("tickets").Where("status = 3").Count(&stats.Pending)
+
+	// Today counts
+	today := time.Now().Format("2006-01-02")
+	s.db.Table("tickets").Where("DATE(created_at) = ?", today).Count(&stats.TodayOpen)
+	s.db.Table("tickets").Where("status = 2 AND DATE(closed_at) = ?", today).Count(&stats.TodayClosed)
+
+	// Week and month counts
+	weekAgo := time.Now().AddDate(0, 0, -7).Format("2006-01-02")
+	monthStart := time.Now().Format("2006-01") + "-01"
+	s.db.Table("tickets").Where("created_at >= ?", weekAgo).Count(&stats.WeekOpen)
+	s.db.Table("tickets").Where("created_at >= ?", monthStart).Count(&stats.MonthOpen)
+
+	// By department
+	s.db.Table("tickets t").
+		Select("t.department_id as dept_id, d.name as dept_name, COUNT(*) as count").
+		Joins("LEFT JOIN departments d ON d.id = t.department_id").
+		Group("t.department_id, d.name").
+		Find(&stats.ByDept)
+
+	// By priority
+	s.db.Table("tickets").
+		Select("priority, COUNT(*) as count").
+		Group("priority").
+		Find(&stats.ByPriority)
+
+	return stats, nil
+}

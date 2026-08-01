@@ -98,3 +98,47 @@ type TicketTransferLog struct {
 	Reason      string  `gorm:"type:text" json:"reason"`
 	Ticket      *Ticket `gorm:"foreignKey:TicketID" json:"ticket,omitempty"`
 }
+
+// TicketNote 工单备注（管理员内部备注）
+type TicketNote struct {
+	gorm.Model
+	TicketID    uint   `gorm:"index;not null" json:"ticket_id"`
+	Ticket      Ticket `gorm:"foreignKey:TicketID" json:"ticket,omitempty"`
+	AdminID     uint   `gorm:"index;not null" json:"admin_id"`
+	Admin       Admin  `gorm:"foreignKey:AdminID" json:"admin,omitempty"`
+	Content     string `gorm:"type:text;not null" json:"content"`
+	Attachment  string `gorm:"type:text" json:"attachment"` // 逗号分隔的附件路径
+}
+
+// CustomField 自定义字段
+type CustomField struct {
+	gorm.Model
+	Type        string `gorm:"type:varchar(32);not null;index" json:"type"`       // ticket/order/product
+	RelID       uint   `gorm:"index;not null" json:"rel_id"`                     // 关联ID
+	FieldName   string `gorm:"type:varchar(128);not null" json:"field_name"`
+	FieldType   string `gorm:"type:varchar(32);default:text" json:"field_type"`  // text/textarea/dropdown/password/tickbox
+	Description string `gorm:"type:varchar(255)" json:"description"`
+	FieldOption string `gorm:"type:text" json:"field_option"`                    // 下拉选项（逗号分隔）
+	RegExpr     string `gorm:"type:varchar(255)" json:"reg_expr"`
+	AdminOnly   int8   `gorm:"default:0" json:"admin_only"`
+	Required    int8   `gorm:"default:0" json:"required"`
+	SortOrder   int    `gorm:"default:0" json:"sort_order"`
+}
+
+// CustomFieldValue 自定义字段值
+type CustomFieldValue struct {
+	gorm.Model
+	FieldID uint   `gorm:"index;not null" json:"field_id"`
+	RelID   uint   `gorm:"index;not null" json:"rel_id"`
+	Value   string `gorm:"type:text" json:"value"`
+}
+
+// FlowPacket 流量包
+type FlowPacket struct {
+	gorm.Model
+	ServerID uint    `gorm:"index;not null" json:"server_id"`
+	Name     string  `gorm:"type:varchar(128);not null" json:"name"`
+	Flow     float64 `gorm:"not null" json:"flow"`         // 流量大小（GB）
+	Price    float64 `gorm:"not null" json:"price"`
+	Status   int8    `gorm:"default:1" json:"status"`       // 1=启用 0=禁用
+}

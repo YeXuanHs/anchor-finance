@@ -648,3 +648,236 @@ func (h *UserManageHandler) GetOperationLogs(c *gin.Context) {
 	}
 	response.SuccessPage(c, logs, total, page, pageSize)
 }
+
+// ==================== 删除原因管理 ====================
+
+// DelReason deletes a cancel reason.
+// DELETE /manage/cancel-reasons/:id
+func (h *UserManageHandler) DelReason(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid reason id")
+		return
+	}
+
+	if err := h.svc.DeleteCancelReason(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "cancel reason deleted")
+}
+
+// GetCancelReasons returns all cancel reasons.
+// GET /manage/cancel-reasons
+func (h *UserManageHandler) GetCancelReasons(c *gin.Context) {
+	reasons, err := h.svc.GetCancelReasons()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, reasons)
+}
+
+// AddCancelReason adds a new cancel reason.
+// POST /manage/cancel-reasons
+func (h *UserManageHandler) AddCancelReason(c *gin.Context) {
+	var req struct {
+		Reason string `json:"reason" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.AddCancelReason(req.Reason); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "cancel reason added")
+}
+
+// ==================== 充值发票 ====================
+
+// AddRechargeInvoice creates a recharge invoice for a user.
+// POST /manage/users/:id/recharge-invoice
+func (h *UserManageHandler) AddRechargeInvoice(c *gin.Context) {
+	uid, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	var req struct {
+		Amount float64 `json:"amount" binding:"required,gt=0"`
+		Notes  string  `json:"notes"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	invoice, err := h.svc.CreateRechargeInvoice(uint(uid), req.Amount, req.Notes)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, invoice)
+}
+
+// ==================== 用户发票 ====================
+
+// AddUserInvoice creates a blank invoice for a user.
+// POST /manage/users/:id/invoice
+func (h *UserManageHandler) AddUserInvoice(c *gin.Context) {
+	uid, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	invoice, err := h.svc.CreateUserInvoice(uint(uid))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, invoice)
+}
+
+// ==================== 认证下载 ====================
+
+// CertifiDownload downloads a certification image.
+// GET /manage/certification/:id/download
+func (h *UserManageHandler) CertifiDownload(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid certification id")
+		return
+	}
+
+	fileType := c.Query("type")
+	if fileType == "" {
+		response.BadRequest(c, "type is required")
+		return
+	}
+
+	filePath, fileName, err := h.svc.GetCertificationFile(uint(id), fileType)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	c.FileAttachment(filePath, fileName)
+}
+
+// ==================== 个人认证下载 ====================
+
+// CertifiPersonDownload downloads a personal certification image.
+// GET /manage/certification/person/:client_id/download
+func (h *UserManageHandler) CertifiPersonDownload(c *gin.Context) {
+	clientID, err := strconv.ParseUint(c.Param("client_id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid client id")
+		return
+	}
+
+	fileType := c.Query("type")
+	if fileType == "" {
+		response.BadRequest(c, "type is required")
+		return
+	}
+
+	filePath, fileName, err := h.svc.GetPersonalCertificationFile(uint(clientID), fileType)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	c.FileAttachment(filePath, fileName)
+}
+
+// ==================== 认证历史日志 ====================
+
+// GetCertifyHistoryLog returns certification history logs for a client.
+// GET /manage/certification/:id/history
+func (h *UserManageHandler) GetCertifyHistoryLog(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid certification id")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	logs, total, err := h.svc.GetCertifyHistoryLog(uint(id), page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, logs, total, page, pageSize)
+}
+
+// ==================== 主机绑定销售 ====================
+
+// HostBindSale binds a salesperson to a user.
+// POST /manage/users/:id/bind-sale
+func (h *UserManageHandler) HostBindSale(c *gin.Context) {
+	uid, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	var req struct {
+		SaleID uint `json:"sale_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.BindSale(uint(uid), req.SaleID); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "sale bound successfully")
+}
+
+// ==================== 关联用户列表 ====================
+
+// RelationUserList returns a list of users for relation selection.
+// GET /manage/users/relation-list
+func (h *UserManageHandler) RelationUserList(c *gin.Context) {
+	keyword := c.Query("keyword")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "50"))
+
+	users, total, err := h.svc.GetRelationUserList(page, pageSize, keyword)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, users, total, page, pageSize)
+}
+
+// ==================== 用户产品发票 ====================
+
+// UserProductInvoice returns invoices related to a user's products.
+// GET /manage/users/:id/product-invoices
+func (h *UserManageHandler) UserProductInvoice(c *gin.Context) {
+	uid, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	order := c.DefaultQuery("order", "id")
+	sort := c.DefaultQuery("sort", "desc")
+
+	invoices, total, err := h.svc.GetUserProductInvoices(uint(uid), page, pageSize, order, sort)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, invoices, total, page, pageSize)
+}

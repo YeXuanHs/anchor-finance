@@ -297,3 +297,39 @@ func (h *DownloadHandler) AdminUploadFile(c *gin.Context) {
 		Data:    dlFile,
 	})
 }
+
+// DownloadsConfig returns download module configuration.
+// GET /downloads/config
+func (h *DownloadHandler) DownloadsConfig(c *gin.Context) {
+	config := map[string]interface{}{
+		"allow_upload":     true,
+		"max_file_size":    100 * 1024 * 1024, // 100MB
+		"allowed_exts":     ".zip,.rar,.7z,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.png,.gif",
+		"upload_dir":       "./uploads/downloads",
+		"enable_public":    true,
+		"require_login":    false,
+		"enable_sort":      true,
+		"enable_category":  true,
+	}
+	response.Success(c, config)
+}
+
+// UpdateFileSort updates the sort order of files.
+// POST /downloads/sort
+func (h *DownloadHandler) UpdateFileSort(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	for i, id := range req.IDs {
+		if err := h.downloadSvc.UpdateSort(id, i+1); err != nil {
+			response.ServerError(c, err.Error())
+			return
+		}
+	}
+	response.SuccessMsg(c, "sort order updated")
+}

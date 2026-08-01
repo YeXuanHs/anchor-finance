@@ -1097,3 +1097,129 @@ func (s *DcimService) GetStats() (map[string]interface{}, error) {
 
 	return stats, nil
 }
+
+// ListFlowPackets returns paginated flow packets for a server.
+func (s *DcimService) ListFlowPackets(serverID uint, page, pageSize int) ([]model.FlowPacket, int64, error) {
+	var packets []model.FlowPacket
+	var total int64
+
+	q := s.db.Model(&model.FlowPacket{}).Where("server_id = ?", serverID)
+	q.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := q.Offset(offset).Limit(pageSize).Order("id ASC").Find(&packets).Error; err != nil {
+		return nil, 0, err
+	}
+	return packets, total, nil
+}
+
+// AddFlowPacket creates a new flow packet.
+func (s *DcimService) AddFlowPacket(serverID uint, name string, flow, price float64) (*model.FlowPacket, error) {
+	packet := &model.FlowPacket{
+		ServerID: serverID,
+		Name:     name,
+		Flow:     flow,
+		Price:    price,
+		Status:   1,
+	}
+	if err := s.db.Create(packet).Error; err != nil {
+		return nil, err
+	}
+	return packet, nil
+}
+
+// EditFlowPacket updates a flow packet.
+func (s *DcimService) EditFlowPacket(packetID uint, name string, flow, price *float64, status *int) error {
+	updates := map[string]interface{}{}
+	if name != "" {
+		updates["name"] = name
+	}
+	if flow != nil {
+		updates["flow"] = *flow
+	}
+	if price != nil {
+		updates["price"] = *price
+	}
+	if status != nil {
+		updates["status"] = *status
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	return s.db.Model(&model.FlowPacket{}).Where("id = ?", packetID).Updates(updates).Error
+}
+
+// DeleteFlowPacket deletes a flow packet.
+func (s *DcimService) DeleteFlowPacket(packetID uint) error {
+	return s.db.Delete(&model.FlowPacket{}, packetID).Error
+}
+
+// AssignServer assigns a server to a user.
+func (s *DcimService) AssignServer(serverID, userID, productID uint) error {
+	updates := map[string]interface{}{
+		"owner_id": userID,
+	}
+	if productID > 0 {
+		updates["product_id"] = productID
+	}
+	return s.db.Model(&model.DcimServer{}).Where("id = ?", serverID).Updates(updates).Error
+}
+
+// GetSalesServers returns servers available for sale.
+func (s *DcimService) GetSalesServers(page, pageSize int) ([]model.DcimServer, int64, error) {
+	var servers []model.DcimServer
+	var total int64
+
+	q := s.db.Model(&model.DcimServer{}).Where("owner_id IS NULL")
+	q.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := q.Offset(offset).Limit(pageSize).Order("id ASC").Find(&servers).Error; err != nil {
+		return nil, 0, err
+	}
+	return servers, total, nil
+}
+
+// GetNovncInfo returns NoVNC connection info.
+func (s *DcimService) GetNovncInfo(serverID uint) (map[string]interface{}, error) {
+	var server model.DcimServer
+	if err := s.db.First(&server, serverID).Error; err != nil {
+		return nil, err
+	}
+
+	info := map[string]interface{}{
+		"host": server.IP,
+		"port": 5900,
+		"password": "",
+	}
+	return info, nil
+}
+
+// RefreshServerStatus refreshes server status from remote API.
+func (s *DcimService) RefreshServerStatus(serverID uint) error {
+	var server model.DcimServer
+	if err := s.db.First(&server, serverID).Error; err != nil {
+		return err
+	}
+
+	// Call remote API to get current status
+	result, err := s.executeServerAction(&server, "status", nil)
+	if err != nil {
+		s.log.Warn("refresh server status failed: %v", err)
+		return nil // Non-critical error
+	}
+
+	if statusStr, ok := result["status"].(string); ok {
+		var status int8
+		switch statusStr {
+		case "running":
+			status = 1
+		case "stopped":
+			status = 0
+		default:
+			status = -1
+		}
+		s.db.Model(&server).Update("status", status)
+	}
+	return nil
+}

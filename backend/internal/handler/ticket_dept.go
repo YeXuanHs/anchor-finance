@@ -229,3 +229,155 @@ func (h *TicketDeptHandler) GetMembers(c *gin.Context) {
 	}
 	response.Success(c, members)
 }
+
+// GetCustomParamType returns the available custom field types.
+// GET /ticket-departments/custom-param-types
+func (h *TicketDeptHandler) GetCustomParamType(c *gin.Context) {
+	types := map[string]string{
+		"dropdown":  "下拉",
+		"password":  "密码",
+		"text":      "文本框",
+		"tickbox":   "选项框",
+		"textarea":  "文本域",
+	}
+	response.Success(c, types)
+}
+
+// AddTicketCustomParam adds a custom field to a ticket department.
+// POST /ticket-departments/:id/custom-params
+func (h *TicketDeptHandler) AddTicketCustomParam(c *gin.Context) {
+	deptID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid department id")
+		return
+	}
+
+	var req struct {
+		FieldName   string `json:"field_name" binding:"required"`
+		FieldType   string `json:"field_type" binding:"required"`
+		Description string `json:"description" binding:"required"`
+		FieldOption string `json:"field_option"`
+		RegExpr     string `json:"reg_expr"`
+		AdminOnly   int8   `json:"admin_only"`
+		Required    int8   `json:"required"`
+		SortOrder   int    `json:"sort_order"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if req.FieldType == "dropdown" && req.FieldOption == "" {
+		response.BadRequest(c, "dropdown type requires field_option")
+		return
+	}
+
+	field, err := h.deptSvc.AddCustomParam(uint(deptID), req.FieldName, req.FieldType, req.Description, req.FieldOption, req.RegExpr, req.AdminOnly, req.Required, req.SortOrder)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, field)
+}
+
+// GetTicketParamVal returns a custom field's value.
+// GET /ticket-departments/custom-params/:field_id
+func (h *TicketDeptHandler) GetTicketParamVal(c *gin.Context) {
+	fieldID, err := strconv.ParseUint(c.Param("field_id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid field id")
+		return
+	}
+
+	field, err := h.deptSvc.GetCustomParam(uint(fieldID))
+	if err != nil {
+		response.NotFound(c, "field not found")
+		return
+	}
+	response.Success(c, field)
+}
+
+// EditTicketCustomParam updates a custom field.
+// PUT /ticket-departments/custom-params/:field_id
+func (h *TicketDeptHandler) EditTicketCustomParam(c *gin.Context) {
+	fieldID, err := strconv.ParseUint(c.Param("field_id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid field id")
+		return
+	}
+
+	var req struct {
+		FieldName   string `json:"field_name" binding:"required"`
+		FieldType   string `json:"field_type" binding:"required"`
+		Description string `json:"description" binding:"required"`
+		DeptID      uint   `json:"dept_id" binding:"required"`
+		FieldOption string `json:"field_option"`
+		RegExpr     string `json:"reg_expr"`
+		AdminOnly   int8   `json:"admin_only"`
+		Required    int8   `json:"required"`
+		SortOrder   int    `json:"sort_order"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if req.FieldType == "dropdown" && req.FieldOption == "" {
+		response.BadRequest(c, "dropdown type requires field_option")
+		return
+	}
+
+	if err := h.deptSvc.EditCustomParam(uint(fieldID), req.DeptID, req.FieldName, req.FieldType, req.Description, req.FieldOption, req.RegExpr, req.AdminOnly, req.Required, req.SortOrder); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "custom param updated")
+}
+
+// DelTicketCustomParam deletes a custom field.
+// DELETE /ticket-departments/custom-params/:field_id
+func (h *TicketDeptHandler) DelTicketCustomParam(c *gin.Context) {
+	fieldID, err := strconv.ParseUint(c.Param("field_id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid field id")
+		return
+	}
+
+	if err := h.deptSvc.DeleteCustomParam(uint(fieldID)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "custom param deleted")
+}
+
+// MoveUp moves a department up in sort order.
+// POST /ticket-departments/:id/move-up
+func (h *TicketDeptHandler) MoveUp(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid department id")
+		return
+	}
+
+	if err := h.deptSvc.MoveUp(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "moved up")
+}
+
+// MoveDown moves a department down in sort order.
+// POST /ticket-departments/:id/move-down
+func (h *TicketDeptHandler) MoveDown(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid department id")
+		return
+	}
+
+	if err := h.deptSvc.MoveDown(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "moved down")
+}
