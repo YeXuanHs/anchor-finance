@@ -591,7 +591,7 @@ export const financeRoutes: AppRouteRecord = {
         {
           path: 'marketplace',
           name: 'MarketplaceConfig',
-          component: () => import('@/views/admin/finance/MarketplaceConfig.vue'),
+          component: () => import('@/views/finance/marketplace/index.vue'),
           meta: {
             title: '交易市场',
             icon: 'ep:shop'

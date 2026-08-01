@@ -89,6 +89,12 @@
             <el-menu-item index="/news">新闻动态</el-menu-item>
           </el-sub-menu>
           
+          <!-- 交易市场 -->
+          <el-menu-item index="/user/marketplace">
+            <el-icon><Shop /></el-icon>
+            <span>交易市场</span>
+          </el-menu-item>
+          
           <!-- 推介计划 -->
           <el-menu-item index="/user/referral">
             <el-icon><Connection /></el-icon>
@@ -179,7 +185,7 @@ import { useUserStore } from '@/stores/user'
 import {
   Fold, Close, Bell, ArrowDown, User, Setting, SwitchButton,
   HomeFilled, Box, ShoppingCart, Wallet, Tickets, Ticket, Connection,
-  Postcard, UserFilled, Lock, Folder, Download, Document, Promotion, TrendCharts
+  Postcard, UserFilled, Lock, Folder, Download, Document, Promotion, TrendCharts, Shop
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
@@ -216,7 +222,11 @@ const pageNameMap: Record<string, string> = {
   '/user/contacts': '联系人管理',
   '/user/oauth-bind': '第三方登录',
   '/user/system-message': '消息中心',
-  '/user/record-log': '操作日志'
+  '/user/record-log': '操作日志',
+  '/user/marketplace': '交易市场',
+  '/user/marketplace/sell': '挂售主机',
+  '/user/marketplace/orders': '交易订单',
+  '/user/marketplace/chat': '私聊消息'
 }
 
 const currentPageName = computed(() => {
