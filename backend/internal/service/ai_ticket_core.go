@@ -16,7 +16,7 @@ import (
 )
 
 // AITicketCoreService AI工单核心服务
-// 移植自 mianyu_ai_ticket 的核心逻辑
+// 移植自 mianyu_ai_ticket 的核心逻辑，支持 Agent（Function Calling）模式
 type AITicketCoreService struct {
 	db  *gorm.DB
 	log *logger.Logger
@@ -198,7 +198,6 @@ func (s *AITicketCoreService) MatchRule(content string, deptID uint) *model.AITi
 	s.db.Where("status = ?", 1).Order("priority ASC").Find(&rules)
 	lower := strings.ToLower(content)
 	for _, rule := range rules {
-		// 检查部门过滤
 		if rule.DeptFilter != "" {
 			deptIDs := strings.Split(rule.DeptFilter, ",")
 			found := false
@@ -212,7 +211,6 @@ func (s *AITicketCoreService) MatchRule(content string, deptID uint) *model.AITi
 				continue
 			}
 		}
-		// 检查关键词
 		if rule.Keywords != "" {
 			keywords := strings.Split(rule.Keywords, ",")
 			matched := false
@@ -313,7 +311,94 @@ func (s *AITicketCoreService) SetTicketMode(ticketID uint, mode string) error {
 	return s.db.Save(&existing).Error
 }
 
-// ─── AI 调用（带工具调用支持） ───
+// ─── 工具管理 ───
+
+// ListTools 获取所有工具列表（按分类）
+func (s *AITicketCoreService) ListTools() []ToolCategory {
+	categories := AllToolCategories()
+
+	// 读取启用/禁用配置
+	var configs []model.AIToolConfig
+	s.db.Find(&configs)
+	configMap := make(map[string]int8, len(configs))
+	for _, c := range configs {
+		configMap[c.Name] = c.Enabled
+	}
+
+	// 如果没有配置记录，所有工具默认启用
+	for i, cat := range categories {
+		for j, tool := range cat.Tools {
+			if enabled, ok := configMap[tool.Name]; ok {
+				if enabled == 0 {
+					categories[i].Tools[j].RiskLevel = tool.RiskLevel + " (已禁用)"
+				}
+			}
+		}
+	}
+
+	return categories
+}
+
+// GetEnabledTools 获取已启用的工具名列表
+func (s *AITicketCoreService) GetEnabledTools() []string {
+	var configs []model.AIToolConfig
+	s.db.Find(&configs)
+
+	if len(configs) == 0 {
+		return AllToolNames()
+	}
+
+	var enabled []string
+	for _, c := range configs {
+		if c.Enabled == 1 {
+			enabled = append(enabled, c.Name)
+		}
+	}
+	return enabled
+}
+
+// SetToolEnabled 启用/禁用工具
+func (s *AITicketCoreService) SetToolEnabled(name string, enabled bool) error {
+	var cfg model.AIToolConfig
+	enabledVal := int8(1)
+	if !enabled {
+		enabledVal = 0
+	}
+
+	if err := s.db.Where("name = ?", name).First(&cfg).Error; err != nil {
+		// 找到对应的 risk level
+		riskLevel := "low"
+		for _, t := range allToolsMap() {
+			if t.Name == name {
+				riskLevel = t.RiskLevel
+				break
+			}
+		}
+		cfg = model.AIToolConfig{Name: name, Enabled: enabledVal, RiskLevel: riskLevel}
+		return s.db.Create(&cfg).Error
+	}
+
+	cfg.Enabled = enabledVal
+	return s.db.Save(&cfg).Error
+}
+
+// ListToolExecutionLogs 获取工具执行日志
+func (s *AITicketCoreService) ListToolExecutionLogs(ticketID uint, page, pageSize int) ([]model.AIToolExecutionLog, int64, error) {
+	var items []model.AIToolExecutionLog
+	var total int64
+	q := s.db.Model(&model.AIToolExecutionLog{})
+	if ticketID > 0 {
+		q = q.Where("ticket_id = ?", ticketID)
+	}
+	q.Count(&total)
+	offset := (page - 1) * pageSize
+	if err := q.Order("id DESC").Offset(offset).Limit(pageSize).Find(&items).Error; err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
+}
+
+// ─── AI 调用（带 Function Calling 支持） ───
 
 type TicketAIRequest struct {
 	TicketID uint   `json:"ticket_id"`
@@ -330,7 +415,36 @@ type TicketAIResult struct {
 	Error       string  `json:"error,omitempty"`
 }
 
-// ProcessTicket 处理工单（核心逻辑）
+// AIChatMessage AI 聊天消息
+type AIChatMessage struct {
+	Role       string           `json:"role"`
+	Content    string           `json:"content,omitempty"`
+	ToolCalls  []AIToolCall     `json:"tool_calls,omitempty"`
+	ToolCallID string           `json:"tool_call_id,omitempty"`
+}
+
+// AIToolCall AI 工具调用
+type AIToolCall struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Function struct {
+		Name      string `json:"name"`
+		Arguments string `json:"arguments"`
+	} `json:"function"`
+}
+
+// AIChatResponse AI 聊天响应
+type AIChatResponse struct {
+	Choices []struct {
+		Message struct {
+			Content   string       `json:"content"`
+			ToolCalls []AIToolCall `json:"tool_calls"`
+		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
+	} `json:"choices"`
+}
+
+// ProcessTicket 处理工单（核心逻辑，支持 Agent 模式）
 func (s *AITicketCoreService) ProcessTicket(req TicketAIRequest) TicketAIResult {
 	// 检查是否启用
 	if s.GetConfig("ai_enabled") != "1" {
@@ -366,25 +480,35 @@ func (s *AITicketCoreService) ProcessTicket(req TicketAIRequest) TicketAIResult 
 		prompt += "\n\n参考回复格式：" + rule.SampleReply
 	}
 
-	// 调用 AI
+	// 调用 AI（带 Function Calling）
 	apiKey := s.GetConfig("ai_api_key")
 	baseURL := s.GetConfig("ai_base_url")
-	models := s.GetConfig("ai_models")
-	if apiKey == "" || baseURL == "" || models == "" {
+	modelName := s.GetConfig("ai_models")
+	if apiKey == "" || baseURL == "" || modelName == "" {
 		return TicketAIResult{ShouldReply: false, Error: "AI 配置不完整"}
 	}
 
-	reply, confidence, err := s.callAI(baseURL, apiKey, models, systemPrompt, prompt)
+	// 获取已启用的工具
+	enabledTools := s.GetEnabledTools()
+	openAITools := GetOpenAITools(enabledTools)
+
+	// 构建消息列表
+	messages := []AIChatMessage{
+		{Role: "system", Content: systemPrompt},
+		{Role: "user", Content: prompt},
+	}
+
+	// Function Calling 循环
+	reply, confidence, err := s.callAIWithTools(baseURL, apiKey, modelName, messages, openAITools, req.TicketID, 0)
 	if err != nil {
 		s.log.Warnf("AI 调用失败: %v", err)
-		// 记录日志
 		s.db.Create(&model.AITicketProcessLog{
 			TicketID:  req.TicketID,
 			Event:     "auto_reply",
 			Decision:  "error",
 			Status:    "failed",
 			Message:   err.Error(),
-			ModelUsed: models,
+			ModelUsed: modelName,
 		})
 		return TicketAIResult{ShouldReply: false, Error: err.Error()}
 	}
@@ -402,15 +526,14 @@ func (s *AITicketCoreService) ProcessTicket(req TicketAIRequest) TicketAIResult 
 		Confidence: confidence,
 		Status:     "success",
 		Message:    reply,
-		ModelUsed:  models,
+		ModelUsed:  modelName,
 	})
 
-	// 加入队列
 	s.db.Create(&model.AITicketQueue{
 		TicketID:  req.TicketID,
 		EventType: "auto_reply",
 		Status:    "completed",
-		ModelUsed: models,
+		ModelUsed: modelName,
 	})
 
 	return TicketAIResult{
@@ -421,46 +544,135 @@ func (s *AITicketCoreService) ProcessTicket(req TicketAIRequest) TicketAIResult 
 	}
 }
 
-func (s *AITicketCoreService) callAI(baseURL, apiKey, modelName, systemPrompt, userPrompt string) (string, float64, error) {
-	endpoint := strings.TrimRight(baseURL, "/") + "/chat/completions"
-	reqBody := map[string]interface{}{
-		"model": modelName,
-		"messages": []map[string]string{
-			{"role": "system", "content": systemPrompt},
-			{"role": "user", "content": userPrompt},
-		},
-		"max_tokens":  2000,
-		"temperature": 0.7,
+// callAIWithTools 带 Function Calling 的 AI 调用（含多轮循环）
+func (s *AITicketCoreService) callAIWithTools(baseURL, apiKey, modelName string, messages []AIChatMessage, tools []map[string]interface{}, ticketID uint, round int) (string, float64, error) {
+	if round >= MaxToolRounds {
+		return "", 0, fmt.Errorf("工具调用轮次超限 (%d)", MaxToolRounds)
 	}
-	jsonData, _ := json.Marshal(reqBody)
-	client := &http.Client{Timeout: 30 * time.Second}
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
+
+	// 调用 AI API
+	aiResp, err := s.callAIChatCompletion(baseURL, apiKey, modelName, messages, tools)
 	if err != nil {
 		return "", 0, err
+	}
+
+	if len(aiResp.Choices) == 0 {
+		return "", 0, fmt.Errorf("AI 无回复")
+	}
+
+	choice := aiResp.Choices[0]
+
+	// 如果 AI 返回 tool_calls
+	if choice.FinishReason == "tool_calls" && len(choice.Message.ToolCalls) > 0 {
+		// 追加 assistant message（含 tool_calls）到消息列表
+		assistantMsg := AIChatMessage{
+			Role:      "assistant",
+			ToolCalls: choice.Message.ToolCalls,
+		}
+		messages = append(messages, assistantMsg)
+
+		// 初始化工具执行器
+		executor := NewToolExecutor(s.db, s.log, ticketID, 0, 0)
+
+		// 执行每个工具调用
+		for _, tc := range choice.Message.ToolCalls {
+			fnName := tc.Function.Name
+			fnArgs := make(map[string]interface{})
+			if tc.Function.Arguments != "" {
+				json.Unmarshal([]byte(tc.Function.Arguments), &fnArgs)
+			}
+
+			// 检查工具是否启用
+			toolResult := ""
+			if !isToolEnabled(fnName, s.GetEnabledTools()) {
+				toolResult = toJSON(map[string]interface{}{"error": "工具未启用: " + fnName})
+			} else {
+				toolResult = executor.Execute(fnName, fnArgs)
+			}
+
+			// 追加 tool result 消息
+			messages = append(messages, AIChatMessage{
+				Role:       "tool",
+				ToolCallID: tc.ID,
+				Content:    toolResult,
+			})
+		}
+
+		// 保存工具调用日志
+		executor.SaveCallLog()
+
+		// 递归调用，让 AI 基于工具结果生成最终回复
+		return s.callAIWithTools(baseURL, apiKey, modelName, messages, tools, ticketID, round+1)
+	}
+
+	// AI 返回普通文本
+	reply := strings.TrimSpace(choice.Message.Content)
+	if reply == "" {
+		return "", 0, fmt.Errorf("AI 返回空内容")
+	}
+
+	return reply, 0.85, nil
+}
+
+// callAIChatCompletion 调用 AI Chat Completion API
+func (s *AITicketCoreService) callAIChatCompletion(baseURL, apiKey, modelName string, messages []AIChatMessage, tools []map[string]interface{}) (*AIChatResponse, error) {
+	endpoint := strings.TrimRight(baseURL, "/") + "/chat/completions"
+
+	payload := map[string]interface{}{
+		"model":       modelName,
+		"messages":    messages,
+		"temperature": 0.5,
+	}
+
+	// 注入工具定义
+	if len(tools) > 0 {
+		payload["tools"] = tools
+		payload["tool_choice"] = "auto"
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("请求构建失败: %v", err)
+	}
+
+	client := &http.Client{Timeout: 120 * time.Second}
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
+
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", 0, err
+		return nil, fmt.Errorf("连接失败: %v", err)
 	}
 	defer resp.Body.Close()
+
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		return "", 0, fmt.Errorf("API 错误 %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("API 错误 %d: %s", resp.StatusCode, string(body))
 	}
-	var result struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-	}
+
+	var result AIChatResponse
 	if err := json.Unmarshal(body, &result); err != nil {
-		return "", 0, err
+		return nil, fmt.Errorf("解析响应失败: %v", err)
 	}
-	if len(result.Choices) == 0 {
-		return "", 0, fmt.Errorf("无回复")
+
+	return &result, nil
+}
+
+// isToolEnabled 检查工具是否在已启用列表中
+func isToolEnabled(toolName string, enabledTools []string) bool {
+	for _, name := range enabledTools {
+		if name == toolName {
+			return true
+		}
 	}
-	return result.Choices[0].Message.Content, 0.85, nil
+	return false
+}
+
+// allToolsMap 返回所有工具名 → 定义的映射（内部辅助）
+func allToolsMapLocal() map[string]ToolDefinition {
+	return allToolsMap()
 }

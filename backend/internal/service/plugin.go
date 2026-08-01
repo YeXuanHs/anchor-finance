@@ -227,7 +227,7 @@ func (s *PluginService) createPluginTables(pluginName string) error {
 			&model.CSChatConfig{},
 			&model.CSChatQuickReply{},
 		},
-		// AI工单自动回复
+		// AI工单自动回复（含 Agent Function Calling）
 		"ai_ticket": {
 			&model.AITicketKnowledge{},
 			&model.AITicketRule{},
@@ -236,6 +236,8 @@ func (s *PluginService) createPluginTables(pluginName string) error {
 			&model.AITicketNotifyLog{},
 			&model.AITicketMode{},
 			&model.AITicketConfig{},
+			&model.AIToolConfig{},
+			&model.AIToolExecutionLog{},
 		},
 		// AI购物助手
 		"ai_shopping": {
@@ -246,6 +248,19 @@ func (s *PluginService) createPluginTables(pluginName string) error {
 		// 邮箱后缀白名单
 		"email_suffix_whitelist": {
 			&model.EmailSuffixWhitelist{},
+		},
+		// anchor_cloud_finance_pro 插件模块
+		"acfp": {
+			&model.ACFPFailNotifyEvent{},
+			&model.ACFPUpstreamCache{},
+			&model.ACFPIPHistory{},
+			&model.ACFPLimitedSale{},
+			&model.ACFPPriceLock{},
+			&model.ACFPLog{},
+			&model.ACFPCronStatus{},
+			&model.ACFPCertProConfig{},
+			&model.ACFPCertMinor{},
+			&model.ACFPBatchTask{},
 		},
 	}
 

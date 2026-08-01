@@ -1669,6 +1669,11 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 			ticket.GET("/mode/:ticket_id", aiTicketHandler.GetTicketMode)
 			ticket.PUT("/mode/:ticket_id", aiTicketHandler.SetTicketMode)
 			ticket.POST("/test", aiTicketHandler.TestAutoReply)
+
+			// Agent（Function Calling）工具管理
+			ticket.GET("/tools", aiTicketHandler.ListTools)
+			ticket.PUT("/tools/:name", aiTicketHandler.SetToolEnabled)
+			ticket.GET("/tools/execution-logs", aiTicketHandler.ListToolExecutionLogs)
 		}
 
 		// ==================== AI 购物助手（mahiru_ai_shopping） ====================
@@ -1678,6 +1683,102 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		{
 			shopping.GET("/config", aiShopHandler.GetConfig)
 			shopping.PUT("/config", aiShopHandler.SaveConfig)
+		}
+
+		// ==================== ACFP 模块（anchor_cloud_finance_pro） ====================
+		acfpSvc := service.NewACFPService(deps.DB, deps.Log)
+		acfpHandler := handler.NewACFPHandler(acfpSvc, deps.Log)
+		acfp := admin.Group("/acfp")
+		{
+			// IP历史
+			acfp.GET("/ip-history/:host_id", acfpHandler.GetIPHistory)
+			// 限量发售
+			acfp.GET("/limited-sale", acfpHandler.ListLimitedSales)
+			acfp.POST("/limited-sale", acfpHandler.SetLimitedSale)
+			acfp.GET("/limited-sale/check/:product_id", acfpHandler.CheckStock)
+			// 价格锁定
+			acfp.GET("/price-lock", acfpHandler.ListPriceLocks)
+			acfp.POST("/price-lock", acfpHandler.SetPriceLock)
+			acfp.DELETE("/price-lock/:id", acfpHandler.DeletePriceLock)
+			// 操作日志
+			acfp.GET("/logs", acfpHandler.ListLogs)
+			acfp.POST("/logs/clean", acfpHandler.CleanLogs)
+			// 定时任务状态
+			acfp.GET("/cron-status", acfpHandler.GetCronStatuses)
+			// 实名认证Pro
+			acfp.GET("/cert-pro/config", acfpHandler.GetCertProConfig)
+			acfp.PUT("/cert-pro/config", acfpHandler.SetCertProConfig)
+			acfp.GET("/cert-pro/minors", acfpHandler.ListMinorCerts)
+			acfp.POST("/cert-pro/scan", acfpHandler.ScanMinorCerts)
+			// 缓存预热
+			acfp.POST("/cache-warm", acfpHandler.WarmCache)
+			// 批量商品修改
+			acfp.GET("/batch-task", acfpHandler.ListBatchTasks)
+			acfp.POST("/batch-task", acfpHandler.CreateBatchTask)
+			acfp.POST("/batch-task/:id/execute", acfpHandler.ExecuteBatchTask)
+			// 状态对账
+			acfp.POST("/status-sync", acfpHandler.RunStatusSync)
+			// 通知去重
+			acfp.GET("/notify/stats", acfpHandler.GetNotifyStats)
+			acfp.POST("/notify/clean", acfpHandler.CleanNotifyEvents)
+		}
+
+		// ==================== ACFP 插件模块（anchor_cloud_finance_pro） ====================
+		acfpSvc := service.NewACFPModulesService(deps.DB, deps.Log)
+		acfpHandler := handler.NewACFPModulesHandler(acfpSvc, deps.Log)
+		acfp := admin.Group("/acfp")
+		{
+			// 通用模块配置
+			acfp.GET("/module/:key", acfpHandler.GetModuleConfig)
+			acfp.POST("/module/:key/toggle", acfpHandler.ToggleModule)
+
+			// 失败通知
+			acfp.GET("/fail-notify/config", acfpHandler.GetFailNotifyConfig)
+			acfp.PUT("/fail-notify/config", acfpHandler.SaveFailNotifyConfig)
+
+			// 状态对账
+			acfp.GET("/status-sync/config", acfpHandler.GetStatusSyncConfig)
+			acfp.PUT("/status-sync/config", acfpHandler.SaveStatusSyncConfig)
+			acfp.GET("/status-sync/cache/:host_id", acfpHandler.GetUpstreamCache)
+			acfp.GET("/status-sync/cron-statuses", acfpHandler.GetCronStatuses)
+
+			// IP 记录
+			acfp.GET("/ip-history", acfpHandler.GetIPHistory)
+
+			// 限量发售
+			acfp.GET("/limited-sale", acfpHandler.GetLimitedSaleList)
+			acfp.POST("/limited-sale", acfpHandler.AddLimitedSale)
+			acfp.PUT("/limited-sale/:id", acfpHandler.UpdateLimitedSale)
+			acfp.DELETE("/limited-sale/:id", acfpHandler.DeleteLimitedSale)
+			acfp.POST("/limited-sale/:id/reset-quota", acfpHandler.ResetLimitedSaleQuota)
+
+			// 价格锁定
+			acfp.GET("/price-lock", acfpHandler.GetPriceLockList)
+			acfp.POST("/price-lock", acfpHandler.SavePriceLock)
+			acfp.DELETE("/price-lock/:id", acfpHandler.DeletePriceLock)
+
+			// 批量商品修改
+			acfp.POST("/batch-product", acfpHandler.BatchUpdateProducts)
+
+			// 实名认证 Pro
+			acfp.GET("/cert-pro/config", acfpHandler.GetCertProConfig)
+			acfp.PUT("/cert-pro/config", acfpHandler.SaveCertProConfig)
+			acfp.GET("/cert-pro/reviews", acfpHandler.GetCertReviewList)
+			acfp.POST("/cert-pro/reviews/:id/review", acfpHandler.ReviewCert)
+			acfp.GET("/cert-pro/scan-minors", acfpHandler.ScanMinors)
+			acfp.POST("/cert-pro/reject-minors", acfpHandler.RejectMinors)
+
+			// 缓存预热
+			acfp.GET("/cache-warm/status", acfpHandler.GetCacheWarmStatus)
+			acfp.POST("/cache-warm/trigger", acfpHandler.TriggerCacheWarm)
+
+			// 系统日志
+			acfp.GET("/logs", acfpHandler.GetACFPLogs)
+			acfp.POST("/logs/clean", acfpHandler.CleanACFPLogs)
+
+			// 业务列表 Pro
+			acfp.GET("/business-list", acfpHandler.GetBusinessList)
+			acfp.POST("/business-list/:host_id/sync", acfpHandler.SyncOneBusiness)
 		}
 	}
 }

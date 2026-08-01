@@ -262,6 +262,57 @@ func (h *AITicketCoreHandler) SetTicketMode(c *gin.Context) {
 	response.SuccessMsg(c, "设置成功")
 }
 
+// ─── 工具管理 ───
+
+// ListTools 获取工具列表（按分类）
+func (h *AITicketCoreHandler) ListTools(c *gin.Context) {
+	categories := h.svc.ListTools()
+	response.Success(c, categories)
+}
+
+// SetToolEnabled 启用/禁用工具
+func (h *AITicketCoreHandler) SetToolEnabled(c *gin.Context) {
+	name := c.Param("name")
+	if name == "" {
+		response.BadRequest(c, "缺少工具名称")
+		return
+	}
+
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	if err := h.svc.SetToolEnabled(name, req.Enabled); err != nil {
+		response.ServerError(c, "设置失败")
+		return
+	}
+
+	msg := "工具已启用"
+	if !req.Enabled {
+		msg = "工具已禁用"
+	}
+	response.SuccessMsg(c, msg)
+}
+
+// ListToolExecutionLogs 获取工具执行日志
+func (h *AITicketCoreHandler) ListToolExecutionLogs(c *gin.Context) {
+	ticketID, _ := strconv.ParseUint(c.Query("ticket_id"), 10, 64)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 { page = 1 }
+	if pageSize < 1 || pageSize > 100 { pageSize = 20 }
+	items, total, err := h.svc.ListToolExecutionLogs(uint(ticketID), page, pageSize)
+	if err != nil {
+		response.ServerError(c, "查询失败")
+		return
+	}
+	response.Success(c, gin.H{"items": items, "total": total, "page": page})
+}
+
 // ─── 测试 ───
 
 // TestAutoReply 测试自动回复
