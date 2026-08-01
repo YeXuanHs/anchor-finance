@@ -750,6 +750,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/public/system-info", publicHandler.GetSystemInfo)
 		admin.GET("/public/config/:key", publicHandler.GetConfig)
 		admin.GET("/public/configs", publicHandler.GetConfigs)
+		admin.POST("/backup", publicHandler.BackupNow)
+		admin.POST("/backup/:id/cancel", publicHandler.CancelBackup)
 
 		// RBAC页面权限
 		rbacPageSvc := service.NewRbacPageService(deps.DB, deps.Log)

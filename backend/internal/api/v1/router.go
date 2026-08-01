@@ -110,6 +110,11 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.GET("/nav/top", userMenuHandler.GetTopNav)
 	r.GET("/nav/bottom", userMenuHandler.GetBottomNav)
 
+	// 公共信息
+	publicHandler := handler.NewPublicHandler(publicSvc, deps.Log)
+	r.GET("/homepage/base-info", publicHandler.GetHomepageBaseInfo)
+	r.GET("/downloads", publicHandler.GetUserDownloads)
+
 	// 语言包（公开接口）
 	langSvc := service.NewLanguageService(deps.DB, deps.Log)
 	langHandler := handler.NewLanguageHandler(langSvc, deps.Log)
@@ -131,6 +136,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// 用户登录日志（脱敏IP）
 		auth.GET("/user/login-logs", frontendUserHandler.GetMyLoginLogs)
+
+		// 用户偏好设置
+		auth.GET("/user/tastes", publicHandler.GetUserTastes)
+		auth.PUT("/user/tastes", publicHandler.SaveUserTastes)
 
 	// OAuth
 	oauthHandler := handler.NewOAuthHandler(deps.OAuthSvc, deps.Log, deps.JWTManager)
