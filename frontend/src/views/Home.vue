@@ -8,53 +8,24 @@
           <span class="logo-text">锚点财务</span>
         </div>
         <nav class="nav-links">
-          <router-link to="/" class="nav-link">首页</router-link>
-          <!-- 产品下拉菜单 - 实时获取 -->
-          <el-dropdown trigger="hover" @command="(cmd: string) => $router.push(`/products?group=${cmd}`)">
-            <span class="nav-link">
-              产品<el-icon class="el-icon--right"><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item v-for="group in productGroups" :key="group.id" :command="group.id">
-                  {{ group.name }}
-                </el-dropdown-item>
-                <el-dropdown-item divided command="">全部产品</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-          <!-- 解决方案下拉菜单 -->
-          <el-dropdown trigger="hover" @command="(cmd: string) => $router.push(`/solutions/${cmd}`)">
-            <span class="nav-link">
-              解决方案<el-icon class="el-icon--right"><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="game">游戏加速</el-dropdown-item>
-                <el-dropdown-item command="video">视频直播</el-dropdown-item>
-                <el-dropdown-item command="edu">在线教育</el-dropdown-item>
-                <el-dropdown-item command="ecommerce">电商平台</el-dropdown-item>
-                <el-dropdown-item command="security">安全防护</el-dropdown-item>
-                <el-dropdown-item divided command="">全部方案</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-          <router-link to="/news" class="nav-link">新闻动态</router-link>
-          <router-link to="/about" class="nav-link">关于我们</router-link>
-          <!-- 帮助下拉菜单 -->
-          <el-dropdown trigger="hover" @command="(cmd: string) => $router.push(`/${cmd}`)">
-            <span class="nav-link">
-              帮助支持<el-icon class="el-icon--right"><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="help">帮助中心</el-dropdown-item>
-                <el-dropdown-item command="knowledge-base">知识库</el-dropdown-item>
-                <el-dropdown-item command="downloads">下载中心</el-dropdown-item>
-                <el-dropdown-item command="contact">联系我们</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+          <!-- 动态导航 - 从数据库读取 -->
+          <template v-for="item in topNavs" :key="item.id">
+            <!-- 有子菜单的 -->
+            <el-dropdown v-if="item.children && item.children.length > 0" trigger="hover" @command="(cmd: string) => $router.push(cmd)">
+              <span class="nav-link">
+                {{ item.name }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item v-for="child in item.children" :key="child.id" :command="child.url">
+                    {{ child.name }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <!-- 没有子菜单的 -->
+            <router-link v-else :to="item.url" class="nav-link">{{ item.name }}</router-link>
+          </template>
         </nav>
         <div class="header-actions">
           <el-button text class="login-btn" @click="$router.push('/login')">
@@ -285,22 +256,13 @@
               </li>
             </ul>
           </div>
-          <div class="footer-col">
-            <h4>帮助支持</h4>
+          <!-- 动态底部导航 -->
+          <div v-for="nav in bottomNavs" :key="nav.id" class="footer-col">
+            <h4>{{ nav.name }}</h4>
             <ul>
-              <li><router-link to="/help">帮助中心</router-link></li>
-              <li><router-link to="/knowledge-base">知识库</router-link></li>
-              <li><router-link to="/downloads">下载中心</router-link></li>
-              <li><router-link to="/contact">联系我们</router-link></li>
-            </ul>
-          </div>
-          <div class="footer-col">
-            <h4>关于我们</h4>
-            <ul>
-              <li><router-link to="/about">公司介绍</router-link></li>
-              <li><router-link to="/news">新闻动态</router-link></li>
-              <li><router-link to="/solutions">解决方案</router-link></li>
-              <li><router-link to="/site-map">网站地图</router-link></li>
+              <li v-for="child in nav.children" :key="child.id">
+                <router-link :to="child.url">{{ child.name }}</router-link>
+              </li>
             </ul>
           </div>
         </div>
@@ -325,6 +287,10 @@ import request from '@/utils/request'
 const carouselRef = ref()
 const scrolled = ref(false)
 const currentSlide = ref(0)
+
+// 导航数据
+const topNavs = ref([])
+const bottomNavs = ref([])
 
 // 从API获取的数据
 const banners = ref([
@@ -400,6 +366,18 @@ const stats = [
 // 获取数据
 const fetchData = async () => {
   try {
+    // 获取顶部导航
+    const navRes = await request.get('/api/v1/nav/top')
+    if (navRes.data?.data) {
+      topNavs.value = navRes.data.data
+    }
+    
+    // 获取底部导航
+    const bottomNavRes = await request.get('/api/v1/nav/bottom')
+    if (bottomNavRes.data?.data) {
+      bottomNavs.value = bottomNavRes.data.data
+    }
+    
     // 获取轮播图
     const bannerRes = await request.get('/api/v1/banners')
     if (bannerRes.data?.data?.length) {

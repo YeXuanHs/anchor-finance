@@ -33,6 +33,26 @@ func (h *UserMenuHandler) GetUserMenus(c *gin.Context) {
 	response.Success(c, menus)
 }
 
+// GetTopNav 获取www顶部导航
+func (h *UserMenuHandler) GetTopNav(c *gin.Context) {
+	menus, err := model.GetNavTree(h.db, 2) // 2=www头部
+	if err != nil || len(menus) == 0 {
+		response.Success(c, h.getDefaultTopNav())
+		return
+	}
+	response.Success(c, menus)
+}
+
+// GetBottomNav 获取www底部导航
+func (h *UserMenuHandler) GetBottomNav(c *gin.Context) {
+	menus, err := model.GetNavTree(h.db, 3) // 3=www尾部
+	if err != nil || len(menus) == 0 {
+		response.Success(c, h.getDefaultBottomNav())
+		return
+	}
+	response.Success(c, menus)
+}
+
 // filterByConfig 根据配置过滤菜单
 func (h *UserMenuHandler) filterByConfig(menus []*model.MenuItem) []*model.MenuItem {
 	var result []*model.MenuItem
@@ -123,6 +143,64 @@ func (h *UserMenuHandler) getDefaultMenus() []*model.MenuItem {
 			Name:   "推介计划",
 			FaIcon: "bx bxs-paper-plane",
 			URL:    "/user/referral",
+		},
+	}
+}
+
+// getDefaultTopNav 获取默认顶部导航
+func (h *UserMenuHandler) getDefaultTopNav() []*model.MenuItem {
+	return []*model.MenuItem{
+		{ID: 26, Name: "首页", URL: "/"},
+		{
+			ID:   27,
+			Name: "产品",
+			Children: []*model.MenuItem{
+				{ID: 28, Name: "云服务器", URL: "/products?group=cloud"},
+				{ID: 29, Name: "独立服务器", URL: "/products?group=dedicated"},
+				{ID: 30, Name: "全部产品", URL: "/products"},
+			},
+		},
+		{ID: 31, Name: "解决方案", URL: "/solutions"},
+		{ID: 32, Name: "新闻动态", URL: "/news"},
+		{
+			ID:   33,
+			Name: "帮助支持",
+			Children: []*model.MenuItem{
+				{ID: 34, Name: "帮助中心", URL: "/help"},
+				{ID: 35, Name: "知识库", URL: "/knowledge-base"},
+				{ID: 36, Name: "下载中心", URL: "/downloads"},
+				{ID: 37, Name: "联系我们", URL: "/contact"},
+			},
+		},
+	}
+}
+
+// getDefaultBottomNav 获取默认底部导航
+func (h *UserMenuHandler) getDefaultBottomNav() []*model.MenuItem {
+	return []*model.MenuItem{
+		{
+			ID:   38,
+			Name: "产品服务",
+			Children: []*model.MenuItem{},
+		},
+		{
+			ID:   40,
+			Name: "帮助支持",
+			Children: []*model.MenuItem{
+				{ID: 41, Name: "帮助中心", URL: "/help"},
+				{ID: 42, Name: "知识库", URL: "/knowledge-base"},
+				{ID: 43, Name: "下载中心", URL: "/downloads"},
+				{ID: 44, Name: "联系我们", URL: "/contact"},
+			},
+		},
+		{
+			ID:   45,
+			Name: "关于我们",
+			Children: []*model.MenuItem{
+				{ID: 46, Name: "公司介绍", URL: "/about"},
+				{ID: 47, Name: "新闻动态", URL: "/news"},
+				{ID: 48, Name: "解决方案", URL: "/solutions"},
+			},
 		},
 	}
 }

@@ -168,10 +168,12 @@ func initDefaultMenus(db *gorm.DB) {
 	}
 
 	// 激活菜单
-	db.Create(&model.MenuActive{MenuType: 1, MenuID: 1})
+	db.Create(&model.MenuActive{MenuType: 1, MenuID: 1}) // 用户中心
+	db.Create(&model.MenuActive{MenuType: 2, MenuID: 1}) // www头部
+	db.Create(&model.MenuActive{MenuType: 3, MenuID: 1}) // www尾部
 
-	// 用户中心默认菜单
-	defaultNavs := []model.Nav{
+	// 用户中心默认菜单 (menu_type=1)
+	userNavs := []model.Nav{
 		{Name: "控制台", URL: "/user/dashboard", ParentID: 0, Order: 0, FaIcon: "bx bx-home-circle", MenuType: 1, NavType: 0, MenuID: 1},
 		{Name: "产品与服务", URL: "", ParentID: 0, Order: 1, FaIcon: "bx bxs-grid-alt", MenuType: 1, NavType: 0, MenuID: 1},
 		{Name: "订购产品", URL: "/products", ParentID: 2, Order: 0, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
@@ -199,7 +201,39 @@ func initDefaultMenus(db *gorm.DB) {
 		{Name: "交易市场", URL: "/user/marketplace", ParentID: 0, Order: 6, FaIcon: "bx bx-store", MenuType: 1, NavType: 0, MenuID: 1},
 	}
 
-	for _, nav := range defaultNavs {
+	// www头部导航 (menu_type=2)
+	topNavs := []model.Nav{
+		{Name: "首页", URL: "/", ParentID: 0, Order: 0, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "产品", URL: "", ParentID: 0, Order: 1, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "云服务器", URL: "/products?group=cloud", ParentID: 27, Order: 0, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "独立服务器", URL: "/products?group=dedicated", ParentID: 27, Order: 1, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "全部产品", URL: "/products", ParentID: 27, Order: 2, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "解决方案", URL: "/solutions", ParentID: 0, Order: 2, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "新闻动态", URL: "/news", ParentID: 0, Order: 3, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "帮助支持", URL: "", ParentID: 0, Order: 4, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "帮助中心", URL: "/help", ParentID: 33, Order: 0, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "知识库", URL: "/knowledge-base", ParentID: 33, Order: 1, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "下载中心", URL: "/downloads", ParentID: 33, Order: 2, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+		{Name: "联系我们", URL: "/contact", ParentID: 33, Order: 3, FaIcon: "", MenuType: 2, NavType: 0, MenuID: 1},
+	}
+
+	// www尾部导航 (menu_type=3)
+	bottomNavs := []model.Nav{
+		{Name: "产品服务", URL: "", ParentID: 0, Order: 0, FaIcon: "", MenuType: 3, NavType: 0, MenuID: 1},
+		{Name: "帮助支持", URL: "", ParentID: 0, Order: 1, FaIcon: "", MenuType: 3, NavType: 0, MenuID: 1},
+		{Name: "帮助中心", URL: "/help", ParentID: 40, Order: 0, FaIcon: "", MenuType: 3, NavType: 0, MenuID: 1},
+		{Name: "知识库", URL: "/knowledge-base", ParentID: 40, Order: 1, FaIcon: "", MenuType: 3, NavType: 0, MenuID: 1},
+		{Name: "下载中心", URL: "/downloads", ParentID: 40, Order: 2, FaIcon: "", MenuType: 3, NavType: 0, MenuID: 1},
+		{Name: "联系我们", URL: "/contact", ParentID: 40, Order: 3, FaIcon: "", MenuType: 3, NavType: 0, MenuID: 1},
+		{Name: "关于我们", URL: "", ParentID: 0, Order: 2, FaIcon: "", MenuType: 3, NavType: 0, MenuID: 1},
+		{Name: "公司介绍", URL: "/about", ParentID: 45, Order: 0, FaIcon: "", MenuType: 3, NavType: 0, MenuID: 1},
+		{Name: "新闻动态", URL: "/news", ParentID: 45, Order: 1, FaIcon: "", MenuType: 3, NavType: 0, MenuID: 1},
+		{Name: "解决方案", URL: "/solutions", ParentID: 45, Order: 2, FaIcon: "", MenuType: 3, NavType: 0, MenuID: 1},
+	}
+
+	allNavs := append(userNavs, topNavs...)
+	allNavs = append(allNavs, bottomNavs...)
+	for _, nav := range allNavs {
 		db.Create(&nav)
 	}
 }
