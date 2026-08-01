@@ -18,6 +18,8 @@ import (
 	"anchorfinance/pkg/auth"
 	"anchorfinance/pkg/db"
 	"anchorfinance/pkg/logger"
+
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -108,9 +110,14 @@ func main() {
 		&model.MarketplaceChat{},
 		&model.MarketplaceChatSession{},
 		&model.MarketplaceConfig{},
+		&model.Nav{},
+		&model.MenuActive{},
 	); err != nil {
-		logger.Warnf("交易市场表迁移失败: %v", err)
+		logger.Warnf("表迁移失败: %v", err)
 	}
+
+	// 插入默认菜单数据（如果表为空）
+	initDefaultMenus(db.DB())
 
 	// 启动定时任务
 	go job.Start()
@@ -150,4 +157,49 @@ func generateRandomSecret(n int) string {
 		b[i] = letters[int(b[i])%len(letters)]
 	}
 	return string(b)
+}
+
+// initDefaultMenus 初始化默认菜单数据
+func initDefaultMenus(db *gorm.DB) {
+	var count int64
+	db.Model(&model.Nav{}).Count(&count)
+	if count > 0 {
+		return // 已有数据
+	}
+
+	// 激活菜单
+	db.Create(&model.MenuActive{MenuType: 1, MenuID: 1})
+
+	// 用户中心默认菜单
+	defaultNavs := []model.Nav{
+		{Name: "控制台", URL: "/user/dashboard", ParentID: 0, Order: 0, FaIcon: "bx bx-home-circle", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "产品与服务", URL: "", ParentID: 0, Order: 1, FaIcon: "bx bxs-grid-alt", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "订购产品", URL: "/products", ParentID: 2, Order: 0, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "我的服务", URL: "/user/products", ParentID: 2, Order: 1, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "订单管理", URL: "/user/orders", ParentID: 2, Order: 2, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "产品升降级", URL: "/user/upgrade", ParentID: 2, Order: 3, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "账户管理", URL: "", ParentID: 0, Order: 2, FaIcon: "bx bx-user", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "个人信息", URL: "/user/profile", ParentID: 7, Order: 0, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "安全中心", URL: "/user/security", ParentID: 7, Order: 1, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "实名认证", URL: "/user/verification", ParentID: 7, Order: 2, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "消息中心", URL: "/user/system-message", ParentID: 7, Order: 3, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "联系人管理", URL: "/user/contacts", ParentID: 7, Order: 4, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "第三方登录", URL: "/user/oauth-bind", ParentID: 7, Order: 5, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "财务管理", URL: "", ParentID: 0, Order: 3, FaIcon: "bx bx-dollar-circle", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "账单列表", URL: "/user/invoices", ParentID: 14, Order: 0, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "账户充值", URL: "/user/wallet", ParentID: 14, Order: 1, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "优惠券", URL: "/user/coupons", ParentID: 14, Order: 2, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "技术支持", URL: "", ParentID: 0, Order: 4, FaIcon: "bx bx-detail", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "工单列表", URL: "/user/tickets", ParentID: 18, Order: 0, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "提交工单", URL: "/user/tickets/create", ParentID: 18, Order: 1, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "帮助中心", URL: "/knowledge-base", ParentID: 18, Order: 2, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "资源下载", URL: "/downloads", ParentID: 18, Order: 3, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "新闻中心", URL: "/news", ParentID: 18, Order: 4, FaIcon: "", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "推介计划", URL: "/user/referral", ParentID: 0, Order: 5, FaIcon: "bx bxs-paper-plane", MenuType: 1, NavType: 0, MenuID: 1},
+		{Name: "交易市场", URL: "/user/marketplace", ParentID: 0, Order: 6, FaIcon: "bx bx-store", MenuType: 1, NavType: 0, MenuID: 1},
+	}
+
+	for _, nav := range defaultNavs {
+		db.Create(&nav)
+	}
 }

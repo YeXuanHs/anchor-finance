@@ -104,6 +104,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		})
 	})
 
+	// 用户中心菜单（公开接口）
+	userMenuHandler := handler.NewUserMenuHandler(deps.DB)
+	r.GET("/user/menus", userMenuHandler.GetUserMenus)
+
 	// 需要认证的路由
 	auth := r.Group("/")
 	auth.Use(middleware.AuthRequired())

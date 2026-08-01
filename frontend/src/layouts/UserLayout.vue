@@ -22,7 +22,7 @@
         </div>
       </div>
 
-      <!-- Menu -->
+      <!-- Menu (动态从数据库读取) -->
       <el-scrollbar class="sidebar-scroll">
         <el-menu
           :default-active="activeMenu"
@@ -30,96 +30,28 @@
           :collapse="false"
           @select="handleMenuSelect"
         >
-          <!-- 快捷入口 -->
-          <el-menu-item index="/user/dashboard">
-            <el-icon><HomeFilled /></el-icon>
-            <span>控制台</span>
-          </el-menu-item>
-          
-          <el-menu-item index="/products">
-            <el-icon><ShoppingCart /></el-icon>
-            <span>订购产品</span>
-          </el-menu-item>
-          
-          <el-menu-item index="/cart">
-            <el-icon><ShoppingCart /></el-icon>
-            <span>购物车</span>
-          </el-menu-item>
-          
-          <!-- 业务管理 -->
-          <el-sub-menu index="business">
-            <template #title>
-              <el-icon><Box /></el-icon>
-              <span>业务管理</span>
-            </template>
-            <el-menu-item index="/user/products">我的服务</el-menu-item>
-            <el-menu-item index="/user/orders">订单管理</el-menu-item>
-            <el-menu-item index="/user/upgrade">产品升降级</el-menu-item>
-          </el-sub-menu>
-          
-          <!-- 财务中心 -->
-          <el-sub-menu index="finance">
-            <template #title>
-              <el-icon><Wallet /></el-icon>
-              <span>财务中心</span>
-            </template>
-            <el-menu-item index="/user/invoices">账单管理</el-menu-item>
-            <el-menu-item index="/user/wallet">充值余额</el-menu-item>
-            <el-menu-item index="/user/coupons">优惠券</el-menu-item>
-          </el-sub-menu>
-          
-          <!-- 支持服务 -->
-          <el-sub-menu index="support">
-            <template #title>
-              <el-icon><Tickets /></el-icon>
-              <span>支持服务</span>
-            </template>
-            <el-menu-item index="/user/tickets">工单列表</el-menu-item>
-            <el-menu-item index="/user/tickets/create">提交工单</el-menu-item>
-          </el-sub-menu>
-          
-          <!-- 资源中心 -->
-          <el-sub-menu index="resources">
-            <template #title>
-              <el-icon><Folder /></el-icon>
-              <span>资源中心</span>
-            </template>
-            <el-menu-item index="/knowledge-base">知识库</el-menu-item>
-            <el-menu-item index="/downloads">下载中心</el-menu-item>
-            <el-menu-item index="/news">新闻动态</el-menu-item>
-          </el-sub-menu>
-          
-          <!-- 交易市场 -->
-          <el-menu-item index="/user/marketplace">
-            <el-icon><Shop /></el-icon>
-            <span>交易市场</span>
-          </el-menu-item>
-          
-          <!-- 推介计划 -->
-          <el-menu-item index="/user/referral">
-            <el-icon><Connection /></el-icon>
-            <span>推介计划</span>
-          </el-menu-item>
-          
-          <!-- 账户设置 -->
-          <el-sub-menu index="account">
-            <template #title>
-              <el-icon><UserFilled /></el-icon>
-              <span>账户设置</span>
-            </template>
-            <el-menu-item index="/user/profile">个人资料</el-menu-item>
-            <el-menu-item index="/user/security">安全设置</el-menu-item>
-            <el-menu-item index="/user/verification">实名认证</el-menu-item>
-            <el-menu-item index="/user/contacts">联系人管理</el-menu-item>
-            <el-menu-item index="/user/oauth-bind">第三方登录</el-menu-item>
-          </el-sub-menu>
-          
-          <!-- 消息中心 -->
-          <el-menu-item index="/user/system-message">
-            <el-icon><Bell /></el-icon>
-            <span>消息中心</span>
-            <el-badge v-if="unreadCount > 0" :value="unreadCount" class="menu-badge" />
-          </el-menu-item>
+          <template v-for="item in menuList" :key="item.id">
+            <!-- 有子菜单的 -->
+            <el-sub-menu v-if="item.children && item.children.length > 0" :index="'menu-' + item.id">
+              <template #title>
+                <el-icon v-if="item.fa_icon"><component :is="getIconComponent(item.fa_icon)" /></el-icon>
+                <span>{{ item.name }}</span>
+              </template>
+              <el-menu-item 
+                v-for="child in item.children" 
+                :key="child.id" 
+                :index="child.url"
+              >
+                {{ child.name }}
+              </el-menu-item>
+            </el-sub-menu>
+
+            <!-- 没有子菜单的 -->
+            <el-menu-item v-else :index="item.url">
+              <el-icon v-if="item.fa_icon"><component :is="getIconComponent(item.fa_icon)" /></el-icon>
+              <span>{{ item.name }}</span>
+            </el-menu-item>
+          </template>
         </el-menu>
       </el-scrollbar>
     </aside>
@@ -179,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, markRaw } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import {
@@ -187,7 +119,7 @@ import {
   HomeFilled, Box, ShoppingCart, Wallet, Tickets, Ticket, Connection,
   Postcard, UserFilled, Lock, Folder, Download, Document, Promotion, TrendCharts, Shop
 } from '@element-plus/icons-vue'
-import request from '@/utils/request'
+import request from '@/utils/http'
 
 const router = useRouter()
 const route = useRoute()
@@ -195,9 +127,35 @@ const userStore = useUserStore()
 
 const sidebarVisible = ref(false)
 const unreadCount = ref(0)
+const menuList = ref<any[]>([])
 
 const username = computed(() => userStore.username || '用户')
 const userInitial = computed(() => username.value.charAt(0).toUpperCase())
+
+// 图标映射
+const iconMap: Record<string, any> = {
+  'bx bx-home-circle': markRaw(HomeFilled),
+  'bx bxs-grid-alt': markRaw(Box),
+  'bx bx-user': markRaw(UserFilled),
+  'bx bx-dollar-circle': markRaw(Wallet),
+  'bx bx-detail': markRaw(Tickets),
+  'bx bxs-paper-plane': markRaw(Connection),
+  'bx bx-store': markRaw(Shop),
+  'HomeFilled': markRaw(HomeFilled),
+  'ShoppingCart': markRaw(ShoppingCart),
+  'Box': markRaw(Box),
+  'Wallet': markRaw(Wallet),
+  'Tickets': markRaw(Tickets),
+  'Folder': markRaw(Folder),
+  'Connection': markRaw(Connection),
+  'UserFilled': markRaw(UserFilled),
+  'Bell': markRaw(Bell),
+  'Shop': markRaw(Shop),
+}
+
+function getIconComponent(icon: string) {
+  return iconMap[icon] || markRaw(Box)
+}
 
 // 当前激活的菜单
 const activeMenu = computed(() => {
@@ -205,37 +163,37 @@ const activeMenu = computed(() => {
 })
 
 // 当前页面名称
-const pageNameMap: Record<string, string> = {
-  '/user/dashboard': '控制台',
-  '/user/products': '我的服务',
-  '/user/orders': '订单管理',
-  '/user/upgrade': '产品升降级',
-  '/user/invoices': '账单管理',
-  '/user/wallet': '充值余额',
-  '/user/coupons': '优惠券',
-  '/user/tickets': '工单列表',
-  '/user/tickets/create': '提交工单',
-  '/user/referral': '推介计划',
-  '/user/profile': '个人资料',
-  '/user/security': '安全设置',
-  '/user/verification': '实名认证',
-  '/user/contacts': '联系人管理',
-  '/user/oauth-bind': '第三方登录',
-  '/user/system-message': '消息中心',
-  '/user/record-log': '操作日志',
-  '/user/marketplace': '交易市场',
-  '/user/marketplace/sell': '挂售主机',
-  '/user/marketplace/orders': '交易订单',
-  '/user/marketplace/chat': '私聊消息'
-}
-
 const currentPageName = computed(() => {
-  return pageNameMap[route.path] || '用户中心'
+  const findName = (items: any[]): string => {
+    for (const item of items) {
+      if (item.url === route.path) return item.name
+      if (item.children) {
+        const found = findName(item.children)
+        if (found) return found
+      }
+    }
+    return ''
+  }
+  return findName(menuList.value) || '用户中心'
 })
+
+// 获取菜单
+const fetchMenus = async () => {
+  try {
+    const { data } = await request.get('/v1/user/menus')
+    if (data) {
+      menuList.value = Array.isArray(data) ? data : []
+    }
+  } catch (error) {
+    console.error('获取菜单失败:', error)
+  }
+}
 
 // 菜单选择
 const handleMenuSelect = (index: string) => {
-  router.push(index)
+  if (index.startsWith('/')) {
+    router.push(index)
+  }
   sidebarVisible.value = false
 }
 
@@ -262,6 +220,7 @@ const fetchUnreadCount = async () => {
 }
 
 onMounted(() => {
+  fetchMenus()
   fetchUnreadCount()
 })
 </script>
