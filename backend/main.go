@@ -101,6 +101,17 @@ func main() {
 		}
 	}
 
+	// 自动迁移插件表
+	if err := db.DB().AutoMigrate(
+		&model.MarketplaceListing{},
+		&model.MarketplaceOrder{},
+		&model.MarketplaceChat{},
+		&model.MarketplaceChatSession{},
+		&model.MarketplaceConfig{},
+	); err != nil {
+		logger.Warnf("交易市场表迁移失败: %v", err)
+	}
+
 	// 启动定时任务
 	go job.Start()
 

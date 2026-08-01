@@ -532,6 +532,31 @@ const router = createRouter({
           path: 'enterprise-verification',
           name: 'UserEnterpriseVerification',
           component: () => import('@/views/user/EnterpriseVerification.vue')
+        },
+        {
+          path: 'marketplace',
+          name: 'UserMarketplace',
+          component: () => import('@/views/user/Marketplace.vue')
+        },
+        {
+          path: 'marketplace/sell',
+          name: 'UserMarketplaceSell',
+          component: () => import('@/views/user/MarketplaceSell.vue')
+        },
+        {
+          path: 'marketplace/orders',
+          name: 'UserMarketplaceOrders',
+          component: () => import('@/views/user/MarketplaceOrders.vue')
+        },
+        {
+          path: 'marketplace/chat',
+          name: 'UserMarketplaceChat',
+          component: () => import('@/views/user/MarketplaceChat.vue')
+        },
+        {
+          path: 'marketplace/chat/:listing_id/:user_id',
+          name: 'UserMarketplaceChatDirect',
+          component: () => import('@/views/user/MarketplaceChat.vue')
         }
       ]
     },

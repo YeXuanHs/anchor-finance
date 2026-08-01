@@ -1756,18 +1756,34 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 			acfp.GET("/logs", acfpModulesHandler.GetACFPLogs)
 			acfp.POST("/logs/clean", acfpModulesHandler.CleanACFPLogs)
 
-			// 业务列表 Pro
-			acfp.GET("/business-list", acfpModulesHandler.GetBusinessList)
-			acfp.GET("/business-list/:host_id", acfpModulesHandler.GetBusinessRow)
-			acfp.GET("/business-list/:host_id/snapshot", acfpModulesHandler.GetBusinessSnapshot)
-			acfp.POST("/business-list/:host_id/sync", acfpModulesHandler.SyncOneBusiness)
-			acfp.POST("/business-list/:host_id/suspend", acfpModulesHandler.SuspendOneBusiness)
-			acfp.POST("/business-list/:host_id/unsuspend", acfpModulesHandler.UnsuspendOneBusiness)
-			acfp.POST("/business-list/:host_id/delete", acfpModulesHandler.DeleteOneBusiness)
-			acfp.POST("/business-list/:host_id/provision", acfpModulesHandler.ProvisionOneBusiness)
-			acfp.GET("/business-list/stats", acfpModulesHandler.GetBusinessStats)
+		// 业务列表 Pro
+		acfp.GET("/business-list", acfpModulesHandler.GetBusinessList)
+		acfp.GET("/business-list/:host_id", acfpModulesHandler.GetBusinessRow)
+		acfp.GET("/business-list/:host_id/snapshot", acfpModulesHandler.GetBusinessSnapshot)
+		acfp.POST("/business-list/:host_id/sync", acfpModulesHandler.SyncOneBusiness)
+		acfp.POST("/business-list/:host_id/suspend", acfpModulesHandler.SuspendOneBusiness)
+		acfp.POST("/business-list/:host_id/unsuspend", acfpModulesHandler.UnsuspendOneBusiness)
+		acfp.POST("/business-list/:host_id/delete", acfpModulesHandler.DeleteOneBusiness)
+		acfp.POST("/business-list/:host_id/provision", acfpModulesHandler.ProvisionOneBusiness)
+		acfp.GET("/business-list/stats", acfpModulesHandler.GetBusinessStats)
+
+		// ==================== 交易市场 ====================
+		marketplaceSvc := service.NewMarketplaceService(deps.DB, deps.Log)
+		marketplaceHandler := handler.NewMarketplaceHandler(marketplaceSvc, deps.Log)
+		marketplace := admin.Group("/marketplace")
+		{
+			// 配置
+			marketplace.GET("/config", marketplaceHandler.AdminGetConfig)
+			marketplace.PUT("/config", marketplaceHandler.AdminSaveConfig)
+
+			// 挂售管理
+			marketplace.GET("/listings", marketplaceHandler.AdminGetAllListings)
+
+			// 订单管理
+			marketplace.GET("/orders", marketplaceHandler.AdminGetAllOrders)
 		}
 	}
+}
 }
 
 // RegisterPublicRoutes registers public-facing API routes.

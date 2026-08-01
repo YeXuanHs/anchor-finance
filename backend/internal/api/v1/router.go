@@ -38,9 +38,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	// 邮箱后缀白名单（注册校验）
 	emailSuffixSvc := service.NewEmailSuffixWhitelistService(deps.DB, deps.Log)
 	authHandler.SetEmailSuffixService(emailSuffixSvc)
-	// 邮箱后缀白名单（注册校验）
-	emailSuffixSvc := service.NewEmailSuffixWhitelistService(deps.DB, deps.Log)
-	authHandler.SetEmailSuffixService(emailSuffixSvc)
 	userHandler := handler.NewUserHandlerWithCaptcha(deps.UserSvc, captchaSvcForAuth, deps.Log)
 	productHandler := handler.NewProductHandler(deps.ProdSvc, deps.Log)
 	orderHandler := handler.NewOrderHandlerWithDB(deps.OrdSvc, deps.DB, deps.Log)
@@ -171,5 +168,32 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		})
 		auth.POST("/ai-shopping/session/:session_id/message", aiShopHandler.Chat)
 		auth.GET("/ai-shopping/session/:session_id/messages", aiShopHandler.GetChatHistory)
+
+		// ─── 交易市场 ───
+		marketplaceSvc := service.NewMarketplaceService(deps.DB, deps.Log)
+		marketplaceHandler := handler.NewMarketplaceHandler(marketplaceSvc, deps.Log)
+
+		// 挂售管理
+		auth.POST("/marketplace/listings", marketplaceHandler.CreateListing)
+		auth.PUT("/marketplace/listings/:id", marketplaceHandler.UpdateListing)
+		auth.DELETE("/marketplace/listings/:id", marketplaceHandler.RemoveListing)
+		auth.GET("/marketplace/listings/mine", marketplaceHandler.GetUserListings)
+
+		// 订单管理
+		auth.POST("/marketplace/orders", marketplaceHandler.CreateOrder)
+		auth.GET("/marketplace/orders/buyer", marketplaceHandler.GetBuyerOrders)
+		auth.GET("/marketplace/orders/seller", marketplaceHandler.GetSellerOrders)
+		auth.POST("/marketplace/orders/:id/complete", marketplaceHandler.CompleteOrder)
+		auth.POST("/marketplace/orders/:id/cancel", marketplaceHandler.CancelOrder)
+
+		// 私聊功能
+		auth.POST("/marketplace/messages", marketplaceHandler.SendMessage)
+		auth.GET("/marketplace/messages/:listing_id/:user_id", marketplaceHandler.GetChatMessages)
+		auth.GET("/marketplace/chat-sessions", marketplaceHandler.GetChatSessions)
+		auth.GET("/marketplace/unread-count", marketplaceHandler.GetUnreadCount)
 	}
+
+	// 公开接口（不需要登录）
+	r.GET("/marketplace/listings", marketplaceHandler.GetListings)
+	r.GET("/marketplace/listings/:id", marketplaceHandler.GetListing)
 }

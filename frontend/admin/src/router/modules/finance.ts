@@ -587,6 +587,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '客服聊天系统',
             icon: 'ep:service'
           }
+        },
+        {
+          path: 'marketplace',
+          name: 'MarketplaceConfig',
+          component: () => import('@/views/admin/finance/MarketplaceConfig.vue'),
+          meta: {
+            title: '交易市场',
+            icon: 'ep:shop'
+          }
         }
       ]
     },
