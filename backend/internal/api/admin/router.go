@@ -817,6 +817,18 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/system/updates/:id/install", systemHandler.InstallUpdate)
 		admin.GET("/system/logs", systemHandler.GetSystemLog)
 		admin.POST("/system/clear-cache", systemHandler.ClearCache)
+		admin.GET("/system/info", systemHandler.GetSystemInfo)
+		admin.GET("/system/database", systemHandler.GetDatabaseInfo)
+		admin.POST("/system/database/optimize", systemHandler.OptimizeTables)
+		admin.POST("/system/database/backup", systemHandler.BackupDatabase)
+		admin.GET("/system/auto-update", systemHandler.GetAutoUpdateConfig)
+		admin.PUT("/system/auto-update", systemHandler.UpdateAutoUpdateConfig)
+		admin.GET("/system/authorize", systemHandler.GetAuthorizeInfo)
+		admin.PUT("/system/license", systemHandler.SetLicense)
+		admin.GET("/system/data-migration", systemHandler.GetDataMigration)
+		admin.POST("/system/data-migration", systemHandler.StartDataMigration)
+		admin.GET("/system/auth-rules", systemHandler.GetSystemAuthRules)
+		admin.GET("/system/language", systemHandler.GetSystemLanguage)
 
 		// 验证码配置管理
 		captchaSvc := service.NewCaptchaService(deps.Redis, deps.DB)
