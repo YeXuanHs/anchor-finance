@@ -1279,6 +1279,14 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/product-diverts/:id/accept", productDivertHandler.Accept)
 		admin.POST("/product-diverts/:id/reject", productDivertHandler.Reject)
 		admin.POST("/product-diverts/:id/cancel", productDivertHandler.Cancel)
+		admin.GET("/product-diverts/:id/code", productDivertHandler.GetTransferCode)
+		admin.POST("/product-diverts/:id/regenerate-code", productDivertHandler.RegenerateCode)
+		admin.POST("/product-diverts/accept-by-code", productDivertHandler.AcceptByCode)
+
+		// 管理员产品转移配置
+		admin.GET("/product-transfer/config", productDivertHandler.AdminGetConfig)
+		admin.PUT("/product-transfer/config", productDivertHandler.AdminSaveConfig)
+		admin.GET("/product-transfers", productDivertHandler.AdminGetAllTransfers)
 
 		// ==================== RBAC权限 ====================
 		rbacSvc := service.NewRbacService(deps.DB, deps.Log)
