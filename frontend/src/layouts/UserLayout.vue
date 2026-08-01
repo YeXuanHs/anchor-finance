@@ -72,6 +72,7 @@
         </div>
 
         <div class="top-bar-right">
+          <LanguageSwitcher class="lang-switch" />
           <el-badge :value="unreadCount" :max="99" class="notify-badge" :hidden="unreadCount === 0">
             <el-icon :size="18" class="top-icon" @click="$router.push('/user/system-message')"><Bell /></el-icon>
           </el-badge>
