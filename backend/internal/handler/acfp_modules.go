@@ -160,6 +160,71 @@ func (h *ACFPHandler) SetCertProConfig(c *gin.Context) {
 	response.SuccessMsg(c, "保存成功")
 }
 
+// SaveCertProConfig 保存配置（别名）
+func (h *ACFPHandler) SaveCertProConfig(c *gin.Context) {
+	h.SetCertProConfig(c)
+}
+
+// GetCertReviewList 获取认证审核列表
+func (h *ACFPHandler) GetCertReviewList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	status := c.DefaultQuery("status", "")
+
+	type CertReview struct {
+		ID        uint   `json:"id"`
+		UserID    uint   `json:"user_id"`
+		Username  string `json:"username"`
+		RealName  string `json:"real_name"`
+		IDCard    string `json:"id_card"`
+		Status    int    `json:"status"`
+		CreatedAt string `json:"created_at"`
+	}
+
+	var items []CertReview
+	var total int64
+
+	q := h.svc.GetDB().Table("certifications c").
+		Select("c.id, c.user_id, u.username, c.real_name, c.idcard as id_card, c.status, c.created_at").
+		Joins("LEFT JOIN users u ON c.user_id = u.id")
+
+	if status != "" {
+		q = q.Where("c.status = ?", status)
+	}
+
+	q.Count(&total)
+	q.Order("c.id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Scan(&items)
+
+	response.Success(c, gin.H{
+		"list":  items,
+		"total": total,
+		"page":  page,
+	})
+}
+
+// ReviewCert 审核认证
+func (h *ACFPHandler) ReviewCert(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var req struct {
+		Status int    `json:"status"` // 1=通过 2=拒绝
+		Reason string `json:"reason"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+	if req.Status != 1 && req.Status != 2 {
+		response.BadRequest(c, "状态无效")
+		return
+	}
+
+	if err := h.svc.GetDB().Exec("UPDATE certifications SET status = ?, reject_reason = ? WHERE id = ?", req.Status, req.Reason, id).Error; err != nil {
+		response.ServerError(c, "审核失败")
+		return
+	}
+	response.SuccessMsg(c, "审核成功")
+}
+
 func (h *ACFPHandler) ListMinorCerts(c *gin.Context) {
 	items, err := h.svc.ListMinorCerts()
 	if err != nil {
@@ -176,6 +241,15 @@ func (h *ACFPHandler) ScanMinorCerts(c *gin.Context) {
 		return
 	}
 	response.Success(c, gin.H{"found": count})
+}
+
+func (h *ACFPHandler) RejectUnderageSubmissions(c *gin.Context) {
+	count, err := h.svc.RejectUnderageSubmissions()
+	if err != nil {
+		response.ServerError(c, "拒绝失败")
+		return
+	}
+	response.Success(c, gin.H{"rejected": count})
 }
 
 // ─── 缓存预热 ───

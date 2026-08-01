@@ -1727,8 +1727,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 			acfp.PUT("/cert-pro/config", acfpModulesHandler.SaveCertProConfig)
 			acfp.GET("/cert-pro/reviews", acfpModulesHandler.GetCertReviewList)
 			acfp.POST("/cert-pro/reviews/:id/review", acfpModulesHandler.ReviewCert)
-			acfp.GET("/cert-pro/scan-minors", acfpModulesHandler.ScanMinors)
-			acfp.POST("/cert-pro/reject-minors", acfpModulesHandler.RejectMinors)
+			acfp.GET("/cert-pro/scan-minors", acfpModulesHandler.ScanMinorCerts)
+			acfp.POST("/cert-pro/reject-minors", acfpModulesHandler.RejectUnderageSubmissions)
 
 			// 缓存预热
 			acfp.GET("/cache-warm/status", acfpModulesHandler.GetCacheWarmStatus)

@@ -21,6 +21,11 @@ func NewACFPService(db *gorm.DB, log *logger.Logger) *ACFPService {
 	return &ACFPService{db: db, log: log}
 }
 
+// GetDB 获取数据库连接
+func (s *ACFPService) GetDB() *gorm.DB {
+	return s.db
+}
+
 // ─── 失败通知 ───
 
 // ShouldNotify 检查是否应发送通知（去重：同一事件24小时内只通知一次）
@@ -337,6 +342,52 @@ func (s *ACFPService) ScanMinorCerts() (int, error) {
 		}
 	}
 	return count, nil
+}
+
+// RejectUnderageSubmissions 自动拒绝未成年提交
+// 扫描所有pending状态的未成年记录，自动拒绝并更新认证状态
+func (s *ACFPService) RejectUnderageSubmissions() (int, error) {
+	var minors []model.ACFPCertMinor
+	if err := s.db.Where("status = ?", "pending").Find(&minors).Error; err != nil {
+		return 0, err
+	}
+
+	rejected := 0
+	for _, m := range minors {
+		// 更新未成年记录状态为已拒绝
+		if err := s.db.Model(&m).Update("status", "rejected").Error; err != nil {
+			s.log.Errorf("拒绝未成年用户 %d 失败: %v", m.UserID, err)
+			continue
+		}
+
+		// 尝试更新认证表状态（如果存在）
+		if err := s.db.Exec("UPDATE certifications SET status = 3, reject_reason = '未满最低年龄要求' WHERE user_id = ?", m.UserID).Error; err != nil {
+			s.log.Debugf("更新认证状态失败（表可能不存在）: %v", err)
+		}
+
+		// 添加操作日志
+		s.db.Create(&model.ACFPLog{
+			Module:   "cert_pro",
+			Action:   "reject_underage",
+			Target:   "user",
+			TargetID: m.UserID,
+			Content:  fmt.Sprintf("自动拒绝未成年用户: 年龄%d岁, 身份证%s", m.Age, maskIDCard(m.IDCard)),
+			Status:   1,
+		})
+
+		rejected++
+		s.log.Infof("已拒绝未成年用户: userID=%d, age=%d", m.UserID, m.Age)
+	}
+
+	return rejected, nil
+}
+
+// maskIDCard 脱敏身份证号
+func maskIDCard(idcard string) string {
+	if len(idcard) <= 6 {
+		return idcard
+	}
+	return idcard[:3] + "***********" + idcard[len(idcard)-3:]
 }
 
 // ─── 缓存预热 ───
