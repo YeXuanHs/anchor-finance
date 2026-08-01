@@ -35,8 +35,7 @@ INSERT INTO `navs` (`name`, `url`, `parent_id`, `order`, `fa_icon`, `menu_type`,
 ('帮助中心', '/knowledge-base', 18, 2, '', 1, 0, 1, 1),
 ('资源下载', '/downloads', 18, 3, '', 1, 0, 1, 1),
 ('新闻中心', '/news', 18, 4, '', 1, 0, 1, 1),
-('推介计划', '/user/referral', 0, 5, 'bx bxs-paper-plane', 1, 0, 1, 1),
-('交易市场', '/user/marketplace', 0, 6, 'bx bx-store', 1, 0, 1, 1);
+('推介计划', '/user/referral', 0, 5, 'bx bxs-paper-plane', 1, 0, 1, 1);
 
 -- ============================================
 -- www顶部导航 (menu_type=2)

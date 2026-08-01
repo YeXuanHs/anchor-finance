@@ -52,7 +52,48 @@ func (s *MarketplaceService) GetConfig() *model.MarketplaceConfig {
 // SaveConfig 保存市场配置
 func (s *MarketplaceService) SaveConfig(config *model.MarketplaceConfig) error {
 	config.ID = 1
-	return s.db.Save(config).Error
+	err := s.db.Save(config).Error
+	if err != nil {
+		return err
+	}
+
+	// 根据启用状态添加/删除菜单
+	if config.Enabled {
+		s.addMarketplaceMenu()
+	} else {
+		s.removeMarketplaceMenu()
+	}
+
+	return nil
+}
+
+// addMarketplaceMenu 添加交易市场菜单
+func (s *MarketplaceService) addMarketplaceMenu() {
+	var count int64
+	s.db.Model(&model.Nav{}).Where("url = ? AND menu_type = 1", "/user/marketplace").Count(&count)
+	if count == 0 {
+		// 获取最大排序号
+		var maxOrder int
+		s.db.Model(&model.Nav{}).Where("menu_type = 1 AND parent_id = 0").Select("COALESCE(MAX(`order`), 0)").Scan(&maxOrder)
+		
+		menu := model.Nav{
+			Name:     "交易市场",
+			URL:      "/user/marketplace",
+			ParentID: 0,
+			Order:    maxOrder + 1,
+			FaIcon:   "bx bx-store",
+			MenuType: 1,
+			NavType:  0,
+			MenuID:   1,
+			IsDisplay: true,
+		}
+		s.db.Create(&menu)
+	}
+}
+
+// removeMarketplaceMenu 删除交易市场菜单
+func (s *MarketplaceService) removeMarketplaceMenu() {
+	s.db.Where("url = ? AND menu_type = 1", "/user/marketplace").Delete(&model.Nav{})
 }
 
 // ─── 挂售管理 ───
