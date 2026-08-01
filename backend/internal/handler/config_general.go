@@ -349,3 +349,322 @@ func (h *ConfigGeneralHandler) TestSMS(c *gin.Context) {
 	}
 	response.SuccessMsg(c, "test SMS sent")
 }
+
+// ==================== Payment Config ====================
+
+func (h *ConfigGeneralHandler) GetPaymentConfig(c *gin.Context) {
+	cfg, err := h.svc.GetPaymentConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) UpdatePaymentConfig(c *gin.Context) {
+	var req service.PaymentConfig
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdatePaymentConfig(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "payment config updated")
+}
+
+// ==================== SMS Config ====================
+
+func (h *ConfigGeneralHandler) GetSmsConfig(c *gin.Context) {
+	cfg, err := h.svc.GetSmsConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) UpdateSmsConfig(c *gin.Context) {
+	var req service.SmsConfig
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateSmsConfig(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "SMS config updated")
+}
+
+// ==================== Security Config ====================
+
+func (h *ConfigGeneralHandler) GetSecurityConfig(c *gin.Context) {
+	cfg, err := h.svc.GetSecurityConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) UpdateSecurityConfig(c *gin.Context) {
+	var req service.SecurityConfig
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateSecurityConfig(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "security config updated")
+}
+
+// ==================== Local Config ====================
+
+func (h *ConfigGeneralHandler) GetLocalConfig(c *gin.Context) {
+	cfg, err := h.svc.GetLocalConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) UpdateLocalConfig(c *gin.Context) {
+	var req service.LocalConfig
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateLocalConfig(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "local config updated")
+}
+
+// ==================== Affiliate Config ====================
+
+func (h *ConfigGeneralHandler) GetAffiliateConfig(c *gin.Context) {
+	cfg, err := h.svc.GetAffiliateConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) UpdateAffiliateConfig(c *gin.Context) {
+	var req service.AffiliateConfig
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateAffiliateConfig(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "affiliate config updated")
+}
+
+// ==================== Captcha Config ====================
+
+func (h *ConfigGeneralHandler) GetCaptchaConfig(c *gin.Context) {
+	cfg, err := h.svc.GetCaptchaConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) UpdateCaptchaConfig(c *gin.Context) {
+	var req service.CaptchaConfigData
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateCaptchaConfig(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "captcha config updated")
+}
+
+// ==================== Buy Product Config ====================
+
+func (h *ConfigGeneralHandler) GetBuyProductConfig(c *gin.Context) {
+	cfg, err := h.svc.GetBuyProductConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) UpdateBuyProductConfig(c *gin.Context) {
+	var req service.BuyProductConfig
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateBuyProductConfig(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "buy product config updated")
+}
+
+// ==================== Second Verify Config ====================
+
+func (h *ConfigGeneralHandler) GetSecondVerifyConfig(c *gin.Context) {
+	cfg, err := h.svc.GetSecondVerifyConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) UpdateSecondVerifyConfig(c *gin.Context) {
+	var req service.SecondVerifyConfig
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateSecondVerifyConfig(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "second verify config updated")
+}
+
+// ==================== Nav Group ====================
+
+func (h *ConfigGeneralHandler) GetNavGroups(c *gin.Context) {
+	groups, err := h.svc.GetNavGroups()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, groups)
+}
+
+func (h *ConfigGeneralHandler) CreateNavGroup(c *gin.Context) {
+	var req service.NavGroupReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.CreateNavGroup(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "nav group created")
+}
+
+func (h *ConfigGeneralHandler) UpdateNavGroup(c *gin.Context) {
+	var req service.NavGroupReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateNavGroup(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "nav group updated")
+}
+
+func (h *ConfigGeneralHandler) DeleteNavGroup(c *gin.Context) {
+	var req struct {
+		ID     uint `json:"id" binding:"required"`
+		ToID   uint `json:"to_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.DeleteNavGroup(req.ID, req.ToID); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "nav group deleted")
+}
+
+// ==================== Language Config ====================
+
+func (h *ConfigGeneralHandler) GetLanguageConfig(c *gin.Context) {
+	cfg, err := h.svc.GetLanguageConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) SetAdminLanguage(c *gin.Context) {
+	var req struct {
+		Lang string `json:"lang" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.SetAdminLanguage(req.Lang); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "language set")
+}
+
+// ==================== Header/Footer Config ====================
+
+func (h *ConfigGeneralHandler) GetHeaderFooter(c *gin.Context) {
+	cfg, err := h.svc.GetHeaderFooter()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) UpdateHeaderFooter(c *gin.Context) {
+	var req service.HeaderFooterConfig
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateHeaderFooter(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "header/footer config updated")
+}
+
+// ==================== New Login Page Config ====================
+
+func (h *ConfigGeneralHandler) GetNewLoginPageConfig(c *gin.Context) {
+	cfg, err := h.svc.GetNewLoginPageConfig()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *ConfigGeneralHandler) UpdateNewLoginPageConfig(c *gin.Context) {
+	var req service.NewLoginPageConfig
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if err := h.svc.UpdateNewLoginPageConfig(req); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "new login page config updated")
+}
