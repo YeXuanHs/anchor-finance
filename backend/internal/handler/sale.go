@@ -436,3 +436,35 @@ func (h *SaleHandler) GetSaleStatus(c *gin.Context) {
 	enabled := result.Error == nil && config.Value == "1"
 	response.Success(c, gin.H{"enabled": enabled})
 }
+
+// GetTimetype returns time type options for sale promotions.
+// GET /admin/sale/timetypes
+func (h *SaleHandler) GetTimetype(c *gin.Context) {
+	timeTypes := []map[string]interface{}{
+		{"id": "month", "name": "按月"},
+		{"id": "quarter", "name": "按季度"},
+		{"id": "half_year", "name": "半年"},
+		{"id": "year", "name": "按年"},
+		{"id": "biennial", "name": "两年"},
+		{"id": "triennial", "name": "三年"},
+		{"id": "onetime", "name": "一次性"},
+		{"id": "free", "name": "免费"},
+	}
+	response.Success(c, gin.H{"time_type": timeTypes})
+}
+
+// DelSaleLadder deletes a sale ladder entry.
+// DELETE /admin/sale/ladder/:id
+func (h *SaleHandler) DelSaleLadder(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid ladder id")
+		return
+	}
+
+	if err := h.saleSvc.DeleteLadder(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "sale ladder deleted")
+}

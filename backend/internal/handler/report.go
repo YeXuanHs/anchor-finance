@@ -8,15 +8,17 @@ import (
 	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type ReportHandler struct {
+	db        *gorm.DB
 	reportSvc *service.ReportService
 	log       *logger.Logger
 }
 
-func NewReportHandler(reportSvc *service.ReportService, log *logger.Logger) *ReportHandler {
-	return &ReportHandler{reportSvc: reportSvc, log: log}
+func NewReportHandler(db *gorm.DB, reportSvc *service.ReportService, log *logger.Logger) *ReportHandler {
+	return &ReportHandler{db: db, reportSvc: reportSvc, log: log}
 }
 
 // GetDashboard returns dashboard summary stats.
@@ -129,4 +131,54 @@ func (h *ReportHandler) GetProductIncome(c *gin.Context) {
 		return
 	}
 	response.Success(c, data)
+}
+
+// BaseInfoModule represents a system info module.
+type BaseInfoModule struct {
+	ID     uint   `gorm:"primaryKey" json:"id"`
+	Name   string `gorm:"type:varchar(128);not null" json:"name"`
+	Desc   string `gorm:"type:varchar(255)" json:"desc"`
+	Enable int    `gorm:"default:1" json:"enable"`
+	Sort   int    `gorm:"default:0" json:"sort"`
+}
+
+func (BaseInfoModule) TableName() string {
+	return "base_info"
+}
+
+// GetSystemInfoModulesList returns all system info modules sorted by sort order.
+// GET /admin/reports/modules
+func (h *ReportHandler) GetSystemInfoModulesList(c *gin.Context) {
+	var modules []BaseInfoModule
+	if err := h.db.Where("delete_time = ?", 0).
+		Order("sort ASC, id ASC").
+		Find(&modules).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, modules)
+}
+
+// UpdateSystemInfoModulesSort updates the sort order of system info modules.
+// POST /admin/reports/modules/sort
+func (h *ReportHandler) UpdateSystemInfoModulesSort(c *gin.Context) {
+	var req struct {
+		Modules []struct {
+			ID   uint `json:"id"`
+			Sort int  `json:"sort"`
+		} `json:"modules" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	for _, m := range req.Modules {
+		if err := h.db.Model(&BaseInfoModule{}).Where("id = ?", m.ID).
+			Update("sort", m.Sort).Error; err != nil {
+			response.ServerError(c, err.Error())
+			return
+		}
+	}
+	response.SuccessMsg(c, "module sort order updated")
 }

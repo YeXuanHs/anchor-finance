@@ -395,3 +395,410 @@ func (s *AffiliateService) ProcessWithdraw(withdrawID uint, approve bool, adminN
 			Update("balance", gorm.Expr("balance + ?", withdraw.Amount)).Error
 	})
 }
+
+// GetGatewayList returns available payment gateways for affiliate.
+func (s *AffiliateService) GetGatewayList() ([]map[string]interface{}, error) {
+	var gateways []model.PaymentGateway
+	if err := s.db.Where("is_active = ?", true).Find(&gateways).Error; err != nil {
+		return nil, err
+	}
+
+	var result []map[string]interface{}
+	for _, gw := range gateways {
+		result = append(result, map[string]interface{}{
+			"id":   gw.ID,
+			"name": gw.Name,
+			"code": gw.Code,
+		})
+	}
+	return result, nil
+}
+
+// ProductAffiRequest represents affiliate product settings.
+type ProductAffiRequest struct {
+	ID                 uint    `json:"id"`
+	PID                uint    `json:"pid" binding:"required"`
+	AffiliateEnabled   int     `json:"affiliate_enabled"`
+	AffiliateBates     float64 `json:"affiliate_bates"`
+	AffiliateType      int     `json:"affiliate_type"`
+	AffiliateIsReorder int     `json:"affiliate_is_reorder"`
+	AffiliateReorder   int     `json:"affiliate_reorder"`
+	AffiliateReorderType int   `json:"affiliate_reorder_type"`
+	AffiliateIsRenew   int     `json:"affiliate_is_renew"`
+	AffiliateRenew     int     `json:"affiliate_renew"`
+	AffiliateRenewType int     `json:"affiliate_renew_type"`
+}
+
+// ProductAffiliateSetting model for affiliate product settings.
+type ProductAffiliateSetting struct {
+	ID                   uint    `gorm:"primaryKey" json:"id"`
+	PID                  uint    `gorm:"index;not null" json:"pid"`
+	AffiliateEnabled     int     `gorm:"default:0" json:"affiliate_enabled"`
+	AffiliateBates       float64 `gorm:"type:decimal(10,2);default:0" json:"affiliate_bates"`
+	AffiliateType        int     `gorm:"default:0" json:"affiliate_type"` // 0=percentage 1=fixed
+	AffiliateIsReorder   int     `gorm:"default:0" json:"affiliate_is_reorder"`
+	AffiliateReorder     int     `gorm:"default:0" json:"affiliate_reorder"`
+	AffiliateReorderType int     `gorm:"default:0" json:"affiliate_reorder_type"`
+	AffiliateIsRenew     int     `gorm:"default:0" json:"affiliate_is_renew"`
+	AffiliateRenew       int     `gorm:"default:0" json:"affiliate_renew"`
+	AffiliateRenewType   int     `gorm:"default:0" json:"affiliate_renew_type"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
+}
+
+// GetProductAffiSetting returns affiliate settings for a product.
+func (s *AffiliateService) GetProductAffiSetting(pid uint) (*ProductAffiliateSetting, error) {
+	var setting ProductAffiliateSetting
+	if err := s.db.Where("pid = ?", pid).First(&setting).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &setting, nil
+}
+
+// SaveProductAffiSetting creates or updates affiliate settings for a product.
+func (s *AffiliateService) SaveProductAffiSetting(req *ProductAffiRequest) error {
+	if req.ID > 0 {
+		// Update existing
+		return s.db.Model(&ProductAffiliateSetting{}).Where("id = ?", req.ID).Updates(map[string]interface{}{
+			"affiliate_enabled":      req.AffiliateEnabled,
+			"affiliate_bates":        req.AffiliateBates,
+			"affiliate_type":         req.AffiliateType,
+			"affiliate_is_reorder":   req.AffiliateIsReorder,
+			"affiliate_reorder":      req.AffiliateReorder,
+			"affiliate_reorder_type": req.AffiliateReorderType,
+			"affiliate_is_renew":     req.AffiliateIsRenew,
+			"affiliate_renew":        req.AffiliateRenew,
+			"affiliate_renew_type":   req.AffiliateRenewType,
+		}).Error
+	}
+
+	// Create new
+	setting := &ProductAffiliateSetting{
+		PID:                  req.PID,
+		AffiliateEnabled:     req.AffiliateEnabled,
+		AffiliateBates:       req.AffiliateBates,
+		AffiliateType:        req.AffiliateType,
+		AffiliateIsReorder:   req.AffiliateIsReorder,
+		AffiliateReorder:     req.AffiliateReorder,
+		AffiliateReorderType: req.AffiliateReorderType,
+		AffiliateIsRenew:     req.AffiliateIsRenew,
+		AffiliateRenew:       req.AffiliateRenew,
+		AffiliateRenewType:   req.AffiliateRenewType,
+	}
+	return s.db.Create(setting).Error
+}
+
+// GetUserBuyRecords returns affiliate purchase records for a user.
+func (s *AffiliateService) GetUserBuyRecords(uid string, page, pageSize int) ([]map[string]interface{}, int64, error) {
+	var total int64
+	query := s.db.Table("invoices i").
+		Joins("LEFT JOIN users u ON i.uid = u.id").
+		Where("i.uid = ? AND i.status = ?", uid, "Paid")
+
+	query.Count(&total)
+
+	var records []map[string]interface{}
+	offset := (page - 1) * pageSize
+	if err := query.Select("i.id, i.type, i.subtotal, i.paid_time, u.username, u.id as uid").
+		Offset(offset).Limit(pageSize).
+		Order("i.id DESC").
+		Find(&records).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return records, total, nil
+}
+
+// ==================== 新增缺失方法 ====================
+
+// UserAffiSettingRequest 用户推介计划设置请求
+type UserAffiSettingRequest struct {
+	ID                  uint    `json:"id"`
+	UID                 uint    `json:"uid" binding:"required"`
+	AffiliateEnabled    int     `json:"affiliate_enabled"`
+	AffiliateBates      float64 `json:"affiliate_bates"`
+	AffiliateType       int     `json:"affiliate_type"`
+	AffiliateIsReorder  int     `json:"affiliate_is_reorder"`
+	AffiliateReorder    int     `json:"affiliate_reorder"`
+	AffiliateReorderType int    `json:"affiliate_reorder_type"`
+	AffiliateIsRenew    int     `json:"affiliate_is_renew"`
+	AffiliateRenew      int     `json:"affiliate_renew"`
+	AffiliateRenewType  int     `json:"affiliate_renew_type"`
+}
+
+// GetUserAffiPage returns affiliate settings page data for a user.
+func (s *AffiliateService) GetUserAffiPage(uid string) (map[string]interface{}, map[string]interface{}, error) {
+	var setting map[string]interface{}
+	if err := s.db.Table("affiliates_user_setting").Where("uid = ?", uid).Find(&setting).Error; err != nil {
+		return nil, nil, err
+	}
+
+	var affData map[string]interface{}
+	if err := s.db.Table("affiliates").Where("uid = ?", uid).Find(&affData).Error; err != nil {
+		return nil, nil, err
+	}
+
+	return setting, affData, nil
+}
+
+// UpdateUserAffiBalance updates affiliate balance for a user.
+func (s *AffiliateService) UpdateUserAffiBalance(uid uint, withdrawn, balance float64) error {
+	updates := map[string]interface{}{}
+	if withdrawn > 0 {
+		updates["withdrawn"] = withdrawn
+	}
+	if balance > 0 {
+		updates["balance"] = balance
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	return s.db.Table("affiliates").Where("uid = ?", uid).Updates(updates).Error
+}
+
+// SaveUserAffiSetting creates or updates affiliate settings for a user.
+func (s *AffiliateService) SaveUserAffiSetting(req *UserAffiSettingRequest) error {
+	if req.ID == 0 {
+		// Create new
+		data := map[string]interface{}{
+			"uid":                   req.UID,
+			"affiliate_enabled":     req.AffiliateEnabled,
+			"affiliate_bates":       req.AffiliateBates,
+			"affiliate_type":        req.AffiliateType,
+			"affiliate_is_reorder":  req.AffiliateIsReorder,
+			"affiliate_reorder":     req.AffiliateReorder,
+			"affiliate_reorder_type": req.AffiliateReorderType,
+			"affiliate_is_renew":    req.AffiliateIsRenew,
+			"affiliate_renew":       req.AffiliateRenew,
+			"affiliate_renew_type":  req.AffiliateRenewType,
+			"create_time":           time.Now().Unix(),
+		}
+		return s.db.Table("affiliates_user_setting").Create(data).Error
+	}
+
+	// Update existing
+	data := map[string]interface{}{
+		"affiliate_enabled":      req.AffiliateEnabled,
+		"affiliate_bates":        req.AffiliateBates,
+		"affiliate_type":         req.AffiliateType,
+		"affiliate_is_reorder":   req.AffiliateIsReorder,
+		"affiliate_reorder":      req.AffiliateReorder,
+		"affiliate_reorder_type": req.AffiliateReorderType,
+		"affiliate_is_renew":     req.AffiliateIsRenew,
+		"affiliate_renew":        req.AffiliateRenew,
+		"affiliate_renew_type":   req.AffiliateRenewType,
+	}
+	return s.db.Table("affiliates_user_setting").Where("id = ?", req.ID).Updates(data).Error
+}
+
+// GetUserAffiList returns referred users list for an affiliate.
+func (s *AffiliateService) GetUserAffiList(uid string, page, pageSize int, keyword string) ([]map[string]interface{}, int64, error) {
+	// Get affiliate ID
+	var aff map[string]interface{}
+	if err := s.db.Table("affiliates").Select("id").Where("uid = ?", uid).Find(&aff).Error; err != nil {
+		return nil, 0, err
+	}
+	if aff == nil {
+		return []map[string]interface{}{}, 0, nil
+	}
+	affID := aff["id"]
+
+	query := s.db.Table("affiliates_user au").
+		Joins("LEFT JOIN users u ON au.uid = u.id").
+		Where("au.affid = ?", affID)
+
+	if keyword != "" {
+		query = query.Where("u.username LIKE ?", "%"+keyword+"%")
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var users []map[string]interface{}
+	offset := (page - 1) * pageSize
+	if err := query.Select("u.id, u.username, u.email, u.created_at, u.last_login_at").
+		Offset(offset).Limit(pageSize).
+		Order("au.id DESC").
+		Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
+// GetUserAffiRecord returns withdrawal records for a specific user.
+func (s *AffiliateService) GetUserAffiRecord(uid string, page, pageSize int, status string) ([]map[string]interface{}, int64, error) {
+	query := s.db.Table("affiliates_withdraw aw").
+		Joins("LEFT JOIN users u ON aw.uid = u.id").
+		Where("aw.uid = ?", uid)
+
+	if status != "" {
+		query = query.Where("aw.status = ?", status)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var records []map[string]interface{}
+	offset := (page - 1) * pageSize
+	if err := query.Select("aw.id, aw.num, aw.type, aw.create_time, aw.status, aw.reason, u.username").
+		Offset(offset).Limit(pageSize).
+		Order("aw.id DESC").
+		Find(&records).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return records, total, nil
+}
+
+// GetAffiliateUserIDs returns user IDs referred by an affiliate.
+func (s *AffiliateService) GetAffiliateUserIDs(uid string) ([]uint, error) {
+	var aff map[string]interface{}
+	if err := s.db.Table("affiliates").Select("id").Where("uid = ?", uid).Find(&aff).Error; err != nil {
+		return nil, err
+	}
+	if aff == nil {
+		return []uint{}, nil
+	}
+	affID := aff["id"]
+
+	var uids []uint
+	if err := s.db.Table("affiliates_user").Where("affid = ?", affID).Pluck("uid", &uids).Error; err != nil {
+		return nil, err
+	}
+
+	return uids, nil
+}
+
+// GetAffiWithdrawRecords returns affiliate withdrawal records.
+func (s *AffiliateService) GetAffiWithdrawRecords(page, pageSize int, keyword, status string) ([]map[string]interface{}, int64, error) {
+	query := s.db.Table("affiliates_withdraw aw").
+		Joins("LEFT JOIN users u ON aw.uid = u.id").
+		Joins("LEFT JOIN currencies cu ON u.currency = cu.id")
+
+	if keyword != "" {
+		query = query.Where("u.username LIKE ?", "%"+keyword+"%")
+	}
+	if status != "" {
+		query = query.Where("aw.status = ?", status)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var records []map[string]interface{}
+	offset := (page - 1) * pageSize
+	if err := query.Select("aw.id, aw.num, aw.type, aw.create_time, aw.status, aw.reason, u.username, cu.suffix").
+		Offset(offset).Limit(pageSize).
+		Order("aw.id DESC").
+		Find(&records).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return records, total, nil
+}
+
+// ProcessAffiWithdrawSH processes affiliate withdrawal approval/rejection.
+func (s *AffiliateService) ProcessAffiWithdrawSH(withdrawID uint, typ, status int, payment, transID, reason string, adminID uint) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var withdraw model.AffiliateWithdraw
+		if err := tx.First(&withdraw, withdrawID).Error; err != nil {
+			return fmt.Errorf("withdrawal not found")
+		}
+
+		if withdraw.Status != 1 {
+			return fmt.Errorf("withdrawal is not pending")
+		}
+
+		if status == 2 {
+			// Approve
+			if typ == 1 {
+				// Add to user balance
+				if err := tx.Table("users").Where("id = ?", withdraw.UserID).
+					Update("credit", gorm.Expr("credit + ?", withdraw.Amount)).Error; err != nil {
+					return err
+				}
+			} else if typ == 3 {
+				// Create account record
+				account := map[string]interface{}{
+					"uid":          withdraw.UserID,
+					"gateway":      payment,
+					"create_time":  time.Now().Unix(),
+					"pay_time":     time.Now().Unix(),
+					"amount_out":   withdraw.Amount,
+					"trans_id":     transID,
+					"description":  "Affiliate withdrawal",
+				}
+				if err := tx.Table("accounts").Create(account).Error; err != nil {
+					return err
+				}
+			}
+
+			// Update withdrawal status
+			if err := tx.Model(&withdraw).Updates(map[string]interface{}{
+				"status":      2,
+				"type":        typ,
+				"admin_id":    adminID,
+				"update_time": time.Now().Unix(),
+			}).Error; err != nil {
+				return err
+			}
+
+			// Update affiliate balance
+			var aff model.Affiliate
+			if err := tx.Where("uid = ?", withdraw.UserID).First(&aff).Error; err == nil {
+				tx.Model(&aff).Updates(map[string]interface{}{
+					"withdraw_ing": gorm.Expr("withdraw_ing - ?", withdraw.Amount),
+					"withdrawn":    gorm.Expr("withdrawn + ?", withdraw.Amount),
+					"updated_time": time.Now().Unix(),
+				})
+			}
+		} else if status == 3 {
+			// Reject
+			if err := tx.Model(&withdraw).Updates(map[string]interface{}{
+				"status":      3,
+				"reason":      reason,
+				"admin_id":    adminID,
+				"update_time": time.Now().Unix(),
+			}).Error; err != nil {
+				return err
+			}
+
+			// Return balance to affiliate
+			var aff model.Affiliate
+			if err := tx.Where("uid = ?", withdraw.UserID).First(&aff).Error; err == nil {
+				tx.Model(&aff).Updates(map[string]interface{}{
+					"balance":      gorm.Expr("balance + ?", withdraw.Amount),
+					"withdraw_ing": gorm.Expr("withdraw_ing - ?", withdraw.Amount),
+					"updated_time": time.Now().Unix(),
+				})
+			}
+		}
+
+		return nil
+	})
+}
+
+// GetCommissionRecords returns commission records with enrichment.
+func (s *AffiliateService) GetCommissionRecords(uid string, page, pageSize int) ([]map[string]interface{}, int64, error) {
+	var total int64
+	query := s.db.Table("affiliate_records ar").
+		Joins("LEFT JOIN users u ON ar.user_id = u.id").
+		Where("ar.user_id = ?", uid)
+
+	query.Count(&total)
+
+	var records []map[string]interface{}
+	offset := (page - 1) * pageSize
+	if err := query.Select("ar.*").
+		Offset(offset).Limit(pageSize).
+		Order("ar.id DESC").
+		Find(&records).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return records, total, nil
+}

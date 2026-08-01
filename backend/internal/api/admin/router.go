@@ -162,6 +162,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/invoices/:id/email-template", invoiceEnhancedHandler.InvoiceEmail)
 		admin.GET("/invoices/:id/logs", invoiceEnhancedHandler.GetInvoiceLog)
 		admin.POST("/invoices/:id/duplicate", invoiceEnhancedHandler.DuplicateInvoice)
+		admin.PUT("/invoices/items/:id", invoiceHandler.EditItem)
+		admin.DELETE("/invoices/items", invoiceHandler.DeleteItems)
+		admin.DELETE("/invoices/:id/account", invoiceHandler.DelAccount)
 
 		// 工单管理
 		admin.GET("/tickets", ticketHandler.GetList)
@@ -259,6 +262,21 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/dcim/servers/:id/shutdown", dcimHandler.ShutdownServer)
 		admin.POST("/dcim/servers/:id/reboot", dcimHandler.RebootServer)
 		admin.GET("/dcim/datacenters", dcimHandler.GetDatacenterList)
+
+		// DCIM扩展功能
+		admin.GET("/dcim/servers/:id/flow-packets", dcimHandler.ListFlowPacket)
+		admin.POST("/dcim/servers/:id/flow-packets", dcimHandler.AddFlowPacket)
+		admin.PUT("/dcim/flow-packets/:id", dcimHandler.EditFlowPacket)
+		admin.DELETE("/dcim/flow-packets/:id", dcimHandler.DelFlowPacket)
+		admin.POST("/dcim/servers/:id/assign", dcimHandler.AssignServer)
+		admin.GET("/dcim/sales-servers", dcimHandler.GetSalesServer)
+		admin.POST("/dcim/servers/:id/refresh", dcimHandler.RefreshServerStatus)
+		admin.GET("/dcim/buy-records", dcimHandler.ListBuyRecord)
+		admin.DELETE("/dcim/buy-records/:id", dcimHandler.DelRecord)
+		admin.GET("/dcim/flow-packets/create", dcimHandler.AddFlowPacketPage)
+		admin.GET("/dcim/flow-packets/:id/edit", dcimHandler.EditFlowPacketPage)
+		admin.POST("/dcim/servers/:id/unsuspend-reload", dcimHandler.UnsuspendReload)
+		admin.GET("/dcim/servers/:id/detail", dcimHandler.Detail)
 
 		// DCIM高级操作 - KVM/IPMI/BMC
 		admin.GET("/dcim/servers/:id/kvm", dcimAdvHandler.GetKVMURL)
@@ -399,6 +417,16 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/client-services/:id/suspend", clientSvcHandler.Suspend)
 		admin.POST("/client-services/:id/terminate", clientSvcHandler.Terminate)
 		admin.POST("/client-services/:id/renew", clientSvcHandler.Renew)
+		// 新增缺失路由
+		admin.POST("/client-services/transfer", clientSvcHandler.PostTransfer)
+		admin.DELETE("/client-services/:id/delete-host", clientSvcHandler.DeleteHost)
+		admin.GET("/client-services/batch-renew-page", clientSvcHandler.PostBatchRenewPage)
+		admin.POST("/client-services/batch-renew", clientSvcHandler.PostBatchRenew)
+		admin.GET("/client-services/apply-credit-page", clientSvcHandler.GetApplyCreditPage)
+		admin.POST("/client-services/apply-credit", clientSvcHandler.ApplyCredit)
+		admin.POST("/client-services/search-client", clientSvcHandler.PostSearchClient)
+		admin.GET("/client-services/:id/refund-page", clientSvcHandler.GetRefundPage)
+		admin.POST("/client-services/:id/refund", clientSvcHandler.Refund)
 
 		// 用户管理
 		userManageSvc := service.NewUserManageService(deps.DB, deps.Log)
@@ -443,6 +471,19 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/user-manage/:id/reset-password", userManageHandler.ResetPassword)
 		admin.GET("/user-manage/:id/status", userManageHandler.GetStatus)
 		admin.GET("/user-manage/:id/operation-logs", userManageHandler.GetOperationLogs)
+		// 新增缺失路由
+		admin.GET("/user-manage/:uid/hosts-by-uid", userManageHandler.HostByUid)
+		admin.GET("/user-manage/certification/list", userManageHandler.CerifyList)
+		admin.GET("/user-manage/certification/log-list", userManageHandler.CerifyLogList)
+		admin.GET("/user-manage/certification/person/:id", userManageHandler.CertifiPersonDetail)
+		admin.PUT("/user-manage/certification/person/:id", userManageHandler.CertifiPersonModify)
+		admin.GET("/user-manage/certification/company/:id", userManageHandler.CertifiCompanyDetail)
+		admin.PUT("/user-manage/certification/company/:id", userManageHandler.CertifiCompanyModify)
+		admin.GET("/user-manage/:id/product-accounts", userManageHandler.UserProductaccounts)
+		admin.POST("/user-manage/:id/login-as", userManageHandler.LoginByUser)
+		admin.DELETE("/user-manage/cancel-requests/:id", userManageHandler.DeleteCancelRequest)
+		admin.POST("/user-manage/:id/record-log", userManageHandler.AddRecordLog)
+		admin.POST("/user-manage/:id/remark-log", userManageHandler.AddRemarkLog)
 
 		// 用户备注
 		userRemarkSvc := service.NewUserRemarkService(deps.DB, deps.Log)
@@ -544,6 +585,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/sales/admin-list", saleHandler.GetAdminList)
 		admin.GET("/sales/status", saleHandler.GetSaleStatus)
 		admin.POST("/sales/status", saleHandler.SetSaleStatus)
+
+		// 销售扩展功能
+		admin.GET("/sale/timetypes", saleHandler.GetTimetype)
+		admin.DELETE("/sale/ladder/:id", saleHandler.DelSaleLadder)
 
 		// 消息发送
 		sendMsgSvc := service.NewSendMessageService(deps.DB, deps.Log)
@@ -769,6 +814,21 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/link-knowledge", linkKnowledgeHandler.CreateKnowledge)
 		admin.PUT("/link-knowledge/:id", linkKnowledgeHandler.UpdateKnowledge)
 		admin.DELETE("/link-knowledge/:id", linkKnowledgeHandler.DeleteKnowledge)
+		admin.GET("/link-knowledge/index", linkKnowledgeHandler.Index)
+		admin.GET("/link-knowledge/:id/edit", linkKnowledgeHandler.Edit)
+		admin.POST("/link-knowledge/save", linkKnowledgeHandler.Save)
+		admin.POST("/link-knowledge/add", linkKnowledgeHandler.Add)
+
+		// 交易流水管理
+		accountHandler := handler.NewAccountHandler(deps.DB)
+		admin.GET("/accounts", accountHandler.Index)
+		admin.GET("/accounts/create", accountHandler.Create)
+		admin.POST("/accounts", accountHandler.Save)
+		admin.GET("/accounts/:id", accountHandler.Read)
+		admin.PUT("/accounts/:id", accountHandler.Update)
+		admin.DELETE("/accounts/:id", accountHandler.Delete)
+		admin.GET("/accounts/search-page", accountHandler.SearchPage)
+		admin.POST("/accounts/create-invoice", accountHandler.CreateInvoice)
 
 		// 公共接口
 		publicSvc := service.NewPublicService(deps.DB, deps.Log)
@@ -1081,6 +1141,21 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/affiliate/records/:id/confirm", affiliateHandler.AdminConfirmRecord)
 		admin.POST("/affiliate/withdraws/:id/process", affiliateHandler.AdminProcessWithdraw)
 
+		// 推广联盟扩展功能
+		admin.GET("/affiliate/gateways", affiliateHandler.GatewayList)
+		admin.GET("/affiliate/product/:pid", affiliateHandler.ProductAffiPage)
+		admin.POST("/affiliate/product", affiliateHandler.ProductAffiPost)
+		admin.GET("/affiliate/buy-records", affiliateHandler.UserAffiBuyRecord)
+		admin.GET("/affiliate/user-affi-page", affiliateHandler.UserAffiPage)
+		admin.POST("/affiliate/user-affi-balance", affiliateHandler.UserAffiBalance)
+		admin.POST("/affiliate/user-affi-post", affiliateHandler.UserAffiPost)
+		admin.GET("/affiliate/user-affi-list", affiliateHandler.UserAffiList)
+		admin.GET("/affiliate/user-affi-record", affiliateHandler.UserAffiRecord)
+		admin.GET("/affiliate/time-type", affiliateHandler.GetTimeType)
+		admin.GET("/affiliate/get-ids", affiliateHandler.GetIDs)
+		admin.GET("/affiliate/withdraw-records", affiliateHandler.AffiWithdrawRecord)
+		admin.POST("/affiliate/withdraw-sh", affiliateHandler.AffiWithdrawSH)
+
 		// ==================== 代理商 ====================
 		agentHandler := handler.NewAgentHandler(deps.DB)
 		admin.GET("/agents", agentHandler.AdminGetList)
@@ -1221,6 +1296,12 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/contracts/:id", contractHandler.AdminUpdate)
 		admin.DELETE("/contracts/:id", contractHandler.AdminDelete)
 		admin.POST("/contracts/:id/sign", contractHandler.AdminSign)
+		admin.GET("/contracts/setting", contractHandler.Setting)
+		admin.POST("/contracts/setting", contractHandler.SettingPost)
+		admin.GET("/contracts/tpl", contractHandler.Tpl)
+		admin.DELETE("/contracts/tpl/:id", contractHandler.DeleteTpl)
+		admin.GET("/contracts/page", contractHandler.ContractPage)
+		admin.POST("/contracts/page", contractHandler.ContractPagePost)
 
 		// ==================== 优惠券 ====================
 		couponSvc := service.NewCouponService(deps.DB, deps.Log)
@@ -1255,6 +1336,13 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/credit/config", creditHandler.AdminGetGlobalCreditConfig)
 		admin.PUT("/credit/config", creditHandler.AdminUpdateGlobalCreditConfig)
 
+		// 信用额度扩展功能
+		admin.DELETE("/credit/users/:uid", creditHandler.Delete)
+		admin.GET("/credit/search", creditHandler.GetSearch)
+		admin.GET("/credit/index", creditHandler.AdminIndex)
+		admin.GET("/credit/log", creditHandler.AdminCreditLog)
+		admin.GET("/credit/invoices", creditHandler.AdminCreditInvoiceList)
+
 		// ==================== 货币 ====================
 		currencyHandler := handler.NewCurrencyHandler(deps.DB)
 		admin.GET("/currencies", currencyHandler.GetAll)
@@ -1278,6 +1366,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.DELETE("/downloads/:id", downloadHandler.AdminDeleteFile)
 		admin.POST("/downloads/upload", downloadHandler.AdminUploadFile)
 		admin.GET("/downloads/:id/download", downloadHandler.Download)
+
+		// 下载管理扩展功能
+		admin.GET("/downloads/config", downloadHandler.DownloadsConfig)
+		admin.POST("/downloads/sort", downloadHandler.UpdateFileSort)
 
 		// ==================== 获取用户 ====================
 		getUserHandler := handler.NewGetUserHandler(deps.DB, deps.Log)
@@ -1425,7 +1517,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// ==================== 报表 ====================
 		reportSvc := service.NewReportService(deps.DB, deps.Log)
-		reportHandler := handler.NewReportHandler(reportSvc, deps.Log)
+		reportHandler := handler.NewReportHandler(deps.DB, reportSvc, deps.Log)
 		admin.GET("/reports/dashboard", reportHandler.GetDashboard)
 		admin.GET("/reports/daily", reportHandler.GetDailyReport)
 		admin.GET("/reports/monthly", reportHandler.GetMonthlyReport)
@@ -1434,6 +1526,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/reports/orders", reportHandler.GetOrderStats)
 		admin.GET("/reports/top-clients", reportHandler.GetTopClients)
 		admin.GET("/reports/product-income", reportHandler.GetProductIncome)
+
+		// 报表扩展功能
+		admin.GET("/reports/modules", reportHandler.GetSystemInfoModulesList)
+		admin.POST("/reports/modules/sort", reportHandler.UpdateSystemInfoModulesSort)
 
 		// ==================== 运行映射 ====================
 		runMapHandler := handler.NewRunMapHandler(deps.DB, deps.Log)
@@ -1919,6 +2015,16 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 			// 订单管理
 			marketplace.GET("/orders", marketplaceHandler.AdminGetAllOrders)
+		}
+
+		// ==================== 公共接口 ====================
+		commonHandler := handler.NewCommonHandler(deps.DB, deps.Log)
+		{
+			admin.GET("/common", commonHandler.Common)
+			admin.GET("/info-notice", commonHandler.InfoNotice)
+			admin.GET("/gateways", commonHandler.GetGetways)
+			admin.GET("/email-templates", commonHandler.GetEmailTem)
+			admin.GET("/sms-countries", commonHandler.GetSmsCountry)
 		}
 	}
 }

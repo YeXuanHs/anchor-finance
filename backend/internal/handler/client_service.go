@@ -271,3 +271,196 @@ func (h *ClientServiceHandler) GetByStatus(c *gin.Context) {
 		"expired":    model.ClientServiceExpired,
 	})
 }
+
+// ==================== 新增缺失方法 ====================
+
+// PostTransfer transfers a service to another user (admin).
+// POST /admin/client-services/transfer
+func (h *ClientServiceHandler) PostTransfer(c *gin.Context) {
+	var req struct {
+		HostID      uint `json:"hostid" binding:"required"`
+		TransferUID uint `json:"transfer_uid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.TransferService(req.HostID, req.TransferUID); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "service transferred successfully")
+}
+
+// DeleteHost deletes a host/service (admin).
+// DELETE /admin/client-services/host
+func (h *ClientServiceHandler) DeleteHost(c *gin.Context) {
+	var req struct {
+		HostIDs []uint `json:"hostid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// Try single ID
+		id, err2 := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err2 != nil {
+			response.BadRequest(c, err.Error())
+			return
+		}
+		req.HostIDs = []uint{uint(id)}
+	}
+
+	if err := h.svc.DeleteHosts(req.HostIDs); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "services deleted")
+}
+
+// PostBatchRenewPage returns batch renew page data (admin).
+// POST /admin/client-services/batch-renew-page
+func (h *ClientServiceHandler) PostBatchRenewPage(c *gin.Context) {
+	var req struct {
+		UID     uint            `json:"uid" binding:"required"`
+		HostIDs []uint          `json:"host_ids" binding:"required"`
+		Cycles  map[uint]string `json:"cycles"`
+		Amount  map[uint]float64 `json:"amount"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	data, err := h.svc.GetBatchRenewPage(req.UID, req.HostIDs, req.Cycles, req.Amount)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, data)
+}
+
+// PostBatchRenew processes batch renewal (admin).
+// POST /admin/client-services/batch-renew
+func (h *ClientServiceHandler) PostBatchRenew(c *gin.Context) {
+	var req struct {
+		UID     uint            `json:"uid" binding:"required"`
+		HostIDs []uint          `json:"host_ids" binding:"required"`
+		Cycles  map[uint]string `json:"cycles"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	result, err := h.svc.ProcessBatchRenew(req.UID, req.HostIDs, req.Cycles)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
+// GetApplyCreditPage returns credit application page data (admin).
+// GET /admin/client-services/apply-credit-page
+func (h *ClientServiceHandler) GetApplyCreditPage(c *gin.Context) {
+	invoiceID := c.Query("invoiceid")
+	uid := c.Query("uid")
+
+	if invoiceID == "" || uid == "" {
+		response.BadRequest(c, "invoiceid and uid are required")
+		return
+	}
+
+	data, err := h.svc.GetApplyCreditPageData(uid, invoiceID)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, data)
+}
+
+// ApplyCredit applies user credit to an invoice (admin).
+// POST /admin/client-services/apply-credit
+func (h *ClientServiceHandler) ApplyCredit(c *gin.Context) {
+	var req struct {
+		UID       uint `json:"uid" binding:"required"`
+		InvoiceID uint `json:"invoiceid" binding:"required"`
+		Enough    int  `json:"enough"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	result, err := h.svc.ApplyCredit(req.UID, req.InvoiceID, req.Enough)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
+// PostSearchClient searches clients by keyword (admin).
+// POST /admin/client-services/search-client
+func (h *ClientServiceHandler) PostSearchClient(c *gin.Context) {
+	var req struct {
+		ClientID string `json:"client_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	clients, err := h.svc.SearchClients(req.ClientID)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{"client_list": clients})
+}
+
+// GetRefundPage returns refund page data (admin).
+// GET /admin/client-services/refund-page
+func (h *ClientServiceHandler) GetRefundPage(c *gin.Context) {
+	hid := c.Query("hid")
+	if hid == "" {
+		response.BadRequest(c, "hid is required")
+		return
+	}
+
+	data, err := h.svc.GetRefundPageData(hid)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, data)
+}
+
+// Refund processes a refund for a service (admin).
+// POST /admin/client-services/refund
+func (h *ClientServiceHandler) Refund(c *gin.Context) {
+	var req struct {
+		HID          uint    `json:"hid" binding:"required"`
+		RefundMethod string  `json:"refund_method" binding:"required"` // day/full/custom
+		RefundType   string  `json:"refund_type" binding:"required"`   // addascredit/only
+		Amount       float64 `json:"amount"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.ProcessRefund(req.HID, req.RefundMethod, req.RefundType, req.Amount); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "refund processed")
+}

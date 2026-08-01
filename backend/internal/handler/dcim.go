@@ -778,3 +778,103 @@ func (h *DcimHandler) RefreshServerStatus(c *gin.Context) {
 	}
 	response.SuccessMsg(c, "server status refreshed")
 }
+
+// ==================== 新增缺失方法 ====================
+
+// ListBuyRecord returns DCIM buy records (admin).
+// GET /admin/dcim/buy-records
+func (h *DcimHandler) ListBuyRecord(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	search := c.Query("search")
+	order := c.DefaultQuery("orderby", "id")
+	sort := c.DefaultQuery("sort", "ASC")
+
+	records, total, err := h.dcimSvc.ListBuyRecords(page, pageSize, search, order, sort)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, records, total, page, pageSize)
+}
+
+// DelRecord deletes a DCIM buy record (admin).
+// DELETE /admin/dcim/buy-records/:id
+func (h *DcimHandler) DelRecord(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid record id")
+		return
+	}
+
+	if err := h.dcimSvc.DeleteBuyRecord(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "record deleted")
+}
+
+// AddFlowPacketPage returns data for creating a flow packet.
+// GET /admin/dcim/flow-packets/create
+func (h *DcimHandler) AddFlowPacketPage(c *gin.Context) {
+	products, err := h.dcimSvc.GetProductList()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"products": products})
+}
+
+// EditFlowPacketPage returns data for editing a flow packet.
+// GET /admin/dcim/flow-packets/:id/edit
+func (h *DcimHandler) EditFlowPacketPage(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid packet id")
+		return
+	}
+
+	packet, products, err := h.dcimSvc.GetFlowPacketEditData(uint(id))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{
+		"flowpacket": packet,
+		"products":   products,
+	})
+}
+
+// UnsuspendReload unsuspends and reloads a server (admin).
+// POST /admin/dcim/servers/:id/unsuspend-reload
+func (h *DcimHandler) UnsuspendReload(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid server id")
+		return
+	}
+
+	operatorID := c.GetUint("user_id")
+	if err := h.dcimSvc.UnsuspendReload(uint(id), operatorID); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "server unsuspended and reload initiated")
+}
+
+// Detail returns detailed server info (admin).
+// GET /admin/dcim/servers/:id/detail
+func (h *DcimHandler) Detail(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid server id")
+		return
+	}
+
+	detail, err := h.dcimSvc.GetServerDetail(uint(id))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+	response.Success(c, detail)
+}

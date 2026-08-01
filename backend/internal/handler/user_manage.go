@@ -881,3 +881,236 @@ func (h *UserManageHandler) UserProductInvoice(c *gin.Context) {
 	}
 	response.SuccessPage(c, invoices, total, page, pageSize)
 }
+
+// ==================== 新增缺失方法 ====================
+
+// HostByUid returns hosts for a specific user.
+// GET /manage/users/:uid/hosts-by-uid
+func (h *UserManageHandler) HostByUid(c *gin.Context) {
+	uid, err := strconv.ParseUint(c.Param("uid"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	hosts, err := h.svc.GetHostsByUID(uint(uid))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, hosts)
+}
+
+// CerifyList returns certification list.
+// GET /manage/certification/list
+func (h *UserManageHandler) CerifyList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	status := c.Query("status")
+	keyword := c.Query("keyword")
+
+	items, total, err := h.svc.GetCertifyList(page, pageSize, status, keyword)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, items, total, page, pageSize)
+}
+
+// CerifyLogList returns certification log list (v2).
+// GET /manage/certification/log-list
+func (h *UserManageHandler) CerifyLogList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	uid := c.Query("uid")
+	logType := c.Query("type")
+
+	logs, total, err := h.svc.GetCertifyLogList(page, pageSize, uid, logType)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, logs, total, page, pageSize)
+}
+
+// CertifiPersonDetail returns personal certification details.
+// GET /manage/certification/person/:id
+func (h *UserManageHandler) CertifiPersonDetail(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	detail, err := h.svc.GetCertifiPersonDetail(uint(id))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+	response.Success(c, detail)
+}
+
+// CertifiPersonModify modifies personal certification.
+// PUT /manage/certification/person/:id
+func (h *UserManageHandler) CertifiPersonModify(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	var data map[string]interface{}
+	if err := c.ShouldBindJSON(&data); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.ModifyCertifiPerson(uint(id), data); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "personal certification modified")
+}
+
+// CertifiCompanyDetail returns company certification details.
+// GET /manage/certification/company/:id
+func (h *UserManageHandler) CertifiCompanyDetail(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	detail, err := h.svc.GetCertifiCompanyDetail(uint(id))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+	response.Success(c, detail)
+}
+
+// CertifiCompanyModify modifies company certification.
+// PUT /manage/certification/company/:id
+func (h *UserManageHandler) CertifiCompanyModify(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	var data map[string]interface{}
+	if err := c.ShouldBindJSON(&data); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.ModifyCertifiCompany(uint(id), data); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "company certification modified")
+}
+
+// UserProductaccounts returns product accounts for a user.
+// GET /manage/users/:id/product-accounts
+func (h *UserManageHandler) UserProductaccounts(c *gin.Context) {
+	uid, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	accounts, total, err := h.svc.GetUserProductAccounts(uint(uid), page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, accounts, total, page, pageSize)
+}
+
+// LoginByUser logs in as a specific user (admin impersonation).
+// POST /manage/users/:id/login-as
+func (h *UserManageHandler) LoginByUser(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	token, err := h.svc.GenerateUserToken(uint(id))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{"token": token})
+}
+
+// DeleteCancelRequest deletes a cancel request.
+// DELETE /manage/cancel-requests/:id
+func (h *UserManageHandler) DeleteCancelRequest(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	if err := h.svc.DeleteCancelRequest(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "cancel request deleted")
+}
+
+// AddRecordLog adds an operation record log.
+// POST /manage/users/:id/record-log
+func (h *UserManageHandler) AddRecordLog(c *gin.Context) {
+	uid, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	var req struct {
+		Content string `json:"content" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	adminID := c.GetUint("user_id")
+	if err := h.svc.AddRecordLog(uint(uid), adminID, req.Content); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "record log added")
+}
+
+// AddRemarkLog adds a remark log for a user.
+// POST /manage/users/:id/remark-log
+func (h *UserManageHandler) AddRemarkLog(c *gin.Context) {
+	uid, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	var req struct {
+		Content string `json:"content" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	adminID := c.GetUint("user_id")
+	if err := h.svc.AddRemarkLog(uint(uid), adminID, req.Content); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "remark log added")
+}

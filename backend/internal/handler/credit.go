@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"anchorfinance/internal/model"
 	"anchorfinance/internal/service"
@@ -776,6 +777,183 @@ func (h *CreditHandler) AdminUpdateGlobalCreditConfig(c *gin.Context) {
 	}
 
 	response.SuccessMsg(c, "global credit config updated")
+}
+
+// AdminIndex returns detailed credit limit info for a specific user (admin).
+// GET /admin/credit/index
+func (h *CreditHandler) AdminIndex(c *gin.Context) {
+	uid := c.Query("uid")
+	if uid == "" {
+		response.BadRequest(c, "uid is required")
+		return
+	}
+
+	var user struct {
+		Username              string  `json:"username"`
+		PhoneNumber           string  `json:"phonenumber"`
+		Email                 string  `json:"email"`
+		IsOpenCreditLimit     int     `json:"is_open_credit_limit"`
+		CreditLimit           float64 `json:"credit_limit"`
+		RepaymentDate         int     `json:"repayment_date"`
+		BillGenerationDate    int     `json:"bill_generation_date"`
+		BillRepaymentPeriod   int     `json:"bill_repayment_period"`
+		CreditLimitCreateTime int64   `json:"credit_limit_create_time"`
+		Prefix                string  `json:"prefix"`
+		Suffix                string  `json:"suffix"`
+	}
+	h.db.Table("users u").
+		Select("u.username, u.phone_number, u.email, u.is_open_credit_limit, u.credit_limit, u.repayment_date, u.bill_generation_date, u.bill_repayment_period, u.credit_limit_create_time, cu.prefix, cu.suffix").
+		Joins("LEFT JOIN currencies cu ON u.currency = cu.id").
+		Where("u.id = ?", uid).
+		Scan(&user)
+
+	// Calculate amount to be settled
+	var amountToBeSettled float64
+	h.db.Model(&model.Invoice{}).
+		Where("status = ? AND use_credit_limit = ? AND invoice_id = ? AND uid = ?", "Paid", 1, 0, uid).
+		Select("COALESCE(SUM(total), 0)").
+		Scan(&amountToBeSettled)
+
+	// Calculate unpaid
+	var unpaid float64
+	h.db.Model(&model.Invoice{}).
+		Where("type = ? AND status = ? AND uid = ?", "credit_limit", "Unpaid", uid).
+		Select("COALESCE(SUM(total), 0)").
+		Scan(&unpaid)
+
+	creditLimitUsed := amountToBeSettled + unpaid
+	creditLimitBalance := user.CreditLimit - creditLimitUsed
+	if creditLimitBalance < 0 {
+		creditLimitBalance = 0
+	}
+
+	creditUsedPercent := 0.0
+	if user.CreditLimit > 0 && user.CreditLimit > creditLimitUsed {
+		creditUsedPercent = creditLimitUsed / user.CreditLimit * 100
+	} else if user.CreditLimit <= creditLimitUsed {
+		creditUsedPercent = 100
+	}
+
+	// Get this month's bill
+	var thisMonthBill map[string]interface{}
+	h.db.Table("invoices").
+		Where("type = ? AND uid = ? AND credit_limit_prepayment = 0", "credit_limit", uid).
+		Where("created_at >= ?", time.Now().Format("2006-01")).
+		Order("created_at DESC").
+		Limit(1).
+		Find(&thisMonthBill)
+
+	// Get credit config
+	creditConfig, _ := h.creditSvc.GetGlobalCreditConfig()
+
+	response.Success(c, gin.H{
+		"user": gin.H{
+			"username":                   user.Username,
+			"phonenumber":                user.PhoneNumber,
+			"email":                      user.Email,
+			"is_open_credit_limit":       user.IsOpenCreditLimit,
+			"credit_limit":               user.CreditLimit,
+			"repayment_date":             user.RepaymentDate,
+			"bill_generation_date":       user.BillGenerationDate,
+			"bill_repayment_period":      user.BillRepaymentPeriod,
+			"amount_to_be_settled":       amountToBeSettled,
+			"credit_limit_used":          creditLimitUsed,
+			"credit_limit_balance":       creditLimitBalance,
+			"credit_limit_used_percent":  creditUsedPercent,
+			"this_month_bill":            thisMonthBill,
+		},
+		"credit_limit_config": creditConfig,
+	})
+}
+
+// AdminCreditLog returns credit change logs for a user (admin).
+// GET /admin/credit/log
+func (h *CreditHandler) AdminCreditLog(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	uid := c.Query("uid")
+	keywords := c.Query("keywords")
+	logType := c.Query("type")
+	startTime := c.Query("start_time")
+	endTime := c.Query("end_time")
+
+	query := h.db.Table("credit_logs cl").
+		Joins("LEFT JOIN users u ON cl.admin_id = u.id").
+		Select("cl.id, cl.user_id, cl.created_at, cl.description, cl.type, cl.ip, u.username as admin_name")
+
+	if uid != "" {
+		query = query.Where("cl.user_id = ?", uid)
+	}
+	if keywords != "" {
+		query = query.Where("cl.description LIKE ?", "%"+keywords+"%")
+	}
+	if logType != "" {
+		query = query.Where("cl.type = ?", logType)
+	}
+	if startTime != "" && endTime != "" {
+		query = query.Where("cl.created_at >= ? AND cl.created_at <= ?", startTime, endTime)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var logs []map[string]interface{}
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("cl.id DESC").Find(&logs)
+
+	response.SuccessPage(c, logs, total, page, pageSize)
+}
+
+// AdminCreditInvoiceList returns credit invoices list (admin).
+// GET /admin/credit/invoices
+func (h *CreditHandler) AdminCreditInvoiceList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	order := c.DefaultQuery("order", "id")
+	sort := c.DefaultQuery("sort", "DESC")
+	uid := c.Query("uid")
+	paymentStatus := c.Query("payment_status")
+
+	query := h.db.Model(&model.Invoice{}).Where("use_credit_limit = ?", 1)
+
+	if uid != "" {
+		query = query.Where("uid = ?", uid)
+	}
+	if paymentStatus != "" {
+		switch paymentStatus {
+		case "Paid":
+			query = query.Where("status = ?", "Paid")
+		case "Unpaid":
+			query = query.Where("status = ? AND due_time > ?", "Unpaid", time.Now().Unix())
+		case "Overdue":
+			query = query.Where("status = ? AND due_time <= ?", "Unpaid", time.Now().Unix())
+		}
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var invoices []model.Invoice
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order(order + " " + sort).Find(&invoices)
+
+	// Get invoice status config
+	statusConfig := map[string]string{
+		"Paid":      "已支付",
+		"Unpaid":    "未支付",
+		"Cancelled": "已取消",
+	}
+
+	response.SuccessPage(c, gin.H{
+		"invoices":              invoices,
+		"invoice_status":        statusConfig,
+		"credit_limit_invoice_status": map[string]string{
+			"Prepayment": "预付款",
+			"Paid":       "已支付",
+			"Unpaid":     "未支付",
+			"Overdue":    "已逾期",
+		},
+	}, total, page, pageSize)
 }
 
 // Delete disables credit for a user (admin).

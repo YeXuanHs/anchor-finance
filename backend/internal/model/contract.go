@@ -25,3 +25,14 @@ type Contract struct {
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
 	User       *User          `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
+
+// ContractTemplate 合同模板
+type ContractTemplate struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Name      string    `gorm:"type:varchar(128);not null" json:"name"`
+	Content   string    `gorm:"type:text" json:"content"`
+	Type      string    `gorm:"type:varchar(32)" json:"type"`
+	Status    int8      `gorm:"type:smallint;default:1" json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}

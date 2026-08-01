@@ -557,3 +557,12 @@ func (s *SaleService) ValidateUsage(promotionID uint, userID uint) (bool, string
 
 	return true, "", nil
 }
+
+// DeleteLadder deletes a sale commission ladder entry by ID.
+func (s *SaleService) DeleteLadder(id uint) error {
+	var commission SaleCommission
+	if err := s.db.First(&commission, id).Error; err != nil {
+		return errors.New("sale ladder not found")
+	}
+	return s.db.Delete(&commission).Error
+}

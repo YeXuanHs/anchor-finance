@@ -510,3 +510,90 @@ func (h *InvoiceHandler) GetRenewInvoices(c *gin.Context) {
 	}
 	response.SuccessPage(c, invoices, total, page, pageSize)
 }
+
+// ==================== 新增缺失方法 ====================
+
+// EditItem updates an invoice item (admin).
+// PUT /admin/invoices/items/:id
+func (h *InvoiceHandler) EditItem(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid item id")
+		return
+	}
+
+	var req struct {
+		Description *string  `json:"description"`
+		Amount      *float64 `json:"amount"`
+		Taxed       *int     `json:"taxed"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.Amount != nil {
+		updates["amount"] = *req.Amount
+	}
+	if req.Taxed != nil {
+		updates["taxed"] = *req.Taxed
+	}
+
+	if len(updates) == 0 {
+		response.BadRequest(c, "no fields to update")
+		return
+	}
+
+	if err := h.invoiceSvc.UpdateInvoiceItem(uint(id), updates); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "invoice item updated")
+}
+
+// DeleteItems deletes multiple invoice items (admin).
+// DELETE /admin/invoices/items
+func (h *InvoiceHandler) DeleteItems(c *gin.Context) {
+	var req struct {
+		ItemIDs []uint `json:"item_ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	for _, id := range req.ItemIDs {
+		if err := h.invoiceSvc.DeleteInvoiceItem(id); err != nil {
+			h.log.Errorf("failed to delete invoice item %d: %v", id, err)
+		}
+	}
+
+	response.SuccessMsg(c, "invoice items deleted")
+}
+
+// DelAccount removes a payment record from an invoice (admin).
+// DELETE /admin/invoices/:id/account
+func (h *InvoiceHandler) DelAccount(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	if err := h.invoiceSvc.DeleteInvoiceAccount(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	adminID := c.GetUint("admin_id")
+	if h.enhancedSvc != nil {
+		h.enhancedSvc.LogAction(uint(id), adminID, "account_deleted", "payment account deleted", c.ClientIP())
+	}
+
+	response.SuccessMsg(c, "invoice account deleted")
+}
