@@ -433,6 +433,19 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.DELETE("/menus/:id", menuHandler.Delete)
 		admin.POST("/menus/sort", menuHandler.Sort)
 
+		// 语言管理
+		langSvc := service.NewLanguageService(deps.DB, deps.Log)
+		langHandler := handler.NewLanguageHandler(langSvc, deps.Log)
+		admin.GET("/languages", langHandler.GetLanguages)
+		admin.POST("/languages", langHandler.CreateLanguage)
+		admin.PUT("/languages/:id", langHandler.UpdateLanguage)
+		admin.DELETE("/languages/:id", langHandler.DeleteLanguage)
+		admin.POST("/languages/:id/default", langHandler.SetDefaultLanguage)
+		admin.GET("/languages/:code/translations", langHandler.GetTranslations)
+		admin.POST("/languages/:code/translations", langHandler.SaveTranslations)
+		admin.POST("/languages/:code/import", langHandler.ImportTranslations)
+		admin.GET("/lang-keys", langHandler.GetLangKeys)
+
 		// 前台导航分组管理
 		navGroupHandler := handler.NewNavGroupHandler(deps.DB)
 		admin.GET("/nav-groups", navGroupHandler.List)

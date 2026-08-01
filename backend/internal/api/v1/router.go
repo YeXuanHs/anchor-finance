@@ -110,6 +110,12 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.GET("/nav/top", userMenuHandler.GetTopNav)
 	r.GET("/nav/bottom", userMenuHandler.GetBottomNav)
 
+	// 语言包（公开接口）
+	langSvc := service.NewLanguageService(deps.DB, deps.Log)
+	langHandler := handler.NewLanguageHandler(langSvc, deps.Log)
+	r.GET("/languages", langHandler.GetActiveLanguages)
+	r.GET("/languages/:code/translations", langHandler.GetTranslations)
+
 	// 需要认证的路由
 	auth := r.Group("/")
 	auth.Use(middleware.AuthRequired())

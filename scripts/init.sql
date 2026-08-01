@@ -77,3 +77,11 @@ INSERT INTO `banners` (`title`, `description`, `type`, `media_url`, `link_url`, 
 ('全球节点覆盖', '遍布全球 30+ 数据中心节点', 'video', '/carousel/2.webm', '/products', '立即选购', 1, 1, 'home'),
 ('专业技术支持', '7×24小时专业技术团队', 'video', '/carousel/3.webm', '/contact', '联系我们', 2, 1, 'home'),
 ('安全可靠保障', '多层安全防护，数据安全无忧', 'video', '/carousel/4.webm', '/products', '了解更多', 3, 1, 'home');
+
+-- ============================================
+-- 默认语言
+-- ============================================
+INSERT INTO `languages` (`code`, `name`, `flag`, `is_default`, `status`) VALUES
+('zh-CN', '中文简体', 'CN', 1, 1),
+('en-US', 'English', 'US', 0, 1),
+('zh-TW', '中文繁體', 'TW', 0, 1);
