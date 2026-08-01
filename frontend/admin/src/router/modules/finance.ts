@@ -670,6 +670,24 @@ export const financeRoutes: AppRouteRecord = {
           }
         },
         {
+          path: 'config-servers',
+          name: 'ConfigServers',
+          component: () => import('@/views/finance/system/config-servers/index.vue'),
+          meta: {
+            title: '服务器管理',
+            icon: 'ep:monitor'
+          }
+        },
+        {
+          path: 'config-options',
+          name: 'ConfigOptions',
+          component: () => import('@/views/finance/system/config-options/index.vue'),
+          meta: {
+            title: '配置选项',
+            icon: 'ep:setting'
+          }
+        },
+        {
           path: 'hosts',
           name: 'Hosts',
           component: () => import('@/views/finance/system/hosts/index.vue'),

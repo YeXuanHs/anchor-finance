@@ -160,3 +160,105 @@ func (h *CurrencyHandler) AdminUpdateRate(c *gin.Context) {
 	h.db.First(&currency, id)
 	response.Success(c, currency)
 }
+
+// AdminSetDefault sets a currency as default and unsets others.
+// PUT /admin/currencies/:id/default
+func (h *CurrencyHandler) AdminSetDefault(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid currency id")
+		return
+	}
+
+	var currency model.Currency
+	if err := h.db.First(&currency, id).Error; err != nil {
+		response.NotFound(c, "currency not found")
+		return
+	}
+
+	// Unset all defaults, then set this one
+	if err := h.db.Model(&model.Currency{}).Where("is_default = ?", true).Update("is_default", false).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	if err := h.db.Model(&currency).Update("is_default", true).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "default currency updated")
+}
+
+// AdminUpdateAllPrices recalculates all pricing based on the default currency rates.
+// POST /admin/currencies/update-prices
+func (h *CurrencyHandler) AdminUpdateAllPrices(c *gin.Context) {
+	// Get default currency ID
+	var defaultCurrency model.Currency
+	if err := h.db.Where("is_default = ?", true).First(&defaultCurrency).Error; err != nil {
+		response.BadRequest(c, "no default currency found")
+		return
+	}
+
+	// Get all pricings for default currency
+	var defaultPricings []struct {
+		Type   string
+		RelID  uint
+		Fields map[string]interface{}
+	}
+
+	rows, err := h.db.Table("pricing").Where("currency = ?", defaultCurrency.ID).Rows()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	defer rows.Close()
+
+	columns, _ := rows.Columns()
+	for rows.Next() {
+		values := make([]interface{}, len(columns))
+		valuePtrs := make([]interface{}, len(columns))
+		for i := range values {
+			valuePtrs[i] = &values[i]
+		}
+		rows.Scan(valuePtrs...)
+
+		rowMap := make(map[string]interface{})
+		for i, col := range columns {
+			rowMap[col] = values[i]
+		}
+		defaultPricings = append(defaultPricings, struct {
+			Type   string
+			RelID  uint
+			Fields map[string]interface{}{
+				"type":  rowMap["type"],
+				"relid": rowMap["relid"],
+				"data":  rowMap,
+			},
+		})
+	}
+
+	// Get all currencies
+	var currencies []model.Currency
+	h.db.Find(&currencies)
+
+	// Update pricing for each currency based on default currency pricing × rate
+	updated := 0
+	for _, pricing := range defaultPricings {
+		for _, curr := range currencies {
+			if curr.ID == defaultCurrency.ID {
+				continue
+			}
+			// Update pricing for this currency
+			result := h.db.Table("pricing").
+				Where("type = ? AND relid = ? AND currency = ?", pricing.Type, pricing.RelID, curr.ID).
+				Updates(map[string]interface{}{
+					"monthly": gorm.Expr("monthly * ?", curr.Rate),
+				})
+			if result.RowsAffected > 0 {
+				updated++
+			}
+		}
+	}
+
+	response.Success(c, gin.H{"updated_count": updated})
+}

@@ -165,3 +165,103 @@ func (h *UploadHandler) Delete(c *gin.Context) {
 	}
 	response.SuccessMsg(c, "file deleted")
 }
+
+// UploadImage handles image upload with type parameter.
+// POST /upload/image
+func (h *UploadHandler) UploadImage(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		file, err = c.FormFile("image")
+		if err != nil {
+			response.BadRequest(c, "file is required")
+			return
+		}
+	}
+
+	uploadType := c.PostForm("type")
+	if uploadType == "" {
+		uploadType = "general"
+	}
+
+	uploaded, err := h.uploadSvc.UploadByType(file, uploadType)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"originname": uploaded.OriginalName,
+		"savename":   uploaded.FileName,
+		"url":        h.uploadSvc.GetURL(uploaded),
+	})
+}
+
+// UploadFile handles general file upload.
+// POST /upload/file
+func (h *UploadHandler) UploadFile(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		response.BadRequest(c, "file is required")
+		return
+	}
+
+	uploaded, err := h.uploadSvc.UploadByType(file, "general")
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"id":           uploaded.ID,
+		"file_name":    uploaded.FileName,
+		"original_name": uploaded.OriginalName,
+		"file_size":    uploaded.FileSize,
+		"url":          h.uploadSvc.GetURL(uploaded),
+	})
+}
+
+// UploadAuthor handles business author certificate upload.
+// POST /upload/author
+func (h *UploadHandler) UploadAuthor(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		response.BadRequest(c, "file is required")
+		return
+	}
+
+	uploaded, err := h.uploadSvc.UploadByType(file, "author")
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	path := h.uploadSvc.GetURL(uploaded)
+	response.Success(c, gin.H{
+		"data": uploaded,
+		"path": path,
+	})
+}
+
+// UploadCertificate handles certificate file upload.
+// POST /upload/certificate
+func (h *UploadHandler) UploadCertificate(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		response.BadRequest(c, "file is required")
+		return
+	}
+
+	uploaded, err := h.uploadSvc.UploadByType(file, "certificate")
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	key := c.PostForm("key")
+	path := h.uploadSvc.GetURL(uploaded)
+	response.Success(c, gin.H{
+		"data": uploaded,
+		"path": path,
+		"key":  key,
+	})
+}

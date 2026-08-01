@@ -188,3 +188,226 @@ func (h *SystemLogHandler) ClearByLevel(c *gin.Context) {
 		"level":         level,
 	})
 }
+
+// ─── LogRecord Admin Methods (from zjmf LogRecordController) ───
+
+// GetSystemLog returns paginated activity logs (non-System user).
+func (h *SystemLogHandler) GetSystemLog(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	searchName := c.Query("search_name")
+	searchDesc := c.Query("search_desc")
+	searchIP := c.Query("search_ip")
+	searchTime := c.Query("search_time")
+
+	items, total, err := h.svc.AdminGetSystemLog(page, pageSize, searchName, searchDesc, searchIP, searchTime, false)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": total, "log_list": items})
+}
+
+// GetCronSystemLog returns paginated activity logs for System user.
+func (h *SystemLogHandler) GetCronSystemLog(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	searchName := c.Query("search_name")
+	searchDesc := c.Query("search_desc")
+	searchIP := c.Query("search_ip")
+	searchTime := c.Query("search_time")
+
+	items, total, err := h.svc.AdminGetSystemLog(page, pageSize, searchName, searchDesc, searchIP, searchTime, true)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": total, "log_list": items})
+}
+
+// GetAdminLog returns paginated admin login logs.
+func (h *SystemLogHandler) GetAdminLog(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	searchName := c.Query("search_name")
+	searchIP := c.Query("search_ip")
+	searchTime := c.Query("search_time")
+
+	items, total, err := h.svc.AdminGetAdminLog(page, pageSize, searchName, searchIP, searchTime)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": total, "data": items})
+}
+
+// GetNotifyLog returns paginated notification logs.
+func (h *SystemLogHandler) GetNotifyLog(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	message := c.Query("message")
+	logType := c.Query("type")
+	searchTime := c.Query("search_time")
+
+	items, total, err := h.svc.AdminGetNotifyLog(page, pageSize, message, logType, searchTime)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": total, "data": items, "type": []string{"email", "sms", "wechat"}})
+}
+
+// GetEmailLog returns paginated email logs.
+func (h *SystemLogHandler) GetEmailLog(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	subject := c.Query("subject")
+	username := c.Query("username")
+	searchTime := c.Query("search_time")
+	uid, _ := strconv.ParseUint(c.Query("uid"), 10, 64)
+
+	items, total, err := h.svc.AdminGetEmailLog(page, pageSize, subject, username, searchTime, uint(uid))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": total, "data": items})
+}
+
+// GetEmailDetail returns email detail by ID.
+func (h *SystemLogHandler) GetEmailDetail(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Query("id"), 10, 64)
+	if id == 0 {
+		response.BadRequest(c, "id is required")
+		return
+	}
+
+	detail, err := h.svc.AdminGetEmailDetail(uint(id))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"detail": detail})
+}
+
+// GetWechatLog returns paginated WeChat logs.
+func (h *SystemLogHandler) GetWechatLog(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	items, total, err := h.svc.AdminGetWechatLog(page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": total, "data": items})
+}
+
+// GetSmsLog returns paginated SMS logs.
+func (h *SystemLogHandler) GetSmsLog(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	phone := c.Query("phone")
+	username := c.Query("username")
+	searchTime := c.Query("search_time")
+	uid, _ := strconv.ParseUint(c.Query("uid"), 10, 64)
+
+	items, total, err := h.svc.AdminGetSmsLog(page, pageSize, phone, username, searchTime, uint(uid))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": total, "data": items})
+}
+
+// GetSmsLogM returns paginated SMS logs for a specific user.
+func (h *SystemLogHandler) GetSmsLogM(c *gin.Context) {
+	uid, _ := strconv.ParseUint(c.Query("uid"), 10, 64)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	phone := c.Query("phone")
+	searchTime := c.Query("search_time")
+
+	items, total, err := h.svc.AdminGetSmsLog(page, pageSize, phone, "", searchTime, uint(uid))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": total, "data": items})
+}
+
+// GetSystemMessageLog returns paginated system message logs.
+func (h *SystemLogHandler) GetSystemMessageLog(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	uid, _ := strconv.ParseUint(c.Query("uid"), 10, 64)
+	keywords := c.Query("keywords")
+	username := c.Query("username")
+	readType := c.Query("read_type")
+	searchTimeStart := c.Query("search_time_start")
+	searchTimeEnd := c.Query("search_time_end")
+
+	items, total, err := h.svc.AdminGetSystemMessageLog(page, pageSize, uint(uid), keywords, username, readType, searchTimeStart, searchTimeEnd)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": total, "list": items})
+}
+
+// GetApiLog returns paginated API resource logs.
+func (h *SystemLogHandler) GetApiLog(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	keywords := c.Query("keywords")
+	uid, _ := strconv.ParseUint(c.Query("uid"), 10, 64)
+	searchTime := c.Query("time")
+
+	items, total, err := h.svc.AdminGetApiLog(page, pageSize, keywords, uint(uid), searchTime)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": total, "list": items})
+}
+
+// GetDeleteLogPage returns the count of logs for a given type.
+func (h *SystemLogHandler) GetDeleteLogPage(c *gin.Context) {
+	logType := c.Query("type")
+	if logType == "" {
+		logType = "system_log"
+	}
+
+	count, err := h.svc.AdminGetLogCount(logType)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": count})
+}
+
+// GetAffirmDeleteLogPage returns the count of logs for deletion confirmation.
+func (h *SystemLogHandler) GetAffirmDeleteLogPage(c *gin.Context) {
+	logType := c.Query("type")
+	timeStr := c.Query("time")
+
+	count, err := h.svc.AdminGetLogCountBefore(logType, timeStr)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"count": count})
+}
+
+// DeleteLog deletes logs by type and optional time filter.
+func (h *SystemLogHandler) DeleteLog(c *gin.Context) {
+	logType := c.Query("type")
+	timeStr := c.Query("time")
+
+	count, err := h.svc.AdminDeleteLog(logType, timeStr)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"deleted_count": count})
+}

@@ -128,3 +128,31 @@ func (h *UserLevelHandler) AdminDelete(c *gin.Context) {
 
 	response.SuccessMsg(c, "level deleted")
 }
+
+// GetLevelPage returns a single user level detail for edit page.
+// GET /admin/user-levels/:id/page
+func (h *UserLevelHandler) GetLevelPage(c *gin.Context) {
+	paramID := c.Query("id")
+	if paramID == "" {
+		paramID = c.Param("id")
+	}
+
+	if paramID == "" {
+		response.Success(c, gin.H{"level_rule": nil})
+		return
+	}
+
+	id, err := strconv.ParseUint(paramID, 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid level id")
+		return
+	}
+
+	var level model.UserLevel
+	if err := h.db.First(&level, id).Error; err != nil {
+		response.NotFound(c, "level not found")
+		return
+	}
+
+	response.Success(c, gin.H{"level_rule": level})
+}

@@ -128,3 +128,20 @@ func (h *TicketStatusHandler) GetDefaultStatuses(c *gin.Context) {
 	defaults := h.svc.GetDefaultStatuses()
 	response.Success(c, gin.H{"default": defaults})
 }
+
+// GetStatusDetail returns a single ticket status by ID.
+// GET /admin/ticket-statuses/:id
+func (h *TicketStatusHandler) GetStatusDetail(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid status id")
+		return
+	}
+
+	status, err := h.svc.GetStatusByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "status not found")
+		return
+	}
+	response.Success(c, status)
+}

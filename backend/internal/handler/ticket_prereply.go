@@ -183,3 +183,73 @@ func (h *TicketPrereplyHandler) DeleteReply(c *gin.Context) {
 	}
 	response.SuccessMsg(c, "reply deleted")
 }
+
+// GetCategoryDetail returns a single prereply category by ID.
+// GET /admin/ticket-prereply-categories/:id
+func (h *TicketPrereplyHandler) GetCategoryDetail(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid category id")
+		return
+	}
+
+	category, err := h.svc.GetCategoryByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "category not found")
+		return
+	}
+	response.Success(c, category)
+}
+
+// GetPrereplyCategories returns all categories for dropdown selection.
+// GET /admin/ticket-prereply-categories/options
+func (h *TicketPrereplyHandler) GetPrereplyCategories(c *gin.Context) {
+	categories, err := h.svc.GetAllCategories()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, categories)
+}
+
+// GetPrereplyDetail returns a single prereply by ID with its categories.
+// GET /admin/ticket-prereplies/:id
+func (h *TicketPrereplyHandler) GetPrereplyDetail(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid reply id")
+		return
+	}
+
+	reply, err := h.svc.GetReplyByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "reply not found")
+		return
+	}
+
+	categories, _ := h.svc.GetAllCategories()
+	response.Success(c, gin.H{
+		"list":       reply,
+		"categories": categories,
+	})
+}
+
+// SearchPrereply searches prereplies by title and content.
+// POST /admin/ticket-prereplies/search
+func (h *TicketPrereplyHandler) SearchPrereply(c *gin.Context) {
+	var req struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	replies, err := h.svc.SearchReplies(req.Title, req.Content)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, replies)
+}

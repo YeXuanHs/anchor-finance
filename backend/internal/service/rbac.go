@@ -2,6 +2,9 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"anchorfinance/pkg/logger"
@@ -286,4 +289,281 @@ func (s *RbacService) GetUserPermissions(userID uint) ([]Permission, error) {
 		}
 	}
 	return perms, nil
+}
+
+// ─── RBAC Admin Methods (from zjmf RbacController) ───
+
+// AdminGetRoles returns all roles with admin users.
+func (s *RbacService) AdminGetRoles(order, sort string) ([]map[string]interface{}, error) {
+	if order == "" {
+		order = "a.id"
+	}
+	if sort == "" {
+		sort = "DESC"
+	}
+
+	var roles []map[string]interface{}
+	if err := s.db.Table("role a").
+		Select("a.id, a.name, a.status, a.remark").
+		Order(order + " " + sort).
+		Find(&roles).Error; err != nil {
+		return nil, err
+	}
+
+	// Attach admin users to each role
+	for i, role := range roles {
+		roleID, _ := role["id"].(uint)
+		var users []string
+		s.db.Table("role_user b").
+			Select("c.user_login").
+			Joins("LEFT JOIN user c ON c.id = b.user_id").
+			Where("b.role_id = ?", roleID).
+			Pluck("c.user_login", &users)
+		role["user_login"] = users
+		roles[i] = role
+	}
+
+	return roles, nil
+}
+
+// AdminGetAuthTree returns auth rules as a tree.
+func (s *RbacService) AdminGetAuthTree() ([]map[string]interface{}, error) {
+	var rules []struct {
+		ID    uint   `json:"id"`
+		PID   uint   `json:"pid"`
+		Title string `json:"title"`
+	}
+	if err := s.db.Table("auth_rule").Where("status = 1").Select("id, pid, title").Find(&rules).Error; err != nil {
+		return nil, err
+	}
+
+	// Build tree
+	ruleMap := make(map[uint]*map[string]interface{})
+	var result []map[string]interface{}
+	for _, r := range rules {
+		node := map[string]interface{}{
+			"id":    r.ID,
+			"pid":   r.PID,
+			"title": r.Title,
+		}
+		nodePtr := &node
+		ruleMap[r.ID] = nodePtr
+		if r.PID == 0 {
+			result = append(result, node)
+		}
+	}
+	for _, r := range rules {
+		if r.PID != 0 {
+			if parent, ok := ruleMap[r.PID]; ok {
+				children, _ := (*parent)["sublevel"].([]map[string]interface{})
+				children = append(children, *ruleMap[r.ID])
+				(*parent)["sublevel"] = children
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// AdminAddRole creates a role with auth rules.
+func (s *RbacService) AdminAddRole(name, remark string, status int, authIDs []uint) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		res := tx.Exec("INSERT INTO role (name, remark, status, auth_role) VALUES (?, ?, ?, ?)",
+			name, remark, status, joinUint(authIDs))
+		if res.Error != nil {
+			return res.Error
+		}
+		var lid struct{ ID uint }
+		tx.Raw("SELECT LAST_INSERT_ID() as id").Scan(&lid)
+
+		// Insert auth_access
+		if len(authIDs) > 0 {
+			var rules []struct {
+				ID   uint
+				Name string
+			}
+			tx.Table("auth_rule").Where("id IN ?", authIDs).Select("id, name").Find(&rules)
+			for _, r := range rules {
+				tx.Exec("INSERT INTO auth_access (role_id, rule_name, rule_id, type) VALUES (?, ?, ?, 'admin_url')",
+					lid.ID, r.Name, r.ID)
+			}
+		}
+		return nil
+	})
+}
+
+// AdminEditRolePage returns data for editing a role.
+func (s *RbacService) AdminEditRolePage(roleID uint) (map[string]interface{}, error) {
+	if roleID == 1 {
+		return nil, fmt.Errorf("不允许的操作")
+	}
+
+	var role map[string]interface{}
+	if err := s.db.Table("role").Where("id = ?", roleID).Find(&role).Error; err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, fmt.Errorf("角色不存在")
+	}
+
+	// Get auth rules assigned to this role
+	var authRole []struct{ RuleID uint }
+	s.db.Table("auth_access").Where("role_id = ?", roleID).Select("rule_id").Find(&authRole)
+	authSelect := make([]uint, len(authRole))
+	for i, a := range authRole {
+		authSelect[i] = a.RuleID
+	}
+
+	// Get all auth rules
+	var rules []struct {
+		ID         uint   `json:"id"`
+		PID        uint   `json:"pid"`
+		IsDisplay  int    `json:"is_display"`
+		Name       string `json:"name"`
+		Title      string `json:"title"`
+	}
+	s.db.Table("auth_rule").Select("id, pid, is_display, name, title").Find(&rules)
+
+	// Build tree
+	auths := buildAuthTree(rules)
+
+	// Get users in this role
+	var users []map[string]interface{}
+	s.db.Table("role_user a").
+		Select("b.id, b.user_login, b.user_nickname").
+		Joins("LEFT JOIN user b ON a.user_id = b.id").
+		Where("a.role_id = ?", roleID).
+		Find(&users)
+
+	return map[string]interface{}{
+		"role":        role,
+		"auths":       auths,
+		"auth_select": authSelect,
+		"user":        users,
+	}, nil
+}
+
+// AdminEditRole updates a role with auth rules.
+func (s *RbacService) AdminEditRole(roleID uint, name, remark string, status int, authIDs []uint) error {
+	if roleID == 1 {
+		return fmt.Errorf("不允许的操作")
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		tx.Exec("UPDATE role SET name = ?, remark = ?, status = ?, auth_role = ?, update_time = ? WHERE id = ?",
+			name, remark, status, joinUint(authIDs), time.Now().Unix(), roleID)
+
+		// Replace auth_access
+		tx.Exec("DELETE FROM auth_access WHERE role_id = ?", roleID)
+		if len(authIDs) > 0 {
+			var rules []struct {
+				ID   uint
+				Name string
+			}
+			tx.Table("auth_rule").Where("id IN ?", authIDs).Select("id, name").Find(&rules)
+			for _, r := range rules {
+				tx.Exec("INSERT INTO auth_access (role_id, rule_name, rule_id, type) VALUES (?, ?, ?, 'admin_url')",
+					roleID, r.Name, r.ID)
+			}
+		}
+		return nil
+	})
+}
+
+// AdminDeleteRole deletes a role (system role 1 excluded).
+func (s *RbacService) AdminDeleteRole(roleID uint) error {
+	if roleID == 1 {
+		return fmt.Errorf("不允许删除系统角色")
+	}
+	var count int64
+	s.db.Table("RoleUser").Where("role_id = ?", roleID).Count(&count)
+	if count > 0 {
+		return fmt.Errorf("该角色下存在管理员，不可删除")
+	}
+	return s.db.Delete(&Role{}, roleID).Error
+}
+
+// AdminCopyRole duplicates a role.
+func (s *RbacService) AdminCopyRole(roleID uint, newName, newRemark string) error {
+	var role Role
+	if err := s.db.First(&role, roleID).Error; err != nil {
+		return fmt.Errorf("要复制的分组不存在")
+	}
+	// Check name uniqueness
+	var count int64
+	s.db.Model(&Role{}).Where("name = ?", newName).Count(&count)
+	if count > 0 {
+		return fmt.Errorf("分组名称已存在")
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		newRole := Role{
+			Name:        newName,
+			Description: newRemark,
+		}
+		if err := tx.Create(&newRole).Error; err != nil {
+			return err
+		}
+
+		// Copy auth access
+		var access []struct {
+			RuleName string
+			RuleID   uint
+		}
+		tx.Table("auth_access").Where("role_id = ?", roleID).Select("rule_name, rule_id").Find(&access)
+		for _, a := range access {
+			tx.Exec("INSERT INTO auth_access (role_id, rule_name, rule_id, type) VALUES (?, ?, ?, 'admin_url')",
+				newRole.ID, a.RuleName, a.RuleID)
+		}
+		return nil
+	})
+}
+
+// Helper functions
+
+func joinUint(ids []uint) string {
+	if len(ids) == 0 {
+		return ""
+	}
+	parts := make([]string, len(ids))
+	for i, id := range ids {
+		parts[i] = strconv.FormatUint(uint64(id), 10)
+	}
+	return strings.Join(parts, ",")
+}
+
+func buildAuthTree(rules []struct {
+	ID        uint   `json:"id"`
+	PID       uint   `json:"pid"`
+	IsDisplay int    `json:"is_display"`
+	Name      string `json:"name"`
+	Title     string `json:"title"`
+}) []map[string]interface{} {
+	nodeMap := make(map[uint]*map[string]interface{})
+	var result []map[string]interface{}
+
+	for _, r := range rules {
+		node := map[string]interface{}{
+			"id":          r.ID,
+			"pid":         r.PID,
+			"is_display":  r.IsDisplay,
+			"name":        r.Name,
+			"title":       r.Title,
+		}
+		nodeMap[r.ID] = &node
+		if r.PID == 0 {
+			result = append(result, node)
+		}
+	}
+
+	for _, r := range rules {
+		if r.PID != 0 {
+			if parent, ok := nodeMap[r.PID]; ok {
+				children, _ := (*parent)["sublevel"].([]map[string]interface{})
+				children = append(children, *nodeMap[r.ID])
+				(*parent)["sublevel"] = children
+			}
+		}
+	}
+	return result
 }
