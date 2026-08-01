@@ -2,11 +2,14 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -545,12 +548,159 @@ func (e *AIToolExecutor) addTicketNote(args map[string]interface{}) string {
 
 func (e *AIToolExecutor) transmitUpstream(args map[string]interface{}) string {
 	ticketID := uint(intVal(args["ticket_id"]))
+	hostID := uint(intVal(args["host_id"]))
 	subject := strVal(args["subject"])
 	content := strVal(args["content"])
+
 	if ticketID == 0 || subject == "" || content == "" {
-		return jsonStr(map[string]interface{}{"error": "参数不完整"})
+		return jsonStr(map[string]interface{}{"error": "参数不完整：需要 ticket_id、subject、content"})
 	}
-	return jsonStr(map[string]interface{}{"success": true, "msg": "已透传至上游"})
+
+	// 读取工单信息
+	var ticket struct {
+		ID       uint   `gorm:"column:id"`
+		TicketNo string `gorm:"column:ticket_no"`
+		UserID   uint   `gorm:"column:user_id"`
+		Priority int    `gorm:"column:priority"`
+		RelID    uint   `gorm:"column:rel_id"`
+	}
+	if err := e.db.Raw("SELECT id, ticket_no, user_id, priority, rel_id FROM tickets WHERE id = ?", ticketID).Scan(&ticket).Error; err != nil {
+		return jsonStr(map[string]interface{}{"error": "工单不存在"})
+	}
+
+	// host_id 优先用参数传入的，没传则自动从工单读取
+	if hostID == 0 {
+		hostID = ticket.RelID
+	}
+	if hostID == 0 {
+		return jsonStr(map[string]interface{}{
+			"error":   "该工单未关联产品/主机，无法识别上游渠道。请先询问客户具体是哪个产品/服务器，然后通过 edit_ticket 设置工单的 host_id",
+			"no_host": true,
+		})
+	}
+
+	// 查询 host 信息
+	var host struct {
+		ID        int64  `gorm:"column:id"`
+		UID       int64  `gorm:"column:uid"`
+		ProductID int64  `gorm:"column:productid"`
+		Server    string `gorm:"column:server"`
+		ParentID  int64  `gorm:"column:parent_id"`
+		DcimID    int64  `gorm:"column:dcimid"`
+		Domain    string `gorm:"column:domain"`
+	}
+	if err := e.db.Raw("SELECT id, uid, productid, IFNULL(server,'') as server, IFNULL(parent_id,0) as parent_id, IFNULL(dcimid,0) as dcimid, IFNULL(domain,'') as domain FROM host WHERE id = ?", hostID).Scan(&host).Error; err != nil {
+		return jsonStr(map[string]interface{}{"error": "主机不存在"})
+	}
+
+	// 获取客户信息
+	var user struct {
+		Username string `gorm:"column:username"`
+	}
+	e.db.Raw("SELECT IFNULL(username,'未知') as username FROM users WHERE id = ?", host.UID).Scan(&user)
+
+	// 获取上游父服务的 dcimid
+	var parentDcimID int64
+	if host.ParentID > 0 {
+		var parentHost struct {
+			DcimID int64 `gorm:"column:dcimid"`
+		}
+		if err := e.db.Raw("SELECT IFNULL(dcimid,0) as dcimid FROM host WHERE id = ?", host.ParentID).Scan(&parentHost).Error; err == nil {
+			parentDcimID = parentHost.DcimID
+		}
+	}
+
+	// 获取本工单最近5条对话作为上下文
+	type replyEntry struct {
+		Content string `gorm:"column:content"`
+		UID     int64  `gorm:"column:uid"`
+	}
+	var recentReplies []replyEntry
+	e.db.Raw("SELECT IFNULL(content,'') as content, IFNULL(uid,0) as uid FROM ticket_replies WHERE ticket_id = ? ORDER BY id DESC LIMIT 5", ticketID).Scan(&recentReplies)
+	// 反转为时间正序
+	for i, j := 0, len(recentReplies)-1; i < j; i, j = i+1, j-1 {
+		recentReplies[i], recentReplies[j] = recentReplies[j], recentReplies[i]
+	}
+
+	conversationSummary := ""
+	for _, r := range recentReplies {
+		role := "客服"
+		if r.UID > 0 {
+			role = "客户"
+		}
+		conversationSummary += fmt.Sprintf("[%s] %s\n", role, stripTags(r.Content))
+	}
+
+	upstreamChannel := host.Server
+	parentHostID := host.ParentID
+	dcimID := host.DcimID
+
+	// 构建上游工单内容
+	upstreamContent := fmt.Sprintf("【客户工单透传】\n工单号：%s\n客户：%s (UID:%d)\n本地主机ID：%d\n机器标识(dcimid)：\n上游渠道：%s\n父服务ID：%d\n父服务dcimid：%d\n\n--- 工单内容 ---\n%s\n\n--- 最近对话 ---\n%s",
+		ticket.TicketNo, user.Username, host.UID, hostID, dcimID, upstreamChannel, parentHostID, parentDcimID, content, conversationSummary)
+
+	// 尝试通过上游渠道提交工单
+	var upstreamResult *UpstreamResult
+	var upstreamTicketID string
+
+	if upstreamChannel != "" && parentHostID > 0 {
+		client := NewUpstreamClient(e.db, e.log)
+		upstreamResult = client.CallForHost(parentHostID, "open_support_ticket", map[string]interface{}{
+			"subject":     subject,
+			"message":     upstreamContent,
+			"service_id":  parentHostID,
+			"priority":    fmt.Sprintf("%d", ticket.Priority),
+		})
+		if upstreamResult != nil && upstreamResult.Data != nil {
+			upstreamTicketID = strVal(upstreamResult.Data["ticketid"])
+			if upstreamTicketID == "" {
+				upstreamTicketID = strVal(upstreamResult.Data["ticket_id"])
+			}
+			if upstreamTicketID == "" {
+				upstreamTicketID = strVal(upstreamResult.Data["id"])
+			}
+		}
+	}
+
+	// 记录内部备注
+	noteText := fmt.Sprintf("【上游工单透传】\n标题：%s\n主机ID：%d\ndcimid：%d\n上游渠道：%s\n父服务ID：%d\n",
+		subject, hostID, dcimID, upstreamChannel, parentHostID)
+
+	if upstreamResult != nil && upstreamResult.Error != "" {
+		noteText += "上游调用状态：失败 - " + upstreamResult.Error + "\n"
+	} else if upstreamResult != nil && upstreamResult.Data != nil {
+		noteText += "上游调用状态：成功\n"
+		if upstreamTicketID != "" {
+			noteText += "上游工单号：" + upstreamTicketID + "\n"
+		}
+		rawJSON, _ := json.Marshal(upstreamResult.Data)
+		noteText += "上游返回：" + string(rawJSON) + "\n"
+	} else {
+		noteText += "上游调用状态：未配置上游渠道或无父服务，需人工处理\n"
+	}
+
+	e.addTicketNote(map[string]interface{}{
+		"ticket_id": ticketID,
+		"note":      noteText,
+	})
+
+	msg := "未找到上游渠道，已记录内部备注待人工处理"
+	if upstreamChannel != "" {
+		msg = "已通过「" + upstreamChannel + "」渠道提交上游工单"
+	}
+
+	return jsonStr(map[string]interface{}{
+		"success":              true,
+		"ticket_id":            ticketID,
+		"host_id":              hostID,
+		"dcimid":               dcimID,
+		"upstream_channel":     upstreamChannel,
+		"parent_host_id":       parentHostID,
+		"upstream_ticket_id":   upstreamTicketID,
+		"upstream_result":      upstreamResult,
+		"conversation_summary": truncateStr(conversationSummary, 500),
+		"msg":                  msg,
+	})
 }
 
 func (e *AIToolExecutor) syncUpstreamReply(args map[string]interface{}) string {
@@ -564,19 +714,204 @@ func (e *AIToolExecutor) syncUpstreamReply(args map[string]interface{}) string {
 func (e *AIToolExecutor) checkUpstreamReply(args map[string]interface{}) string {
 	ticketID := uint(intVal(args["ticket_id"]))
 	hostID := uint(intVal(args["host_id"]))
+
 	if ticketID == 0 || hostID == 0 {
-		return jsonStr(map[string]interface{}{"error": "参数不完整"})
+		return jsonStr(map[string]interface{}{"error": "参数不完整：需要 ticket_id 和 host_id"})
 	}
-	return jsonStr(map[string]interface{}{"success": true, "has_new": false, "msg": "上游暂无新回复"})
+
+	// 查询 host 信息
+	var host struct {
+		Server   string `gorm:"column:server"`
+		ParentID int64  `gorm:"column:parent_id"`
+	}
+	if err := e.db.Raw("SELECT IFNULL(server,'') as server, IFNULL(parent_id,0) as parent_id FROM host WHERE id = ?", hostID).Scan(&host).Error; err != nil {
+		return jsonStr(map[string]interface{}{"error": "主机不存在"})
+	}
+
+	upstreamChannel := host.Server
+	parentHostID := host.ParentID
+
+	// 从内部备注中读取上游工单号
+	upstreamTicketID := ""
+	var notes []struct {
+		Content string `gorm:"column:content"`
+	}
+	e.db.Raw("SELECT IFNULL(content,'') as content FROM ticket_replies WHERE ticket_id = ? AND content LIKE '%【上游工单透传】%' ORDER BY id DESC LIMIT 5", ticketID).Scan(&notes)
+	for _, note := range notes {
+		cleanContent := stripTags(note.Content)
+		if m := extractRegex(cleanContent, `上游工单号[:：]\s*(\S+)`); m != "" {
+			upstreamTicketID = m
+			break
+		}
+	}
+
+	// 读取上次回复数
+	lastKnownCount := 0
+	var lastCountNote struct {
+		Content string `gorm:"column:content"`
+	}
+	if err := e.db.Raw("SELECT IFNULL(content,'') as content FROM ticket_replies WHERE ticket_id = ? AND content LIKE '%上游回复数:%' ORDER BY id DESC LIMIT 1", ticketID).Scan(&lastCountNote).Error; err == nil {
+		if m := extractRegex(stripTags(lastCountNote.Content), `上游回复数:(\d+)`); m != "" {
+			lastKnownCount = int(intVal(m))
+		}
+	}
+
+	if upstreamTicketID == "" {
+		return jsonStr(map[string]interface{}{
+			"success": false,
+			"error":   "未找到上游工单号，可能尚未提交上游工单",
+			"msg":     "未找到上游工单号",
+		})
+	}
+
+	// 通过 UpstreamClient 查询上游回复
+	var upstreamResult *UpstreamResult
+	if upstreamChannel != "" && parentHostID > 0 {
+		client := NewUpstreamClient(e.db, e.log)
+		upstreamResult = client.CallForHost(parentHostID, "get_ticket_replies", map[string]interface{}{
+			"service_id":         parentHostID,
+			"upstream_ticket_id": upstreamTicketID,
+		})
+	}
+
+	if upstreamResult != nil && upstreamResult.Error != "" {
+		return jsonStr(map[string]interface{}{
+			"success":             false,
+			"error":               upstreamResult.Error,
+			"upstream_ticket_id":  upstreamTicketID,
+			"msg":                 "上游查询失败：" + upstreamResult.Error,
+		})
+	}
+
+	// 分析新回复
+	var replies []interface{}
+	if upstreamResult != nil && upstreamResult.Data != nil {
+		data := upstreamResult.Data
+		// 不同模块返回格式不同，尝试多种字段
+		if r, ok := data["replies"].([]interface{}); ok {
+			replies = r
+		} else if r, ok := data["messages"].([]interface{}); ok {
+			replies = r
+		} else if r, ok := data["data"].([]interface{}); ok {
+			replies = r
+		}
+	}
+
+	currentCount := len(replies)
+	var newReplies []interface{}
+	if currentCount > lastKnownCount {
+		newReplies = replies[lastKnownCount:]
+	}
+
+	// 记录当前回复数到内部备注
+	if currentCount > 0 && currentCount != lastKnownCount {
+		e.addTicketNote(map[string]interface{}{
+			"ticket_id": ticketID,
+			"note":      fmt.Sprintf("上游回复数:%d", currentCount),
+		})
+	}
+
+	msg := "上游暂无新回复"
+	if len(newReplies) > 0 {
+		msg = fmt.Sprintf("检测到上游有 %d 条新回复", len(newReplies))
+	}
+
+	return jsonStr(map[string]interface{}{
+		"success":             true,
+		"ticket_id":           ticketID,
+		"host_id":             hostID,
+		"upstream_channel":    upstreamChannel,
+		"parent_host_id":      parentHostID,
+		"upstream_ticket_id":  upstreamTicketID,
+		"total_replies":       currentCount,
+		"last_known_count":    lastKnownCount,
+		"new_replies":         newReplies,
+		"has_new":             len(newReplies) > 0,
+		"msg":                 msg,
+	})
 }
 
 func (e *AIToolExecutor) closeUpstreamTicket(args map[string]interface{}) string {
 	ticketID := uint(intVal(args["ticket_id"]))
 	hostID := uint(intVal(args["host_id"]))
+
 	if ticketID == 0 || hostID == 0 {
-		return jsonStr(map[string]interface{}{"error": "参数不完整"})
+		return jsonStr(map[string]interface{}{"error": "参数不完整：需要 ticket_id 和 host_id"})
 	}
-	return jsonStr(map[string]interface{}{"success": true, "msg": "已关闭上游工单"})
+
+	// 查询 host 信息
+	var host struct {
+		Server   string `gorm:"column:server"`
+		ParentID int64  `gorm:"column:parent_id"`
+	}
+	if err := e.db.Raw("SELECT IFNULL(server,'') as server, IFNULL(parent_id,0) as parent_id FROM host WHERE id = ?", hostID).Scan(&host).Error; err != nil {
+		return jsonStr(map[string]interface{}{"error": "主机不存在"})
+	}
+
+	upstreamChannel := host.Server
+	parentHostID := host.ParentID
+
+	// 从内部备注中读取上游工单号
+	upstreamTicketID := ""
+	var notes []struct {
+		Content string `gorm:"column:content"`
+	}
+	e.db.Raw("SELECT IFNULL(content,'') as content FROM ticket_replies WHERE ticket_id = ? AND content LIKE '%【上游工单透传】%' ORDER BY id DESC LIMIT 5", ticketID).Scan(&notes)
+	for _, note := range notes {
+		cleanContent := stripTags(note.Content)
+		if m := extractRegex(cleanContent, `上游工单号[:：]\s*(\S+)`); m != "" {
+			upstreamTicketID = m
+			break
+		}
+	}
+
+	if upstreamTicketID == "" {
+		return jsonStr(map[string]interface{}{
+			"success": false,
+			"error":   "未找到上游工单号，可能尚未提交上游工单",
+			"msg":     "未找到上游工单号",
+		})
+	}
+
+	// 通过 UpstreamClient 关闭上游工单
+	var upstreamResult *UpstreamResult
+	if upstreamChannel != "" && parentHostID > 0 {
+		client := NewUpstreamClient(e.db, e.log)
+		upstreamResult = client.CallForHost(parentHostID, "close_support_ticket", map[string]interface{}{
+			"service_id":         parentHostID,
+			"upstream_ticket_id": upstreamTicketID,
+		})
+	}
+
+	// 记录内部备注
+	noteText := fmt.Sprintf("【关闭上游工单】\n上游渠道：%s\n父服务ID：%d\n上游工单号：%s\n",
+		upstreamChannel, parentHostID, upstreamTicketID)
+	if upstreamResult != nil && upstreamResult.Error != "" {
+		noteText += "关闭状态：失败 - " + upstreamResult.Error + "\n"
+	} else {
+		noteText += "关闭状态：成功\n"
+	}
+
+	e.addTicketNote(map[string]interface{}{
+		"ticket_id": ticketID,
+		"note":      noteText,
+	})
+
+	msg := "已成功关闭上游工单"
+	if upstreamResult != nil && upstreamResult.Error != "" {
+		msg = "上游工单关闭失败：" + upstreamResult.Error
+	}
+
+	return jsonStr(map[string]interface{}{
+		"success":              true,
+		"ticket_id":            ticketID,
+		"host_id":              hostID,
+		"upstream_channel":     upstreamChannel,
+		"parent_host_id":       parentHostID,
+		"upstream_ticket_id":   upstreamTicketID,
+		"upstream_result":      upstreamResult,
+		"msg":                  msg,
+	})
 }
 
 func (e *AIToolExecutor) transferToHuman(args map[string]interface{}) string {
@@ -610,40 +945,292 @@ func (e *AIToolExecutor) autoCloseTicket(args map[string]interface{}) string {
 func (e *AIToolExecutor) refundTransmitUpstream(args map[string]interface{}) string {
 	ticketID := uint(intVal(args["ticket_id"]))
 	orderID := uint(intVal(args["order_id"]))
+	hostID := uint(intVal(args["host_id"]))
 	reason := strVal(args["reason"])
+
 	if ticketID == 0 || orderID == 0 || reason == "" {
-		return jsonStr(map[string]interface{}{"error": "参数不完整"})
+		return jsonStr(map[string]interface{}{"error": "参数不完整：需要 ticket_id、order_id、reason"})
 	}
 
+	// 校验退款资格：仅新开通订单 + 24小时内
 	var order struct {
-		Type      string `gorm:"column:type"`
-		CreatedAt string `gorm:"column:created_at"`
+		ID        uint    `gorm:"column:id"`
+		UserID    uint    `gorm:"column:uid"`
+		Type      string  `gorm:"column:type"`
+		Amount    float64 `gorm:"column:amount"`
+		CreatedAt string  `gorm:"column:created_at"`
+		RelID     uint    `gorm:"column:relid"`
 	}
-	if err := e.db.Raw("SELECT type, created_at FROM orders WHERE id = ?", orderID).Scan(&order).Error; err != nil {
+	if err := e.db.Raw("SELECT id, uid, type, amount, created_at, relid FROM orders WHERE id = ?", orderID).Scan(&order).Error; err != nil {
 		return jsonStr(map[string]interface{}{"error": "订单不存在"})
 	}
+
 	if order.Type != "new" {
-		return jsonStr(map[string]interface{}{"error": "仅新开通订单允许退款"})
+		return jsonStr(map[string]interface{}{"error": "仅新开通订单允许退款申请，续费订单不可退款"})
+	}
+
+	// 检查24小时限制
+	if order.CreatedAt != "" {
+		createTime, err := time.Parse("2006-01-02 15:04:05", order.CreatedAt)
+		if err == nil && time.Since(createTime) > 24*time.Hour {
+			return jsonStr(map[string]interface{}{"error": "订单开通已超过24小时，不符合退款条件"})
+		}
+	}
+
+	// host_id 从工单自动读取
+	if hostID == 0 {
+		var ticket struct {
+			RelID uint `gorm:"column:rel_id"`
+		}
+		if err := e.db.Raw("SELECT rel_id FROM tickets WHERE id = ?", ticketID).Scan(&ticket).Error; err == nil {
+			hostID = ticket.RelID
+		}
+	}
+	if hostID == 0 {
+		return jsonStr(map[string]interface{}{
+			"error":   "该工单未关联产品，无法确定要退款的具体产品。请先询问客户要退款的是哪个产品，然后通过 edit_ticket 设置工单的 host_id",
+			"no_host": true,
+		})
+	}
+
+	// 获取主机上游渠道信息
+	var host struct {
+		ID        int64  `gorm:"column:id"`
+		UID       int64  `gorm:"column:uid"`
+		Server    string `gorm:"column:server"`
+		ParentID  int64  `gorm:"column:parent_id"`
+		DcimID    int64  `gorm:"column:dcimid"`
+	}
+	if err := e.db.Raw("SELECT id, uid, IFNULL(server,'') as server, IFNULL(parent_id,0) as parent_id, IFNULL(dcimid,0) as dcimid FROM host WHERE id = ?", hostID).Scan(&host).Error; err != nil {
+		return jsonStr(map[string]interface{}{"error": "主机不存在"})
+	}
+
+	upstreamChannel := host.Server
+	parentHostID := host.ParentID
+	dcimID := host.DcimID
+
+	// 构建上游退款工单内容（绝不填写金额，只提交退款诉求）
+	upstreamSubject := fmt.Sprintf("退款申请 - 订单#%d", orderID)
+	upstreamContent := fmt.Sprintf("【退款申请】\n订单号：#%d\n客户UID：%d\n主机ID：%d\n机器标识(dcimid)：%d\n退款原因：%s\n申请时间：%s",
+		orderID, e.userID, hostID, dcimID, reason, time.Now().Format("2006-01-02 15:04:05"))
+
+	// 尝试通过上游渠道提交退款工单
+	var upstreamResult *UpstreamResult
+	var upstreamTicketID string
+
+	if upstreamChannel != "" && parentHostID > 0 {
+		client := NewUpstreamClient(e.db, e.log)
+		upstreamResult = client.CallForHost(parentHostID, "open_support_ticket", map[string]interface{}{
+			"subject":    upstreamSubject,
+			"message":    upstreamContent,
+			"service_id": parentHostID,
+			"priority":   "high",
+		})
+		if upstreamResult != nil && upstreamResult.Data != nil {
+			upstreamTicketID = strVal(upstreamResult.Data["ticketid"])
+			if upstreamTicketID == "" {
+				upstreamTicketID = strVal(upstreamResult.Data["ticket_id"])
+			}
+			if upstreamTicketID == "" {
+				upstreamTicketID = strVal(upstreamResult.Data["id"])
+			}
+		}
 	}
 
 	// 记录内部备注
-	e.db.Exec(`INSERT INTO ticket_replies (ticket_id, uid, content, admin_id, admin, editor, created_at) 
-		VALUES (?, 0, ?, 0, '', 'plain', NOW())`, ticketID, "[退款申请] 订单#"+fmt.Sprint(orderID)+" 原因: "+reason)
+	noteText := fmt.Sprintf("【退款申请透传上游】\n订单号：#%d\n退款原因：%s\n主机ID：%d\ndcimid：%d\n上游渠道：%s\n父服务ID：%d\n",
+		orderID, reason, hostID, dcimID, upstreamChannel, parentHostID)
+
+	if upstreamResult != nil && upstreamResult.Error != "" {
+		noteText += "上游调用状态：失败 - " + upstreamResult.Error + "\n"
+	} else if upstreamResult != nil && upstreamResult.Data != nil {
+		noteText += "上游调用状态：成功\n"
+		if upstreamTicketID != "" {
+			noteText += "上游工单号：" + upstreamTicketID + "\n"
+		}
+		rawJSON, _ := json.Marshal(upstreamResult.Data)
+		noteText += "上游返回：" + string(rawJSON) + "\n"
+	} else {
+		noteText += "上游调用状态：未配置上游渠道，需人工处理\n"
+	}
+
+	e.addTicketNote(map[string]interface{}{
+		"ticket_id": ticketID,
+		"note":      noteText,
+	})
+
+	msg := "未找到上游渠道，已记录内部备注待人工处理"
+	if upstreamChannel != "" {
+		msg = "已通过「" + upstreamChannel + "」渠道提交退款工单至上游"
+	}
 
 	return jsonStr(map[string]interface{}{
-		"success": true, "ticket_id": ticketID, "order_id": orderID, "msg": "退款申请已记录",
+		"success":              true,
+		"ticket_id":            ticketID,
+		"order_id":             orderID,
+		"host_id":              hostID,
+		"dcimid":               dcimID,
+		"upstream_channel":     upstreamChannel,
+		"parent_host_id":       parentHostID,
+		"upstream_ticket_id":   upstreamTicketID,
+		"upstream_result":      upstreamResult,
+		"msg":                  msg,
 	})
 }
 
 func (e *AIToolExecutor) checkUpstreamRefundResult(args map[string]interface{}) string {
 	ticketID := uint(intVal(args["ticket_id"]))
 	orderID := uint(intVal(args["order_id"]))
+
 	if ticketID == 0 || orderID == 0 {
 		return jsonStr(map[string]interface{}{"error": "参数不完整"})
 	}
+
+	// 查询订单
+	var order struct {
+		ID        uint    `gorm:"column:id"`
+		UserID    uint    `gorm:"column:uid"`
+		Type      string  `gorm:"column:type"`
+		Amount    float64 `gorm:"column:amount"`
+		CreatedAt string  `gorm:"column:created_at"`
+		RelID     uint    `gorm:"column:relid"`
+	}
+	if err := e.db.Raw("SELECT id, uid, type, amount, created_at, relid FROM orders WHERE id = ?", orderID).Scan(&order).Error; err != nil {
+		return jsonStr(map[string]interface{}{"error": "订单不存在"})
+	}
+
+	amount := order.Amount
+	orderType := order.Type
+	relID := order.RelID
+
+	// 检查上游退款状态
+	var host struct {
+		Server   string `gorm:"column:server"`
+		ParentID int64  `gorm:"column:parent_id"`
+	}
+	upstreamChannel := ""
+	var parentHostID int64
+	if relID > 0 {
+		if err := e.db.Raw("SELECT IFNULL(server,'') as server, IFNULL(parent_id,0) as parent_id FROM host WHERE id = ?", relID).Scan(&host).Error; err == nil {
+			upstreamChannel = host.Server
+			parentHostID = host.ParentID
+		}
+	}
+
+	// 从内部备注读取上游工单号
+	upstreamTicketID := ""
+
+	// 先从退款透传记录中查找
+	var refundNotes []struct {
+		Content string `gorm:"column:content"`
+	}
+	e.db.Raw("SELECT IFNULL(content,'') as content FROM ticket_replies WHERE ticket_id = ? AND content LIKE '%【退款申请透传上游】%' ORDER BY id DESC LIMIT 5", ticketID).Scan(&refundNotes)
+	for _, note := range refundNotes {
+		cleanContent := stripTags(note.Content)
+		if m := extractRegex(cleanContent, `上游工单号[:：]\s*(\S+)`); m != "" {
+			upstreamTicketID = m
+			break
+		}
+	}
+
+	// 也从工单透传记录中查找
+	if upstreamTicketID == "" {
+		var transmitNotes []struct {
+			Content string `gorm:"column:content"`
+		}
+		e.db.Raw("SELECT IFNULL(content,'') as content FROM ticket_replies WHERE ticket_id = ? AND content LIKE '%【上游工单透传】%' ORDER BY id DESC LIMIT 5", ticketID).Scan(&transmitNotes)
+		for _, note := range transmitNotes {
+			cleanContent := stripTags(note.Content)
+			if m := extractRegex(cleanContent, `上游工单号[:：]\s*(\S+)`); m != "" {
+				upstreamTicketID = m
+				break
+			}
+		}
+	}
+
+	// 查询上游退款状态
+	upstreamRefundStatus := "unknown"
+	var upstreamRefundData interface{}
+
+	if upstreamChannel != "" && parentHostID > 0 && upstreamTicketID != "" {
+		client := NewUpstreamClient(e.db, e.log)
+		result := client.CallForHost(parentHostID, "get_ticket_replies", map[string]interface{}{
+			"service_id":         parentHostID,
+			"upstream_ticket_id": upstreamTicketID,
+		})
+		if result != nil && result.Error != "" {
+			upstreamRefundStatus = "query_failed"
+			upstreamRefundData = result.Error
+		} else if result != nil {
+			upstreamRefundStatus = "queried"
+			upstreamRefundData = result.Data
+		}
+	}
+
+	// 自动执行下游退款（仅新开通订单+24小时内）
+	var downstreamRefundResult map[string]interface{}
+	canAutoRefund := false
+
+	if orderType == "new" && order.CreatedAt != "" {
+		createTime, err := time.Parse("2006-01-02 15:04:05", order.CreatedAt)
+		if err == nil && time.Since(createTime) <= 24*time.Hour {
+			canAutoRefund = true
+		}
+	}
+
+	if canAutoRefund && amount > 0 {
+		// 通过财务标准流程退款：添加退款交易记录
+		refundTransID := fmt.Sprintf("REF%s", randomHex(12))
+
+		result := e.db.Exec(`INSERT INTO transactions (uid, amount, create_time, notes, gateway, trans_id) VALUES (?, ?, NOW(), ?, 'refund', ?)`,
+			e.userID, -amount, fmt.Sprintf("AI自动退款 - 订单#%d - 上游退款确认后执行", orderID), refundTransID)
+		if result.Error != nil {
+			downstreamRefundResult = map[string]interface{}{"error": "退款执行失败: " + result.Error.Error()}
+		} else {
+			// 获取退款ID
+			var refundID int64
+			e.db.Raw("SELECT LAST_INSERT_ID()").Scan(&refundID)
+
+			// 更新订单状态为已取消
+			e.db.Exec("UPDATE orders SET status = 'Cancelled' WHERE id = ?", orderID)
+
+			downstreamRefundResult = map[string]interface{}{
+				"success":   true,
+				"refund_id": refundID,
+				"trans_id":  refundTransID,
+				"amount":    amount,
+				"order_id":  orderID,
+			}
+
+			// 记录内部备注
+			e.addTicketNote(map[string]interface{}{
+				"ticket_id": ticketID,
+				"note":      fmt.Sprintf("【自动退款已执行】\n订单号：#%d\n退款金额：¥%.2f\n退款ID：%d\n上游状态：%s", orderID, amount, refundID, upstreamRefundStatus),
+			})
+		}
+	}
+
+	msg := "不符合自动退款条件（仅新开通订单+24小时内），需人工确认"
+	if canAutoRefund {
+		if downstreamRefundResult != nil && downstreamRefundResult["error"] == nil {
+			msg = fmt.Sprintf("已自动执行下游退款 ¥%.2f，订单#%d已取消", amount, orderID)
+		} else {
+			msg = "符合退款条件但执行失败，请人工处理"
+		}
+	}
+
 	return jsonStr(map[string]interface{}{
-		"success": true, "order_id": orderID, "upstream_refund_status": "pending",
-		"msg": "需人工确认退款状态",
+		"success":                  true,
+		"order_id":                 orderID,
+		"amount":                   amount,
+		"order_type":               orderType,
+		"can_auto_refund":          canAutoRefund,
+		"upstream_channel":         upstreamChannel,
+		"upstream_ticket_id":       upstreamTicketID,
+		"upstream_refund_status":   upstreamRefundStatus,
+		"upstream_refund_data":     upstreamRefundData,
+		"downstream_refund":        downstreamRefundResult,
+		"msg":                      msg,
 	})
 }
 
@@ -686,4 +1273,32 @@ func intVal(v interface{}) int64 {
 		return i
 	}
 	return 0
+}
+
+// stripTags 移除 HTML 标签
+func stripTags(s string) string {
+	re := regexp.MustCompile(`<[^>]*>`)
+	return strings.TrimSpace(re.ReplaceAllString(s, ""))
+}
+
+// extractRegex 从文本中提取正则匹配的第一个捕获组
+func extractRegex(text, pattern string) string {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return ""
+	}
+	matches := re.FindStringSubmatch(text)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
+}
+
+// randomHex 生成指定长度的随机十六进制字符串
+func randomHex(n int) string {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	return strings.ToUpper(hex.EncodeToString(b))
 }

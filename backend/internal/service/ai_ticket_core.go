@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -463,22 +464,51 @@ func (s *AITicketCoreService) ProcessTicket(req TicketAIRequest) TicketAIResult 
 	// 搜索知识库
 	kbItems := s.SearchKnowledge(req.Subject+" "+req.Content, 5)
 
-	// 构建 prompt
-	systemPrompt := "你是一个专业的客服助手。根据用户的问题和知识库内容给出准确回答。"
-	prompt := fmt.Sprintf("用户工单主题：%s\n用户工单内容：%s", req.Subject, req.Content)
+	// 构建上下文（使用 TicketContextService）
+	ctxSvc := NewTicketContextService(s.db, s.log)
+	contextJson := ctxSvc.BuildContextJson(req.TicketID, 0)
+
+	// 系统提示词
+	systemPrompt := s.GetConfig("system_prompt")
+	if systemPrompt == "" {
+		systemPrompt = DefaultSystemPrompt()
+	}
+	// 注入上下文
+	if strings.Contains(systemPrompt, "{context}") {
+		systemPrompt = strings.Replace(systemPrompt, "{context}", contextJson, 1)
+	} else {
+		systemPrompt += "\n\n## 上下文数据（JSON）\n" + contextJson
+	}
+
+	// 规则额外提示词
+	if rule != nil && rule.PromptExtra != "" {
+		systemPrompt += "\n" + rule.PromptExtra
+	}
+
+	// 构建消息列表（从工单对话历史）
+	messages := ctxSvc.BuildMessages(req.TicketID)
+	if len(messages) == 0 {
+		return TicketAIResult{ShouldReply: false, Error: "工单无有效对话内容"}
+	}
+
+	// 追加知识库参考到用户最后一条消息
 	if len(kbItems) > 0 {
 		kbContext := "\n\n参考知识库："
 		for _, item := range kbItems {
 			kbContext += fmt.Sprintf("\n【%s】问：%s 答：%s", item.Title, item.Question, item.Answer)
 		}
-		prompt += kbContext
+		lastIdx := len(messages) - 1
+		messages[lastIdx].Content += kbContext
 	}
-	if rule != nil && rule.PromptExtra != "" {
-		systemPrompt += "\n" + rule.PromptExtra
-	}
+
+	// 规则示例回复
 	if rule != nil && rule.SampleReply != "" {
-		prompt += "\n\n参考回复格式：" + rule.SampleReply
+		lastIdx := len(messages) - 1
+		messages[lastIdx].Content += "\n\n参考回复格式：" + rule.SampleReply
 	}
+
+	// 在最前面插入系统提示词
+	messages = append([]AIChatMessage{{Role: "system", Content: systemPrompt}}, messages...)
 
 	// 调用 AI（带 Function Calling）
 	apiKey := s.GetConfig("ai_api_key")
@@ -491,12 +521,6 @@ func (s *AITicketCoreService) ProcessTicket(req TicketAIRequest) TicketAIResult 
 	// 获取已启用的工具
 	enabledTools := s.GetEnabledTools()
 	openAITools := GetOpenAITools(enabledTools)
-
-	// 构建消息列表
-	messages := []AIChatMessage{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: prompt},
-	}
 
 	// Function Calling 循环
 	reply, confidence, err := s.callAIWithTools(baseURL, apiKey, modelName, messages, openAITools, req.TicketID, 0)
@@ -536,12 +560,92 @@ func (s *AITicketCoreService) ProcessTicket(req TicketAIRequest) TicketAIResult 
 		ModelUsed: modelName,
 	})
 
+	// 使用回复服务写入工单
+	adminID, _ := strconv.Atoi(s.GetConfig("reply_admin_id"))
+	if adminID == 0 {
+		adminID = 1
+	}
+	replySvc := NewTicketReplyService(s.db, s.log)
+	if err := replySvc.PostAdminReply(req.TicketID, reply, uint(adminID)); err != nil {
+		s.log.Warnf("AI 回复写入失败: %v", err)
+	}
+
 	return TicketAIResult{
 		ShouldReply: true,
 		Reply:       reply,
 		Confidence:  confidence,
 		Decision:    decision,
 	}
+}
+
+// DefaultSystemPrompt 默认系统提示词
+func DefaultSystemPrompt() string {
+	return `你是锚点财务 IDC 客户工单 AI 客服助手，为客户解答问题。
+
+## 身份与保密
+- 你代表技术支持团队回复工单
+- 对话仅客户、管理员与你可见，可基于下方用户与产品数据回答问题
+- 语气专业、简洁、友好，使用中文
+
+## 对话风格
+- 你可以像真人客服一样自然对话，不必拘泥于一问一答
+- 如果需要多条信息要告知客户，可以分多条消息发送
+- 主动关怀：如果发现客户有问题但没明确提问，可以主动询问
+- 全程禁止使用固定模板话术，所有提示语由你自主智能生成
+
+## 能力范围
+- 根据工单标题、内容、部门、优先级理解客户诉求
+- 结合用户账户信息与产品列表（状态、IP、端口、登录用户名/密码、到期时间、specs 配置参数等）回答问题
+- 客户询问如何连接服务器时，必须直接写出 IP、端口、用户名、密码明文及连接方式（SSH/RDP）
+- 常见问题：续费、开机/关机、网络、配置、账单、密码重置指引等
+- 无法确定或需人工操作时，明确说明已转交人工
+
+## 工具使用规则
+- 优先使用工具获取数据，不要编造数据
+- 需要操作服务器前，先确认客户意图
+- 高危操作（重装系统等）必须先获得客户明确确认
+- 不要在回复中提及工具名称或技术细节，用自然语言描述操作
+- 首次服务时，调用 list_available_tools 查询当前可用工具
+
+## 跨部门分流规则
+- 售前部门：产品咨询、套餐询价、下单购机
+- 技术部门：服务器运维、故障、网络、重装
+- 财务部门：退款、账单、费用、发票
+- 识别到部门错配后使用 transfer_ticket_department 自动迁移
+
+## 上游透传规则
+适用场景：服务器宕机、机房网络中断、硬件故障、新机器未开通、上游卡单
+执行规则：
+1. 自动识别上游渠道
+2. 整理客户诉求，生成规范工单
+3. 上游工单仅提交问题/退款诉求，绝不填写任何金额
+4. 不擅自承诺处理结果
+
+## 上游回复处理规则
+- 禁止直接转发上游原始回复
+- 需对上游回复进行脱敏、简化、通俗化、润色改写
+- 隐藏上游内部工单号和系统名称
+
+## 转人工规则
+禁止转接：开关机、重启、状态查询、产品咨询、基础故障排查
+允许转接：机房深层硬件故障、退款争议、复杂纠纷
+转接后 AI 停止主动应答，静默监听；若客户问题降级为简单问题，自动切回 AI 接管
+
+## 退款规则（铁律）
+1. 仅新开通订单 + 24小时以内允许退款
+2. 续费订单、超时订单直接驳回
+3. 上游工单只提交退款诉求，不填写金额
+4. 金额核算由本机处理，以客户实付金额为准
+
+## 限制
+- 不要编造不存在的产品或操作结果
+- 登录信息仅来自上下文，没有则说明需人工核实
+- 不要承诺具体完成时间
+- 回复使用 Markdown 排版
+- 不要直接输出 HTML 标签
+
+## 上下文数据（JSON）
+{context}`
 }
 
 // callAIWithTools 带 Function Calling 的 AI 调用（含多轮循环）
