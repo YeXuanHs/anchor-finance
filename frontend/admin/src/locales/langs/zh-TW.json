@@ -1,0 +1,209 @@
+{
+  "httpMsg": {
+    "unauthorized": "未授權存取，請重新登入",
+    "forbidden": "禁止存取該資源",
+    "notFound": "請求的資源不存在",
+    "methodNotAllowed": "請求方法不允許",
+    "requestTimeout": "請求逾時，請稍後重試",
+    "internalServerError": "伺服器內部錯誤，請稍後重試",
+    "badGateway": "閘道錯誤，請稍後重試",
+    "serviceUnavailable": "服務暫時不可用，請稍後重試",
+    "gatewayTimeout": "閘道逾時，請稍後重試",
+    "requestCancelled": "請求已取消",
+    "networkError": "網路連線異常，請檢查網路連線",
+    "requestFailed": "請求失敗",
+    "requestConfigError": "請求設定錯誤"
+  },
+  "topBar": {
+    "search": { "title": "搜尋" },
+    "user": {
+      "userCenter": "個人中心",
+      "docs": "使用文件",
+      "github": "Github",
+      "lockScreen": "鎖定螢幕",
+      "logout": "登出"
+    },
+    "guide": {
+      "title": "點擊這裡查看",
+      "theme": "主題風格",
+      "menu": "開啟頂欄選單",
+      "description": "等更多設定"
+    }
+  },
+  "common": {
+    "tips": "提示",
+    "cancel": "取消",
+    "confirm": "確定",
+    "logOutTips": "您是否要登出?"
+  },
+  "search": {
+    "placeholder": "搜尋頁面",
+    "historyTitle": "搜尋歷史",
+    "switchKeydown": "切換",
+    "selectKeydown": "選擇",
+    "exitKeydown": "關閉"
+  },
+  "setting": {
+    "menuType": { "title": "選單佈局", "list": ["垂直", "水平", "混合", "雙列"] },
+    "theme": { "title": "主題風格", "list": ["淺色", "深色", "系統"] },
+    "menu": { "title": "選單風格" },
+    "color": { "title": "系統主題色" },
+    "box": { "title": "盒子樣式", "list": ["邊框", "陰影"] },
+    "container": { "title": "容器寬度", "list": ["鋪滿", "定寬"] },
+    "basics": {
+      "title": "基礎設定",
+      "list": {
+        "multiTab": "開啟多標籤欄",
+        "accordion": "側邊欄開啟手風琴模式",
+        "collapseSidebar": "顯示摺疊側邊欄按鈕",
+        "fastEnter": "顯示快速入口",
+        "reloadPage": "顯示重載頁面按鈕",
+        "breadcrumb": "顯示全域導覽列",
+        "language": "顯示多語言選擇",
+        "progressBar": "顯示頂部進度條",
+        "weakMode": "色弱模式",
+        "watermark": "全域浮水印",
+        "menuWidth": "選單寬度",
+        "tabStyle": "標籤頁風格",
+        "pageTransition": "頁面切換動畫",
+        "borderRadius": "自訂圓角"
+      }
+    },
+    "tabStyle": { "default": "預設", "card": "卡片", "google": "Google" },
+    "transition": {
+      "list": {
+        "none": "無動畫", "fade": "淡入淡出",
+        "slideLeft": "左側滑入", "slideBottom": "下方滑入", "slideTop": "上方滑入"
+      }
+    },
+    "actions": {
+      "resetConfig": "重設設定",
+      "copyConfig": "複製設定",
+      "copySuccess": "設定已複製到剪貼簿，可貼上到 src/config/setting.ts 檔案中",
+      "copyFailed": "複製失敗，請重試",
+      "resetFailed": "重設失敗，請重新整理頁面後重試"
+    }
+  },
+  "notice": {
+    "title": "通知",
+    "btnRead": "標為已讀",
+    "bar": ["通知", "訊息", "待辦"],
+    "text": ["暫無"],
+    "viewAll": "查看全部"
+  },
+  "worktab": {
+    "btn": {
+      "refresh": "重新整理", "fixed": "固定", "unfixed": "取消固定",
+      "closeLeft": "關閉左側", "closeRight": "關閉右側",
+      "closeOther": "關閉其他", "closeAll": "關閉全部"
+    }
+  },
+  "login": {
+    "leftView": {
+      "title": "一款兼具設計美學與高效開發的後台系統",
+      "subTitle": "美觀實用的介面，經過視覺最佳化，確保卓越的使用者體驗"
+    },
+    "title": "歡迎回來",
+    "subTitle": "輸入您的帳號和密碼登入",
+    "roles": { "super": "超級管理員", "admin": "管理員", "user": "普通使用者" },
+    "placeholder": {
+      "username": "請輸入帳號", "password": "請輸入密碼", "slider": "請拖動滑塊完成驗證"
+    },
+    "sliderText": "按住滑塊拖動",
+    "sliderSuccessText": "驗證成功",
+    "rememberPwd": "記住密碼",
+    "forgetPwd": "忘記密碼",
+    "btnText": "登入",
+    "noAccount": "還沒有帳號？",
+    "register": "註冊",
+    "success": { "title": "登入成功", "message": "歡迎回來" }
+  },
+  "forgetPassword": {
+    "title": "忘記密碼？",
+    "subTitle": "輸入您的電子郵件來重設您的密碼",
+    "placeholder": "請輸入您的電子郵件",
+    "submitBtnText": "提交",
+    "backBtnText": "返回"
+  },
+  "register": {
+    "title": "建立帳號",
+    "subTitle": "歡迎加入我們，請填寫以下資訊完成註冊",
+    "placeholder": {
+      "username": "請輸入帳號", "password": "請輸入密碼", "confirmPassword": "請再次輸入密碼"
+    },
+    "rule": {
+      "confirmPasswordRequired": "請再次輸入密碼",
+      "passwordMismatch": "兩次輸入密碼不一致！",
+      "usernameLength": "長度在 3 到 20 個字元",
+      "passwordLength": "密碼長度不能小於6位",
+      "agreementRequired": "請同意隱私協議"
+    },
+    "agreeText": "我同意",
+    "privacyPolicy": "《隱私政策》",
+    "submitBtnText": "註冊",
+    "hasAccount": "已有帳號？",
+    "toLogin": "去登入"
+  },
+  "lockScreen": {
+    "pwdError": "密碼錯誤",
+    "lock": { "inputPlaceholder": "請輸入鎖屏密碼", "btnText": "鎖定" },
+    "unlock": { "inputPlaceholder": "請輸入解鎖密碼", "btnText": "解鎖", "backBtnText": "返回登入" }
+  },
+  "greeting": { "dawn": "凌晨了！", "morning": "早安！", "afternoon": "午安！", "evening": "晚安！" },
+  "exceptionPage": {
+    "gohome": "返回首頁",
+    "403": "抱歉，您無權存取該頁面",
+    "404": "抱歉，您存取的頁面不存在",
+    "500": "抱歉，伺服器出錯了"
+  },
+  "menus": {
+    "login": { "title": "登入" },
+    "register": { "title": "註冊" },
+    "forgetPassword": { "title": "忘記密碼" },
+    "outside": { "title": "內嵌頁面" },
+    "dashboard": { "title": "儀錶板", "console": "工作台", "analysis": "分析頁", "ecommerce": "電子商務" },
+    "widgets": {
+      "title": "元件中心", "icon": "圖示", "imageCrop": "影像裁剪",
+      "excel": "Excel 匯入匯出", "video": "影片播放器", "countTo": "數字滾動",
+      "wangEditor": "富文字編輯器", "watermark": "浮水印", "contextMenu": "右鍵選單",
+      "qrcode": "二維碼", "drag": "拖拽", "textScroll": "文字滾動", "fireworks": "禮花", "elementUI": "元件總覽"
+    },
+    "template": {
+      "title": "模板中心", "chat": "聊天", "cards": "卡片", "banners": "橫幅",
+      "charts": "圖表", "map": "地圖", "calendar": "日曆", "pricing": "定價"
+    },
+    "article": {
+      "title": "文章管理", "articleList": "文章列表", "articleDetail": "文章詳情",
+      "comment": "留言管理", "articlePublish": "文章發布"
+    },
+    "result": { "title": "結果頁面", "success": "成功頁", "fail": "失敗頁" },
+    "exception": { "title": "異常頁面", "forbidden": "403", "notFound": "404", "serverError": "500" },
+    "examples": {
+      "title": "功能示範", "tabs": "標籤頁", "tablesBasic": "基礎表格", "tables": "進階表格",
+      "tablesTree": "左右佈局表格", "forms": "表單", "searchBar": "搜尋表單",
+      "socketChat": "Socket 連線", "permission": {
+        "title": "前端權限", "switchRole": "切換權限", "buttonAuth": "按鈕權限演示", "pageVisibility": "超級管理員可見"
+      }
+    },
+    "system": {
+      "title": "系統管理", "user": "使用者管理", "role": "角色管理", "userCenter": "個人中心",
+      "menu": "選單管理", "nested": "嵌套選單",
+      "menu1": "選單1", "menu2": "選單2", "menu21": "選單2-1",
+      "menu3": "選單3", "menu31": "選單3-1", "menu32": "選單3-2", "menu321": "選單3-2-1"
+    },
+    "safeguard": { "title": "運維管理", "server": "伺服器管理" },
+    "plan": { "title": "版本計劃", "log": "更新日誌" },
+    "help": { "title": "幫助中心", "document": "官方文件", "liteVersion": "精簡版本", "oldVersion": "v2.6.1 版本" }
+  },
+  "table": {
+    "form": { "reset": "重設", "submit": "提交" },
+    "searchBar": {
+      "reset": "重設", "search": "查詢", "expand": "展開", "collapse": "收起",
+      "searchInputPlaceholder": "請輸入", "searchSelectPlaceholder": "請選擇"
+    },
+    "selection": "選擇",
+    "sizeOptions": { "small": "緊湊", "default": "預設", "large": "寬鬆" },
+    "column": { "selection": "勾選", "expand": "展開", "index": "序號" },
+    "zebra": "斑馬紋", "border": "邊框", "headerBackground": "表頭背景"
+  }
+}
