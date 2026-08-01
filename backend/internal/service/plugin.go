@@ -184,25 +184,82 @@ func (s *PluginService) GetList(pluginType string, isEnabled *bool) ([]model.Plu
 	return plugins, nil
 }
 
-// ToggleStatus 切换启用状态
+// SetEnabled 设置启用状态（启用时自动建表）
+func (s *PluginService) SetEnabled(id uint, enabled bool) error {
+	var plugin model.Plugin
+	if err := s.db.First(&plugin, id).Error; err != nil {
+		return errors.New("插件不存在")
+	}
+
+	// 启用插件时自动建表
+	if enabled && !plugin.IsEnabled {
+		if err := s.createPluginTables(plugin.Name); err != nil {
+			s.log.Errorf("插件 %s 建表失败: %v", plugin.Name, err)
+			return fmt.Errorf("启用失败: 建表出错 - %v", err)
+		}
+		s.log.Infof("插件 %s 表结构已创建", plugin.Name)
+	}
+
+	result := s.db.Model(&plugin).Update("is_enabled", enabled)
+	if result.Error != nil {
+		return result.Error
+	}
+	s.log.Infof("插件状态更新: id=%d name=%s enabled=%v", id, plugin.Name, enabled)
+	return nil
+}
+
+// ToggleStatus 切换启用状态（带建表逻辑）
 func (s *PluginService) ToggleStatus(id uint) error {
 	var plugin model.Plugin
 	if err := s.db.First(&plugin, id).Error; err != nil {
 		return err
 	}
-	return s.db.Model(&plugin).Update("is_enabled", !plugin.IsEnabled).Error
+	return s.SetEnabled(id, !plugin.IsEnabled)
 }
 
-// SetEnabled 设置启用状态
-func (s *PluginService) SetEnabled(id uint, enabled bool) error {
-	result := s.db.Model(&model.Plugin{}).Where("id = ?", id).Update("is_enabled", enabled)
-	if result.Error != nil {
-		return result.Error
+// createPluginTables 根据插件名称创建对应的表
+func (s *PluginService) createPluginTables(pluginName string) error {
+	pluginTableMap := map[string][]interface{}{
+		// 客服聊天系统
+		"cs_chat": {
+			&model.CSChatSession{},
+			&model.CSChatMessage{},
+			&model.CSChatConfig{},
+			&model.CSChatQuickReply{},
+		},
+		// AI工单自动回复
+		"ai_ticket": {
+			&model.AITicketKnowledge{},
+			&model.AITicketRule{},
+			&model.AITicketQueue{},
+			&model.AITicketProcessLog{},
+			&model.AITicketNotifyLog{},
+			&model.AITicketMode{},
+			&model.AITicketConfig{},
+		},
+		// AI购物助手
+		"ai_shopping": {
+			&model.AIShoppingConfig{},
+			&model.AIShoppingChatLog{},
+			&model.ProductCatalogTool{},
+		},
+		// 邮箱后缀白名单
+		"email_suffix_whitelist": {
+			&model.EmailSuffixWhitelist{},
+		},
 	}
-	if result.RowsAffected == 0 {
-		return errors.New("插件不存在")
+
+	models, ok := pluginTableMap[pluginName]
+	if !ok {
+		// 没有专属表的插件（如smtp、oauth等）直接跳过
+		return nil
 	}
-	s.log.Infof("插件状态更新: id=%d enabled=%v", id, enabled)
+
+	for _, m := range models {
+		if err := s.db.AutoMigrate(m); err != nil {
+			return fmt.Errorf("建表失败 %T: %w", m, err)
+		}
+	}
 	return nil
 }
 
@@ -403,96 +460,4 @@ func (s *PluginService) GetServerGroupList() ([]model.ServerGroup, error) {
 		return nil, err
 	}
 	return groups, nil
-}
-
-// ==================== OAuth提供商管理 ====================
-
-// CreateOAuthProvider 创建OAuth提供商
-func (s *PluginService) CreateOAuthProvider(req model.OAuthProvider) (*model.OAuthProvider, error) {
-	var count int64
-	s.db.Model(&model.OAuthProvider{}).Where("name = ?", req.Name).Count(&count)
-	if count > 0 {
-		return nil, errors.New("OAuth提供商标识名已存在")
-	}
-
-	if err := s.db.Create(&req).Error; err != nil {
-		return nil, err
-	}
-
-	return &req, nil
-}
-
-// UpdateOAuthProvider 更新OAuth提供商
-func (s *PluginService) UpdateOAuthProvider(id uint, updates map[string]interface{}) error {
-	result := s.db.Model(&model.OAuthProvider{}).Where("id = ?", id).Updates(updates)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("OAuth提供商不存在")
-	}
-	return nil
-}
-
-// DeleteOAuthProvider 删除OAuth提供商
-func (s *PluginService) DeleteOAuthProvider(id uint) error {
-	result := s.db.Delete(&model.OAuthProvider{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("OAuth提供商不存在")
-	}
-	return nil
-}
-
-// GetOAuthProviderByID 根据ID获取OAuth提供商
-func (s *PluginService) GetOAuthProviderByID(id uint) (*model.OAuthProvider, error) {
-	var provider model.OAuthProvider
-	if err := s.db.First(&provider, id).Error; err != nil {
-		return nil, err
-	}
-	return &provider, nil
-}
-
-// GetOAuthProviderList 获取OAuth提供商列表
-func (s *PluginService) GetOAuthProviderList() ([]model.OAuthProvider, error) {
-	var providers []model.OAuthProvider
-	if err := s.db.Order("sort_order ASC, id ASC").Find(&providers).Error; err != nil {
-		return nil, err
-	}
-	return providers, nil
-}
-
-// GetEnabledOAuthProviders 获取启用的OAuth提供商
-func (s *PluginService) GetEnabledOAuthProviders() ([]model.OAuthProvider, error) {
-	var providers []model.OAuthProvider
-	if err := s.db.Where("is_enabled = true").
-		Order("sort_order ASC").
-		Find(&providers).Error; err != nil {
-		return nil, err
-	}
-	return providers, nil
-}
-
-// InitDefaultOAuthProviders 初始化默认OAuth提供商
-func (s *PluginService) InitDefaultOAuthProviders() {
-	var count int64
-	s.db.Model(&model.OAuthProvider{}).Count(&count)
-	if count > 0 {
-		return
-	}
-
-	defaults := []model.OAuthProvider{
-		{Name: "Weixin", Title: "微信登录", Description: "微信扫码登录", Icon: "/assets/oauth/weixin.png", IsEnabled: false, SortOrder: 1},
-		{Name: "QQ", Title: "QQ登录", Description: "QQ互联登录", Icon: "/assets/oauth/qq.png", IsEnabled: false, SortOrder: 2},
-		{Name: "Alipay", Title: "支付宝登录", Description: "支付宝登录", Icon: "/assets/oauth/alipay.png", IsEnabled: false, SortOrder: 3},
-		{Name: "Weibo", Title: "微博登录", Description: "微博登录", Icon: "/assets/oauth/weibo.png", IsEnabled: false, SortOrder: 4},
-	}
-
-	for _, d := range defaults {
-		s.db.Create(&d)
-	}
-
-	s.log.Info("默认OAuth提供商初始化完成")
 }

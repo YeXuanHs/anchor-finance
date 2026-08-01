@@ -1626,52 +1626,59 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/backups/clean", backupHandler.CleanOldBackups)
 		admin.POST("/backups/restore", backupHandler.RestoreBackup)
 
-		// ==================== 客服悬浮窗 ====================
-		widgetSvc := service.NewCustomerServiceWidgetService(deps.DB, deps.Log)
-		widgetHandler := handler.NewCustomerServiceWidgetHandler(widgetSvc, deps.Log)
-		admin.GET("/cs-widgets", widgetHandler.List)
-		admin.GET("/cs-widgets/:id", widgetHandler.Get)
-		admin.POST("/cs-widgets", widgetHandler.Create)
-		admin.PUT("/cs-widgets/:id", widgetHandler.Update)
-		admin.DELETE("/cs-widgets/:id", widgetHandler.Delete)
-		admin.GET("/cs-widgets/settings", widgetHandler.GetSettings)
-		admin.PUT("/cs-widgets/settings", widgetHandler.UpdateSettings)
+		// ==================== 客服聊天系统（anchor_cloud_finance_pro） ====================
+		csSvc := service.NewCSChatService(deps.DB, deps.Log)
+		csHandler := handler.NewCSChatHandler(csSvc, deps.Log)
+		chat := admin.Group("/cs")
+		{
+			chat.GET("/ai-config", csHandler.GetAIConfig)
+			chat.PUT("/ai-config", csHandler.SaveAIConfig)
+			chat.GET("/appearance", csHandler.GetAppearanceConfig)
+			chat.PUT("/appearance", csHandler.SaveAppearanceConfig)
+			chat.GET("/working-hours", csHandler.GetWorkingHours)
+			chat.PUT("/working-hours", csHandler.SaveWorkingHours)
+			chat.GET("/sessions", csHandler.ListSessions)
+			chat.GET("/sessions/:id", csHandler.GetSession)
+			chat.POST("/sessions/:id/reply", csHandler.SendReply)
+			chat.POST("/sessions/:id/transfer", csHandler.TransferToHuman)
+			chat.POST("/sessions/:id/close", csHandler.CloseSession)
+			chat.POST("/sessions/:id/rate", csHandler.RateSession)
+			chat.GET("/stats", csHandler.GetStats)
+		}
 
-		// ==================== 知识库 ====================
-		kbSvc := service.NewKnowledgeBaseService(deps.DB, deps.Log)
-		kbHandler := handler.NewKnowledgeBaseHandler(kbSvc, deps.Log)
-		admin.GET("/kb/categories", kbHandler.ListCategories)
-		admin.POST("/kb/categories", kbHandler.CreateCategory)
-		admin.PUT("/kb/categories/:id", kbHandler.UpdateCategory)
-		admin.DELETE("/kb/categories/:id", kbHandler.DeleteCategory)
-		admin.GET("/kb/articles", kbHandler.ListArticles)
-		admin.GET("/kb/articles/:id", kbHandler.GetArticle)
-		admin.POST("/kb/articles", kbHandler.CreateArticle)
-		admin.PUT("/kb/articles/:id", kbHandler.UpdateArticle)
-		admin.DELETE("/kb/articles/:id", kbHandler.DeleteArticle)
-		admin.POST("/kb/articles/:id/helpful", kbHandler.MarkHelpful)
+		// ==================== AI 工单核心（mianyu_ai_ticket） ====================
+		aiTicketSvc := service.NewAITicketCoreService(deps.DB, deps.Log)
+		aiTicketHandler := handler.NewAITicketCoreHandler(aiTicketSvc, deps.Log)
+		ticket := admin.Group("/ai-ticket")
+		{
+			ticket.GET("/dashboard", aiTicketHandler.GetDashboard)
+			ticket.PUT("/dashboard", aiTicketHandler.SaveDashboard)
+			ticket.GET("/knowledge", aiTicketHandler.ListKnowledge)
+			ticket.POST("/knowledge", aiTicketHandler.CreateKnowledge)
+			ticket.PUT("/knowledge/:id", aiTicketHandler.UpdateKnowledge)
+			ticket.DELETE("/knowledge/:id", aiTicketHandler.DeleteKnowledge)
+			ticket.POST("/knowledge/import", aiTicketHandler.ImportDefaultKnowledge)
+			ticket.GET("/rules", aiTicketHandler.ListRules)
+			ticket.POST("/rules", aiTicketHandler.CreateRule)
+			ticket.PUT("/rules/:id", aiTicketHandler.UpdateRule)
+			ticket.DELETE("/rules/:id", aiTicketHandler.DeleteRule)
+			ticket.GET("/queue", aiTicketHandler.ListQueue)
+			ticket.GET("/queue/stats", aiTicketHandler.GetQueueStats)
+			ticket.GET("/process-logs", aiTicketHandler.ListProcessLogs)
+			ticket.GET("/notify-logs", aiTicketHandler.ListNotifyLogs)
+			ticket.GET("/mode/:ticket_id", aiTicketHandler.GetTicketMode)
+			ticket.PUT("/mode/:ticket_id", aiTicketHandler.SetTicketMode)
+			ticket.POST("/test", aiTicketHandler.TestAutoReply)
+		}
 
-		// ==================== AI 工单自动回复 ====================
-		aiTicketSvc := service.NewAITicketService(deps.DB, deps.Log, kbSvc)
-		aiTicketHandler := handler.NewAITicketHandler(aiTicketSvc, deps.Log)
-		admin.GET("/ai-ticket/configs", aiTicketHandler.ListAIConfigs)
-		admin.GET("/ai-ticket/configs/:id", aiTicketHandler.GetAIConfig)
-		admin.POST("/ai-ticket/configs", aiTicketHandler.SaveAIConfig)
-		admin.PUT("/ai-ticket/configs/:id", aiTicketHandler.SaveAIConfig)
-		admin.DELETE("/ai-ticket/configs/:id", aiTicketHandler.DeleteAIConfig)
-		admin.GET("/ai-ticket/auto-reply-config", aiTicketHandler.GetAutoReplyConfig)
-		admin.PUT("/ai-ticket/auto-reply-config", aiTicketHandler.SaveAutoReplyConfig)
-		admin.GET("/ai-ticket/logs", aiTicketHandler.GetAutoReplyLogs)
-		admin.POST("/ai-ticket/logs/:id/accept", aiTicketHandler.MarkReplyAccepted)
-		admin.POST("/ai-ticket/test", aiTicketHandler.TestAutoReply)
-
-		// ==================== AI 购物助手 ====================
-		aiShoppingSvc := service.NewAIShoppingService(deps.DB, deps.Log)
-		aiShoppingHandler := handler.NewAIShoppingHandler(aiShoppingSvc, deps.Log)
-		admin.GET("/ai-shopping/config", aiShoppingHandler.GetConfig)
-		admin.PUT("/ai-shopping/config", aiShoppingHandler.SaveConfig)
-		admin.GET("/ai-shopping/catalog-config", aiShoppingHandler.GetCatalogConfig)
-		admin.PUT("/ai-shopping/catalog-config", aiShoppingHandler.SaveCatalogConfig)
+		// ==================== AI 购物助手（mahiru_ai_shopping） ====================
+		aiShopSvc := service.NewAIShoppingCoreService(deps.DB, deps.Log)
+		aiShopHandler := handler.NewAIShoppingCoreHandler(aiShopSvc, deps.Log)
+		shopping := admin.Group("/ai-shopping")
+		{
+			shopping.GET("/config", aiShopHandler.GetConfig)
+			shopping.PUT("/config", aiShopHandler.SaveConfig)
+		}
 	}
 }
 
@@ -1693,22 +1700,49 @@ func RegisterPublicRoutes(r *gin.RouterGroup, db *gorm.DB, log *logger.Logger) {
 	friendlyLinkHandler := handler.NewFriendlyLinkHandler(friendlyLinkSvc, log)
 	r.GET("/friendly-links/active", friendlyLinkHandler.GetActive)
 
-	// 客服悬浮窗（前台）
-	widgetSvc := service.NewCustomerServiceWidgetService(db, log)
-	widgetHandler := handler.NewCustomerServiceWidgetHandler(widgetSvc, log)
-	r.GET("/cs-widget", widgetHandler.GetPublic)
-
-	// 知识库搜索（前台）
-	kbSvc := service.NewKnowledgeBaseService(db, log)
-	kbHandler := handler.NewKnowledgeBaseHandler(kbSvc, log)
-	r.GET("/kb/search", kbHandler.SearchPublic)
-	r.GET("/kb/articles/:id", kbHandler.GetArticle)
-	r.GET("/kb/categories", func(c *gin.Context) {
-		cats, err := kbSvc.ListCategories(false)
-		if err != nil {
-			c.JSON(500, gin.H{"error": "查询失败"})
+	// 客服聊天（前台）
+	csSvc := service.NewCSChatService(db, log)
+	csHandler := handler.NewCSChatHandler(csSvc, log)
+	r.POST("/cs/send", func(c *gin.Context) {
+		var req struct {
+			Content   string `json:"content" binding:"required"`
+			VisitorID string `json:"visitor_id"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": "消息不能为空"})
 			return
 		}
-		c.JSON(200, gin.H{"code": 0, "data": cats})
+		session, err := csSvc.GetOrCreateSession(req.VisitorID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "会话创建失败"})
+			return
+		}
+		_ = csSvc.SendMessage(session.ID, "user", req.Content)
+		reply, _ := csSvc.AIReply(session.ID, req.Content)
+		c.JSON(200, gin.H{"code": 0, "data": gin.H{"reply": reply, "session_id": session.ID}})
 	})
+	r.GET("/cs/history", func(c *gin.Context) {
+		visitorID := c.Query("visitor_id")
+		if visitorID == "" {
+			c.JSON(400, gin.H{"error": "缺少visitor_id"})
+			return
+		}
+		session, _ := csSvc.GetOrCreateSession(visitorID)
+		messages, _ := csSvc.GetSessionMessages(session.ID)
+		c.JSON(200, gin.H{"code": 0, "data": messages})
+	})
+
+	// 知识库搜索（前台）
+	kbSvc := service.NewAITicketCoreService(db, log)
+	r.GET("/kb/search", func(c *gin.Context) {
+		keyword := c.Query("keyword")
+		results := kbSvc.SearchKnowledge(keyword)
+		c.JSON(200, gin.H{"code": 0, "data": results})
+	})
+
+	// AI 购物助手（前台）
+	aiShopSvc := service.NewAIShoppingCoreService(db, log)
+	aiShopHandler := handler.NewAIShoppingCoreHandler(aiShopSvc, log)
+	r.POST("/ai-shopping/chat/:session_id", aiShopHandler.Chat)
+	r.GET("/ai-shopping/history/:session_id", aiShopHandler.GetChatHistory)
 }

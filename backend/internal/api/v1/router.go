@@ -1,6 +1,9 @@
 package v1
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"anchorfinance/internal/handler"
@@ -160,11 +163,13 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		auth.POST("/v10cloud/price", v10CloudHandler.CalculatePrice)
 
 		// AI 购物助手会话
-		aiShoppingSvc := service.NewAIShoppingService(deps.DB, deps.Log)
-		aiShoppingHandler := handler.NewAIShoppingHandler(aiShoppingSvc, deps.Log)
-		auth.POST("/ai-shopping/session", aiShoppingHandler.StartSession)
-		auth.POST("/ai-shopping/session/:session_id/message", aiShoppingHandler.SendMessage)
-		auth.POST("/ai-shopping/session/:session_id/close", aiShoppingHandler.CloseSession)
-		auth.GET("/ai-shopping/session/:session_id/messages", aiShoppingHandler.GetSessionMessages)
+		aiShopSvc := service.NewAIShoppingCoreService(deps.DB, deps.Log)
+		aiShopHandler := handler.NewAIShoppingCoreHandler(aiShopSvc, deps.Log)
+		auth.POST("/ai-shopping/session", func(c *gin.Context) {
+			sessionID := fmt.Sprintf("shop_%d_%d", c.GetUint("user_id"), time.Now().UnixNano())
+			c.JSON(200, gin.H{"code": 0, "data": gin.H{"session_id": sessionID}})
+		})
+		auth.POST("/ai-shopping/session/:session_id/message", aiShopHandler.Chat)
+		auth.GET("/ai-shopping/session/:session_id/messages", aiShopHandler.GetChatHistory)
 	}
 }

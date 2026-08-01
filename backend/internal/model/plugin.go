@@ -91,20 +91,3 @@ type ServerGroup struct {
 func (ServerGroup) TableName() string {
 	return "server_groups"
 }
-
-// OAuthProvider OAuth提供商
-type OAuthProvider struct {
-	gorm.Model
-	Name        string `gorm:"type:varchar(64);uniqueIndex;not null" json:"name"`        // 提供商标识名
-	Title       string `gorm:"type:varchar(64);not null" json:"title"`                   // 显示名称
-	Description string `gorm:"type:varchar(256)" json:"description"`                     // 描述
-	Icon        string `gorm:"type:varchar(256)" json:"icon"`                            // 图标URL
-	Config      string `gorm:"type:json" json:"config"`                                 // 配置JSON
-	IsEnabled   bool   `gorm:"default:false;index" json:"is_enabled"`                    // 是否启用
-	SortOrder   int    `gorm:"default:0" json:"sort_order"`                              // 排序
-}
-
-// TableName 表名
-func (OAuthProvider) TableName() string {
-	return "oauth_providers"
-}

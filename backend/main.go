@@ -51,22 +51,8 @@ func main() {
 		log.Fatalf("数据库初始化失败: %v", err)
 	}
 
-	// Auto-migrate new models/columns
-	if conn := db.GetDB(); conn != nil {
-		conn.AutoMigrate(&model.TicketTransferLog{})
-		conn.AutoMigrate(&model.EmailSuffixWhitelist{})
-		conn.AutoMigrate(&model.CustomerServiceWidget{})
-		conn.AutoMigrate(&model.CustomerServiceWidgetSetting{})
-		conn.AutoMigrate(&model.KnowledgeBaseCategory{})
-		conn.AutoMigrate(&model.KnowledgeBaseArticle{})
-		conn.AutoMigrate(&model.AIConfig{})
-		conn.AutoMigrate(&model.AITicketAutoReplyConfig{})
-		conn.AutoMigrate(&model.AITicketLog{})
-		conn.AutoMigrate(&model.AIShoppingAssistantConfig{})
-		conn.AutoMigrate(&model.AIShoppingSession{})
-		conn.AutoMigrate(&model.AIShoppingMessage{})
-		conn.AutoMigrate(&model.ProductCatalogConfig{})
-	}
+	// Auto-migrate: 仅核心表，插件表在启用时动态创建
+	// 核心表结构由 scripts/init.sql 管理
 
 	// 从数据库读取日志配置并初始化
 	logLevel := db.GetSystemSetting("log_level")

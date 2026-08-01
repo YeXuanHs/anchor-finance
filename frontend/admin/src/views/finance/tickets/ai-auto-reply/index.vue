@@ -1,313 +1,373 @@
 <template>
-  <div class="ai-ticket-page">
-    <div class="page-header">
-      <div class="header-left">
-        <h2>AI 工单自动回复</h2>
-        <span class="subtitle">配置 AI 自动回复引擎和自动回复规则</span>
-      </div>
-    </div>
-
-    <el-tabs v-model="activeTab">
-      <!-- AI 模型配置 -->
-      <el-tab-pane label="AI 模型配置" name="models">
-        <div class="tab-header">
-          <el-button type="primary" @click="showAddModel">添加 AI 模型</el-button>
+  <div class="ai-ticket-admin">
+    <el-card>
+      <template #header>
+        <div class="card-header">
+          <span>AI 工单自动回复</span>
+          <el-tag type="info" size="small">mianyu_ai_ticket</el-tag>
         </div>
-        <el-table :data="aiModels" v-loading="loadingModels" stripe>
-          <el-table-column prop="provider" label="供应商" width="120" />
-          <el-table-column prop="model" label="模型" width="200" />
-          <el-table-column prop="api_endpoint" label="API地址" min-width="300" show-overflow-tooltip />
-          <el-table-column prop="is_active" label="状态" width="80" align="center">
-            <template #default="{ row }">
-              <el-tag :type="row.is_active ? 'success' : 'info'" size="small">
-                {{ row.is_active ? '启用' : '禁用' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="150" align="center">
-            <template #default="{ row }">
-              <el-button type="primary" link size="small" @click="showEditModel(row)">编辑</el-button>
-              <el-popconfirm title="确定删除？" @confirm="deleteModel(row.id)">
-                <template #reference>
-                  <el-button type="danger" link size="small">删除</el-button>
-                </template>
-              </el-popconfirm>
-            </template>
-          </el-table-column>
-        </el-table>
+      </template>
 
-        <el-dialog v-model="modelDialogVisible" :title="isEditModel ? '编辑 AI 模型' : '添加 AI 模型'" width="600px">
-          <el-form :model="modelForm" label-width="120px">
-            <el-form-item label="供应商" required>
-              <el-select v-model="modelForm.provider">
-                <el-option label="OpenAI" value="openai" />
-                <el-option label="Claude" value="claude" />
-                <el-option label="DeepSeek" value="deepseek" />
-                <el-option label="自定义" value="custom" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="模型" required>
-              <el-input v-model="modelForm.model" placeholder="例如: gpt-4o, deepseek-chat" />
-            </el-form-item>
+      <el-tabs v-model="activeTab">
+        <!-- 控制台配置 -->
+        <el-tab-pane label="控制台配置" name="dashboard">
+          <el-form :model="dashboard" label-width="140px" style="max-width: 700px">
+            <el-divider content-position="left">AI 模型配置</el-divider>
             <el-form-item label="API 地址">
-              <el-input v-model="modelForm.api_endpoint" placeholder="留空使用默认地址" />
+              <el-input v-model="dashboard.api_endpoint" placeholder="https://api.openai.com/v1" />
             </el-form-item>
-            <el-form-item label="API Key" required>
-              <el-input v-model="modelForm.api_key" type="password" show-password placeholder="API 密钥" />
+            <el-form-item label="API Key">
+              <el-input v-model="dashboard.api_key" type="password" show-password />
             </el-form-item>
-            <el-form-item label="最大Token">
-              <el-input-number v-model="modelForm.max_tokens" :min="100" :max="8000" />
+            <el-form-item label="模型">
+              <el-input v-model="dashboard.model" placeholder="gpt-3.5-turbo" />
             </el-form-item>
-            <el-form-item label="温度">
-              <el-slider v-model="modelForm.temperature" :min="0" :max="2" :step="0.1" show-input />
-            </el-form-item>
-            <el-form-item label="系统提示词">
-              <el-input v-model="modelForm.system_prompt" type="textarea" :rows="4" placeholder="AI 的角色设定和行为指令" />
-            </el-form-item>
-            <el-form-item label="启用">
-              <el-switch v-model="modelForm.is_active" />
-            </el-form-item>
-          </el-form>
-          <template #footer>
-            <el-button @click="modelDialogVisible = false">取消</el-button>
-            <el-button type="primary" @click="submitModel">确定</el-button>
-          </template>
-        </el-dialog>
-      </el-tab-pane>
-
-      <!-- 自动回复配置 -->
-      <el-tab-pane label="自动回复配置" name="config">
-        <el-card>
-          <el-form :model="autoReplyConfig" label-width="160px" style="max-width: 700px">
+            <el-divider content-position="left">自动回复设置</el-divider>
             <el-form-item label="启用自动回复">
-              <el-switch v-model="autoReplyConfig.enabled" />
-            </el-form-item>
-            <el-form-item label="AI 模型">
-              <el-select v-model="autoReplyConfig.ai_config_id" placeholder="选择 AI 模型">
-                <el-option v-for="m in aiModels" :key="m.id" :label="`${m.provider} - ${m.model}`" :value="m.id" />
-              </el-select>
+              <el-switch v-model="dashboard.auto_reply_enabled" />
             </el-form-item>
             <el-form-item label="置信度阈值">
-              <el-slider v-model="autoReplyConfig.confidence_threshold" :min="0.3" :max="1" :step="0.05" show-input />
-              <div class="form-hint">低于此置信度的回复不会自动发送</div>
+              <el-slider v-model="dashboard.confidence_threshold" :min="0" :max="100" :format-tooltip="(v: number) => `${v}%`" />
             </el-form-item>
-            <el-form-item label="最大自动回复数">
-              <el-input-number v-model="autoReplyConfig.max_auto_replies" :min="1" :max="10" />
-              <div class="form-hint">同一工单最多自动回复次数</div>
+            <el-form-item label="每日最大回复数">
+              <el-input-number v-model="dashboard.max_daily_replies" :min="0" :max="9999" />
             </el-form-item>
-            <el-form-item label="回复延迟(秒)">
-              <el-input-number v-model="autoReplyConfig.reply_delay" :min="0" :max="60" />
-            </el-form-item>
-            <el-form-item label="引用知识库">
-              <el-switch v-model="autoReplyConfig.include_kb_content" />
-            </el-form-item>
-            <el-form-item label="知识库搜索数量" v-if="autoReplyConfig.include_kb_content">
-              <el-input-number v-model="autoReplyConfig.kb_search_limit" :min="1" :max="20" />
-            </el-form-item>
-            <el-form-item label="适用部门ID">
-              <el-input v-model="autoReplyConfig.dept_ids" placeholder="逗号分隔，留空表示全部" />
-            </el-form-item>
-            <el-form-item label="排除关键词">
-              <el-input v-model="autoReplyConfig.exclude_keywords" placeholder="包含这些关键词的工单不自动回复，逗号分隔" />
-            </el-form-item>
-            <el-form-item label="添加AI声明">
-              <el-switch v-model="autoReplyConfig.add_disclaimer" />
-            </el-form-item>
-            <el-form-item label="声明文本" v-if="autoReplyConfig.add_disclaimer">
-              <el-input v-model="autoReplyConfig.disclaimer_text" type="textarea" :rows="2" />
+            <el-form-item label="回复后转人工">
+              <el-switch v-model="dashboard.transfer_after_reply" />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" @click="saveAutoReplyConfig" :loading="savingConfig">保存配置</el-button>
+              <el-button type="primary" @click="saveDashboard">保存配置</el-button>
             </el-form-item>
           </el-form>
-        </el-card>
-      </el-tab-pane>
+        </el-tab-pane>
 
-      <!-- 自动回复日志 -->
-      <el-tab-pane label="回复日志" name="logs">
-        <el-table :data="logs" v-loading="loadingLogs" stripe>
-          <el-table-column prop="ticket_id" label="工单ID" width="100" />
-          <el-table-column prop="question" label="问题" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="answer" label="AI回复" min-width="300" show-overflow-tooltip />
-          <el-table-column prop="confidence" label="置信度" width="100" align="center">
-            <template #default="{ row }">
-              <el-tag :type="row.confidence >= 0.7 ? 'success' : 'warning'" size="small">
-                {{ (row.confidence * 100).toFixed(0) }}%
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="tokens_used" label="Token" width="80" align="center" />
-          <el-table-column prop="accepted" label="接受" width="80" align="center">
-            <template #default="{ row }">
-              <el-tag v-if="row.accepted === true" type="success" size="small">是</el-tag>
-              <el-tag v-else-if="row.accepted === false" type="danger" size="small">否</el-tag>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="created_at" label="时间" width="170" />
-        </el-table>
-      </el-tab-pane>
-
-      <!-- 测试 -->
-      <el-tab-pane label="测试" name="test">
-        <el-card>
-          <el-form :model="testForm" label-width="100px" style="max-width: 600px">
-            <el-form-item label="工单主题">
-              <el-input v-model="testForm.subject" placeholder="测试工单主题" />
-            </el-form-item>
-            <el-form-item label="工单内容">
-              <el-input v-model="testForm.content" type="textarea" :rows="4" placeholder="测试工单内容" />
-            </el-form-item>
-            <el-form-item label="部门ID">
-              <el-input-number v-model="testForm.dept_id" :min="0" />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="runTest" :loading="testing">测试自动回复</el-button>
-            </el-form-item>
-          </el-form>
-          <el-divider v-if="testResult" />
-          <div v-if="testResult">
-            <h4>测试结果</h4>
-            <p><strong>是否回复：</strong>{{ testResult.should_reply ? '是' : '否' }}</p>
-            <p><strong>置信度：</strong>{{ (testResult.confidence * 100).toFixed(1) }}%</p>
-            <div v-if="testResult.reply">
-              <h4>AI 回复：</h4>
-              <div class="test-reply" v-html="testResult.reply"></div>
+        <!-- 知识库 -->
+        <el-tab-pane label="知识库" name="knowledge">
+          <div style="margin-bottom: 16px; display: flex; justify-content: space-between">
+            <el-input v-model="kbSearch" placeholder="搜索知识库..." style="width: 300px" @keyup.enter="loadKnowledge" clearable />
+            <div>
+              <el-button @click="importDefault">导入默认知识库</el-button>
+              <el-button type="primary" @click="showKBDialog = true">新增条目</el-button>
             </div>
           </div>
-        </el-card>
-      </el-tab-pane>
-    </el-tabs>
+
+          <el-table :data="knowledgeList" border stripe>
+            <el-table-column prop="id" label="ID" width="60" />
+            <el-table-column prop="category" label="分类" width="120" />
+            <el-table-column prop="question" label="问题" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="hit_count" label="命中次数" width="90" />
+            <el-table-column prop="status" label="状态" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="140" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" @click="editKB(row)">编辑</el-button>
+                <el-button size="small" type="danger" @click="deleteKB(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 规则 -->
+        <el-tab-pane label="自动化规则" name="rules">
+          <div style="margin-bottom: 16px">
+            <el-button type="primary" @click="showRuleDialog = true">新增规则</el-button>
+          </div>
+          <el-table :data="rules" border stripe>
+            <el-table-column prop="id" label="ID" width="60" />
+            <el-table-column prop="name" label="规则名称" width="150" />
+            <el-table-column prop="match_type" label="匹配方式" width="100">
+              <template #default="{ row }">{{ { keyword: '关键词', regex: '正则', ai: 'AI判断' }[row.match_type as string] || row.match_type }}</template>
+            </el-table-column>
+            <el-table-column prop="match_value" label="匹配值" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="action" label="动作" width="100">
+              <template #default="{ row }">{{ { auto_reply: '自动回复', transfer: '转人工', close: '关闭工单', tag: '打标签' }[row.action as string] || row.action }}</template>
+            </el-table-column>
+            <el-table-column prop="priority" label="优先级" width="80" />
+            <el-table-column prop="status" label="状态" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="140" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" @click="editRule(row)">编辑</el-button>
+                <el-button size="small" type="danger" @click="deleteRule(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 队列 -->
+        <el-tab-pane label="处理队列" name="queue">
+          <el-row :gutter="20" style="margin-bottom: 16px">
+            <el-col :span="6"><el-statistic title="待处理" :value="queueStats.pending || 0" /></el-col>
+            <el-col :span="6"><el-statistic title="处理中" :value="queueStats.processing || 0" /></el-col>
+            <el-col :span="6"><el-statistic title="已完成" :value="queueStats.completed || 0" /></el-col>
+            <el-col :span="6"><el-statistic title="失败" :value="queueStats.failed || 0" /></el-col>
+          </el-row>
+          <el-table :data="queue" border stripe>
+            <el-table-column prop="id" label="ID" width="60" />
+            <el-table-column prop="ticket_id" label="工单ID" width="80" />
+            <el-table-column prop="status" label="状态" width="80">
+              <template #default="{ row }">
+                <el-tag :type="{ pending: 'warning', processing: 'primary', completed: 'success', failed: 'danger' }[row.status as string] as any" size="small">
+                  {{ { pending: '待处理', processing: '处理中', completed: '已完成', failed: '失败' }[row.status as string] || row.status }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="retry_count" label="重试次数" width="90" />
+            <el-table-column prop="error_message" label="错误信息" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="created_at" label="创建时间" width="160" />
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 日志 -->
+        <el-tab-pane label="处理日志" name="logs">
+          <el-table :data="processLogs" border stripe>
+            <el-table-column prop="id" label="ID" width="60" />
+            <el-table-column prop="ticket_id" label="工单ID" width="80" />
+            <el-table-column prop="action" label="动作" width="100" />
+            <el-table-column prop="ai_response" label="AI回复" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="confidence" label="置信度" width="80">
+              <template #default="{ row }">{{ row.confidence }}%</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">{{ row.status }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="created_at" label="时间" width="160" />
+          </el-table>
+          <el-pagination
+            v-model:current-page="logPage"
+            :page-size="20"
+            :total="logTotal"
+            layout="total, prev, pager, next"
+            style="margin-top: 16px; justify-content: flex-end"
+            @current-change="loadProcessLogs"
+          />
+        </el-tab-pane>
+
+        <!-- 测试 -->
+        <el-tab-pane label="测试" name="test">
+          <el-form :model="testForm" label-width="100px" style="max-width: 600px">
+            <el-form-item label="工单标题">
+              <el-input v-model="testForm.subject" />
+            </el-form-item>
+            <el-form-item label="工单内容">
+              <el-input v-model="testForm.content" type="textarea" :rows="4" />
+            </el-form-item>
+            <el-form-item label="部门ID">
+              <el-input-number v-model="testForm.dept_id" :min="1" />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="testAutoReply">测试自动回复</el-button>
+            </el-form-item>
+            <el-form-item v-if="testResult" label="测试结果">
+              <el-card shadow="never">
+                <pre style="white-space: pre-wrap; margin: 0">{{ JSON.stringify(testResult, null, 2) }}</pre>
+              </el-card>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
+
+    <!-- 知识库编辑弹窗 -->
+    <el-dialog v-model="showKBDialog" :title="editingKB ? '编辑知识条目' : '新增知识条目'" width="600px">
+      <el-form :model="kbForm" label-width="100px">
+        <el-form-item label="分类">
+          <el-input v-model="kbForm.category" placeholder="如：账号、支付、产品" />
+        </el-form-item>
+        <el-form-item label="问题">
+          <el-input v-model="kbForm.question" />
+        </el-form-item>
+        <el-form-item label="答案">
+          <el-input v-model="kbForm.answer" type="textarea" :rows="4" />
+        </el-form-item>
+        <el-form-item label="关键词">
+          <el-input v-model="kbForm.keywords" placeholder="逗号分隔" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="kbForm.status" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showKBDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveKB">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 规则编辑弹窗 -->
+    <el-dialog v-model="showRuleDialog" :title="editingRule ? '编辑规则' : '新增规则'" width="600px">
+      <el-form :model="ruleForm" label-width="100px">
+        <el-form-item label="规则名称">
+          <el-input v-model="ruleForm.name" />
+        </el-form-item>
+        <el-form-item label="匹配方式">
+          <el-select v-model="ruleForm.match_type">
+            <el-option label="关键词" value="keyword" />
+            <el-option label="正则" value="regex" />
+            <el-option label="AI判断" value="ai" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="匹配值">
+          <el-input v-model="ruleForm.match_value" placeholder="关键词或正则表达式" />
+        </el-form-item>
+        <el-form-item label="动作">
+          <el-select v-model="ruleForm.action">
+            <el-option label="自动回复" value="auto_reply" />
+            <el-option label="转人工" value="transfer" />
+            <el-option label="关闭工单" value="close" />
+            <el-option label="打标签" value="tag" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="回复内容" v-if="ruleForm.action === 'auto_reply'">
+          <el-input v-model="ruleForm.reply_content" type="textarea" :rows="3" />
+        </el-form-item>
+        <el-form-item label="优先级">
+          <el-input-number v-model="ruleForm.priority" :min="0" :max="100" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="ruleForm.status" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showRuleDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveRule">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/http'
 
-const activeTab = ref('config')
-const loadingModels = ref(false)
-const loadingLogs = ref(false)
-const savingConfig = ref(false)
-const testing = ref(false)
-const aiModels = ref<any[]>([])
-const logs = ref<any[]>([])
+const activeTab = ref('dashboard')
 
-const modelDialogVisible = ref(false)
-const isEditModel = ref(false)
-const editModelId = ref(0)
-const modelForm = ref({
-  provider: 'openai', model: '', api_endpoint: '', api_key: '',
-  max_tokens: 2000, temperature: 0.7, system_prompt: '', is_active: true
-})
+// 控制台配置
+const dashboard = reactive<any>({ api_endpoint: '', api_key: '', model: '', auto_reply_enabled: false, confidence_threshold: 70, max_daily_replies: 100, transfer_after_reply: false })
 
-const autoReplyConfig = ref({
-  enabled: false, ai_config_id: null as number | null,
-  confidence_threshold: 0.7, max_auto_replies: 3, reply_delay: 5,
-  include_kb_content: true, kb_search_limit: 5,
-  dept_ids: '', exclude_keywords: '',
-  add_disclaimer: true, disclaimer_text: '此回复由AI生成，仅供参考。如需人工帮助请回复「转人工」'
-})
+// 知识库
+const knowledgeList = ref<any[]>([])
+const kbSearch = ref('')
+const showKBDialog = ref(false)
+const editingKB = ref<any>(null)
+const kbForm = reactive<any>({ category: '', question: '', answer: '', keywords: '', status: 1 })
 
-const testForm = ref({ subject: '', content: '', dept_id: 0 })
+// 规则
+const rules = ref<any[]>([])
+const showRuleDialog = ref(false)
+const editingRule = ref<any>(null)
+const ruleForm = reactive<any>({ name: '', match_type: 'keyword', match_value: '', action: 'auto_reply', reply_content: '', priority: 0, status: 1 })
+
+// 队列
+const queue = ref<any[]>([])
+const queueStats = reactive<any>({})
+
+// 日志
+const processLogs = ref<any[]>([])
+const logPage = ref(1)
+const logTotal = ref(0)
+
+// 测试
+const testForm = reactive({ subject: '', content: '', dept_id: 1 })
 const testResult = ref<any>(null)
 
-const loadModels = async () => {
-  loadingModels.value = true
-  try {
-    const res = await request.get('/api/admin/ai-ticket/configs')
-    aiModels.value = res.data || []
-  } catch (e) {}
-  finally { loadingModels.value = false }
+const loadDashboard = async () => {
+  const { data } = await request.get('/admin/ai-ticket/dashboard')
+  if (data) Object.assign(dashboard, data)
+}
+const saveDashboard = async () => {
+  await request.put('/admin/ai-ticket/dashboard', dashboard)
+  ElMessage.success('保存成功')
 }
 
-const loadAutoReplyConfig = async () => {
-  try {
-    const res = await request.get('/api/admin/ai-ticket/auto-reply-config')
-    if (res.data) autoReplyConfig.value = { ...autoReplyConfig.value, ...res.data }
-  } catch (e) {}
+const loadKnowledge = async () => {
+  const { data } = await request.get('/admin/ai-ticket/knowledge', { params: { keyword: kbSearch.value } })
+  knowledgeList.value = Array.isArray(data) ? data : []
+}
+const editKB = (row: any) => { editingKB.value = row; Object.assign(kbForm, row); showKBDialog.value = true }
+const saveKB = async () => {
+  if (editingKB.value) {
+    await request.put(`/admin/ai-ticket/knowledge/${editingKB.value.id}`, kbForm)
+  } else {
+    await request.post('/admin/ai-ticket/knowledge', kbForm)
+  }
+  ElMessage.success('保存成功')
+  showKBDialog.value = false
+  editingKB.value = null
+  Object.assign(kbForm, { category: '', question: '', answer: '', keywords: '', status: 1 })
+  loadKnowledge()
+}
+const deleteKB = async (row: any) => {
+  await ElMessageBox.confirm('确定删除？', '提示')
+  await request.delete(`/admin/ai-ticket/knowledge/${row.id}`)
+  ElMessage.success('删除成功')
+  loadKnowledge()
+}
+const importDefault = async () => {
+  await request.post('/admin/ai-ticket/knowledge/import')
+  ElMessage.success('导入完成')
+  loadKnowledge()
 }
 
-const loadLogs = async () => {
-  loadingLogs.value = true
-  try {
-    const res = await request.get('/api/admin/ai-ticket/logs')
-    logs.value = res.data?.items || []
-  } catch (e) {}
-  finally { loadingLogs.value = false }
+const loadRules = async () => {
+  const { data } = await request.get('/admin/ai-ticket/rules')
+  rules.value = Array.isArray(data) ? data : []
+}
+const editRule = (row: any) => { editingRule.value = row; Object.assign(ruleForm, row); showRuleDialog.value = true }
+const saveRule = async () => {
+  if (editingRule.value) {
+    await request.put(`/admin/ai-ticket/rules/${editingRule.value.id}`, ruleForm)
+  } else {
+    await request.post('/admin/ai-ticket/rules', ruleForm)
+  }
+  ElMessage.success('保存成功')
+  showRuleDialog.value = false
+  editingRule.value = null
+  Object.assign(ruleForm, { name: '', match_type: 'keyword', match_value: '', action: 'auto_reply', reply_content: '', priority: 0, status: 1 })
+  loadRules()
+}
+const deleteRule = async (row: any) => {
+  await ElMessageBox.confirm('确定删除？', '提示')
+  await request.delete(`/admin/ai-ticket/rules/${row.id}`)
+  ElMessage.success('删除成功')
+  loadRules()
 }
 
-const showAddModel = () => {
-  isEditModel.value = false
-  modelForm.value = { provider: 'openai', model: '', api_endpoint: '', api_key: '', max_tokens: 2000, temperature: 0.7, system_prompt: '', is_active: true }
-  modelDialogVisible.value = true
+const loadQueue = async () => {
+  const { data } = await request.get('/admin/ai-ticket/queue')
+  queue.value = data?.items || []
+  const { data: stats } = await request.get('/admin/ai-ticket/queue/stats')
+  if (stats) Object.assign(queueStats, stats)
 }
 
-const showEditModel = (row: any) => {
-  isEditModel.value = true
-  editModelId.value = row.id
-  modelForm.value = { ...row, api_key: '' }
-  modelDialogVisible.value = true
+const loadProcessLogs = async () => {
+  const { data } = await request.get('/admin/ai-ticket/process-logs', { params: { page: logPage.value } })
+  processLogs.value = data?.items || []
+  logTotal.value = data?.total || 0
 }
 
-const submitModel = async () => {
-  if (!modelForm.value.model) { ElMessage.warning('请输入模型名称'); return }
-  try {
-    const data = { ...modelForm.value }
-    if (isEditModel.value && !data.api_key) delete data.api_key
-    if (isEditModel.value) {
-      await request.put(`/api/admin/ai-ticket/configs/${editModelId.value}`, data)
-    } else {
-      await request.post('/api/admin/ai-ticket/configs', data)
-    }
-    ElMessage.success('操作成功')
-    modelDialogVisible.value = false
-    loadModels()
-  } catch (e) { ElMessage.error('操作失败') }
-}
-
-const deleteModel = async (id: number) => {
-  try {
-    await request.delete(`/api/admin/ai-ticket/configs/${id}`)
-    ElMessage.success('删除成功')
-    loadModels()
-  } catch (e) { ElMessage.error('删除失败') }
-}
-
-const saveAutoReplyConfig = async () => {
-  savingConfig.value = true
-  try {
-    await request.put('/api/admin/ai-ticket/auto-reply-config', autoReplyConfig.value)
-    ElMessage.success('保存成功')
-  } catch (e) { ElMessage.error('保存失败') }
-  finally { savingConfig.value = false }
-}
-
-const runTest = async () => {
-  if (!testForm.value.subject && !testForm.value.content) { ElMessage.warning('请输入测试内容'); return }
-  testing.value = true
-  testResult.value = null
-  try {
-    const res = await request.post('/api/admin/ai-ticket/test', testForm.value)
-    testResult.value = res.data
-  } catch (e) { ElMessage.error('测试失败') }
-  finally { testing.value = false }
+const testAutoReply = async () => {
+  const { data } = await request.post('/admin/ai-ticket/test', testForm)
+  testResult.value = data
 }
 
 onMounted(() => {
-  loadModels()
-  loadAutoReplyConfig()
-  loadLogs()
+  loadDashboard()
+  loadKnowledge()
+  loadRules()
+  loadQueue()
+  loadProcessLogs()
 })
 </script>
 
 <style scoped>
-.ai-ticket-page { padding: 20px; }
-.page-header { margin-bottom: 20px; }
-.page-header h2 { margin: 0 0 4px 0; font-size: 20px; }
-.subtitle { color: #909399; font-size: 14px; }
-.tab-header { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
-.form-hint { color: #909399; font-size: 12px; margin-top: 4px; }
-.test-reply { background: #f5f7fa; padding: 16px; border-radius: 8px; white-space: pre-wrap; }
+.card-header { display: flex; align-items: center; justify-content: space-between; }
 </style>

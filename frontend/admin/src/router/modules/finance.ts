@@ -580,11 +580,11 @@ export const financeRoutes: AppRouteRecord = {
           }
         },
         {
-          path: 'cs-widgets',
-          name: 'CSWidgets',
-          component: () => import('@/views/finance/system/cs-widgets/index.vue'),
+          path: 'cs-chat',
+          name: 'CSChat',
+          component: () => import('@/views/finance/system/cs-chat/index.vue'),
           meta: {
-            title: '客服悬浮窗',
+            title: '客服聊天系统',
             icon: 'ep:service'
           }
         }
