@@ -661,6 +661,15 @@ export const financeRoutes: AppRouteRecord = {
           }
         },
         {
+          path: 'languages',
+          name: 'Languages',
+          component: () => import('@/views/finance/system/languages/index.vue'),
+          meta: {
+            title: '语言管理',
+            icon: 'ep:connection'
+          }
+        },
+        {
           path: 'cron-url',
           name: 'CronUrl',
           component: () => import('@/views/finance/system/cron-url/index.vue'),
