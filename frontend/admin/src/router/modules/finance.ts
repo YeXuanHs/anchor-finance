@@ -67,6 +67,24 @@ export const financeRoutes: AppRouteRecord = {
             title: '联系人',
             icon: 'ep:phone'
           }
+        },
+        {
+          path: 'services',
+          name: 'ClientServices',
+          component: () => import('@/views/finance/clients/services/index.vue'),
+          meta: {
+            title: '客户服务',
+            icon: 'ep:service'
+          }
+        },
+        {
+          path: 'remarks',
+          name: 'ClientRemarks',
+          component: () => import('@/views/finance/clients/remarks/index.vue'),
+          meta: {
+            title: '用户备注',
+            icon: 'ep:edit'
+          }
         }
       ]
     },
@@ -113,6 +131,15 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: 'AI购物助手',
             icon: 'ep:shopping-cart-full'
+          }
+        },
+        {
+          path: 'advanced-options',
+          name: 'AdvancedOptions',
+          component: () => import('@/views/finance/products/advanced-options/index.vue'),
+          meta: {
+            title: '高级配置项',
+            icon: 'ep:setting'
           }
         }
       ]
@@ -378,6 +405,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '下载中心',
             icon: 'ep:download'
           }
+        },
+        {
+          path: 'community',
+          name: 'Community',
+          component: () => import('@/views/finance/content/community/index.vue'),
+          meta: {
+            title: '社区管理',
+            icon: 'ep:chat-dot-round'
+          }
         }
       ]
     },
@@ -596,6 +632,69 @@ export const financeRoutes: AppRouteRecord = {
             title: '交易市场',
             icon: 'ep:shop'
           }
+        },
+        {
+          path: 'menus',
+          name: 'Menus',
+          component: () => import('@/views/finance/system/menus/index.vue'),
+          meta: {
+            title: '菜单管理',
+            icon: 'ep:menu'
+          }
+        },
+        {
+          path: 'messages',
+          name: 'Messages',
+          component: () => import('@/views/finance/system/messages/index.vue'),
+          meta: {
+            title: '消息配置',
+            icon: 'ep:message'
+          }
+        },
+        {
+          path: 'site-settings',
+          name: 'SiteSettings',
+          component: () => import('@/views/finance/system/site-settings/index.vue'),
+          meta: {
+            title: '站点设置',
+            icon: 'ep:house'
+          }
+        },
+        {
+          path: 'cron-url',
+          name: 'CronUrl',
+          component: () => import('@/views/finance/system/cron-url/index.vue'),
+          meta: {
+            title: 'URL定时任务',
+            icon: 'ep:link'
+          }
+        },
+        {
+          path: 'provisions',
+          name: 'Provisions',
+          component: () => import('@/views/finance/system/provisions/index.vue'),
+          meta: {
+            title: '供应管理',
+            icon: 'ep:box'
+          }
+        },
+        {
+          path: 'log-records',
+          name: 'LogRecords',
+          component: () => import('@/views/finance/system/log-records/index.vue'),
+          meta: {
+            title: '日志记录',
+            icon: 'ep:document'
+          }
+        },
+        {
+          path: 'run-map',
+          name: 'RunMap',
+          component: () => import('@/views/finance/system/run-map/index.vue'),
+          meta: {
+            title: '运行映射',
+            icon: 'ep:map-location'
+          }
         }
       ]
     },
@@ -678,6 +777,15 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '群发消息',
             icon: 'ep:promotion'
+          }
+        },
+        {
+          path: 'batch-sync',
+          name: 'BatchSync',
+          component: () => import('@/views/finance/advanced/batch-sync/index.vue'),
+          meta: {
+            title: '批量同步',
+            icon: 'ep:refresh'
           }
         }
       ]

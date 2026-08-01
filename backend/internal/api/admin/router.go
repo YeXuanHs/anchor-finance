@@ -656,18 +656,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/dcim-cloud/servers/:id/sync", dcimCloudHandler.SyncServer)
 		admin.GET("/dcim-cloud/logs", dcimCloudHandler.GetOperationLogs)
 
-		// 钩子系统
-		hookSvc := service.NewHookService(deps.DB, deps.Log)
-		hookHandler := handler.NewHookHandler(hookSvc, deps.Log)
-		admin.GET("/hooks", hookHandler.GetList)
-		admin.GET("/hooks/:id", hookHandler.GetDetail)
-		admin.POST("/hooks", hookHandler.Create)
-		admin.PUT("/hooks/:id", hookHandler.Update)
-		admin.DELETE("/hooks/:id", hookHandler.Delete)
-		admin.POST("/hooks/:id/status", hookHandler.SetStatus)
-		admin.POST("/hooks/:id/trigger", hookHandler.Trigger)
-		admin.GET("/hooks/logs", hookHandler.GetLogs)
-
 		// 关联原因
 		linkCauseSvc := service.NewLinkCauseService(deps.DB, deps.Log)
 		linkCauseHandler := handler.NewLinkCauseHandler(linkCauseSvc, deps.Log)
