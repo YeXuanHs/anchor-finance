@@ -24,6 +24,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Connection } from '@element-plus/icons-vue'
+import { switchLanguage } from '@/i18n'
 
 const { locale } = useI18n()
 
@@ -47,9 +48,7 @@ const currentLangName = computed(() => {
 })
 
 const changeLanguage = (langCode: string) => {
-  locale.value = langCode
-  localStorage.setItem('language', langCode)
-  document.documentElement.lang = langCode
+  switchLanguage(langCode)
 }
 </script>
 

@@ -16,12 +16,12 @@
           </div>
           <h1 class="logo-text">{{ companyName }}</h1>
         </div>
-        <p class="login-subtitle">欢迎回来，请登录您的账户</p>
+        <p class="login-subtitle">{{ $t('auth.welcomeBack') }}</p>
       </div>
 
       <n-tabs v-model:value="activeTab" type="segment" animated class="login-tabs">
         <!-- 密码登录 -->
-        <n-tab-pane v-if="showPasswordLogin" name="password" tab="密码登录">
+        <n-tab-pane v-if="showPasswordLogin" name="password" :tab="$t('auth.passwordLogin')">
           <n-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" class="login-form">
             <n-form-item path="username">
               <n-input
@@ -84,7 +84,7 @@
 
             <div class="login-options">
               <n-checkbox v-model:checked="passwordForm.remember">记住我</n-checkbox>
-              <router-link to="/forgot-password" class="link-text">忘记密码?</router-link>
+              <router-link to="/forgot-password" class="link-text">{{ $t('auth.forgotPassword') }}</router-link>
             </div>
 
             <n-button
@@ -101,7 +101,7 @@
         </n-tab-pane>
 
         <!-- 手机验证码登录 -->
-        <n-tab-pane v-if="loginMethods.phone" name="sms" tab="验证码登录">
+        <n-tab-pane v-if="loginMethods.phone" name="sms" :tab="$t('auth.codeLogin')">
           <n-form ref="smsFormRef" :model="smsForm" :rules="smsRules" class="login-form">
             <n-form-item path="phone">
               <n-input
@@ -244,8 +244,12 @@
         </div>
       </template>
 
+      <div class="login-lang">
+        <LanguageSwitch />
+      </div>
+
       <div class="login-footer">
-        还没有账号？<router-link to="/register" class="link-text">立即注册</router-link>
+        {{ $t('auth.noAccount') }}<router-link to="/register" class="link-text">{{ $t('auth.registerNow') }}</router-link>
       </div>
     </div>
   </div>
@@ -267,6 +271,7 @@ import {
 import { useUserStore } from '@/stores/user'
 import { useConfigStore } from '@/stores/config'
 import GeetestCaptcha from '@/components/GeetestCaptcha.vue'
+import LanguageSwitch from '@/components/LanguageSwitch.vue'
 import request from '@/utils/request'
 
 const router = useRouter()
@@ -797,6 +802,12 @@ function handleThirdParty(platform: string) {
   background: #f0f4ff;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
+}
+
+.login-lang {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
 }
 
 .login-footer {

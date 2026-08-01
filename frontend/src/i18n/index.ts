@@ -14,4 +14,11 @@ const i18n = createI18n({
   }
 })
 
+// 切换语言
+export async function switchLanguage(langCode: string) {
+  i18n.global.locale.value = langCode
+  localStorage.setItem('language', langCode)
+  document.documentElement.lang = langCode
+}
+
 export default i18n

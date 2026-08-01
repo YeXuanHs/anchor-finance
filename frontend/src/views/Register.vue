@@ -16,7 +16,7 @@
           </div>
           <h1 class="logo-text">锚点财务</h1>
         </div>
-        <p class="register-subtitle">创建您的账户，开启财务管理之旅</p>
+        <p class="register-subtitle">{{ $t('auth.registerTitle') }}</p>
       </div>
 
       <n-form ref="formRef" :model="form" :rules="rules" class="register-form">
@@ -131,12 +131,16 @@
           class="register-btn"
           @click="handleRegister"
         >
-          注册
+          {{ $t('auth.register') }}
         </n-button>
       </n-form>
 
+      <div class="register-lang">
+        <LanguageSwitch />
+      </div>
+
       <div class="register-footer">
-        已有账号？<router-link to="/login" class="link-text">去登录</router-link>
+        {{ $t('auth.hasAccount') }}<router-link to="/login" class="link-text">{{ $t('auth.loginNow') }}</router-link>
       </div>
     </div>
   </div>
@@ -155,6 +159,7 @@ import {
   RefreshOutline
 } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/user'
+import LanguageSwitch from '@/components/LanguageSwitch.vue'
 
 const router = useRouter()
 const message = useMessage()
@@ -509,6 +514,12 @@ async function handleRegister() {
   background: linear-gradient(135deg, #40a9ff, #1890ff);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+}
+
+.register-lang {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
 }
 
 .register-footer {
