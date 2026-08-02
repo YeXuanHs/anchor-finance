@@ -339,7 +339,7 @@ const fetchTicket = async () => {
 
 const fetchDepartments = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/ticket-departments' })
+    const data = await request.get({ url: '/api/admin/ticket/departments' })
     departments.value = data || []
   } catch (error) {
     console.error('获取部门列表失败:', error)

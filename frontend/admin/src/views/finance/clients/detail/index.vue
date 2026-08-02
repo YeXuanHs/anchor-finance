@@ -429,37 +429,37 @@ const fetchTabData = async (tab: string) => {
     services: async () => {
       servicesLoading.value = true
       try {
-        services.value = await request.get({ url: `/api/admin/users/${id}/services` }) || []
+        services.value = await request.get({ url: `/api/admin/client-services?user_id=${id}` }) || []
       } finally { servicesLoading.value = false }
     },
     bills: async () => {
       billsLoading.value = true
       try {
-        bills.value = await request.get({ url: `/api/admin/users/${id}/bills` }) || []
+        bills.value = await request.get({ url: `/api/admin/invoices?user_id=${id}` }) || []
       } finally { billsLoading.value = false }
     },
     transactions: async () => {
       transactionsLoading.value = true
       try {
-        transactions.value = await request.get({ url: `/api/admin/users/${id}/transactions` }) || []
+        transactions.value = await request.get({ url: `/api/admin/account?user_id=${id}` }) || []
       } finally { transactionsLoading.value = false }
     },
     tickets: async () => {
       ticketsLoading.value = true
       try {
-        tickets.value = await request.get({ url: `/api/admin/users/${id}/tickets` }) || []
+        tickets.value = await request.get({ url: `/api/admin/tickets?user_id=${id}` }) || []
       } finally { ticketsLoading.value = false }
     },
     logs: async () => {
       logsLoading.value = true
       try {
-        logs.value = await request.get({ url: `/api/admin/users/${id}/logs` }) || []
+        logs.value = await request.get({ url: `/api/admin/log-records?user_id=${id}` }) || []
       } finally { logsLoading.value = false }
     },
     referrals: async () => {
       referralsLoading.value = true
       try {
-        referrals.value = await request.get({ url: `/api/admin/users/${id}/referrals` }) || []
+        referrals.value = await request.get({ url: `/api/admin/affiliate?user_id=${id}` }) || []
       } finally { referralsLoading.value = false }
     }
   }
@@ -506,7 +506,7 @@ const handleCreditAdjust = async () => {
   }
   creditLoading.value = true
   try {
-    await request.post({ url: `/api/admin/users/${id}/credit-adjust`, params: creditForm })
+    await request.post({ url: `/api/admin/credit/users/${id}/adjust`, params: creditForm })
     ElMessage.success('信用调整成功')
     fetchClient()
     creditForm.amount = 0

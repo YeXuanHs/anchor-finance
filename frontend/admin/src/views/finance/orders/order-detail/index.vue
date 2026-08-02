@@ -182,7 +182,7 @@ const fetchLogs = async () => {
   if (!id) return
 
   try {
-    const data = await request.get({ url: `/api/admin/orders/${id}/logs` })
+    const data = await request.get({ url: `/api/admin/log-records?rel_id=${id}` })
     logs.value = data || []
   } catch (error) {
     console.error('获取操作日志失败:', error)
@@ -224,7 +224,12 @@ const handleSuspend = async () => {
   try {
     await ElMessageBox.confirm('确定要暂停该服务吗？', '暂停确认', { type: 'warning' })
     actionLoading.value = true
-    await request.post({ url: `/api/admin/orders/${id}/suspend` })
+    const serviceId = order.value?.service_id
+    if (!serviceId) {
+      ElMessage.error('未找到关联服务ID')
+      return
+    }
+    await request.post({ url: `/api/admin/client-services/${serviceId}/suspend` })
     ElMessage.success('服务已暂停')
     fetchOrder()
     fetchLogs()
@@ -242,7 +247,12 @@ const handleTerminate = async () => {
   try {
     await ElMessageBox.confirm('确定要终止该服务吗？此操作不可恢复。', '终止确认', { type: 'danger' })
     actionLoading.value = true
-    await request.post({ url: `/api/admin/orders/${id}/terminate` })
+    const serviceId = order.value?.service_id
+    if (!serviceId) {
+      ElMessage.error('未找到关联服务ID')
+      return
+    }
+    await request.post({ url: `/api/admin/client-services/${serviceId}/terminate` })
     ElMessage.success('服务已终止')
     fetchOrder()
     fetchLogs()
@@ -260,7 +270,12 @@ const handleRenew = async () => {
   try {
     await ElMessageBox.confirm('确定要为该服务续费吗？', '续费确认', { type: 'warning' })
     actionLoading.value = true
-    await request.post({ url: `/api/admin/orders/${id}/renew` })
+    const serviceId = order.value?.service_id
+    if (!serviceId) {
+      ElMessage.error('未找到关联服务ID')
+      return
+    }
+    await request.post({ url: `/api/admin/client-services/${serviceId}/renew` })
     ElMessage.success('续费成功')
     fetchOrder()
     fetchLogs()

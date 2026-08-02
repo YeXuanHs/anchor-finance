@@ -1,5 +1,55 @@
 <template>
   <div class="finance-dashboard">
+    <!-- 全局搜索 -->
+    <el-card shadow="hover" class="search-card mb-4">
+      <el-input
+        v-model="globalSearch"
+        placeholder="全局搜索：输入客户名、邮箱、产品、订单号、工单号..."
+        size="large"
+        clearable
+        @keyup.enter="handleGlobalSearch"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+        <template #append>
+          <el-button @click="handleGlobalSearch">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
+        </template>
+      </el-input>
+      <div class="search-tags">
+        <el-tag
+          v-for="tag in searchTags"
+          :key="tag.label"
+          :type="tag.type"
+          class="search-tag"
+          @click="quickSearch(tag.query)"
+        >
+          {{ tag.label }}
+        </el-tag>
+      </div>
+    </el-card>
+
+    <!-- 快捷操作 -->
+    <el-card shadow="hover" class="mb-4">
+      <template #header>
+        <span>快捷操作</span>
+      </template>
+      <el-row :gutter="16">
+        <el-col :span="4" v-for="action in quickActions" :key="action.label">
+          <el-button
+            class="quick-action-btn"
+            :icon="action.icon"
+            @click="$router.push(action.route)"
+          >
+            {{ action.label }}
+          </el-button>
+        </el-col>
+      </el-row>
+    </el-card>
+
     <el-row :gutter="20" class="mb-4">
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
@@ -154,11 +204,50 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Money, User, ChatDotRound, Document } from '@element-plus/icons-vue'
+import { Money, User, ChatDotRound, Document, Search, Plus, Tickets, ShoppingCart, UserFilled, Setting } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import request from '@/utils/http'
 
+const router = useRouter()
 const chartPeriod = ref('week')
+
+// 全局搜索
+const globalSearch = ref('')
+const searchTags = [
+  { label: '客户管理', type: 'primary', query: 'clients' },
+  { label: '订单列表', type: 'success', query: 'orders' },
+  { label: '工单列表', type: 'warning', query: 'tickets' },
+  { label: '产品管理', type: 'info', query: 'products' },
+]
+
+// 快捷操作
+const quickActions = [
+  { label: '新增客户', icon: Plus, route: '/finance/clients/list' },
+  { label: '创建订单', icon: ShoppingCart, route: '/finance/orders/create' },
+  { label: '处理工单', icon: Tickets, route: '/finance/tickets/list' },
+  { label: '客户列表', icon: UserFilled, route: '/finance/clients/list' },
+  { label: '产品管理', icon: Setting, route: '/finance/products/list' },
+  { label: '系统设置', icon: Setting, route: '/finance/system/basic' },
+]
+
+const handleGlobalSearch = () => {
+  if (!globalSearch.value.trim()) return
+  router.push({
+    path: '/finance/clients/list',
+    query: { search: globalSearch.value }
+  })
+}
+
+const quickSearch = (query: string) => {
+  const routeMap: Record<string, string> = {
+    clients: '/finance/clients/list',
+    orders: '/finance/orders/list',
+    tickets: '/finance/tickets/list',
+    products: '/finance/products/list',
+  }
+  router.push(routeMap[query] || '/finance/dashboard')
+}
 
 // 加载状态
 const incomeLoading = ref(false)
@@ -496,6 +585,41 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .finance-dashboard {
   padding: 20px;
+}
+
+.search-card {
+  .search-tags {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+
+    .search-tag {
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        transform: translateY(-2px);
+        opacity: 0.8;
+      }
+    }
+  }
+}
+
+.quick-action-btn {
+  width: 100%;
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  border-radius: 8px;
+  transition: all 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .stat-card {
