@@ -196,3 +196,184 @@ func (h *DashboardHandler) GetProductDistribution(c *gin.Context) {
 		"data": stats,
 	})
 }
+
+// GetAdminIndex 管理首页
+// GET /admin/dashboard/admin-index
+func (h *DashboardHandler) GetAdminIndex(c *gin.Context) {
+	// 最近操作日志（最近7条）
+	type LogEntry struct {
+		ID        uint      `json:"id"`
+		Action    string    `json:"action"`
+		Operator  string    `json:"operator"`
+		IP        string    `json:"ip"`
+		CreatedAt time.Time `json:"created_at"`
+	}
+	var logs []LogEntry
+	h.db.Table("system_logs").
+		Select("id, message as action, module as operator, ip, created_at").
+		Order("created_at DESC").
+		Limit(7).
+		Scan(&logs)
+
+	// 快捷统计
+	type QuickStats struct {
+		TodayIncome    float64 `json:"today_income"`
+		NewClients     int64   `json:"new_clients"`
+		PendingTickets int64   `json:"pending_tickets"`
+		PendingOrders  int64   `json:"pending_orders"`
+	}
+
+	today := time.Now().Format("2006-01-02")
+	var stats QuickStats
+	h.db.Raw(`SELECT COALESCE(SUM(amount), 0) FROM orders WHERE DATE(created_at) = ? AND status IN (3, 5)`, today).Scan(&stats.TodayIncome)
+	h.db.Raw(`SELECT COUNT(*) FROM users WHERE DATE(created_at) = ?`, today).Scan(&stats.NewClients)
+	h.db.Raw(`SELECT COUNT(*) FROM tickets WHERE status IN (0, 2)`).Scan(&stats.PendingTickets)
+	h.db.Raw(`SELECT COUNT(*) FROM orders WHERE status IN (0, 1)`).Scan(&stats.PendingOrders)
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"logs":  logs,
+			"stats": stats,
+		},
+	})
+}
+
+// GlobalSearch 全局搜索
+// GET /admin/dashboard/global-search?keyword=xxx
+func (h *DashboardHandler) GlobalSearch(c *gin.Context) {
+	keyword := c.Query("keyword")
+	if keyword == "" {
+		c.JSON(200, gin.H{"code": 0, "data": []interface{}{}})
+		return
+	}
+
+	like := "%" + keyword + "%"
+
+	type SearchResult struct {
+		Category string      `json:"category"`
+		Name     string      `json:"name"`
+		List     interface{} `json:"list"`
+	}
+
+	var results []SearchResult
+
+	// 搜索用户
+	type ClientResult struct {
+		ID     uint   `json:"id"`
+		URL    string `json:"url"`
+		Name   string `json:"name"`
+		Email  string `json:"email"`
+		Status int16  `json:"status"`
+	}
+	var clients []ClientResult
+	h.db.Raw(`
+		SELECT id, id as url, username as name, email, status
+		FROM users
+		WHERE username LIKE ? OR email LIKE ? OR phone LIKE ? OR nickname LIKE ?
+		LIMIT 20
+	`, like, like, like, like).Scan(&clients)
+	if len(clients) > 0 {
+		results = append(results, SearchResult{
+			Category: "client",
+			Name:     "用户",
+			List:     clients,
+		})
+	}
+
+	// 搜索产品
+	type ProductResult struct {
+		ID     uint   `json:"id"`
+		URL    string `json:"url"`
+		Name   string `json:"name"`
+		Status int16  `json:"status"`
+	}
+	var products []ProductResult
+	h.db.Raw(`
+		SELECT id, id as url, name, status
+		FROM products
+		WHERE name LIKE ? OR description LIKE ?
+		LIMIT 20
+	`, like, like).Scan(&products)
+	if len(products) > 0 {
+		results = append(results, SearchResult{
+			Category: "product",
+			Name:     "产品",
+			List:     products,
+		})
+	}
+
+	// 搜索工单
+	type TicketResult struct {
+		ID       uint   `json:"id"`
+		URL      string `json:"url"`
+		TicketNo string `json:"ticket_no"`
+		Subject  string `json:"subject"`
+		Status   int16  `json:"status"`
+	}
+	var tickets []TicketResult
+	h.db.Raw(`
+		SELECT t.id, t.id as url, t.ticket_no, t.subject, t.status
+		FROM tickets t
+		WHERE t.ticket_no LIKE ? OR t.subject LIKE ?
+		LIMIT 20
+	`, like, like).Scan(&tickets)
+	if len(tickets) > 0 {
+		results = append(results, SearchResult{
+			Category: "ticket",
+			Name:     "工单",
+			List:     tickets,
+		})
+	}
+
+	// 搜索订单
+	type OrderResult struct {
+		ID      uint    `json:"id"`
+		URL     string  `json:"url"`
+		OrderNo string  `json:"order_no"`
+		Amount  float64 `json:"amount"`
+		Status  int16   `json:"status"`
+	}
+	var orders []OrderResult
+	h.db.Raw(`
+		SELECT id, id as url, order_no, CAST(amount AS DECIMAL(20,2)) as amount, status
+		FROM orders
+		WHERE order_no LIKE ?
+		LIMIT 20
+	`, like).Scan(&orders)
+	if len(orders) > 0 {
+		results = append(results, SearchResult{
+			Category: "order",
+			Name:     "订单",
+			List:     orders,
+		})
+	}
+
+	// 搜索账单
+	type InvoiceResult struct {
+		ID        uint    `json:"id"`
+		URL       string  `json:"url"`
+		InvoiceNo string  `json:"invoice_no"`
+		SubTotal  float64 `json:"sub_total"`
+		Status    int16   `json:"status"`
+	}
+	var invoices []InvoiceResult
+	h.db.Raw(`
+		SELECT id, id as url, invoice_no, CAST(sub_total AS DECIMAL(20,2)) as sub_total, status
+		FROM invoices
+		WHERE invoice_no LIKE ?
+		LIMIT 20
+	`, like).Scan(&invoices)
+	if len(invoices) > 0 {
+		results = append(results, SearchResult{
+			Category: "invoice",
+			Name:     "账单",
+			List:     invoices,
+		})
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": results,
+	})
+}

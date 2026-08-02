@@ -113,3 +113,131 @@ func (h *RunMapHandler) GetTaskTypes(c *gin.Context) {
 		"types": types,
 	})
 }
+
+// GetCronTrend 定时任务执行趋势图表数据
+// GET /admin/run-map/cron-trend?time_type=1
+func (h *RunMapHandler) GetCronTrend(c *gin.Context) {
+	timeType, _ := strconv.Atoi(c.DefaultQuery("time_type", "1"))
+
+	var days int
+	switch timeType {
+	case 2:
+		days = 15
+	case 3:
+		days = 30
+	case 4:
+		days = 90
+	default:
+		days = 7
+	}
+
+	type TrendItem struct {
+		Date  string `json:"date"`
+		Total int    `json:"total"`
+		Fail  int    `json:"fail"`
+	}
+
+	var trends []TrendItem
+	now := time.Now()
+
+	for i := days - 1; i >= 0; i-- {
+		date := now.AddDate(0, 0, -i)
+		dateStr := date.Format("20060102")
+		startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC).Unix()
+		endOfDay := time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 0, time.UTC).Unix()
+
+		var item TrendItem
+		item.Date = date.Format("01-02")
+
+		// 从 system_logs 或 run_map 表统计执行情况
+		h.db.Table("run_maps").
+			Where("created_at >= ? AND created_at <= ?", startOfDay, endOfDay).
+			Count(&item.Total)
+
+		h.db.Table("run_maps").
+			Where("created_at >= ? AND created_at <= ? AND run_count = 0", startOfDay, endOfDay).
+			Count(&item.Fail)
+
+		trends = append(trends, item)
+	}
+
+	response.Success(c, gin.H{
+		"trends": trends,
+	})
+}
+
+// GetCronHistory 定时任务执行历史列表
+// GET /admin/run-map/cron-history?datetime=20260802
+func (h *RunMapHandler) GetCronHistory(c *gin.Context) {
+	datetime := c.DefaultQuery("datetime", time.Now().Format("20060102"))
+
+	// 解析日期
+	date, err := time.Parse("20060102", datetime)
+	if err != nil {
+		response.BadRequest(c, "invalid date format")
+		return
+	}
+	startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	endOfDay := time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 0, time.UTC)
+
+	// 定时任务类型定义
+	type CronType struct {
+		Type      int    `json:"type"`
+		Name      string `json:"name"`
+		ShowFail  int    `json:"show_fail"`
+		Keywords  string `json:"keywords"`
+	}
+	cronTypes := []CronType{
+		{Type: 1, Name: "自动暂停", ShowFail: 1, Keywords: "产品到期暂停"},
+		{Type: 2, Name: "未实名暂停", ShowFail: 1, Keywords: "未实名客户产品暂停"},
+		{Type: 3, Name: "信用额产品暂停", ShowFail: 1, Keywords: "信用额账单未支付"},
+		{Type: 4, Name: "自动删除", ShowFail: 1, Keywords: "产品到期删除"},
+		{Type: 7, Name: "DCIM流量重置", ShowFail: 1, Keywords: "DCIM流量"},
+		{Type: 8, Name: "魔方云流量重置", ShowFail: 1, Keywords: "魔方云流量"},
+		{Type: 9, Name: "关闭工单", ShowFail: 0, Keywords: ""},
+		{Type: 10, Name: "信用额账单提醒", ShowFail: 0, Keywords: ""},
+		{Type: 12, Name: "账单提醒", ShowFail: 0, Keywords: ""},
+		{Type: 13, Name: "生成账单", ShowFail: 0, Keywords: ""},
+	}
+
+	type HistoryItem struct {
+		Type     int    `json:"type"`
+		Name     string `json:"name"`
+		ShowFail int    `json:"show_fail"`
+		Keywords string `json:"keywords"`
+		All      int    `json:"all"`
+		Fail     int    `json:"fail"`
+	}
+
+	var result []HistoryItem
+	for _, ct := range cronTypes {
+		item := HistoryItem{
+			Type:     ct.Type,
+			Name:     ct.Name,
+			ShowFail: ct.ShowFail,
+			Keywords: ct.Keywords,
+		}
+
+		// 统计全部执行次数
+		if ct.Keywords != "" {
+			h.db.Table("run_maps").
+				Where("description LIKE ? AND created_at >= ? AND created_at <= ?",
+					"%"+ct.Keywords+"%", startOfDay.Unix(), endOfDay.Unix()).
+				Count(&item.All)
+		}
+
+		// 统计失败次数
+		if ct.ShowFail == 1 && ct.Keywords != "" {
+			h.db.Table("run_maps").
+				Where("description LIKE ? AND created_at >= ? AND created_at <= ? AND run_count = 0",
+					"%"+ct.Keywords+"%", startOfDay.Unix(), endOfDay.Unix()).
+				Count(&item.Fail)
+		}
+
+		result = append(result, item)
+	}
+
+	response.Success(c, gin.H{
+		"data": result,
+	})
+}

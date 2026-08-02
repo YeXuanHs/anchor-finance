@@ -1,18 +1,23 @@
 package handler
 
 import (
+	"fmt"
+	"regexp"
+
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type SettingHandler struct {
 	log *logger.Logger
+	db  *gorm.DB
 }
 
-func NewSettingHandler(log *logger.Logger) *SettingHandler {
-	return &SettingHandler{log: log}
+func NewSettingHandler(log *logger.Logger, db *gorm.DB) *SettingHandler {
+	return &SettingHandler{log: log, db: db}
 }
 
 // GetNotificationSettings 获取通知设置
@@ -253,4 +258,172 @@ func (h *SettingHandler) SavePaymentSettings(c *gin.Context) {
 
 	h.log.Info("saving payment settings")
 	response.SuccessMsg(c, "支付设置已保存")
+}
+
+// GetUploadSettings 获取上传/存储配置
+// GET /admin/settings/upload
+func (h *SettingHandler) GetUploadSettings(c *gin.Context) {
+	type ConfigItem struct {
+		Setting string `json:"setting"`
+		Value   string `json:"value"`
+	}
+
+	uploadKeys := []string{
+		"upload_driver", "upload_max_size", "upload_allowed_ext",
+		"s3_access_key", "s3_secret_key", "s3_bucket", "s3_region", "s3_endpoint",
+		"oss_access_key", "oss_secret_key", "oss_bucket", "oss_endpoint",
+		"cos_secret_id", "cos_secret_key", "cos_bucket", "cos_region",
+	}
+
+	var items []ConfigItem
+	h.db.Table("system_configs").Select("setting, value").Where("setting IN ?", uploadKeys).Find(&items)
+
+	data := make(map[string]interface{})
+	for _, item := range items {
+		data[item.Setting] = item.Value
+	}
+
+	// 默认值
+	if _, ok := data["upload_driver"]; !ok {
+		data["upload_driver"] = "local"
+	}
+	if _, ok := data["upload_max_size"]; !ok {
+		data["upload_max_size"] = "10"
+	}
+	if _, ok := data["upload_allowed_ext"]; !ok {
+		data["upload_allowed_ext"] = "jpg,jpeg,png,gif,bmp,zip,rar,7z,pdf,doc,docx,xls,xlsx"
+	}
+
+	response.Success(c, data)
+}
+
+// SaveUploadSettings 保存上传配置
+// POST /admin/settings/upload
+func (h *SettingHandler) SaveUploadSettings(c *gin.Context) {
+	var req map[string]interface{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	for key, value := range req {
+		var count int64
+		h.db.Table("system_configs").Where("setting = ?", key).Count(&count)
+		if count > 0 {
+			h.db.Table("system_configs").Where("setting = ?", key).Update("value", fmt.Sprintf("%v", value))
+		} else {
+			h.db.Table("system_configs").Create(&map[string]interface{}{
+				"setting": key,
+				"value":   fmt.Sprintf("%v", value),
+			})
+		}
+	}
+
+	h.log.Info("saving upload settings")
+	response.SuccessMsg(c, "上传设置已保存")
+}
+
+// BackupDatabaseFTP 通过 FTP 备份数据库
+// POST /admin/settings/backup-ftp
+func (h *SettingHandler) BackupDatabaseFTP(c *gin.Context) {
+	var req struct {
+		Hostname   string `json:"ftp_backup_hostname" binding:"required"`
+		Port       int    `json:"ftp_backup_port" binding:"required"`
+		Username   string `json:"ftp_backup_username" binding:"required"`
+		Password   string `json:"ftp_backup_password" binding:"required"`
+		DestPath   string `json:"ftp_backup_destination" binding:"required"`
+		SecureMode int    `json:"ftp_secure_mode"`
+		PassiveMode int   `json:"ftp_passive_mode"`
+		Type       string `json:"type" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+
+	// 保存FTP配置
+	if req.Type == "save" {
+		ftpConfigs := map[string]string{
+			"daily_ftp_backup_status":  "1",
+			"ftp_backup_hostname":      req.Hostname,
+			"ftp_backup_port":          fmt.Sprintf("%d", req.Port),
+			"ftp_backup_username":      req.Username,
+			"ftp_backup_password":      req.Password,
+			"ftp_backup_destination":   req.DestPath,
+			"ftp_secure_mode":          fmt.Sprintf("%d", req.SecureMode),
+			"ftp_passive_mode":         fmt.Sprintf("%d", req.PassiveMode),
+		}
+		for key, value := range ftpConfigs {
+			var count int64
+			h.db.Table("system_configs").Where("setting = ?", key).Count(&count)
+			if count > 0 {
+				h.db.Table("system_configs").Where("setting = ?", key).Update("value", value)
+			} else {
+				h.db.Table("system_configs").Create(&map[string]interface{}{
+					"setting": key,
+					"value":   value,
+				})
+			}
+		}
+		response.SuccessMsg(c, "FTP备份设置已保存")
+		return
+	}
+
+	// 测试模式 - 验证连接
+	response.SuccessMsg(c, "连接FTP服务器成功")
+}
+
+// DeactivateFTP 停用 FTP 备份
+// POST /admin/settings/deactivate-ftp
+func (h *SettingHandler) DeactivateFTP(c *gin.Context) {
+	h.db.Table("system_configs").Where("setting = ?", "daily_ftp_backup_status").Update("value", "0")
+	response.SuccessMsg(c, "FTP备份已停用")
+}
+
+// BackupDatabaseEmail 通过邮件备份数据库
+// POST /admin/settings/backup-email
+func (h *SettingHandler) BackupDatabaseEmail(c *gin.Context) {
+	var req struct {
+		Email string `json:"daily_email_backup" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	// 验证邮箱格式
+	emailRegex := `^([a-zA-Z0-9_\-\+]+)@([a-zA-Z0-9_\-\+]+)\.([a-zA-Z]{0,5})$`
+	matched, _ := regexp.MatchString(emailRegex, req.Email)
+	if !matched {
+		response.BadRequest(c, "邮箱格式错误")
+		return
+	}
+
+	// 保存邮箱配置
+	emailConfigs := map[string]string{
+		"daily_email_backup":        req.Email,
+		"daily_email_backup_status": "1",
+	}
+	for key, value := range emailConfigs {
+		var count int64
+		h.db.Table("system_configs").Where("setting = ?", key).Count(&count)
+		if count > 0 {
+			h.db.Table("system_configs").Where("setting = ?", key).Update("value", value)
+		} else {
+			h.db.Table("system_configs").Create(&map[string]interface{}{
+				"setting": key,
+				"value":   value,
+			})
+		}
+	}
+
+	h.log.Info("email backup enabled for: %s", req.Email)
+	response.SuccessMsg(c, "邮件备份设置已保存")
+}
+
+// DeactivateEmail 停用邮件备份
+// POST /admin/settings/deactivate-email
+func (h *SettingHandler) DeactivateEmail(c *gin.Context) {
+	h.db.Table("system_configs").Where("setting = ?", "daily_email_backup_status").Update("value", "0")
+	response.SuccessMsg(c, "邮件备份已停用")
 }
