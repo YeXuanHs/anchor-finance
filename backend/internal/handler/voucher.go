@@ -19,129 +19,9 @@ func NewVoucherHandler(voucherSvc *service.VoucherService, log *logger.Logger) *
 	return &VoucherHandler{voucherSvc: voucherSvc, log: log}
 }
 
-// GetUserVouchers 获取用户可用的代金券
-// GET /user/vouchers
-func (h *VoucherHandler) GetUserVouchers(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	vouchers, err := h.voucherSvc.GetUserVouchers(userID)
-	if err != nil {
-		response.ServerError(c, err.Error())
-		return
-	}
-	response.Success(c, vouchers)
-}
+// ==================== Admin 接口 ====================
 
-// ClaimVoucher 用户领取代金券
-// POST /vouchers/:id/claim
-func (h *VoucherHandler) ClaimVoucher(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		response.BadRequest(c, "invalid voucher id")
-		return
-	}
-
-	if err := h.voucherSvc.ClaimVoucher(userID, uint(id)); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	response.SuccessMsg(c, "voucher claimed")
-}
-
-// ValidateVoucher 验证代金券是否可用于订单
-// POST /vouchers/validate
-func (h *VoucherHandler) ValidateVoucher(c *gin.Context) {
-	userID := c.GetUint("user_id")
-
-	var req service.ValidateVoucherRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	discount, voucher, err := h.voucherSvc.ValidateVoucher(userID, req.Code, req.ProductID, req.Amount)
-	if err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	response.Success(c, gin.H{
-		"discount": discount,
-		"voucher":  voucher,
-	})
-}
-
-// AdminGetList 获取所有代金券 (admin)
-// GET /admin/vouchers
-func (h *VoucherHandler) AdminGetList(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-
-	vouchers, total, err := h.voucherSvc.GetAll(page, pageSize)
-	if err != nil {
-		response.ServerError(c, err.Error())
-		return
-	}
-	response.SuccessPage(c, vouchers, total, page, pageSize)
-}
-
-// AdminCreate 创建代金券 (admin)
-// POST /admin/vouchers
-func (h *VoucherHandler) AdminCreate(c *gin.Context) {
-	var req service.CreateVoucherRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	voucher, err := h.voucherSvc.Create(req)
-	if err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	response.Success(c, voucher)
-}
-
-// AdminUpdate 更新代金券 (admin)
-// PUT /admin/vouchers/:id
-func (h *VoucherHandler) AdminUpdate(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		response.BadRequest(c, "invalid voucher id")
-		return
-	}
-
-	var req service.UpdateVoucherRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	voucher, err := h.voucherSvc.Update(uint(id), req)
-	if err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	response.Success(c, voucher)
-}
-
-// AdminDelete 删除代金券 (admin)
-// DELETE /admin/vouchers/:id
-func (h *VoucherHandler) AdminDelete(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		response.BadRequest(c, "invalid voucher id")
-		return
-	}
-
-	if err := h.voucherSvc.Delete(uint(id)); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	response.SuccessMsg(c, "voucher deleted")
-}
-
-// GetRate 获取代金券费率配置
+// GetRate 获取费率配置
 // GET /admin/voucher-rate
 func (h *VoucherHandler) GetRate(c *gin.Context) {
 	data, err := h.voucherSvc.GetRateConfig()
@@ -152,7 +32,7 @@ func (h *VoucherHandler) GetRate(c *gin.Context) {
 	response.Success(c, data)
 }
 
-// PostRate 更新代金券费率配置
+// PostRate 更新费率配置
 // POST /admin/voucher-rate
 func (h *VoucherHandler) PostRate(c *gin.Context) {
 	var req struct {
@@ -171,82 +51,9 @@ func (h *VoucherHandler) PostRate(c *gin.Context) {
 	response.SuccessMsg(c, "rate config updated")
 }
 
-// GetExpressList 获取快递方式列表
-// GET /admin/expresses
-func (h *VoucherHandler) GetExpressList(c *gin.Context) {
-	expresses, total, err := h.voucherSvc.GetExpressList()
-	if err != nil {
-		response.ServerError(c, err.Error())
-		return
-	}
-	response.Success(c, gin.H{"express": expresses, "total": total})
-}
-
-// GetExpress 获取单个快递方式
-// GET /admin/expresses/:id
-func (h *VoucherHandler) GetExpress(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		response.BadRequest(c, "invalid express id")
-		return
-	}
-
-	express, err := h.voucherSvc.GetExpressByID(uint(id))
-	if err != nil {
-		response.NotFound(c, "express not found")
-		return
-	}
-	response.Success(c, gin.H{"express": express})
-}
-
-// PostExpress 创建/更新快递方式
-// POST /admin/expresses
-func (h *VoucherHandler) PostExpress(c *gin.Context) {
-	var req struct {
-		ID    *uint   `json:"id"`
-		Name  string  `json:"name" binding:"required"`
-		Price float64 `json:"price"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	if len(req.Name) > 50 {
-		response.BadRequest(c, "name too long (max 50 chars)")
-		return
-	}
-	if req.Price < 0 {
-		response.BadRequest(c, "price must be non-negative")
-		return
-	}
-
-	if err := h.voucherSvc.SaveExpress(req.ID, req.Name, req.Price); err != nil {
-		response.ServerError(c, err.Error())
-		return
-	}
-	response.SuccessMsg(c, "express saved")
-}
-
-// DeleteExpress 删除快递方式
-// DELETE /admin/expresses/:id
-func (h *VoucherHandler) DeleteExpress(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		response.BadRequest(c, "invalid express id")
-		return
-	}
-
-	if err := h.voucherSvc.DeleteExpress(uint(id)); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	response.SuccessMsg(c, "express deleted")
-}
-
-// AdminGetVoucherList 获取代金券列表(含发票信息)
+// GetVoucherList 获取发票申请列表
 // GET /admin/voucher-list
-func (h *VoucherHandler) AdminGetVoucherList(c *gin.Context) {
+func (h *VoucherHandler) GetVoucherList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	status := c.Query("status")
@@ -261,9 +68,9 @@ func (h *VoucherHandler) AdminGetVoucherList(c *gin.Context) {
 	response.SuccessPage(c, vouchers, total, page, pageSize)
 }
 
-// AdminGetVoucherDetail 获取代金券详情(含发票)
+// GetVoucherDetail 获取发票申请详情
 // GET /admin/voucher-detail/:id
-func (h *VoucherHandler) AdminGetVoucherDetail(c *gin.Context) {
+func (h *VoucherHandler) GetVoucherDetail(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.BadRequest(c, "invalid voucher id")
@@ -272,13 +79,13 @@ func (h *VoucherHandler) AdminGetVoucherDetail(c *gin.Context) {
 
 	detail, err := h.voucherSvc.GetVoucherDetail(uint(id))
 	if err != nil {
-		response.NotFound(c, "voucher not found")
+		response.NotFound(c, err.Error())
 		return
 	}
 	response.Success(c, detail)
 }
 
-// PostVoucherStatus 更新代金券状态(审核/拒绝)
+// PostVoucherStatus 更新发票申请状态
 // POST /admin/voucher-status
 func (h *VoucherHandler) PostVoucherStatus(c *gin.Context) {
 	var req struct {
@@ -305,4 +112,190 @@ func (h *VoucherHandler) PostVoucherStatus(c *gin.Context) {
 		return
 	}
 	response.SuccessMsg(c, "voucher status updated")
+}
+
+// ==================== 用户接口 ====================
+
+// GetUserVoucherList 获取用户发票申请列表
+// GET /user/vouchers
+func (h *VoucherHandler) GetUserVoucherList(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	vouchers, total, err := h.voucherSvc.GetUserVoucherList(userID, page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, vouchers, total, page, pageSize)
+}
+
+// CreateUserVoucher 创建发票申请
+// POST /user/vouchers
+func (h *VoucherHandler) CreateUserVoucher(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	var req service.CreateVoucherRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	voucher, err := h.voucherSvc.CreateUserVoucher(userID, req)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, voucher)
+}
+
+// ==================== 发票抬头 ====================
+
+// GetVoucherTypes 获取用户发票抬头列表
+// GET /user/voucher-types
+func (h *VoucherHandler) GetVoucherTypes(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	types, err := h.voucherSvc.GetVoucherTypes(userID)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, types)
+}
+
+// CreateVoucherType 创建发票抬头
+// POST /user/voucher-types
+func (h *VoucherHandler) CreateVoucherType(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	var req service.CreateVoucherTypeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	vt, err := h.voucherSvc.CreateVoucherType(userID, req)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, vt)
+}
+
+// UpdateVoucherType 更新发票抬头
+// PUT /user/voucher-types/:id
+func (h *VoucherHandler) UpdateVoucherType(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid voucher type id")
+		return
+	}
+
+	var req service.CreateVoucherTypeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	vt, err := h.voucherSvc.UpdateVoucherType(userID, uint(id), req)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, vt)
+}
+
+// DeleteVoucherType 删除发票抬头
+// DELETE /user/voucher-types/:id
+func (h *VoucherHandler) DeleteVoucherType(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid voucher type id")
+		return
+	}
+
+	if err := h.voucherSvc.DeleteVoucherType(userID, uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "voucher type deleted")
+}
+
+// ==================== 收件地址 ====================
+
+// GetVoucherPosts 获取用户收件地址列表
+// GET /user/voucher-posts
+func (h *VoucherHandler) GetVoucherPosts(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	posts, err := h.voucherSvc.GetVoucherPosts(userID)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, posts)
+}
+
+// CreateVoucherPost 创建收件地址
+// POST /user/voucher-posts
+func (h *VoucherHandler) CreateVoucherPost(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	var req service.CreateVoucherPostRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	vp, err := h.voucherSvc.CreateVoucherPost(userID, req)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, vp)
+}
+
+// UpdateVoucherPost 更新收件地址
+// PUT /user/voucher-posts/:id
+func (h *VoucherHandler) UpdateVoucherPost(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid voucher post id")
+		return
+	}
+
+	var req service.CreateVoucherPostRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	vp, err := h.voucherSvc.UpdateVoucherPost(userID, uint(id), req)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, vp)
+}
+
+// DeleteVoucherPost 删除收件地址
+// DELETE /user/voucher-posts/:id
+func (h *VoucherHandler) DeleteVoucherPost(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid voucher post id")
+		return
+	}
+
+	if err := h.voucherSvc.DeleteVoucherPost(userID, uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "voucher post deleted")
 }

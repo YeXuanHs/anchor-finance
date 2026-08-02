@@ -3,35 +3,29 @@
     <el-card shadow="never">
       <template #header>
         <div class="card-header">
-          <span>代金券管理</span>
+          <span>发票管理</span>
           <div>
-            <el-button type="success" @click="handleGrant">
-              <el-icon><Promotion /></el-icon>
-              发放代金券
-            </el-button>
-            <el-button type="primary" @click="handleAdd">
-              <el-icon><Plus /></el-icon>
-              添加代金券
+            <el-button type="primary" @click="showRateDialog">
+              <el-icon><Setting /></el-icon>
+              费率配置
             </el-button>
           </div>
         </div>
       </template>
 
-      <!-- 搜索栏 -->
+      <!-- 工具栏 -->
       <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="代金券名称/编码" clearable />
-        </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
-            <el-option label="正常" :value="1" />
-            <el-option label="已禁用" :value="0" />
-            <el-option label="已过期" :value="2" />
-            <el-option label="已用完" :value="3" />
+          <el-select v-model="searchForm.status" placeholder="全部状态" clearable>
+            <el-option label="待审核" value="Pending" />
+            <el-option label="已取消" value="Cancelled" />
+            <el-option label="已驳回" value="Reject" />
+            <el-option label="待支付" value="Unpaid" />
+            <el-option label="已发出" value="Send" />
           </el-select>
         </el-form-item>
-        <el-form-item label="客户">
-          <el-input v-model="searchForm.client_name" placeholder="客户名称" clearable />
+        <el-form-item label="搜索">
+          <el-input v-model="searchForm.keyword" placeholder="用户名/备注" clearable />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">搜索</el-button>
@@ -40,60 +34,48 @@
       </el-form>
 
       <!-- 数据表格 -->
-      <el-table :data="tableData" v-loading="loading" style="width: 100%" border>
+      <el-table :data="tableData" v-loading="loading" style="width: 100%" border stripe>
         <el-table-column prop="id" label="ID" width="70" align="center" />
-        <el-table-column prop="name" label="代金券名称" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="code" label="代金码" width="140" />
-        <el-table-column prop="amount" label="面值" width="110" align="right">
+        <el-table-column prop="username" label="用户名" width="120" show-overflow-tooltip />
+        <el-table-column prop="create_time" label="申请时间" width="180" />
+        <el-table-column prop="title" label="发票抬头" min-width="150" show-overflow-tooltip />
+        <el-table-column label="发票类型" width="160">
+          <template #default="{ row }">
+            <div>{{ getTypeLabel(row.issue_type) }}</div>
+            <div class="text-secondary">{{ getVoucherTypeLabel(row.voucher_type) }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="amount" label="金额" width="100" align="right">
           <template #default="{ row }">
             <span class="amount-text">¥{{ formatAmount(row.amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="balance" label="余额" width="110" align="right">
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
-            <span :class="{ 'balance-empty': row.balance <= 0 }">
-              ¥{{ formatAmount(row.balance) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="client_name" label="所属客户" width="120" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ row.client_name || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="order_no" label="关联订单" width="150" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ row.order_no || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="end_time" label="有效期" width="170">
-          <template #default="{ row }">
-            {{ row.end_time || '永久' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getVoucherStatusType(row.status)" size="small">
-              {{ getVoucherStatusText(row.status) }}
+            <el-tag :type="getStatusType(row.status)" size="small">
+              {{ getStatusLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="收件地址" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ formatAddress(row) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="express_name" label="快递方式" width="120" />
+        <el-table-column prop="notes" label="备注" width="150" show-overflow-tooltip />
+        <el-table-column prop="check_time" label="审核时间" width="180" />
         <el-table-column label="操作" width="180" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
+            <el-button type="primary" link @click="showDetail(row)">详情</el-button>
             <el-button
-              v-if="row.status === 1 && row.client_id"
-              type="success"
+              v-if="row.status === 'Pending' || row.status === 'Unpaid'"
+              type="warning"
               link
-              @click="handleGrantSingle(row)"
+              @click="showAuditDialog(row)"
             >
-              发放
+              审核
             </el-button>
-            <el-popconfirm title="确定删除该代金券吗？" @confirm="handleDelete(row)">
-              <template #reference>
-                <el-button type="danger" link>删除</el-button>
-              </template>
-            </el-popconfirm>
           </template>
         </el-table-column>
       </el-table>
@@ -112,140 +94,143 @@
       </div>
     </el-card>
 
-    <!-- 添加/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" destroy-on-close>
-      <el-form :model="formData" :rules="formRules" ref="formRef" label-width="110px">
-        <el-form-item label="代金券名称" prop="name">
-          <el-input v-model="formData.name" placeholder="请输入代金券名称" />
-        </el-form-item>
-        <el-form-item label="代金码" prop="code">
-          <el-input v-model="formData.code" placeholder="留空则自动生成">
-            <template #append>
-              <el-button @click="handleGenerateCode">随机生成</el-button>
+    <!-- 发票详情对话框 -->
+    <el-dialog v-model="detailDialogVisible" title="发票详情" width="800px" destroy-on-close>
+      <div v-loading="detailLoading" class="detail-container">
+        <template v-if="detailData">
+          <!-- 基本信息 -->
+          <el-card shadow="never" class="detail-section">
+            <template #header>
+              <span class="section-title">基本信息</span>
             </template>
-          </el-input>
+            <el-descriptions :column="2" border>
+              <el-descriptions-item label="申请ID">{{ detailData.voucher?.id }}</el-descriptions-item>
+              <el-descriptions-item label="用户ID">{{ detailData.uid }}</el-descriptions-item>
+              <el-descriptions-item label="申请时间">{{ detailData.voucher?.create_time }}</el-descriptions-item>
+              <el-descriptions-item label="状态">
+                <el-tag :type="getStatusType(detailData.voucher?.status)">
+                  {{ getStatusLabel(detailData.voucher?.status) }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="审核时间">{{ detailData.voucher?.check_time || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="备注">{{ detailData.voucher?.notes || '-' }}</el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+
+          <!-- 发票抬头区 -->
+          <el-card shadow="never" class="detail-section">
+            <template #header>
+              <span class="section-title">发票抬头</span>
+            </template>
+            <el-descriptions :column="2" border>
+              <el-descriptions-item label="抬头名称">{{ detailData.voucher?.title }}</el-descriptions-item>
+              <el-descriptions-item label="类型">{{ getTypeLabel(detailData.voucher?.issue_type) }}</el-descriptions-item>
+              <el-descriptions-item label="发票类型">{{ getVoucherTypeLabel(detailData.voucher?.voucher_type) }}</el-descriptions-item>
+              <el-descriptions-item label="税号">{{ detailData.voucher?.tax_id || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="开户行">{{ detailData.voucher?.bank || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="账号">{{ detailData.voucher?.account || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="地址">{{ detailData.voucher?.address || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="电话">{{ detailData.voucher?.phone || '-' }}</el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+
+          <!-- 收件地址区 -->
+          <el-card shadow="never" class="detail-section">
+            <template #header>
+              <span class="section-title">收件地址</span>
+            </template>
+            <el-descriptions :column="2" border>
+              <el-descriptions-item label="省份">{{ detailData.voucher?.province || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="城市">{{ detailData.voucher?.city || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="区县">{{ detailData.voucher?.region || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="详细地址" :span="2">{{ detailData.voucher?.detail || '-' }}</el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+
+          <!-- 快递信息区 -->
+          <el-card shadow="never" class="detail-section">
+            <template #header>
+              <span class="section-title">快递信息</span>
+            </template>
+            <el-descriptions :column="2" border>
+              <el-descriptions-item label="快递名称">{{ detailData.voucher?.express_name || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="快递费用">¥{{ formatAmount(detailData.voucher?.express_price) }}</el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+
+          <!-- 关联账单区 -->
+          <el-card shadow="never" class="detail-section">
+            <template #header>
+              <span class="section-title">关联账单</span>
+            </template>
+            <el-table :data="detailData.invoices" border size="small">
+              <el-table-column prop="id" label="账单ID" width="80" />
+              <el-table-column prop="subtotal" label="账单金额" width="120" align="right">
+                <template #default="{ row }">
+                  ¥{{ formatAmount(row.subtotal) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="taxed" label="税率" width="100" />
+              <el-table-column prop="taxed_amount" label="税额" width="120" align="right">
+                <template #default="{ row }">
+                  ¥{{ formatAmount(row.taxed_amount) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="账单明细" min-width="200">
+                <template #default="{ row }">
+                  <div v-for="item in row.items" :key="item.id" class="invoice-item">
+                    {{ item.description }}
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div class="total-amount">
+              <span>发票金额合计：</span>
+              <span class="amount-text">¥{{ formatAmount(detailData.voucher_amount) }}</span>
+            </div>
+          </el-card>
+        </template>
+      </div>
+    </el-dialog>
+
+    <!-- 审核对话框 -->
+    <el-dialog v-model="auditDialogVisible" title="审核发票" width="500px" destroy-on-close>
+      <el-form :model="auditForm" :rules="auditRules" ref="auditFormRef" label-width="80px">
+        <el-form-item label="发票ID">
+          <el-input :model-value="auditForm.id" disabled />
         </el-form-item>
-        <el-form-item label="面值(元)" prop="amount">
-          <el-input-number
-            v-model="formData.amount"
-            :min="0.01"
-            :max="99999"
-            :precision="2"
-            :step="50"
-            controls-position="right"
-          />
+        <el-form-item label="用户名">
+          <el-input :model-value="auditForm.username" disabled />
         </el-form-item>
-        <el-form-item label="关联客户" prop="client_id">
-          <el-select
-            v-model="formData.client_id"
-            filterable
-            remote
-            :remote-method="searchClients"
-            :loading="clientSearchLoading"
-            placeholder="输入搜索客户"
-            clearable
-            style="width: 100%"
-          >
-            <el-option
-              v-for="client in clientOptions"
-              :key="client.id"
-              :label="client.username"
-              :value="client.id"
-            />
+        <el-form-item label="审核状态" prop="status">
+          <el-select v-model="auditForm.status" placeholder="请选择审核状态" style="width: 100%">
+            <el-option label="驳回 (Reject)" value="Reject" />
+            <el-option label="已发出 (Send)" value="Send" />
           </el-select>
         </el-form-item>
-        <el-form-item label="关联订单" prop="order_id">
-          <el-select
-            v-model="formData.order_id"
-            filterable
-            remote
-            :remote-method="searchOrders"
-            :loading="orderSearchLoading"
-            placeholder="输入搜索订单号（可选）"
-            clearable
-            style="width: 100%"
-          >
-            <el-option
-              v-for="order in orderOptions"
-              :key="order.id"
-              :label="order.order_no"
-              :value="order.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="有效期" prop="date_range">
-          <el-date-picker
-            v-model="formData.date_range"
-            type="datetimerange"
-            range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            value-format="YYYY-MM-DD HH:mm:ss"
-          />
-        </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <el-input
-            v-model="formData.description"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入代金券描述（可选）"
-          />
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-switch v-model="formData.status" :active-value="1" :inactive-value="0" />
+        <el-form-item label="备注" prop="notes">
+          <el-input v-model="auditForm.notes" type="textarea" :rows="3" placeholder="请输入备注（可选，最多500字符）" maxlength="500" show-word-limit />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
+        <el-button @click="auditDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAuditSubmit" :loading="auditLoading">确认</el-button>
       </template>
     </el-dialog>
 
-    <!-- 批量发放对话框 -->
-    <el-dialog v-model="grantDialogVisible" title="发放代金券" width="550px" destroy-on-close>
-      <el-form :model="grantForm" :rules="grantFormRules" ref="grantFormRef" label-width="110px">
-        <el-form-item label="代金券" prop="voucher_id">
-          <el-select v-model="grantForm.voucher_id" placeholder="请选择代金券" style="width: 100%">
-            <el-option
-              v-for="voucher in availableVouchers"
-              :key="voucher.id"
-              :label="`${voucher.name} (¥${formatAmount(voucher.amount)})`"
-              :value="voucher.id"
-            />
-          </el-select>
+    <!-- 费率配置对话框 -->
+    <el-dialog v-model="rateDialogVisible" title="费率配置" width="400px" destroy-on-close>
+      <el-form :model="rateForm" :rules="rateRules" ref="rateFormRef" label-width="100px">
+        <el-form-item label="启用发票管理" prop="voucher_manager">
+          <el-switch v-model="rateForm.voucher_manager" :active-value="1" :inactive-value="0" />
         </el-form-item>
-        <el-form-item label="发放客户" prop="client_ids">
-          <el-select
-            v-model="grantForm.client_ids"
-            multiple
-            filterable
-            remote
-            :remote-method="searchClientsForGrant"
-            :loading="clientSearchLoading"
-            placeholder="输入搜索客户，可多选"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="client in clientOptions"
-              :key="client.id"
-              :label="client.username"
-              :value="client.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="发放数量" prop="count">
-          <el-input-number
-            v-model="grantForm.count"
-            :min="1"
-            :max="100"
-            controls-position="right"
-          />
-          <span class="form-tip">每个客户发放的代金券数量</span>
+        <el-form-item label="税率(%)" prop="rate">
+          <el-input-number v-model="rateForm.rate" :min="0" :max="100" :precision="2" :step="0.1" controls-position="right" style="width: 100%" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="grantDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleGrantSubmit" :loading="grantLoading">确认发放</el-button>
+        <el-button @click="rateDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleRateSubmit" :loading="rateLoading">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -253,23 +238,48 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Plus, Promotion } from '@element-plus/icons-vue'
+import { Setting } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/http'
 
+// 状态常量
+const statusMap: Record<string, string> = {
+  Pending: '待审核',
+  Cancelled: '已取消',
+  Reject: '已驳回',
+  Unpaid: '待支付',
+  Send: '已发出'
+}
+
+const statusTypeMap: Record<string, string> = {
+  Pending: 'warning',
+  Cancelled: 'info',
+  Reject: 'danger',
+  Unpaid: 'info',
+  Send: 'success'
+}
+
+const typeMap: Record<string, string> = {
+  person: '个人',
+  company: '企业'
+}
+
+const voucherTypeMap: Record<string, string> = {
+  common: '增值税普通发票',
+  dedicated: '增值税专用发票'
+}
+
 // 加载状态
 const loading = ref(false)
-const submitLoading = ref(false)
-const grantLoading = ref(false)
-const clientSearchLoading = ref(false)
-const orderSearchLoading = ref(false)
+const detailLoading = ref(false)
+const auditLoading = ref(false)
+const rateLoading = ref(false)
 
 // 搜索表单
 const searchForm = reactive({
-  keyword: '',
-  status: undefined as number | undefined,
-  client_name: ''
+  status: '' as string,
+  keyword: ''
 })
 
 // 分页
@@ -282,88 +292,35 @@ const pagination = reactive({
 // 表格数据
 const tableData = ref<any[]>([])
 
-// 客户选项
-const clientOptions = ref<any[]>([])
+// 详情数据
+const detailDialogVisible = ref(false)
+const detailData = ref<any>(null)
 
-// 订单选项
-const orderOptions = ref<any[]>([])
-
-// 可用代金券列表（用于发放）
-const availableVouchers = ref<any[]>([])
-
-// 对话框
-const dialogVisible = ref(false)
-const dialogTitle = ref('添加代金券')
-const formRef = ref<FormInstance>()
-
-// 发放对话框
-const grantDialogVisible = ref(false)
-const grantFormRef = ref<FormInstance>()
-
-// 表单数据
-const formData = reactive({
-  id: undefined as number | undefined,
-  name: '',
-  code: '',
-  amount: 0,
-  client_id: undefined as number | undefined,
-  order_id: undefined as number | undefined,
-  date_range: [] as string[],
-  description: '',
-  status: 1
+// 审核对话框
+const auditDialogVisible = ref(false)
+const auditFormRef = ref<FormInstance>()
+const auditForm = reactive({
+  id: 0,
+  username: '',
+  status: '' as string,
+  notes: ''
 })
 
-// 发放表单
-const grantForm = reactive({
-  voucher_id: undefined as number | undefined,
-  client_ids: [] as number[],
-  count: 1
+// 费率配置对话框
+const rateDialogVisible = ref(false)
+const rateFormRef = ref<FormInstance>()
+const rateForm = reactive({
+  voucher_manager: 0,
+  rate: 0
 })
 
 // 表单验证规则
-const formRules: FormRules = {
-  name: [
-    { required: true, message: '请输入代金券名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
-  ],
-  amount: [
-    { required: true, message: '请输入面值', trigger: 'blur' }
-  ]
+const auditRules: FormRules = {
+  status: [{ required: true, message: '请选择审核状态', trigger: 'change' }]
 }
 
-// 发放表单验证规则
-const grantFormRules: FormRules = {
-  voucher_id: [
-    { required: true, message: '请选择代金券', trigger: 'change' }
-  ],
-  client_ids: [
-    { required: true, type: 'array', min: 1, message: '请选择至少一个客户', trigger: 'change' }
-  ],
-  count: [
-    { required: true, message: '请输入发放数量', trigger: 'blur' }
-  ]
-}
-
-// 代金券状态文本
-const getVoucherStatusText = (status: number) => {
-  const map: Record<number, string> = {
-    0: '已禁用',
-    1: '正常',
-    2: '已过期',
-    3: '已用完'
-  }
-  return map[status] || '未知'
-}
-
-// 代金券状态类型
-const getVoucherStatusType = (status: number) => {
-  const map: Record<number, string> = {
-    0: 'info',
-    1: 'success',
-    2: 'warning',
-    3: 'danger'
-  }
-  return (map[status] || 'info') as any
+const rateRules: FormRules = {
+  rate: [{ required: true, message: '请输入税率', trigger: 'blur' }]
 }
 
 // 格式化金额
@@ -371,96 +328,83 @@ const formatAmount = (amount: number | undefined) => {
   return amount?.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'
 }
 
-// 生成随机代金码
-const handleGenerateCode = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let code = 'V'
-  for (let i = 0; i < 9; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  formData.code = code
+// 格式化地址
+const formatAddress = (row: any) => {
+  const parts = [row.province, row.city, row.region].filter(Boolean)
+  return parts.join('') || '-'
 }
 
-// 搜索客户
-const searchClients = async (query: string) => {
-  if (!query) {
-    clientOptions.value = []
-    return
-  }
-  clientSearchLoading.value = true
-  try {
-    const data = await request.get({
-      url: '/api/admin/users',
-      params: { keyword: query, page_size: 20 }
-    })
-    clientOptions.value = data.list || data || []
-  } catch (error) {
-    console.error('搜索客户失败:', error)
-  } finally {
-    clientSearchLoading.value = false
-  }
+// 获取状态标签
+const getStatusLabel = (status: string) => {
+  return statusMap[status] || status
 }
 
-// 搜索客户（发放用）
-const searchClientsForGrant = async (query: string) => {
-  await searchClients(query)
+// 获取状态类型
+const getStatusType = (status: string) => {
+  return (statusTypeMap[status] || 'info') as any
 }
 
-// 搜索订单
-const searchOrders = async (query: string) => {
-  if (!query) {
-    orderOptions.value = []
-    return
-  }
-  orderSearchLoading.value = true
-  try {
-    const data = await request.get({
-      url: '/api/admin/orders',
-      params: { order_no: query, page_size: 20 }
-    })
-    orderOptions.value = data.list || data || []
-  } catch (error) {
-    console.error('搜索订单失败:', error)
-  } finally {
-    orderSearchLoading.value = false
-  }
+// 获取类型标签
+const getTypeLabel = (type: string) => {
+  return typeMap[type] || type
 }
 
-// 获取代金券列表
+// 获取发票类型标签
+const getVoucherTypeLabel = (type: string) => {
+  return voucherTypeMap[type] || type
+}
+
+// 获取发票列表
 const fetchVouchers = async () => {
   loading.value = true
   try {
     const params: any = {
       page: pagination.page,
       page_size: pagination.page_size,
-      keyword: searchForm.keyword || undefined,
-      status: searchForm.status,
-      client_name: searchForm.client_name || undefined
+      status: searchForm.status || undefined,
+      keyword: searchForm.keyword || undefined
     }
     const data = await request.get({
-      url: '/api/admin/vouchers',
+      url: '/api/admin/voucher-list',
       params
     })
-    tableData.value = data.list || []
+    tableData.value = data.voucher || data.list || []
     pagination.total = data.total || 0
   } catch (error) {
-    console.error('获取代金券列表失败:', error)
-    ElMessage.error('获取代金券列表失败')
+    console.error('获取发票列表失败:', error)
+    ElMessage.error('获取发票列表失败')
   } finally {
     loading.value = false
   }
 }
 
-// 获取可用代金券（发放用）
-const fetchAvailableVouchers = async () => {
+// 获取发票详情
+const fetchDetail = async (id: number) => {
+  detailLoading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/vouchers',
-      params: { status: 1, page_size: 100 }
+      url: `/api/admin/voucher-detail/${id}`
     })
-    availableVouchers.value = data.list || data || []
+    detailData.value = data
   } catch (error) {
-    console.error('获取可用代金券失败:', error)
+    console.error('获取发票详情失败:', error)
+    ElMessage.error('获取发票详情失败')
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+// 获取费率配置
+const fetchRateConfig = async () => {
+  try {
+    const data = await request.get({
+      url: '/api/admin/voucher-rate'
+    })
+    rateForm.voucher_manager = data.voucher_manager || 0
+    rateForm.rate = data.rate || 0
+  } catch (error) {
+    console.error('获取费率配置失败:', error)
+    ElMessage.error('获取费率配置失败')
   }
 }
 
@@ -472,131 +416,9 @@ const handleSearch = () => {
 
 // 重置
 const handleReset = () => {
+  searchForm.status = ''
   searchForm.keyword = ''
-  searchForm.status = undefined
-  searchForm.client_name = ''
   handleSearch()
-}
-
-// 添加
-const handleAdd = () => {
-  dialogTitle.value = '添加代金券'
-  formData.id = undefined
-  formData.name = ''
-  formData.code = ''
-  formData.amount = 0
-  formData.client_id = undefined
-  formData.order_id = undefined
-  formData.date_range = []
-  formData.description = ''
-  formData.status = 1
-  dialogVisible.value = true
-}
-
-// 编辑
-const handleEdit = (row: any) => {
-  dialogTitle.value = '编辑代金券'
-  Object.assign(formData, {
-    ...row,
-    date_range: row.start_time && row.end_time ? [row.start_time, row.end_time] : []
-  })
-  if (row.client_id && row.client_name) {
-    clientOptions.value = [{ id: row.client_id, username: row.client_name }]
-  }
-  if (row.order_id && row.order_no) {
-    orderOptions.value = [{ id: row.order_id, order_no: row.order_no }]
-  }
-  dialogVisible.value = true
-}
-
-// 单个发放
-const handleGrantSingle = (row: any) => {
-  grantForm.voucher_id = row.id
-  grantForm.client_ids = row.client_id ? [row.client_id] : []
-  grantForm.count = 1
-  fetchAvailableVouchers()
-  grantDialogVisible.value = true
-}
-
-// 批量发放
-const handleGrant = () => {
-  grantForm.voucher_id = undefined
-  grantForm.client_ids = []
-  grantForm.count = 1
-  fetchAvailableVouchers()
-  grantDialogVisible.value = true
-}
-
-// 删除
-const handleDelete = async (row: any) => {
-  try {
-    await request.del({
-      url: `/api/admin/vouchers/${row.id}`
-    })
-    ElMessage.success('删除成功')
-    fetchVouchers()
-  } catch (error) {
-    ElMessage.error('删除失败')
-  }
-}
-
-// 提交表单
-const handleSubmit = async () => {
-  if (!formRef.value) return
-
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-
-    submitLoading.value = true
-    try {
-      const submitData: any = { ...formData }
-      if (submitData.date_range?.length === 2) {
-        submitData.start_time = submitData.date_range[0]
-        submitData.end_time = submitData.date_range[1]
-      }
-      delete submitData.date_range
-
-      const url = formData.id ? `/api/admin/vouchers/${formData.id}` : '/api/admin/vouchers'
-
-      if (formData.id) {
-        await request.put({ url, params: submitData })
-      } else {
-        await request.post({ url, params: submitData })
-      }
-
-      ElMessage.success(formData.id ? '更新成功' : '添加成功')
-      dialogVisible.value = false
-      fetchVouchers()
-    } catch (error) {
-      ElMessage.error('操作失败')
-    } finally {
-      submitLoading.value = false
-    }
-  })
-}
-
-// 提交发放
-const handleGrantSubmit = async () => {
-  if (!grantFormRef.value) return
-
-  await grantFormRef.value.validate(async (valid) => {
-    if (!valid) return
-
-    grantLoading.value = true
-    try {
-      await request.post({
-        url: '/api/admin/vouchers/grant',
-        params: grantForm
-      })
-      ElMessage.success('发放成功')
-      grantDialogVisible.value = false
-      fetchVouchers()
-    } catch (error) {
-      ElMessage.error('发放失败')
-    } finally {
-      grantLoading.value = false
-    }
-  })
 }
 
 // 分页大小变化
@@ -608,6 +430,82 @@ const handleSizeChange = () => {
 // 页码变化
 const handlePageChange = () => {
   fetchVouchers()
+}
+
+// 显示详情
+const showDetail = async (row: any) => {
+  detailData.value = null
+  detailDialogVisible.value = true
+  await fetchDetail(row.id)
+}
+
+// 显示审核对话框
+const showAuditDialog = (row: any) => {
+  auditForm.id = row.id
+  auditForm.username = row.username
+  auditForm.status = ''
+  auditForm.notes = ''
+  auditDialogVisible.value = true
+}
+
+// 提交审核
+const handleAuditSubmit = async () => {
+  if (!auditFormRef.value) return
+
+  await auditFormRef.value.validate(async (valid) => {
+    if (!valid) return
+
+    auditLoading.value = true
+    try {
+      await request.post({
+        url: '/api/admin/voucher-status',
+        data: {
+          id: auditForm.id,
+          status: auditForm.status,
+          notes: auditForm.notes
+        }
+      })
+      ElMessage.success('审核成功')
+      auditDialogVisible.value = false
+      fetchVouchers()
+    } catch (error) {
+      ElMessage.error('审核失败')
+    } finally {
+      auditLoading.value = false
+    }
+  })
+}
+
+// 显示费率配置对话框
+const showRateDialog = async () => {
+  await fetchRateConfig()
+  rateDialogVisible.value = true
+}
+
+// 提交费率配置
+const handleRateSubmit = async () => {
+  if (!rateFormRef.value) return
+
+  await rateFormRef.value.validate(async (valid) => {
+    if (!valid) return
+
+    rateLoading.value = true
+    try {
+      await request.post({
+        url: '/api/admin/voucher-rate',
+        data: {
+          voucher_manager: rateForm.voucher_manager,
+          rate: rateForm.rate
+        }
+      })
+      ElMessage.success('费率配置保存成功')
+      rateDialogVisible.value = false
+    } catch (error) {
+      ElMessage.error('费率配置保存失败')
+    } finally {
+      rateLoading.value = false
+    }
+  })
 }
 
 onMounted(() => {
@@ -635,8 +533,9 @@ onMounted(() => {
   color: #f56c6c;
 }
 
-.balance-empty {
-  color: #c0c4cc;
+.text-secondary {
+  font-size: 12px;
+  color: #909399;
 }
 
 .pagination-container {
@@ -645,9 +544,32 @@ onMounted(() => {
   margin-top: 20px;
 }
 
-.form-tip {
-  margin-left: 12px;
+.detail-container {
+  min-height: 200px;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.section-title {
+  font-weight: 600;
+}
+
+.invoice-item {
+  padding: 2px 0;
   font-size: 12px;
-  color: #909399;
+  color: #606266;
+}
+
+.total-amount {
+  margin-top: 16px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
 }
 </style>

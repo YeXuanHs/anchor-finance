@@ -81,7 +81,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	affiliateSvc := service.NewAffiliateService(deps.DB)
 	affiliateHandler := handler.NewAffiliateHandler(affiliateSvc, log)
 
-	voucherSvc := service.NewVoucherService(deps.DB)
+	voucherSvc := service.NewVoucherService(deps.DB, log)
 	voucherHandler := handler.NewVoucherHandler(voucherSvc, log)
 
 	multiRenewSvc := service.NewMultiRenewService(deps.DB)
@@ -257,9 +257,21 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/affiliate/withdraws", affiliateHandler.GetWithdraws)
 		user.POST("/affiliate/withdraw", affiliateHandler.ApplyWithdraw)
 
-		// 代金券
-		user.GET("/vouchers", voucherHandler.GetUserVouchers)
-		user.POST("/vouchers/claim", voucherHandler.ClaimVoucher)
+		// 发票管理
+		user.GET("/vouchers", voucherHandler.GetUserVoucherList)
+		user.POST("/vouchers", voucherHandler.CreateUserVoucher)
+
+		// 发票抬头
+		user.GET("/voucher-types", voucherHandler.GetVoucherTypes)
+		user.POST("/voucher-types", voucherHandler.CreateVoucherType)
+		user.PUT("/voucher-types/:id", voucherHandler.UpdateVoucherType)
+		user.DELETE("/voucher-types/:id", voucherHandler.DeleteVoucherType)
+
+		// 收件地址
+		user.GET("/voucher-posts", voucherHandler.GetVoucherPosts)
+		user.POST("/voucher-posts", voucherHandler.CreateVoucherPost)
+		user.PUT("/voucher-posts/:id", voucherHandler.UpdateVoucherPost)
+		user.DELETE("/voucher-posts/:id", voucherHandler.DeleteVoucherPost)
 
 		// 批量续费
 		user.POST("/multi-renew", multiRenewHandler.Create)

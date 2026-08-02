@@ -1778,13 +1778,14 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/v10/cloud/hosts/:id/traffic", v10CloudHandler.GetTrafficUsage)
 		admin.GET("/v10/cloud/hosts/:id/os", v10CloudHandler.GetOSList)
 
-		// ==================== 代金券 ====================
+		// ==================== 发票管理 ====================
 		voucherSvc := service.NewVoucherService(deps.DB, deps.Log)
 		voucherHandler := handler.NewVoucherHandler(voucherSvc, deps.Log)
-		admin.GET("/vouchers", voucherHandler.AdminGetList)
-		admin.POST("/vouchers", voucherHandler.AdminCreate)
-		admin.PUT("/vouchers/:id", voucherHandler.AdminUpdate)
-		admin.DELETE("/vouchers/:id", voucherHandler.AdminDelete)
+		admin.GET("/voucher-rate", voucherHandler.GetRate)
+		admin.POST("/voucher-rate", voucherHandler.PostRate)
+		admin.GET("/voucher-list", voucherHandler.GetVoucherList)
+		admin.GET("/voucher-detail/:id", voucherHandler.GetVoucherDetail)
+		admin.POST("/voucher-status", voucherHandler.PostVoucherStatus)
 
 		// ==================== 微信 ====================
 		if deps.WechatAppID != "" {
