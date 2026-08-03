@@ -55,8 +55,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	captchaHandler := handler.NewCaptchaHandler(captchaSvc, deps.DB)
 	captchaConfigHandler := handler.NewCaptchaConfigHandler(captchaSvc)
 
-	// 初始化极验服务（如果配置了）
-	geetestHandler := handler.NewGeetestHandler(captchaSvc)
+	// 极验服务（通过 CaptchaHandler 集成）
+	geetestSvc := service.NewGeetestService(deps.DB, deps.Log)
+	captchaHandler.SetGeetestService(geetestSvc)
 
 	// ─── 公共路由 ───
 	r.POST("/login", authHandler.Login)
@@ -72,8 +73,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.POST("/captcha/check", captchaHandler.Check)
 
 	// 极验4.0
-	r.GET("/geetest/register", geetestHandler.Register)
-	r.POST("/geetest/validate", geetestHandler.Validate)
+	r.GET("/geetest/register", captchaHandler.GetGeetestConfig)
+	r.POST("/geetest/validate", captchaHandler.VerifyGeetest)
 
 	// 产品
 	r.GET("/products", productHandler.List)
@@ -111,6 +112,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.GET("/nav/bottom", userMenuHandler.GetBottomNav)
 
 	// 公共信息
+	publicSvc := service.NewPublicService(deps.DB, deps.Log)
 	publicHandler := handler.NewPublicHandler(publicSvc, deps.Log)
 	r.GET("/homepage/base-info", publicHandler.GetHomepageBaseInfo)
 	r.GET("/downloads", publicHandler.GetUserDownloads)

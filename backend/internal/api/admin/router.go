@@ -361,12 +361,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/server-groups/:id", pluginHandler.UpdateServerGroup)
 		admin.DELETE("/server-groups/:id", pluginHandler.DeleteServerGroup)
 
-		// OAuth提供商管理
-		admin.GET("/oauth-providers", pluginHandler.ListOAuthProviders)
-		admin.POST("/oauth-providers", pluginHandler.CreateOAuthProvider)
-		admin.PUT("/oauth-providers/:id", pluginHandler.UpdateOAuthProvider)
-		admin.DELETE("/oauth-providers/:id", pluginHandler.DeleteOAuthProvider)
-
 		// 模块供给
 		provisionSvc := service.NewProvisionService(deps.DB, deps.Log)
 		provisionHandler := handler.NewProvisionHandler(provisionSvc, deps.Log)
@@ -1336,7 +1330,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// ==================== 验证码 ====================
 		if deps.Redis != nil {
-			captchaSvc := service.NewCaptchaService(deps.Redis)
+			captchaSvc := service.NewCaptchaService(deps.Redis, deps.DB)
 			captchaHandler := handler.NewCaptchaHandler(captchaSvc, deps.DB)
 			admin.GET("/captcha/image", captchaHandler.GetImage)
 			admin.POST("/captcha/sms", captchaHandler.SendSMS)
@@ -1901,10 +1895,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// ==================== 邮件增强 ====================
 		emailEnhancedSvc := service.NewEmailEnhancedService(deps.DB)
 		emailEnhancedHandler := handler.NewEmailEnhancedHandler(emailEnhancedSvc)
-		admin.GET("/email-templates", emailEnhancedHandler.GetTemplates)
-		admin.POST("/email-templates", emailEnhancedHandler.CreateTemplate)
-		admin.PUT("/email-templates/:id", emailEnhancedHandler.UpdateTemplate)
-		admin.DELETE("/email-templates/:id", emailEnhancedHandler.DeleteTemplate)
 		admin.POST("/email/test", emailEnhancedHandler.SendTestEmail)
 		admin.POST("/email/batch", emailEnhancedHandler.SendBatchEmail)
 		admin.GET("/email-logs", emailEnhancedHandler.GetEmailLogs)
@@ -1956,7 +1946,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/menu-active/:id", menuEnhancedHandler.EditMenuActive)
 		admin.GET("/nav-types", menuEnhancedHandler.GetNavType)
 		admin.GET("/create-web-data", menuEnhancedHandler.GetCreateWebData)
-		admin.GET("/languages", menuEnhancedHandler.GetLang)
 		admin.DELETE("/direct/:id", menuEnhancedHandler.DirectDel)
 		admin.POST("/hook-menus", menuEnhancedHandler.AddHookMenu)
 		admin.DELETE("/hook-menus/:id", menuEnhancedHandler.DelHookMenu)

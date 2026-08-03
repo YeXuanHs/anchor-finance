@@ -39,7 +39,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	orderHandler := handler.NewOrderHandler(deps.OrdSvc, log)
 	invoiceHandler := handler.NewInvoiceHandler(deps.InvSvc, log)
 	ticketHandler := handler.NewTicketHandler(deps.TicSvc, log)
-	cartHandler := handler.NewCartHandler(deps.CartSvc, log)
+	cartHandler := handler.NewCartHandler(deps.CartSvc)
 
 	balanceSvc := service.NewBalanceLogService(deps.DB)
 	balanceHandler := handler.NewBalanceHandler(balanceSvc, deps.DB)
@@ -59,8 +59,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	announceSvc := service.NewAnnounceService(deps.DB, log)
 	announceHandler := handler.NewAnnounceHandler(announceSvc, log)
 
-	newsSvc := service.NewNewsService(deps.DB, log)
-	newsHandler := handler.NewNewsHandler(newsSvc, log)
+	newsHandler := handler.NewNewsHandler(deps.DB, log)
 
 	knowledgeSvc := service.NewKnowledgeService(deps.DB, log)
 	knowledgeHandler := handler.NewKnowledgeHandler(knowledgeSvc, log)
