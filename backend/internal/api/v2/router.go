@@ -209,6 +209,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/balance", balanceHandler.GetBalance)
 		user.POST("/balance/recharge", balanceHandler.Recharge)
 		user.GET("/balance/logs", balanceHandler.GetBalanceLogs)
+		user.POST("/balance/withdraw", balanceHandler.Withdraw)
 
 		// 信用额度
 		user.GET("/credit", creditHandler.GetInfo)
@@ -234,6 +235,42 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 				return
 			}
 			c.JSON(200, gin.H{"data": promos})
+		})
+		user.POST("/promo-codes/validate", func(c *gin.Context) {
+			var req struct {
+				Code string `json:"code" binding:"required"`
+			}
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(400, gin.H{"error": err.Error()})
+				return
+			}
+			userID := c.GetUint("user_id")
+			promo, err := promoCodeSvc.Validate(req.Code, userID)
+			if err != nil {
+				c.JSON(400, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(200, gin.H{"data": promo})
+		})
+
+		// 支付方式
+		user.GET("/payment-gateways", balanceHandler.GetEnabledGateways)
+
+		// OAuth解绑
+		user.POST("/oauth/unbind", func(c *gin.Context) {
+			var req struct {
+				Provider string `json:"provider" binding:"required"`
+			}
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(400, gin.H{"error": err.Error()})
+				return
+			}
+			userID := c.GetUint("user_id")
+			if err := deps.DB.Where("user_id = ? AND provider = ?", userID, req.Provider).Delete(&model.OAuthBind{}).Error; err != nil {
+				c.JSON(500, gin.H{"error": "failed to unbind"})
+				return
+			}
+			c.JSON(200, gin.H{"message": "unbind success"})
 		})
 
 		// 系统消息

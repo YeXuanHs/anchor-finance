@@ -1,17 +1,17 @@
 <template>
   <div class="coupons-page">
     <div class="page-header">
-      <h1 class="page-title">优惠券</h1>
+      <h1 class="page-title">{{ $t('menu.coupons') }}</h1>
       <div class="redeem-area">
-        <el-input v-model="redeemCode" placeholder="输入兑换码" clearable style="width: 200px;" />
-        <el-button type="primary" @click="handleRedeem">兑换</el-button>
+        <el-input v-model="redeemCode" :placeholder="$t('coupon.enterCode')" clearable style="width: 200px;" />
+        <el-button type="primary" @click="handleRedeem">{{ $t('coupon.redeem') }}</el-button>
       </div>
     </div>
 
     <el-tabs v-model="activeTab" class="coupon-tabs">
-      <el-tab-pane label="可使用" name="available" />
-      <el-tab-pane label="已使用" name="used" />
-      <el-tab-pane label="已过期" name="expired" />
+      <el-tab-pane :label="$t('coupon.available')" name="available" />
+      <el-tab-pane :label="$t('coupon.used')" name="used" />
+      <el-tab-pane :label="$t('coupon.expired')" name="expired" />
     </el-tabs>
 
     <div class="coupons-grid">
@@ -21,48 +21,54 @@
         class="coupon-card"
         :class="{ disabled: activeTab !== 'available' }"
       >
-        <div class="coupon-left" :style="{ background: coupon.bg }">
+        <div class="coupon-left" :style="{ background: coupon.bg || '#409eff' }">
           <span class="coupon-value">
-            <span class="coupon-symbol">¥</span>{{ coupon.value }}
+            <span class="coupon-symbol">¥</span>{{ coupon.value || coupon.amount }}
           </span>
-          <span class="coupon-condition">满{{ coupon.threshold }}可用</span>
+          <span class="coupon-condition">{{ $t('coupon.minSpend', { amount: coupon.threshold || coupon.min_amount || 0 }) }}</span>
         </div>
         <div class="coupon-right">
-          <h4 class="coupon-name">{{ coupon.name }}</h4>
+          <h4 class="coupon-name">{{ coupon.name || coupon.code }}</h4>
           <p class="coupon-desc">{{ coupon.description }}</p>
-          <p class="coupon-expire">有效期至 {{ coupon.expireDate }}</p>
+          <p class="coupon-expire">{{ $t('coupon.expireAt') }} {{ coupon.expireDate || coupon.expire_at }}</p>
           <el-button
             v-if="activeTab === 'available'"
             type="primary"
             size="small"
             @click="handleUse(coupon)"
-          >立即使用</el-button>
-          <span v-else-if="activeTab === 'used'" class="coupon-used-tag">已使用</span>
-          <span v-else class="coupon-expired-tag">已过期</span>
+          >{{ $t('coupon.useNow') }}</el-button>
+          <span v-else-if="activeTab === 'used'" class="coupon-used-tag">{{ $t('coupon.used') }}</span>
+          <span v-else class="coupon-expired-tag">{{ $t('coupon.expired') }}</span>
         </div>
       </div>
     </div>
 
-    <el-empty v-if="filteredCoupons.length === 0" description="暂无优惠券" />
+    <el-empty v-if="filteredCoupons.length === 0" :description="$t('coupon.empty')" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import request from '@/utils/request'
 
+const { t } = useI18n()
 const activeTab = ref('available')
 const redeemCode = ref('')
 const loading = ref(false)
 
 interface Coupon {
   id: number
+  code: string
   name: string
   description: string
   value: number
+  amount: number
   threshold: number
+  min_amount: number
   expireDate: string
+  expire_at: string
   status: string
   bg: string
 }
@@ -82,17 +88,17 @@ const filteredCoupons = computed(() => {
 })
 
 async function handleRedeem() {
-  if (!redeemCode.value) { ElMessage.warning('请输入兑换码'); return }
+  if (!redeemCode.value) { ElMessage.warning(t('coupon.enterCodeHint')); return }
   try {
     await request.post('/api/v2/promo-codes/validate', { code: redeemCode.value })
-    ElMessage.success('兑换成功')
+    ElMessage.success(t('coupon.redeemSuccess'))
     redeemCode.value = ''
     const { data } = await request.get('/api/v2/promo-codes')
     coupons.value = data.data?.list || data.list || data.data || []
-  } catch (e: any) { ElMessage.error(e?.message || '兑换失败，请检查兑换码') }
+  } catch (e: any) { ElMessage.error(e?.message || t('coupon.redeemFailed')) }
 }
 
-function handleUse(coupon: Coupon) { ElMessage.info(`使用优惠券：${coupon.name}`) }
+function handleUse(coupon: Coupon) { ElMessage.info(t('coupon.useCoupon', { name: coupon.name || coupon.code })) }
 </script>
 
 <style scoped>

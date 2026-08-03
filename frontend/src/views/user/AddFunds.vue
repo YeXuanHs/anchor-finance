@@ -166,7 +166,7 @@ const getStatusText = (status: string) => {
 const loadPaymentMethods = async () => {
   loadingGateways.value = true
   try {
-    const { data } = await request.get('/api/v2/payment-gateways')
+    const { data } = await request.get('/api/v1/payment-methods')
     paymentMethods.value = data?.data || []
     // 默认选中第一个
     if (paymentMethods.value.length > 0 && !paymentMethod.value) {

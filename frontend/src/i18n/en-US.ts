@@ -458,5 +458,15 @@ export default {
   },
   pay: {
     bill: 'Bill', payImmediately: 'Pay Now', return: 'Back'
+  },
+  coupon: {
+    enterCode: 'Enter code', redeem: 'Redeem',
+    available: 'Available', used: 'Used', expired: 'Expired',
+    minSpend: 'Min spend {amount}', expireAt: 'Expires',
+    useNow: 'Use Now', empty: 'No coupons',
+    enterCodeHint: 'Please enter a code',
+    redeemSuccess: 'Redeemed successfully',
+    redeemFailed: 'Redeem failed, check your code',
+    useCoupon: 'Use coupon: {name}'
   }
 }

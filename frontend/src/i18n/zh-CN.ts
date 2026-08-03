@@ -938,5 +938,20 @@ export default {
     bill: '账单',
     payImmediately: '立即支付',
     return: '返回'
+  },
+  coupon: {
+    enterCode: '输入兑换码',
+    redeem: '兑换',
+    available: '可使用',
+    used: '已使用',
+    expired: '已过期',
+    minSpend: '满{amount}可用',
+    expireAt: '有效期至',
+    useNow: '立即使用',
+    empty: '暂无代金券',
+    enterCodeHint: '请输入兑换码',
+    redeemSuccess: '兑换成功',
+    redeemFailed: '兑换失败，请检查兑换码',
+    useCoupon: '使用代金券：{name}'
   }
 }

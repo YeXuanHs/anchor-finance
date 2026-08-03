@@ -455,5 +455,15 @@ export default {
   },
   pay: {
     bill: '帳單', payImmediately: '立即支付', return: '返回'
+  },
+  coupon: {
+    enterCode: '輸入兌換碼', redeem: '兌換',
+    available: '可使用', used: '已使用', expired: '已過期',
+    minSpend: '滿{amount}可用', expireAt: '有效期至',
+    useNow: '立即使用', empty: '暫無代金券',
+    enterCodeHint: '請輸入兌換碼',
+    redeemSuccess: '兌換成功',
+    redeemFailed: '兌換失敗，請檢查兌換碼',
+    useCoupon: '使用代金券：{name}'
   }
 }

@@ -89,7 +89,7 @@ const fetchCategories = async () => {
 
 const fetchHotQuestions = async () => {
   try {
-    const res = await request.get('/api/v2/help/hot')
+    const res = await request.get('/api/v2/help/articles/hot')
     hotQuestions.value = res.data?.data || [
       { id: 1, title: '如何重置服务器密码？', rank: 1 },
       { id: 2, title: '域名解析如何设置？', rank: 2 },
