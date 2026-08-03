@@ -1659,6 +1659,18 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// 报表扩展功能
 		admin.GET("/reports/modules", reportHandler.GetSystemInfoModulesList)
 		admin.POST("/reports/modules/sort", reportHandler.UpdateSystemInfoModulesSort)
+		admin.GET("/reports/year-income-statistics", reportHandler.GetYearIncomeStatistics)
+		admin.GET("/reports/year-income-statistics-chart", reportHandler.GetYearIncomeStatisticsForChart)
+		admin.GET("/reports/new-client-statistics", reportHandler.GetNewClientStatistics)
+		admin.GET("/reports/revenue-ranking", reportHandler.GetRevenueRanking)
+
+		// ==================== 黑名单管理 ====================
+		blacklistSvc := service.NewBlacklistService(deps.DB, deps.Log)
+		blacklistHandler := handler.NewBlacklistHandler(blacklistSvc, deps.Log)
+		admin.GET("/blacklist", blacklistHandler.List)
+		admin.POST("/blacklist", blacklistHandler.Create)
+		admin.PUT("/blacklist/:id", blacklistHandler.Update)
+		admin.DELETE("/blacklist/:id", blacklistHandler.Delete)
 
 		// ==================== 运行映射 ====================
 		runMapHandler := handler.NewRunMapHandler(deps.DB, deps.Log)
