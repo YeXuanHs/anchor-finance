@@ -141,7 +141,7 @@ const fetchTreeData = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/link-cause/tree',
+      url: '/api/admin/link-causes/tree',
       params: searchForm
     })
     treeData.value = data || []
@@ -193,7 +193,7 @@ const handleEdit = (row: LinkCause) => {
 const handleDelete = async (row: LinkCause) => {
   try {
     await request.del({
-      url: `/api/admin/link-cause/${row.id}`
+      url: `/api/admin/link-causes/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchTreeData()
@@ -212,12 +212,12 @@ const handleSubmit = async () => {
     try {
       if (formData.id) {
         await request.put({
-          url: `/api/admin/link-cause/${formData.id}`,
+          url: `/api/admin/link-causes/${formData.id}`,
           params: { ...formData }
         })
       } else {
         await request.post({
-          url: '/api/admin/link-cause',
+          url: '/api/admin/link-causes',
           params: { ...formData }
         })
       }

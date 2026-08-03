@@ -230,7 +230,7 @@ const fetchList = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/upstream',
+      url: '/api/admin/upstream/providers',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -293,7 +293,7 @@ const handleTest = async (row: any) => {
   row._testing = true
   try {
     const data = await request.post({
-      url: `/api/admin/upstream/${row.id}/test`
+      url: `/api/admin/upstream/providers/${row.id}/test`
     })
     row.test_status = data.status === 'success' ? 'success' : 'failed'
     ElMessage.success(data.message || '测试完成')
@@ -308,7 +308,7 @@ const handleTest = async (row: any) => {
 const handleStatusChange = async (row: any) => {
   try {
     await request.put({
-      url: `/api/admin/upstream/${row.id}`,
+      url: `/api/admin/upstream/providers/${row.id}`,
       params: { status: row.status }
     })
     ElMessage.success('状态已更新')
@@ -321,7 +321,7 @@ const handleStatusChange = async (row: any) => {
 const handleDelete = async (row: any) => {
   try {
     await request.del({
-      url: `/api/admin/upstream/${row.id}`
+      url: `/api/admin/upstream/providers/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchList()
@@ -349,7 +349,7 @@ const handleSubmit = async () => {
         delete submitData.api_password
       }
 
-      const url = formData.id ? `/api/admin/upstream/${formData.id}` : '/api/admin/upstream'
+      const url = formData.id ? `/api/admin/upstream/providers/${formData.id}` : '/api/admin/upstream/providers'
 
       if (formData.id) {
         await request.put({ url, params: submitData })

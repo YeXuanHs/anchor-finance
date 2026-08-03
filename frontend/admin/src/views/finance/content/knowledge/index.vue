@@ -199,7 +199,7 @@ const fetchData = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/knowledge-base',
+      url: '/api/admin/knowledge/articles',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -253,7 +253,7 @@ const handleEdit = (row: any) => {
 
 const handleDelete = async (row: any) => {
   try {
-    await request.del({ url: `/api/admin/knowledge-base/${row.id}` })
+    await request.del({ url: `/api/admin/knowledge/articles/${row.id}` })
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {
@@ -267,7 +267,7 @@ const handleSubmit = async () => {
     if (!valid) return
     submitLoading.value = true
     try {
-      const url = formData.id ? `/api/admin/knowledge-base/${formData.id}` : '/api/admin/knowledge-base'
+      const url = formData.id ? `/api/admin/knowledge/articles/${formData.id}` : '/api/admin/knowledge/articles'
       if (formData.id) {
         await request.put({ url, params: formData })
       } else {

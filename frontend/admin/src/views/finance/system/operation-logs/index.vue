@@ -114,7 +114,7 @@ const fetchData = async () => {
       params.start_date = searchForm.date_range[0]
       params.end_date = searchForm.date_range[1]
     }
-    const data = await request.get({ url: '/api/admin/system/operation-logs', params })
+    const data = await request.get({ url: '/api/admin/log-records', params })
     tableData.value = data.list || []
     pagination.total = data.total || 0
   } catch (error) {
@@ -146,7 +146,7 @@ const handleClearLogs = async () => {
     type: 'warning'
   })
   try {
-    await request.del({ url: '/api/admin/system/operation-logs' })
+    await request.post({ url: '/api/admin/system-logs/clear-by-level' })
     ElMessage.success('清理成功')
     fetchData()
   } catch (error) {

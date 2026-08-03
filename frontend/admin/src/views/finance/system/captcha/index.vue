@@ -138,7 +138,7 @@ const defaultConfig = { ...configForm }
 
 const fetchConfig = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/system/captcha' })
+    const data = await request.get({ url: '/api/admin/captcha-config' })
     if (data) {
       Object.assign(configForm, data)
     }
@@ -155,8 +155,8 @@ const handleSave = async () => {
 
     saveLoading.value = true
     try {
-      await request.post({
-        url: '/api/admin/system/captcha',
+      await request.put({
+        url: '/api/admin/captcha-config/basic',
         params: { ...configForm }
       })
       ElMessage.success('保存成功')

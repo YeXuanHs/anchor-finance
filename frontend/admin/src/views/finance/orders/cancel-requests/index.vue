@@ -91,7 +91,7 @@ const fetchCancelList = async () => {
   loading.value = true
   try {
     const res = await request.get({
-      url: '/api/admin/orders/cancel-requests',
+      url: '/api/admin/user-manage/cancel-requests',
       params: { page: pagination.page, limit: pagination.limit }
     })
     if (res?.data) {
@@ -108,7 +108,7 @@ const fetchCancelList = async () => {
 const handleConfirm = async (row: any) => {
   try {
     await ElMessageBox.confirm('确定确认此取消请求吗？产品将被取消。', '提示')
-    await request.put({ url: `/api/admin/orders/cancel-requests/${row.id}/confirm`, showSuccessMessage: true })
+    await request.post({ url: `/api/admin/user-manage/cancel-requests/${row.id}`, showSuccessMessage: true })
     fetchCancelList()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('操作失败')
@@ -118,7 +118,7 @@ const handleConfirm = async (row: any) => {
 const showReasonDialog = async () => {
   reasonDialogVisible.value = true
   try {
-    const res = await request.get({ url: '/api/admin/orders/cancel-reasons' })
+    const res = await request.get({ url: '/api/admin/cancel-reasons' })
     reasonList.value = res?.data || []
   } catch (error) {
     console.error(error)
@@ -133,7 +133,7 @@ const showAddReason = () => {
 const handleAddReason = async () => {
   if (!newReason.value) return
   try {
-    await request.post({ url: '/api/admin/orders/cancel-reasons', data: { reason: newReason.value }, showSuccessMessage: true })
+    await request.post({ url: '/api/admin/cancel-reasons', params: { reason: newReason.value }, showSuccessMessage: true })
     addReasonVisible.value = false
     showReasonDialog()
   } catch (error) {
@@ -144,7 +144,7 @@ const handleAddReason = async () => {
 const handleDeleteReason = async (row: any) => {
   try {
     await ElMessageBox.confirm('确定删除此原因吗？', '提示')
-    await request.delete({ url: `/api/admin/orders/cancel-reasons/${row.id}`, showSuccessMessage: true })
+    await request.del({ url: `/api/admin/cancel-reasons/${row.id}`, showSuccessMessage: true })
     showReasonDialog()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('删除失败')

@@ -188,7 +188,7 @@ const fetchIncomeReport = async () => {
   incomeLoading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/reports/income',
+      url: '/api/admin/reports/revenue',
       params: { range: incomeRange.value }
     })
     if (!incomeChart) incomeChart = initChart(incomeChartRef.value)
@@ -247,7 +247,7 @@ const fetchClientReport = async () => {
   clientLoading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/reports/clients',
+      url: '/api/admin/reports/users',
       params: { range: clientRange.value }
     })
     if (!clientChart) clientChart = initChart(clientChartRef.value)
@@ -312,7 +312,7 @@ const fetchProductReport = async () => {
   productLoading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/reports/products',
+      url: '/api/admin/reports/product-income',
       params: { range: productRange.value }
     })
     if (!productChart) productChart = initChart(productChartRef.value)
@@ -427,7 +427,7 @@ const fetchTicketReport = async () => {
 // 获取概览数据
 const fetchSummary = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/reports/summary' })
+    const data = await request.get({ url: '/api/admin/reports/dashboard' })
     Object.assign(summary, data)
   } catch (error) {
     console.error('获取概览数据失败:', error)

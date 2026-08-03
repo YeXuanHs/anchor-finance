@@ -1,6 +1,18 @@
 package mail
 
-import "fmt"
+import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"sort"
+	"strings"
+	"time"
+)
 
 // SenderFactory creates a MailSender instance based on the plugin name.
 type SenderFactory struct{}
@@ -115,9 +127,41 @@ func NewSubmailSender(config SubmailConfig) *SubmailSender {
 }
 
 // Send sends an email via Submail API.
-// TODO: implement Submail REST API integration
 func (s *SubmailSender) Send(to, subject, content string, attachments []string) error {
-	return fmt.Errorf("submail: not yet implemented")
+	if s.config.AppID == "" || s.config.AppKey == "" {
+		return fmt.Errorf("submail: app_id and app_key are required")
+	}
+
+	apiURL := "https://api.submail.cn/mail.send"
+	form := url.Values{}
+	form.Set("appid", s.config.AppID)
+	form.Set("to", to)
+	form.Set("subject", subject)
+	form.Set("html", content)
+	form.Set("signature", s.config.AppKey)
+	if s.config.SignType != "" {
+		form.Set("sign_type", s.config.SignType)
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Post(apiURL, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+	if err != nil {
+		return fmt.Errorf("submail: request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return fmt.Errorf("submail: invalid response: %s", string(body))
+	}
+
+	if status, ok := result["status"].(string); ok && status != "success" {
+		msg, _ := result["msg"].(string)
+		return fmt.Errorf("submail: %s", msg)
+	}
+
+	return nil
 }
 
 // AlimailConfig holds the configuration for Aliyun DirectMail sender.
@@ -139,7 +183,89 @@ func NewAlimailSender(config AlimailConfig) *AlimailSender {
 }
 
 // Send sends an email via Aliyun DirectMail API.
-// TODO: implement Aliyun DirectMail SDK integration
 func (s *AlimailSender) Send(to, subject, content string, attachments []string) error {
-	return fmt.Errorf("alimail: not yet implemented")
+	if s.config.AccessKeyID == "" || s.config.AccessKeySecret == "" {
+		return fmt.Errorf("alimail: access_key_id and access_key_secret are required")
+	}
+
+	accountName := s.config.AccountName
+	if accountName == "" {
+		return fmt.Errorf("alimail: account_name is required")
+	}
+
+	fromAlias := s.config.FromAlias
+
+	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
+
+	params := map[string]string{
+		"Action":           "SingleSendMail",
+		"AccountName":      accountName,
+		"AddressType":      "1",
+		"ToAddress":        to,
+		"Subject":          subject,
+		"HtmlBody":         content,
+		"Format":           "JSON",
+		"Version":          "2015-11-23",
+		"AccessKeyId":      s.config.AccessKeyID,
+		"SignatureMethod":  "HMAC-SHA1",
+		"SignatureVersion": "1.0",
+		"SignatureNonce":   fmt.Sprintf("%d", time.Now().UnixNano()),
+		"Timestamp":        now,
+	}
+	if fromAlias != "" {
+		params["FromAlias"] = fromAlias
+	}
+
+	// Sort parameters lexicographically
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var canonicalQuery strings.Builder
+	for i, k := range keys {
+		if i > 0 {
+			canonicalQuery.WriteString("&")
+		}
+		canonicalQuery.WriteString(url.QueryEscape(k))
+		canonicalQuery.WriteString("=")
+		canonicalQuery.WriteString(url.QueryEscape(params[k]))
+	}
+
+	stringToSign := fmt.Sprintf("POST&%%2F&%s", url.QueryEscape(canonicalQuery.String()))
+
+	mac := hmac.New(sha1.New, []byte(s.config.AccessKeySecret+"&"))
+	mac.Write([]byte(stringToSign))
+	signature := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+
+	params["Signature"] = signature
+
+	form := url.Values{}
+	for k, v := range params {
+		form.Set(k, v)
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Post("https://dm.aliyuncs.com/", "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+	if err != nil {
+		return fmt.Errorf("alimail: request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return fmt.Errorf("alimail: invalid response: %s", string(body))
+	}
+
+	if resp.StatusCode >= 400 {
+		errMsg, _ := result["Message"].(string)
+		if errMsg == "" {
+			errMsg = string(body)
+		}
+		return fmt.Errorf("alimail: %s", errMsg)
+	}
+
+	return nil
 }

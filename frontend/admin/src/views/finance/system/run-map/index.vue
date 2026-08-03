@@ -125,7 +125,7 @@ const fetchData = async () => {
       keyword: searchForm.keyword || undefined,
       status: searchForm.status
     }
-    const data = await request.get({ url: '/api/admin/system/run-map', params })
+    const data = await request.get({ url: '/api/admin/run-map', params })
     tableData.value = data.list || []
     pagination.total = data.total || 0
   } catch (error) {
@@ -154,7 +154,7 @@ const handleViewDetail = (row: any) => {
 
 const handleRetry = async (row: any) => {
   try {
-    await request.post({ url: `/api/admin/system/run-map/${row.id}/retry` })
+    await request.post({ url: `/api/admin/run-map/${row.id}/repeat` })
     ElMessage.success('重试成功')
     fetchData()
   } catch (error) {

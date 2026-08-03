@@ -118,7 +118,7 @@ const configRules: FormRules = {
 
 const fetchConfig = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/affiliate-config' })
+    const data = await request.get({ url: '/api/admin/config/affiliate' })
     Object.assign(configForm, data)
   } catch (error) {
     console.error('获取配置失败:', error)
@@ -131,7 +131,7 @@ const handleSaveConfig = async () => {
     if (!valid) return
     saveLoading.value = true
     try {
-      await request.put({ url: '/api/admin/affiliate-config', params: configForm })
+      await request.put({ url: '/api/admin/config/affiliate', params: configForm })
       ElMessage.success('保存成功')
     } catch (error) {
       ElMessage.error('保存失败')

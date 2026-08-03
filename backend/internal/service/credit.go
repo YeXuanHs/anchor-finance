@@ -962,21 +962,3 @@ func (s *CreditService) UpdateGlobalCreditConfig(config *GlobalCreditConfig) err
 	return nil
 }
 
-func parseFloat(s string) float64 {
-	var f float64
-	fmt.Sscanf(s, "%f", &f)
-	return f
-}
-
-func parseInt(s string) int {
-	var i int
-	fmt.Sscanf(s, "%d", &i)
-	return i
-}
-
-func boolToIntStr(b bool) string {
-	if b {
-		return "1"
-	}
-	return "0"
-}

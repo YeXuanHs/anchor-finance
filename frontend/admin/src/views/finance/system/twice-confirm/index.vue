@@ -99,7 +99,7 @@ const configForm = reactive({
 
 const fetchConfig = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/system/twice-confirm' })
+    const data = await request.get({ url: '/api/admin/config/second-verify' })
     if (data) {
       Object.assign(configForm, data)
     }
@@ -111,8 +111,8 @@ const fetchConfig = async () => {
 const handleSave = async () => {
   saveLoading.value = true
   try {
-    await request.post({
-      url: '/api/admin/system/twice-confirm',
+    await request.put({
+      url: '/api/admin/config/second-verify',
       params: { ...configForm }
     })
     ElMessage.success('保存成功')

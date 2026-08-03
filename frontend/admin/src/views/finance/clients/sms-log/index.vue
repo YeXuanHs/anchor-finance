@@ -113,7 +113,7 @@ const fetchData = async () => {
       params.start_date = searchForm.date_range[0]
       params.end_date = searchForm.date_range[1]
     }
-    const data = await request.get({ url: '/api/admin/sms-logs', params })
+    const data = await request.get({ url: '/api/admin/sms/logs', params })
     tableData.value = data.list || []
     pagination.total = data.total || 0
   } catch (error) {

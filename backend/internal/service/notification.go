@@ -3,6 +3,7 @@ package service
 import (
 	"time"
 
+	"anchorfinance/pkg/email"
 	"anchorfinance/pkg/logger"
 
 	"gorm.io/gorm"
@@ -76,15 +77,16 @@ func (s *NotificationService) NotifyOnce(eventType string, targetID interface{},
 
 // sendNotification 实际发送通知
 func (s *NotificationService) sendNotification(title string, content string) error {
-	// 从配置获取通知邮箱
 	emails := s.getNotifyEmails()
 	if emails == "" {
 		s.log.Warn("未配置通知邮箱，跳过发送")
 		return nil
 	}
 
-	// TODO: 调用邮件服务发送
-	s.log.Infof("发送通知到 %s: %s", emails, title)
+	sender := email.NewSender(s.db)
+	if err := sender.Send(emails, title, content); err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -56,23 +56,27 @@ func (h *SettingHandler) loadConfigMap(keys []string) map[string]string {
 
 // GetNotificationSettings 获取通知设置
 func (h *SettingHandler) GetNotificationSettings(c *gin.Context) {
+	keys := []string{
+		"notification_email_enabled", "notification_email_host",
+		"notification_email_port", "notification_email_username",
+		"notification_email_password", "notification_email_from",
+		"notification_email_encryption",
+		"notification_sms_enabled", "notification_sms_provider",
+		"notification_sms_api_key",
+	}
+	m := h.loadConfigMap(keys)
+
 	settings := gin.H{
-		"email_enabled":     true,
-		"email_host":        "",
-		"email_port":        465,
-		"email_username":    "",
-		"email_password":    "",
-		"email_from":        "",
-		"email_encryption":  "ssl",
-		"sms_enabled":       false,
-		"sms_provider":      "",
-		"sms_api_key":       "",
-		"template": gin.H{
-			"welcome":         "欢迎注册，{username}！",
-			"password_reset":  "您的密码重置链接：{link}",
-			"order_confirm":   "订单 {order_id} 已确认",
-			"payment_success": "支付成功，金额：{amount}",
-		},
+		"email_enabled":    m["notification_email_enabled"] == "true",
+		"email_host":       m["notification_email_host"],
+		"email_port":       m["notification_email_port"],
+		"email_username":   m["notification_email_username"],
+		"email_password":   m["notification_email_password"],
+		"email_from":       m["notification_email_from"],
+		"email_encryption": m["notification_email_encryption"],
+		"sms_enabled":      m["notification_sms_enabled"] == "true",
+		"sms_provider":     m["notification_sms_provider"],
+		"sms_api_key":      m["notification_sms_api_key"],
 	}
 	response.Success(c, settings)
 }
@@ -119,12 +123,24 @@ func (h *SettingHandler) SaveNotificationSettings(c *gin.Context) {
 
 // GetMaintenanceMode 获取维护模式配置
 func (h *SettingHandler) GetMaintenanceMode(c *gin.Context) {
+	keys := []string{
+		"main_tenance_mode", "main_tenance_mode_message",
+		"main_tenance_mode_allowed_ips", "main_tenance_mode_start_time",
+		"main_tenance_mode_end_time",
+	}
+	m := h.loadConfigMap(keys)
+
+	var allowedIPs []string
+	if v := m["main_tenance_mode_allowed_ips"]; v != "" {
+		_ = json.Unmarshal([]byte(v), &allowedIPs)
+	}
+
 	config := gin.H{
-		"enabled":     false,
-		"message":     "系统维护中，请稍后再试",
-		"allowed_ips": []string{"127.0.0.1"},
-		"start_time":  "",
-		"end_time":    "",
+		"enabled":     m["main_tenance_mode"] == "true",
+		"message":     m["main_tenance_mode_message"],
+		"allowed_ips": allowedIPs,
+		"start_time":  m["main_tenance_mode_start_time"],
+		"end_time":    m["main_tenance_mode_end_time"],
 	}
 	response.Success(c, config)
 }
@@ -167,37 +183,14 @@ func (h *SettingHandler) SetMaintenanceMode(c *gin.Context) {
 
 // GetCronSettings 获取定时任务配置
 func (h *SettingHandler) GetCronSettings(c *gin.Context) {
-	jobs := []gin.H{
-		{
-			"id":          1,
-			"name":        "数据库备份",
-			"command":     "backup:database",
-			"schedule":    "0 2 * * *",
-			"enabled":     true,
-			"last_run":    "2026-08-01 02:00:00",
-			"next_run":    "2026-08-02 02:00:00",
-			"status":      "success",
-		},
-		{
-			"id":          2,
-			"name":        "清理临时文件",
-			"command":     "cleanup:temp",
-			"schedule":    "0 3 * * 0",
-			"enabled":     true,
-			"last_run":    "2026-07-28 03:00:00",
-			"next_run":    "2026-08-04 03:00:00",
-			"status":      "success",
-		},
-		{
-			"id":          3,
-			"name":        "系统更新检查",
-			"command":     "system:check-update",
-			"schedule":    "0 9 * * 1",
-			"enabled":     false,
-			"last_run":    "",
-			"next_run":    "",
-			"status":      "disabled",
-		},
+	m := h.loadConfigMap([]string{"cron_jobs"})
+
+	var jobs []gin.H
+	if v := m["cron_jobs"]; v != "" {
+		_ = json.Unmarshal([]byte(v), &jobs)
+	}
+	if jobs == nil {
+		jobs = []gin.H{}
 	}
 	response.Success(c, gin.H{"jobs": jobs})
 }
@@ -232,18 +225,25 @@ func (h *SettingHandler) SaveCronSettings(c *gin.Context) {
 
 // GetSiteSettings 获取站点设置
 func (h *SettingHandler) GetSiteSettings(c *gin.Context) {
+	keys := []string{
+		"site_name", "site_url", "site_logo", "site_description",
+		"site_keywords", "site_icp", "site_copyright", "site_footer",
+		"default_language", "default_timezone", "date_format",
+	}
+	m := h.loadConfigMap(keys)
+
 	settings := gin.H{
-		"site_name":        "AnchorFinance",
-		"site_url":         "",
-		"site_logo":        "",
-		"site_description": "",
-		"site_keywords":    "",
-		"site_icp":         "",
-		"site_copyright":   "",
-		"site_footer":      "",
-		"default_language":  "zh-CN",
-		"default_timezone":  "Asia/Shanghai",
-		"date_format":       "Y-m-d H:i:s",
+		"site_name":        m["site_name"],
+		"site_url":         m["site_url"],
+		"site_logo":        m["site_logo"],
+		"site_description": m["site_description"],
+		"site_keywords":    m["site_keywords"],
+		"site_icp":         m["site_icp"],
+		"site_copyright":   m["site_copyright"],
+		"site_footer":      m["site_footer"],
+		"default_language": m["default_language"],
+		"default_timezone": m["default_timezone"],
+		"date_format":      m["date_format"],
 	}
 	response.Success(c, settings)
 }
@@ -292,26 +292,38 @@ func (h *SettingHandler) SaveSiteSettings(c *gin.Context) {
 
 // GetPaymentSettings 获取支付设置
 func (h *SettingHandler) GetPaymentSettings(c *gin.Context) {
+	keys := []string{
+		"payment_alipay_enabled", "payment_alipay_app_id",
+		"payment_alipay_private_key", "payment_alipay_public_key",
+		"payment_alipay_notify_url",
+		"payment_wechat_enabled", "payment_wechat_app_id",
+		"payment_wechat_mch_id", "payment_wechat_api_key",
+		"payment_wechat_notify_url",
+		"payment_stripe_enabled", "payment_stripe_public_key",
+		"payment_stripe_secret_key", "payment_stripe_webhook_key",
+	}
+	m := h.loadConfigMap(keys)
+
 	settings := gin.H{
 		"alipay": gin.H{
-			"enabled":      false,
-			"app_id":       "",
-			"private_key":  "",
-			"public_key":   "",
-			"notify_url":   "",
+			"enabled":     m["payment_alipay_enabled"] == "true",
+			"app_id":      m["payment_alipay_app_id"],
+			"private_key": m["payment_alipay_private_key"],
+			"public_key":  m["payment_alipay_public_key"],
+			"notify_url":  m["payment_alipay_notify_url"],
 		},
 		"wechat": gin.H{
-			"enabled":      false,
-			"app_id":       "",
-			"mch_id":       "",
-			"api_key":      "",
-			"notify_url":   "",
+			"enabled":   m["payment_wechat_enabled"] == "true",
+			"app_id":    m["payment_wechat_app_id"],
+			"mch_id":    m["payment_wechat_mch_id"],
+			"api_key":   m["payment_wechat_api_key"],
+			"notify_url": m["payment_wechat_notify_url"],
 		},
 		"stripe": gin.H{
-			"enabled":      false,
-			"public_key":   "",
-			"secret_key":   "",
-			"webhook_key":  "",
+			"enabled":    m["payment_stripe_enabled"] == "true",
+			"public_key": m["payment_stripe_public_key"],
+			"secret_key": m["payment_stripe_secret_key"],
+			"webhook_key": m["payment_stripe_webhook_key"],
 		},
 	}
 	response.Success(c, settings)
@@ -375,7 +387,7 @@ func (h *SettingHandler) SavePaymentSettings(c *gin.Context) {
 // GET /admin/settings/upload
 func (h *SettingHandler) GetUploadSettings(c *gin.Context) {
 	type ConfigItem struct {
-		Setting string `json:"setting"`
+		Setting string `json:"setting" gorm:"column:key"`
 		Value   string `json:"value"`
 	}
 
@@ -387,7 +399,7 @@ func (h *SettingHandler) GetUploadSettings(c *gin.Context) {
 	}
 
 	var items []ConfigItem
-	h.db.Table("system_configs").Select("setting, value").Where("setting IN ?", uploadKeys).Find(&items)
+	h.db.Table("system_configs").Select("`key`, value").Where("`key` IN ?", uploadKeys).Find(&items)
 
 	data := make(map[string]interface{})
 	for _, item := range items {
@@ -419,13 +431,13 @@ func (h *SettingHandler) SaveUploadSettings(c *gin.Context) {
 
 	for key, value := range req {
 		var count int64
-		h.db.Table("system_configs").Where("setting = ?", key).Count(&count)
+		h.db.Table("system_configs").Where("`key` = ?", key).Count(&count)
 		if count > 0 {
-			h.db.Table("system_configs").Where("setting = ?", key).Update("value", fmt.Sprintf("%v", value))
+			h.db.Table("system_configs").Where("`key` = ?", key).Update("value", fmt.Sprintf("%v", value))
 		} else {
 			h.db.Table("system_configs").Create(&map[string]interface{}{
-				"setting": key,
-				"value":   fmt.Sprintf("%v", value),
+				"key":   key,
+				"value": fmt.Sprintf("%v", value),
 			})
 		}
 	}
@@ -466,13 +478,13 @@ func (h *SettingHandler) BackupDatabaseFTP(c *gin.Context) {
 		}
 		for key, value := range ftpConfigs {
 			var count int64
-			h.db.Table("system_configs").Where("setting = ?", key).Count(&count)
+			h.db.Table("system_configs").Where("`key` = ?", key).Count(&count)
 			if count > 0 {
-				h.db.Table("system_configs").Where("setting = ?", key).Update("value", value)
+				h.db.Table("system_configs").Where("`key` = ?", key).Update("value", value)
 			} else {
 				h.db.Table("system_configs").Create(&map[string]interface{}{
-					"setting": key,
-					"value":   value,
+					"key":   key,
+					"value": value,
 				})
 			}
 		}
@@ -487,7 +499,7 @@ func (h *SettingHandler) BackupDatabaseFTP(c *gin.Context) {
 // DeactivateFTP 停用 FTP 备份
 // POST /admin/settings/deactivate-ftp
 func (h *SettingHandler) DeactivateFTP(c *gin.Context) {
-	h.db.Table("system_configs").Where("setting = ?", "daily_ftp_backup_status").Update("value", "0")
+	h.db.Table("system_configs").Where("`key` = ?", "daily_ftp_backup_status").Update("value", "0")
 	response.SuccessMsg(c, "FTP备份已停用")
 }
 
@@ -517,13 +529,13 @@ func (h *SettingHandler) BackupDatabaseEmail(c *gin.Context) {
 	}
 	for key, value := range emailConfigs {
 		var count int64
-		h.db.Table("system_configs").Where("setting = ?", key).Count(&count)
+		h.db.Table("system_configs").Where("`key` = ?", key).Count(&count)
 		if count > 0 {
-			h.db.Table("system_configs").Where("setting = ?", key).Update("value", value)
+			h.db.Table("system_configs").Where("`key` = ?", key).Update("value", value)
 		} else {
 			h.db.Table("system_configs").Create(&map[string]interface{}{
-				"setting": key,
-				"value":   value,
+				"key":   key,
+				"value": value,
 			})
 		}
 	}
@@ -535,7 +547,7 @@ func (h *SettingHandler) BackupDatabaseEmail(c *gin.Context) {
 // DeactivateEmail 停用邮件备份
 // POST /admin/settings/deactivate-email
 func (h *SettingHandler) DeactivateEmail(c *gin.Context) {
-	h.db.Table("system_configs").Where("setting = ?", "daily_email_backup_status").Update("value", "0")
+	h.db.Table("system_configs").Where("`key` = ?", "daily_email_backup_status").Update("value", "0")
 	response.SuccessMsg(c, "邮件备份已停用")
 }
 

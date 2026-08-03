@@ -125,7 +125,7 @@ const formData = reactive({
 const fetchTasks = async () => {
   loading.value = true
   try {
-    const data = await request.get({ url: '/api/admin/system/data-migration/tasks' })
+    const data = await request.get({ url: '/api/admin/system/data-migration' })
     tasks.value = data || []
   } catch (error) {
     ElMessage.error('获取迁移任务失败')
@@ -145,7 +145,7 @@ const handleCreateTask = () => {
 const handleSubmit = async () => {
   if (!formData.name) { ElMessage.warning('请输入任务名称'); return }
   try {
-    await request.post({ url: '/api/admin/system/data-migration/tasks', params: { ...formData } })
+    await request.post({ url: '/api/admin/system/data-migration', params: { ...formData } })
     ElMessage.success('任务创建成功')
     dialogVisible.value = false
     fetchTasks()

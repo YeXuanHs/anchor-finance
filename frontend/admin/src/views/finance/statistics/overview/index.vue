@@ -177,7 +177,7 @@ const fetchStats = async () => {
       params.start_date = dateRange.value[0]
       params.end_date = dateRange.value[1]
     }
-    const data = await request.get({ url: '/api/admin/statistics/overview', params })
+    const data = await request.get({ url: '/api/admin/reports/dashboard', params })
     if (data) Object.assign(stats, data)
   } catch (error) {
     console.error('获取统计数据失败:', error)

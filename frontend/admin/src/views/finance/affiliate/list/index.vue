@@ -229,7 +229,7 @@ const fetchAffiliates = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/affiliates',
+      url: '/api/admin/affiliate',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -264,7 +264,7 @@ const handleReset = () => {
 const handleViewDetail = async (row: any) => {
   try {
     const data = await request.get({
-      url: `/api/admin/affiliates/${row.id}`
+      url: `/api/admin/affiliate/${row.id}`
     })
     detailData.value = data
     detailVisible.value = true
@@ -294,7 +294,7 @@ const handleRateSubmit = async () => {
     submitLoading.value = true
     try {
       await request.put({
-        url: `/api/admin/affiliates/${rateForm.id}`,
+        url: `/api/admin/affiliate/${rateForm.id}`,
         params: {
           commission_rate: rateForm.commission_rate,
           remark: rateForm.remark || undefined
@@ -315,7 +315,7 @@ const handleRateSubmit = async () => {
 const handleToggleStatus = async (row: any) => {
   try {
     await request.put({
-      url: `/api/admin/affiliates/${row.id}`,
+      url: `/api/admin/affiliate/${row.id}`,
       params: { status: row.status === 1 ? 0 : 1 }
     })
     ElMessage.success(row.status === 1 ? '已禁用' : '已启用')

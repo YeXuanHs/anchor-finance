@@ -182,7 +182,7 @@ const fetchAdmins = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/admins',
+      url: '/api/admin/users',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -203,7 +203,7 @@ const fetchAdmins = async () => {
 const fetchRoles = async () => {
   try {
     const data = await request.get({
-      url: '/api/admin/roles'
+      url: '/api/admin/rbac/roles'
     })
     roles.value = data.list || data || []
   } catch (error) {
@@ -252,7 +252,7 @@ const handleEdit = (row: Admin) => {
 const handleDelete = async (row: Admin) => {
   try {
     await request.del({
-      url: `/api/admin/admins/${row.id}`
+      url: `/api/admin/users/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchAdmins()
@@ -282,13 +282,13 @@ const handleSubmit = async () => {
 
       if (formData.id) {
         await request.put({
-          url: `/api/admin/admins/${formData.id}`,
+          url: `/api/admin/users/${formData.id}`,
           params: submitData,
           showSuccessMessage: true
         })
       } else {
         await request.post({
-          url: '/api/admin/admins',
+          url: '/api/admin/users',
           params: submitData,
           showSuccessMessage: true
         })

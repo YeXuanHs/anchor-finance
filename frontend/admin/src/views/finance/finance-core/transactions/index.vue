@@ -292,7 +292,7 @@ const fetchTransactions = async () => {
       params.end_date = searchForm.date_range[1]
     }
     const data = await request.get({
-      url: '/api/admin/transactions',
+      url: '/api/admin/accounts',
       params
     })
     tableData.value = data.list || []
@@ -311,7 +311,7 @@ const fetchTransactions = async () => {
 
 const fetchGateways = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/transactions/gateways' })
+    const data = await request.get({ url: '/api/admin/payment-gateways' })
     gateways.value = data || []
   } catch (error) {
     console.error('获取网关列表失败:', error)

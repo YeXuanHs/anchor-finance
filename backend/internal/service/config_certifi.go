@@ -102,27 +102,3 @@ func (s *ConfigCertifiService) UpdateConfig(req CertificationConfig) error {
 	})
 }
 
-func parseInt(s string) int {
-	if s == "" {
-		return 0
-	}
-	n := 0
-	for _, c := range s {
-		if c >= '0' && c <= '9' {
-			n = n*10 + int(c-'0')
-		}
-	}
-	return n
-}
-
-func intStr(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	s := ""
-	for n > 0 {
-		s = string(rune('0'+n%10)) + s
-		n /= 10
-	}
-	return s
-}

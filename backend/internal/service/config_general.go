@@ -642,22 +642,10 @@ func (s *ConfigGeneralService) SetDebugMode(enabled bool) error {
 // ==================== SMTP Test ====================
 
 func (s *ConfigGeneralService) TestSMTP(toEmail string) error {
-	// Load SMTP config
-	cfg, err := s.GetEmailConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load email config: %w", err)
-	}
-	if cfg.SMTPHost == "" {
-		return fmt.Errorf("SMTP host not configured")
-	}
-	if cfg.SMTPUser == "" {
-		return fmt.Errorf("SMTP user not configured")
-	}
 	if toEmail == "" {
 		return fmt.Errorf("recipient email is required")
 	}
 
-	// Build sender using pkg/email
 	sender := email.NewSender(s.db)
 	return sender.Send(toEmail, "AnchorFinance SMTP Test", "<p>This is a test email from AnchorFinance. SMTP configuration is working correctly.</p>")
 }

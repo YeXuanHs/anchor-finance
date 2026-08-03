@@ -245,7 +245,7 @@ const fetchCredits = async () => {
     if (searchForm.status !== undefined) params.status = searchForm.status
 
     const data = await request.get({
-      url: '/api/admin/credits',
+      url: '/api/admin/credit/index',
       params
     })
     tableData.value = data.list || []
@@ -303,7 +303,7 @@ const handleSubmitSet = async () => {
     submitLoading.value = true
     try {
       await request.put({
-        url: `/api/admin/credits/${setForm.id}`,
+        url: `/api/admin/credit/users/${setForm.id}/settings`,
         params: {
           credit_limit: setForm.credit_limit,
           expire_at: setForm.expire_at
@@ -333,10 +333,11 @@ const handleSubmitAdjust = async () => {
         ? adjustForm.current_limit + adjustForm.amount
         : Math.max(0, adjustForm.current_limit - adjustForm.amount)
 
-      await request.put({
-        url: `/api/admin/credits/${adjustForm.id}`,
+      await request.post({
+        url: `/api/admin/credit/users/${adjustForm.id}/adjust`,
         params: {
-          credit_limit: newLimit,
+          amount: adjustForm.amount,
+          adjust_type: adjustForm.adjust_type,
           reason: adjustForm.reason
         },
         showSuccessMessage: true

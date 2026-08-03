@@ -276,7 +276,7 @@ const fetchRecords = async () => {
       params.end_date = searchForm.date_range[1]
     }
     const data = await request.get({
-      url: '/api/admin/affiliate-records',
+      url: '/api/admin/affiliate/user-affi-record',
       params
     })
     tableData.value = data.list || []
@@ -328,7 +328,7 @@ const handleConfirm = async (row: any) => {
       type: 'warning'
     })
     await request.put({
-      url: `/api/admin/affiliate-records/${row.id}/confirm`,
+      url: `/api/admin/affiliate/records/${row.id}/confirm`,
       params: { status: 1 }
     })
     ElMessage.success('佣金已确认')
@@ -349,7 +349,7 @@ const handleReject = async (row: any) => {
       type: 'warning'
     })
     await request.put({
-      url: `/api/admin/affiliate-records/${row.id}/confirm`,
+      url: `/api/admin/affiliate/records/${row.id}/confirm`,
       params: { status: 2 }
     })
     ElMessage.success('佣金已拒绝')
@@ -366,7 +366,7 @@ const handleConfirmFromDetail = async () => {
   actionLoading.value = true
   try {
     await request.put({
-      url: `/api/admin/affiliate-records/${detailData.value.id}/confirm`,
+      url: `/api/admin/affiliate/records/${detailData.value.id}/confirm`,
       params: {
         status: 1,
         remark: confirmRemark.value || undefined
@@ -387,7 +387,7 @@ const handleRejectFromDetail = async () => {
   actionLoading.value = true
   try {
     await request.put({
-      url: `/api/admin/affiliate-records/${detailData.value.id}/confirm`,
+      url: `/api/admin/affiliate/records/${detailData.value.id}/confirm`,
       params: {
         status: 2,
         remark: confirmRemark.value || undefined

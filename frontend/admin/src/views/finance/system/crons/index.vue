@@ -234,7 +234,7 @@ const fetchCrons = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/crons',
+      url: '/api/admin/cron-tasks',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -291,7 +291,7 @@ const handleRun = async (row: Cron) => {
       type: 'warning'
     })
     await request.post({
-      url: `/api/admin/crons/${row.id}/run`,
+      url: `/api/admin/cron-tasks/${row.id}/run`,
       showSuccessMessage: true
     })
     ElMessage.success('任务已触发执行')
@@ -309,7 +309,7 @@ const handleViewLogs = async (row: Cron) => {
   logLoading.value = true
   try {
     const data = await request.get({
-      url: `/api/admin/crons/${row.id}/logs`
+      url: `/api/admin/cron-tasks/${row.id}/logs`
     })
     logData.value = data || []
   } catch (error) {
@@ -330,7 +330,7 @@ const handleViewOutput = (row: CronLog) => {
 const handleDelete = async (row: Cron) => {
   try {
     await request.del({
-      url: `/api/admin/crons/${row.id}`
+      url: `/api/admin/cron-tasks/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchCrons()
@@ -350,13 +350,13 @@ const handleSubmit = async () => {
     try {
       if (formData.id) {
         await request.put({
-          url: `/api/admin/crons/${formData.id}`,
+          url: `/api/admin/cron-tasks/${formData.id}`,
           params: { ...formData },
           showSuccessMessage: true
         })
       } else {
         await request.post({
-          url: '/api/admin/crons',
+          url: '/api/admin/cron-tasks',
           params: { ...formData },
           showSuccessMessage: true
         })
