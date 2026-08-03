@@ -45,6 +45,10 @@ type Invoice struct {
 	AutoBilling    bool           `gorm:"default:false" json:"auto_billing"`
 	LastAutoAttempt *time.Time    `json:"last_auto_attempt"`
 	Attempts       int            `gorm:"default:0" json:"attempts"`
+	// 信用额相关
+	UseCreditLimit         int  `gorm:"type:tinyint;default:0" json:"use_credit_limit"`         // 1=使用信用额支付
+	CreditLimitPrepayment  int  `gorm:"type:tinyint;default:0" json:"credit_limit_prepayment"`  // 1=提前还款账单
+	LinkedInvoiceID        uint `gorm:"index;default:0" json:"linked_invoice_id"`               // 关联的提前还款账单ID
 	Items          []InvoiceItem  `gorm:"foreignKey:InvoiceID" json:"items,omitempty"`
 	Transactions   []Transaction  `gorm:"foreignKey:InvoiceID" json:"transactions,omitempty"`
 	Metadata       datatypes.JSON `gorm:"type:json" json:"metadata"`

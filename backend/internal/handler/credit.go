@@ -11,6 +11,7 @@ import (
 	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -1031,4 +1032,59 @@ func (h *CreditHandler) GetSearch(c *gin.Context) {
 	}
 
 	response.SuccessPage(c, invoices, total, page, pageSize)
+}
+
+// Prepayment allows a user to repay credit limit bills before due date.
+// POST /credit/prepayment
+func (h *CreditHandler) Prepayment(c *gin.Context) {
+	userID := getUserID(c)
+	if userID == 0 {
+		return
+	}
+
+	// Check if user has unpaid credit limit bills
+	var unpaidCount int64
+	h.db.Model(&model.Invoice{}).
+		Where("user_id = ? AND type = ? AND status = ?", userID, "credit_limit", 0).
+		Count(&unpaidCount)
+	if unpaidCount > 0 {
+		response.BadRequest(c, "当前有未还款信用额账单，不可提前还款")
+		return
+	}
+
+	// Calculate amount from paid invoices using credit limit that have no associated prepayment invoice
+	var totalAmount float64
+	h.db.Model(&model.Invoice{}).
+		Where("user_id = ? AND status = ? AND use_credit_limit = ? AND linked_invoice_id = ?", userID, 1, 1, 0).
+		Select("COALESCE(SUM(total), 0)").
+		Scan(&totalAmount)
+
+	if totalAmount <= 0 {
+		response.BadRequest(c, "无需提前还款的金额")
+		return
+	}
+
+	// Create prepayment invoice
+	invoice := model.Invoice{
+		UserID:                userID,
+		Type:                  "credit_limit",
+		CreditLimitPrepayment: 1,
+		Total:                 datatypes.DecimalFromString(fmt.Sprintf("%.4f", totalAmount)),
+		Status:                0, // Unpaid
+	}
+	if err := h.db.Create(&invoice).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	// Link original invoices to this prepayment invoice
+	h.db.Model(&model.Invoice{}).
+		Where("user_id = ? AND status = ? AND use_credit_limit = ? AND linked_invoice_id = ?", userID, 1, 1, 0).
+		Update("linked_invoice_id", invoice.ID)
+
+	response.Success(c, gin.H{
+		"invoice_id": invoice.ID,
+		"amount":     totalAmount,
+		"message":    "提前还款账单已生成",
+	})
 }

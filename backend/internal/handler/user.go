@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
+	"time"
 
 	"anchorfinance/internal/service"
 	"anchorfinance/internal/validator"
@@ -229,7 +231,7 @@ func (h *UserHandler) SendVerifyCode(c *gin.Context) {
 	}
 
 	// Generate and send code
-	code := "123456" // TODO: generate random code
+	code := fmt.Sprintf("%06d", time.Now().UnixNano()%1000000)
 	if h.captchaSvc != nil {
 		key := "captcha:" + req.Type + ":" + req.Target
 		h.captchaSvc.Store(key, code, 300) // 5 minutes

@@ -215,6 +215,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/credit/logs", creditHandler.GetLogs)
 		user.POST("/credit/apply", creditHandler.Apply)
 		user.POST("/credit/repay", creditHandler.Repay)
+		user.POST("/credit/prepayment", creditHandler.Prepayment)
 
 		// 联系人
 		user.GET("/contacts", contactsHandler.GetList)

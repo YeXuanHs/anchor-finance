@@ -85,10 +85,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	frontendUserHandler := handler.NewFrontendUserHandler(deps.UserSvc, deps.Log)
 	r.GET("/users/:id", frontendUserHandler.GetPublicProfile)
 
-	// 通用
-	r.GET("/payment-methods", func(c *gin.Context) {
-		c.JSON(200, gin.H{"code": 0, "data": []interface{}{}})
-	})
+	// 支付方式
+	balanceSvc := service.NewBalanceLogService(deps.DB)
+	balanceHandler := handler.NewBalanceHandler(balanceSvc, deps.DB)
+	r.GET("/payment-methods", balanceHandler.GetEnabledGateways)
 	r.GET("/system/lang", func(c *gin.Context) {
 		c.JSON(200, gin.H{"code": 0, "data": gin.H{"lang": "zh-CN"}})
 	})
