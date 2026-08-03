@@ -85,6 +85,13 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/products/:id/discounts", productHandler.GetDiscountList)
 		admin.GET("/products/:id/downloads", productHandler.GetProductDownloads)
 		admin.POST("/products/:id/upstream-price", productHandler.GetUpstreamPrice)
+		// P1-6: 资源产品编辑
+		admin.PUT("/products/:id/res", productHandler.EditResProduct)
+		// P3-16: 下拉选项/分类管理
+		admin.GET("/products/select-type", productHandler.SelectType)
+		admin.GET("/products/selectcates", productHandler.Selectcates)
+		admin.GET("/products/downloadcates", productHandler.Downloadcates)
+		admin.POST("/products/add-downloadcats", productHandler.AddDownloadcats)
 
 		// 一级分组
 		admin.GET("/product-first-groups", productHandler.GetFirstGroups)
@@ -124,9 +131,18 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/orders/multi-total", orderHandler.GetMultiTotal)
 		admin.POST("/orders/custom-promo", orderHandler.ApplyCustomPromo)
 		admin.GET("/orders/search-page", orderHandler.SearchPage)
+		// P0-5: 产品试用/资格校验
+		admin.POST("/orders/check-product", orderHandler.CheckProduct)
+		// P3-17: 下单配置和客户下拉
+		admin.GET("/orders/set-config", orderHandler.SetConfig)
+		admin.GET("/orders/clients", orderHandler.GetClients)
+		// P2-13: 增强订单列表
+		admin.GET("/orders-enhanced", orderHandler.GetListEnhanced)
 
 		// 账单管理（静态路由必须在参数路由之前注册）
 		admin.GET("/invoices", invoiceHandler.GetList)
+		// P2-14: 增强发票列表
+		admin.GET("/invoices-enhanced", invoiceHandler.GetListEnhanced)
 
 		// 账单增强功能
 		invoiceEnhancedSvc := service.NewInvoiceEnhancedService(deps.DB, deps.Log)
@@ -153,6 +169,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/invoices/:id", invoiceHandler.GetDetail)
 		admin.POST("/invoices/:id/cancel", invoiceHandler.Cancel)
 		admin.POST("/invoices/:id/pay", invoiceEnhancedHandler.AddPayInvoice)
+		admin.POST("/invoices/:id/apply-credit-limit", invoiceEnhancedHandler.ApplyCreditLimit)
+		admin.POST("/invoices/:id/execute-renew", invoiceEnhancedHandler.ExecuteRenew)
+		admin.GET("/invoices/:id/notes-page", invoiceEnhancedHandler.NotesPage)
+		admin.PUT("/invoices/:id/notes-page", invoiceEnhancedHandler.NotesUpdate)
 		admin.DELETE("/invoices/:id/pay", invoiceEnhancedHandler.DeletePayInvoice)
 		admin.POST("/invoices/:id/refund", invoiceEnhancedHandler.RefundInvoice)
 		admin.GET("/invoices/:id/refund-page", invoiceEnhancedHandler.GetRefundPage)
@@ -168,10 +188,16 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// 工单管理
 		admin.GET("/tickets", ticketHandler.GetList)
+		// P2-15: 增强工单列表
+		admin.GET("/tickets-enhanced", ticketHandler.GetListEnhanced)
 		admin.GET("/tickets/:id", ticketHandler.GetDetail)
 		admin.POST("/tickets/:id/reply", ticketHandler.AdminReply)
 		admin.POST("/tickets/:id/assign", ticketHandler.Assign)
 		admin.POST("/tickets/:id/close", ticketHandler.Close)
+		// P1-8: 附件下载
+		admin.GET("/tickets/:id/attachment/:aid", ticketHandler.DownloadAttachment)
+		// P1-9: 工单接单
+		admin.POST("/tickets/:id/receive", ticketHandler.TicketReceive)
 		admin.POST("/tickets/merge", ticketHandler.MergeTickets)
 		admin.POST("/tickets/:id/transfer", ticketHandler.TransferTicket)
 		admin.GET("/tickets/:id/transfer-logs", ticketHandler.GetTransferLogs)
@@ -427,6 +453,13 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/client-services/search-client", clientSvcHandler.PostSearchClient)
 		admin.GET("/client-services/:id/refund-page", clientSvcHandler.GetRefundPage)
 		admin.POST("/client-services/:id/refund", clientSvcHandler.Refund)
+		// P1-10: 单台主机续费
+		admin.POST("/client-services/:id/host-renew", clientSvcHandler.HostRenew)
+		// P1-11: 升级配置
+		admin.POST("/client-services/:id/upgrade-config", clientSvcHandler.UpgradeConfig)
+		// P3-20: 联动筛选
+		admin.GET("/client-services/linkage-list", clientSvcHandler.AdminGetLinkAgeList)
+		admin.GET("/client-services/product-list", clientSvcHandler.GetProductList)
 
 		// 用户管理
 		userManageSvc := service.NewUserManageService(deps.DB, deps.Log)
@@ -484,6 +517,11 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.DELETE("/user-manage/cancel-requests/:id", userManageHandler.DeleteCancelRequest)
 		admin.POST("/user-manage/:id/record-log", userManageHandler.AddRecordLog)
 		admin.POST("/user-manage/:id/remark-log", userManageHandler.AddRemarkLog)
+		// P1-7: 黑名单管理
+		admin.GET("/user-manage/black-list", userManageHandler.GetBlackList)
+		admin.DELETE("/user-manage/black-list/:id", userManageHandler.RemoveBlackList)
+		// P3-21: 用户发票列表
+		admin.GET("/user-manage/:id/user-invoice", userManageHandler.UserInvoice)
 
 		// 用户备注
 		userRemarkSvc := service.NewUserRemarkService(deps.DB, deps.Log)
@@ -656,6 +694,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/hosts/:id/boot", hostHandler.Boot)
 		admin.POST("/hosts/:id/shutdown", hostHandler.Shutdown)
 		admin.POST("/hosts/:id/reboot", hostHandler.Reboot)
+		// P3-18: 时间类型选项
+		admin.GET("/hosts/timetype", hostHandler.GetTimetype)
 
 		// 系统配置
 		configServerSvc := service.NewConfigServerService(deps.DB, deps.Log)
@@ -1678,6 +1718,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/upstream/dock/group", upstreamHandler.DockGroup)
 		admin.POST("/upstream/products/:product_id/sync", upstreamHandler.SyncSingleProduct)
 		admin.POST("/upstream/providers/:id/sync-all", upstreamHandler.SyncAllProducts)
+		// P3-19: 清空对接
+		admin.POST("/upstream/providers/:id/empty", upstreamHandler.EmptyUpper)
 
 		// ==================== 上游操作 ====================
 		upstreamOpsSvc := service.NewUpstreamService(deps.DB, deps.Log)

@@ -389,3 +389,23 @@ func (h *UpstreamHandler) SyncAllProducts(c *gin.Context) {
 
 	response.Success(c, gin.H{"synced": synced})
 }
+
+// ==================== P3-19: EmptyUpper ====================
+
+// EmptyUpper 清空对接（删除指定上游的所有对接映射）
+func (h *UpstreamHandler) EmptyUpper(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid provider id")
+		return
+	}
+
+	// 删除该上游的所有产品映射
+	if err := h.db.Table("upstream_products").Where("upstream_id = ?", id).Delete(nil).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	h.log.WithField("provider_id", id).Info("upstream docking cleared")
+	response.SuccessMsg(c, "对接已清空")
+}

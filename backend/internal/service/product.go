@@ -774,6 +774,19 @@ func (s *ProductService) GetDiscountList(productID uint) ([]DiscountDTO, error) 
 	return list, nil
 }
 
+// ==================== EditResProduct Fields ====================
+
+// UpdateProductFields 直接更新产品字段（用于 EditResProduct）
+func (s *ProductService) UpdateProductFields(id uint, updates map[string]interface{}) error {
+	updates["updated_at"] = time.Now()
+	return s.db.Table("products").Where("id = ?", id).Updates(updates).Error
+}
+
+// GetDB returns the database instance for direct queries.
+func (s *ProductService) GetDB() *gorm.DB {
+	return s.db
+}
+
 // ==================== Get Upstream Price ====================
 
 // GetUpstreamPrice fetches upstream pricing for a product via its linked upstream provider.

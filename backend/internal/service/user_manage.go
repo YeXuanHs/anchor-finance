@@ -671,3 +671,57 @@ func (s *UserManageService) GetOperationLogs(userID uint, page, pageSize int) ([
 func (s *UserManageService) GetUserStatus(userID uint) (map[string]interface{}, error) {
 	return s.GetClientProfile(userID)
 }
+
+// ==================== P1-7: GetBlackList ====================
+
+// GetBlackList 获取黑名单用户列表
+func (s *UserManageService) GetBlackList(page, pageSize int) ([]model.User, int64, error) {
+	var users []model.User
+	var total int64
+
+	query := s.db.Model(&model.User{}).Where("status = ?", -1)
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+	return users, total, nil
+}
+
+// RemoveBlackList 从黑名单移除用户
+func (s *UserManageService) RemoveBlackList(userID uint) error {
+	var user model.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+	if user.Status != -1 {
+		return errors.New("user is not in blacklist")
+	}
+	return s.db.Model(&model.User{}).Where("id = ?", userID).Update("status", 1).Error
+}
+
+// ==================== P3-21: GetUserInvoices ====================
+
+// GetUserInvoices 获取用户发票列表（独立页面）
+func (s *UserManageService) GetUserInvoices(userID uint, page, pageSize int, status string) ([]map[string]interface{}, int64, error) {
+	var invoices []map[string]interface{}
+	var total int64
+
+	query := s.db.Table("invoices").Where("user_id = ?", userID)
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&invoices).Error; err != nil {
+		return nil, 0, err
+	}
+	return invoices, total, nil
+}

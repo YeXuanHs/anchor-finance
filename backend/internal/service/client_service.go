@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"anchorfinance/internal/model"
@@ -184,4 +185,152 @@ func (s *ClientServiceService) Resume(id uint) error {
 	}
 	return s.db.Model(&model.ClientService{}).Where("id = ?", id).
 		Update("status", model.ClientServiceActive).Error
+}
+
+// GetDB returns the database instance.
+func (s *ClientServiceService) GetDB() *gorm.DB {
+	return s.db
+}
+
+// ==================== P1-10: HostRenew ====================
+
+// HostRenew 单台主机续费（创建续费发票）
+func (s *ClientServiceService) HostRenew(hostID uint, cycle string) (map[string]interface{}, error) {
+	var host struct {
+		ID            uint
+		UserID        uint
+		ProductID     uint
+		BillingCycle  string
+		NextDueDate   *time.Time
+		FirstPayment  float64
+	}
+	if err := s.db.Table("host").Where("id = ?", hostID).
+		Select("id, userid as user_id, productid as product_id, billingcycle as billing_cycle, nextduedate as next_due_date, firstpaymentamount as first_payment").
+		Scan(&host).Error; err != nil {
+		return nil, errors.New("host not found")
+	}
+
+	// 获取产品价格
+	var product struct {
+		ID    uint
+		Name  string
+		Price float64
+	}
+	s.db.Table("products").Where("id = ?", host.ProductID).Select("id, name, price").Scan(&product)
+
+	// 计算续费金额
+	basePrice := product.Price
+	months := 1
+	switch cycle {
+	case "monthly":
+		months = 1
+	case "quarterly":
+		months = 3
+	case "semi-annually":
+		months = 6
+	case "annually":
+		months = 12
+	case "biennially":
+		months = 24
+	case "triennially":
+		months = 36
+	}
+	amount := basePrice * float64(months)
+
+	// 创建续费发票
+	invoice := map[string]interface{}{
+		"user_id":    host.UserID,
+		"type":       "renew",
+		"amount":     amount,
+		"status":     0,
+		"host_id":    hostID,
+		"remark":     fmt.Sprintf("主机续费 - %s (%s)", product.Name, cycle),
+		"created_at": time.Now(),
+		"updated_at": time.Now(),
+	}
+	if err := s.db.Table("invoices").Create(&invoice).Error; err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"host_id":   hostID,
+		"cycle":     cycle,
+		"amount":    amount,
+		"invoice":   invoice,
+	}, nil
+}
+
+// ==================== P1-11: UpgradeConfig ====================
+
+// UpgradeConfig 升级配置（创建升级发票）
+func (s *ClientServiceService) UpgradeConfig(hostID, newProductID uint, cycle string) (map[string]interface{}, error) {
+	var host struct {
+		ID           uint
+		UserID       uint
+		ProductID    uint
+		BillingCycle string
+	}
+	if err := s.db.Table("host").Where("id = ?", hostID).
+		Select("id, userid as user_id, productid as product_id, billingcycle as billing_cycle").
+		Scan(&host).Error; err != nil {
+		return nil, errors.New("host not found")
+	}
+
+	// 获取当前产品价格
+	var oldProduct struct {
+		Price float64
+		Name  string
+	}
+	s.db.Table("products").Where("id = ?", host.ProductID).Select("price, name").Scan(&oldProduct)
+
+	// 获取新产品价格
+	var newProduct struct {
+		Price float64
+		Name  string
+	}
+	if err := s.db.Table("products").Where("id = ?", newProductID).Select("price, name").Scan(&newProduct).Error; err != nil {
+		return nil, errors.New("new product not found")
+	}
+
+	// 计算升级差价
+	months := 1
+	switch cycle {
+	case "quarterly":
+		months = 3
+	case "semi-annually":
+		months = 6
+	case "annually":
+		months = 12
+	case "biennially":
+		months = 24
+	case "triennially":
+		months = 36
+	}
+	diff := (newProduct.Price - oldProduct.Price) * float64(months)
+	if diff < 0 {
+		diff = 0
+	}
+
+	// 创建升级发票
+	invoice := map[string]interface{}{
+		"user_id":    host.UserID,
+		"type":       "upgrade",
+		"amount":     diff,
+		"status":     0,
+		"host_id":    hostID,
+		"remark":     fmt.Sprintf("配置升级 %s -> %s", oldProduct.Name, newProduct.Name),
+		"created_at": time.Now(),
+		"updated_at": time.Now(),
+	}
+	if err := s.db.Table("invoices").Create(&invoice).Error; err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"host_id":       hostID,
+		"old_product":   oldProduct.Name,
+		"new_product":   newProduct.Name,
+		"upgrade_price": diff,
+		"invoice":       invoice,
+	}, nil
 }

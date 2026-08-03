@@ -565,3 +565,79 @@ func (s *TicketService) GetTicketStatistics() (*TicketStatistics, error) {
 
 	return stats, nil
 }
+
+// ==================== P1-8: GetAttachmentByID ====================
+
+// GetAttachmentByID 根据ID获取附件信息
+func (s *TicketService) GetAttachmentByID(id uint) (*TicketAttachment, error) {
+	var att TicketAttachment
+	if err := s.db.First(&att, id).Error; err != nil {
+		return nil, err
+	}
+	return &att, nil
+}
+
+// ==================== P1-9: ReceiveTicket ====================
+
+// ReceiveTicket 工单接单/领取
+func (s *TicketService) ReceiveTicket(ticketID, adminID uint) error {
+	var ticket Ticket
+	if err := s.db.First(&ticket, ticketID).Error; err != nil {
+		return errors.New("工单不存在")
+	}
+	if ticket.AssigneeID != nil && *ticket.AssigneeID > 0 {
+		return errors.New("工单已被其他人领取")
+	}
+
+	return s.db.Model(&ticket).Updates(map[string]interface{}{
+		"assignee_id": adminID,
+		"status":      1, // replied/in-progress
+	}).Error
+}
+
+// ==================== P2-15: GetListEnhanced ====================
+
+// GetListEnhanced 工单列表（支持部门权限过滤和高级筛选）
+func (s *TicketService) GetListEnhanced(page, pageSize int, status *int, keyword string,
+	deptID, assigneeID, userID *uint, priority, startTime, endTime string) ([]Ticket, int64, error) {
+	var tickets []Ticket
+	var total int64
+
+	query := s.db.Model(&Ticket{})
+
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		query = query.Where("subject LIKE ? OR ticket_no LIKE ?", like, like)
+	}
+	if deptID != nil {
+		query = query.Where("department_id = ?", *deptID)
+	}
+	if assigneeID != nil {
+		query = query.Where("assignee_id = ?", *assigneeID)
+	}
+	if userID != nil {
+		query = query.Where("user_id = ?", *userID)
+	}
+	if priority != "" {
+		query = query.Where("priority = ?", priority)
+	}
+	if startTime != "" {
+		query = query.Where("created_at >= ?", startTime)
+	}
+	if endTime != "" {
+		query = query.Where("created_at <= ?", endTime+" 23:59:59")
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset, limit := Paginate(page, pageSize)
+	if err := query.Offset(offset).Limit(limit).Order("id DESC").Find(&tickets).Error; err != nil {
+		return nil, 0, err
+	}
+	return tickets, total, nil
+}

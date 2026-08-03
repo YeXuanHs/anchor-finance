@@ -14,6 +14,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var _ = model.Order{}
+
 type OrderHandler struct {
 	orderSvc *service.OrderService
 	db       *gorm.DB
@@ -514,4 +516,152 @@ func (h *OrderHandler) ApplyCustomPromo(c *gin.Context) {
 func (h *OrderHandler) SearchPage(c *gin.Context) {
 	config := h.orderSvc.SearchPageConfig()
 	response.Success(c, config)
+}
+
+// ==================== P0-5: CheckProduct ====================
+
+// CheckProduct 校验产品试用/购买资格
+func (h *OrderHandler) CheckProduct(c *gin.Context) {
+	var req struct {
+		ProductID uint `json:"product_id" binding:"required"`
+		UserID    uint `json:"user_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	result, err := h.orderSvc.CheckProduct(req.ProductID, req.UserID)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
+// ==================== P3-17: SetConfig ====================
+
+// SetConfig 获取下单配置（产品定价/配置选项/自定义字段）
+func (h *OrderHandler) SetConfig(c *gin.Context) {
+	pid, err := strconv.ParseUint(c.Query("pid"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid product id")
+		return
+	}
+	cycle := c.DefaultQuery("billingcycle", "monthly")
+
+	data, err := h.orderSvc.GetOrderConfig(uint(pid), cycle)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, data)
+}
+
+// ==================== P3-17: GetClients ====================
+
+// GetClients 搜索客户下拉列表
+func (h *OrderHandler) GetClients(c *gin.Context) {
+	keyword := c.Query("username")
+
+	var clients []map[string]interface{}
+	query := h.db.Table("users").Select("id, username, email, phone")
+	if keyword != "" {
+		query = query.Where("username LIKE ? OR email LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+	}
+	if err := query.Limit(50).Scan(&clients).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"data": clients})
+}
+
+// ==================== P2-13: Enhanced GetList filters ====================
+
+// GetListEnhanced returns all orders with advanced filters (admin).
+func (h *OrderHandler) GetListEnhanced(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	orderField := c.DefaultQuery("order", "id")
+	sort := c.DefaultQuery("sort", "desc")
+
+	query := h.db.Model(&model.Order{})
+
+	// 基础筛选
+	if s := c.Query("status"); s != "" {
+		query = query.Where("orders.status = ?", s)
+	}
+	if uid := c.Query("uid"); uid != "" {
+		query = query.Where("orders.user_id = ?", uid)
+	}
+	if id := c.Query("id"); id != "" {
+		query = query.Where("orders.id LIKE ?", "%"+id+"%")
+	}
+	if amount := c.Query("amount"); amount != "" {
+		query = query.Where("orders.total_price LIKE ?", "%"+amount+"%")
+	}
+	if ordernum := c.Query("ordernum"); ordernum != "" {
+		query = query.Where("orders.order_no LIKE ?", "%"+ordernum+"%")
+	}
+
+	// 用户名筛选
+	if username := c.Query("username"); username != "" {
+		query = query.Joins("JOIN users ON users.id = orders.user_id").
+			Where("users.username LIKE ?", "%"+username+"%")
+	}
+
+	// 产品名筛选
+	if productName := c.Query("product_name"); productName != "" {
+		query = query.Joins("JOIN products ON products.id = orders.product_id").
+			Where("products.name = ?", productName)
+	}
+
+	// 支付方式筛选
+	if payment := c.Query("payment"); payment != "" {
+		if payment == "creditPay" {
+			query = query.Joins("LEFT JOIN invoices ON invoices.order_id = orders.id").
+				Where("invoices.credit > 0")
+		} else if payment == "creditLimitPay" {
+			query = query.Joins("LEFT JOIN invoices ON invoices.order_id = orders.id").
+				Where("invoices.use_credit_limit = 1")
+		} else {
+			query = query.Where("orders.payment = ?", payment)
+		}
+	}
+
+	// 销售筛选
+	if saleID := c.Query("sale_id"); saleID != "" {
+		query = query.Joins("JOIN users u ON u.id = orders.user_id").
+			Where("u.sale_id = ?", saleID)
+	}
+
+	// 付款状态筛选
+	if payStatus := c.Query("pay_status"); payStatus != "" {
+		if payStatus == "0" {
+			query = query.Where("orders.invoice_id IS NULL OR orders.invoice_id = 0")
+		} else {
+			query = query.Joins("LEFT JOIN invoices inv ON inv.id = orders.invoice_id").
+				Where("inv.status = ?", payStatus)
+		}
+	}
+
+	// 时间范围
+	if startTime := c.Query("start_time"); startTime != "" {
+		query = query.Where("orders.created_at >= ?", startTime)
+	}
+	if endTime := c.Query("end_time"); endTime != "" {
+		query = query.Where("orders.created_at <= ?", endTime+" 23:59:59")
+	}
+
+	var total int64
+	query.Count(&total)
+
+	offset, limit := service.Paginate(page, pageSize)
+	var orders []model.Order
+	if err := query.Preload("Product").Offset(offset).Limit(limit).
+		Order(fmt.Sprintf("orders.%s %s", orderField, sort)).Find(&orders).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, orders, total, page, pageSize)
 }

@@ -10,6 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var _ = service.HostActionRequest{}
+
 type HostHandler struct {
 	hostSvc *service.HostService
 	log     *logger.Logger
@@ -175,4 +177,21 @@ func (h *HostHandler) GetExpiringHosts(c *gin.Context) {
 		return
 	}
 	response.Success(c, hosts)
+}
+
+// ==================== P3-18: GetTimetype ====================
+
+// GetTimetype 获取时间类型选项
+func (h *HostHandler) GetTimetype(c *gin.Context) {
+	timeTypes := []map[string]interface{}{
+		{"value": "monthly", "label": "月付"},
+		{"value": "quarterly", "label": "季付"},
+		{"value": "semi-annually", "label": "半年付"},
+		{"value": "annually", "label": "年付"},
+		{"value": "biennially", "label": "两年付"},
+		{"value": "triennially", "label": "三年付"},
+		{"value": "free", "label": "免费"},
+		{"value": "onetime", "label": "一次性"},
+	}
+	response.Success(c, gin.H{"data": timeTypes})
 }

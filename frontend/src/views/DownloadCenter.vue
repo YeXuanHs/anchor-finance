@@ -148,140 +148,35 @@ interface FileItem {
   fileUrl: string
 }
 
-const files = ref<FileItem[]>([
-  {
-    id: 1,
-    name: 'AnchorPanel-控制面板安装包',
-    category: '面板程序',
-    version: 'v3.2.1',
-    size: '45.6 MB',
-    updateTime: '2025-12-15',
-    downloads: 8932,
-    description: '服务器管理控制面板，支持一键部署、环境配置、站点管理等功能',
-    fileUrl: '#'
-  },
-  {
-    id: 2,
-    name: 'AnchorPanel-Agent客户端',
-    category: '面板程序',
-    version: 'v3.2.0',
-    size: '12.3 MB',
-    updateTime: '2025-12-12',
-    downloads: 6543,
-    description: '配合控制面板使用的服务器端Agent程序',
-    fileUrl: '#'
-  },
-  {
-    id: 3,
-    name: 'WordPress一键部署脚本',
-    category: '部署脚本',
-    version: 'v1.5.0',
-    size: '2.1 MB',
-    updateTime: '2025-12-10',
-    downloads: 12456,
-    description: '支持LNMP/LAMP环境自动配置WordPress站点',
-    fileUrl: '#'
-  },
-  {
-    id: 4,
-    name: 'Node.js环境自动配置脚本',
-    category: '部署脚本',
-    version: 'v2.0.3',
-    size: '1.8 MB',
-    updateTime: '2025-12-08',
-    downloads: 7821,
-    description: '自动安装配置Node.js、PM2、Nginx反向代理',
-    fileUrl: '#'
-  },
-  {
-    id: 5,
-    name: '服务器安全加固工具',
-    category: '安全工具',
-    version: 'v1.3.2',
-    size: '8.7 MB',
-    updateTime: '2025-12-05',
-    downloads: 4567,
-    description: '一键加固服务器安全配置，包括防火墙、SSH、端口管理',
-    fileUrl: '#'
-  },
-  {
-    id: 6,
-    name: 'SSL证书自动申请工具',
-    category: '安全工具',
-    version: 'v1.1.0',
-    size: '3.4 MB',
-    updateTime: '2025-12-01',
-    downloads: 3298,
-    description: '基于Let\'s Encrypt自动申请和续期SSL证书',
-    fileUrl: '#'
-  },
-  {
-    id: 7,
-    name: '数据备份恢复工具',
-    category: '运维工具',
-    version: 'v2.1.1',
-    size: '15.2 MB',
-    updateTime: '2025-11-28',
-    downloads: 5678,
-    description: '支持MySQL、PostgreSQL数据库的定时备份与一键恢复',
-    fileUrl: '#'
-  },
-  {
-    id: 8,
-    name: '服务器迁移助手',
-    category: '运维工具',
-    version: 'v1.0.5',
-    size: '6.9 MB',
-    updateTime: '2025-11-25',
-    downloads: 2345,
-    description: '支持站点、数据库、邮件的一键跨服务器迁移',
-    fileUrl: '#'
-  },
-  {
-    id: 9,
-    name: '产品API接口文档',
-    category: '开发文档',
-    version: 'v2.0',
-    size: '4.5 MB',
-    updateTime: '2025-11-20',
-    downloads: 1890,
-    description: '完整的RESTful API接口文档，含SDK示例代码',
-    fileUrl: '#'
-  },
-  {
-    id: 10,
-    name: 'WebHook集成指南',
-    category: '开发文档',
-    version: 'v1.2',
-    size: '2.3 MB',
-    updateTime: '2025-11-18',
-    downloads: 1234,
-    description: 'WebHook事件订阅与回调处理开发指南',
-    fileUrl: '#'
-  },
-  {
-    id: 11,
-    name: 'Windows远程连接工具',
-    category: '客户端工具',
-    version: 'v5.8.0',
-    size: '28.6 MB',
-    updateTime: '2025-11-15',
-    downloads: 9876,
-    description: '支持RDP、VNC、SSH多种协议的远程连接客户端',
-    fileUrl: '#'
-  },
-  {
-    id: 12,
-    name: 'FTP文件传输工具',
-    category: '客户端工具',
-    version: 'v3.5.2',
-    size: '18.4 MB',
-    updateTime: '2025-11-10',
-    downloads: 6543,
-    description: '支持FTP/SFTP协议的文件传输管理工具',
-    fileUrl: '#'
+const files = ref<FileItem[]>([])
+const loading = ref(false)
+
+async function fetchFiles() {
+  loading.value = true
+  try {
+    const response = await fetch('/api/v1/downloads')
+    const result = await response.json()
+    if (result.code === 0 && result.data?.items) {
+      files.value = result.data.items.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category_name || '未分类',
+        version: item.version || '-',
+        size: item.size || '-',
+        updateTime: item.updated_at?.split('T')[0] || '',
+        downloads: item.downloads || 0,
+        description: item.description || '',
+        fileUrl: item.file_url || '#'
+      }))
+    }
+  } catch (e) {
+    console.error('Failed to fetch download files:', e)
+  } finally {
+    loading.value = false
   }
-])
+}
+
+fetchFiles()
 
 const fileGroups = computed(() => {
   const categories = [...new Set(files.value.map(f => f.category))]

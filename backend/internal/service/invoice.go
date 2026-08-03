@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"anchorfinance/internal/util"
@@ -11,20 +12,25 @@ import (
 )
 
 type Invoice struct {
-	ID         uint           `gorm:"primaryKey" json:"id"`
-	InvoiceNo  string         `gorm:"uniqueIndex;size:64;not null" json:"invoice_no"`
-	UserID     uint           `gorm:"index;not null" json:"user_id"`
-	OrderID    uint           `json:"order_id"`
-	OrderNo    string         `gorm:"size:64" json:"order_no"`
-	Amount     float64        `gorm:"type:decimal(12,2);not null" json:"amount"`
-	Type       string         `gorm:"size:32;default:new;comment:new/renew" json:"type"`
-	Status     int            `gorm:"default:0;comment:0=pending 1=paid 2=cancelled 3=overdue" json:"status"`
-	PaidAt     *time.Time     `json:"paid_at"`
-	DueDate    time.Time      `gorm:"index" json:"due_date"`
-	Remark     string         `gorm:"size:256" json:"remark"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
+	ID              uint           `gorm:"primaryKey" json:"id"`
+	InvoiceNo       string         `gorm:"uniqueIndex;size:64;not null" json:"invoice_no"`
+	UserID          uint           `gorm:"index;not null" json:"user_id"`
+	OrderID         uint           `json:"order_id"`
+	OrderNo         string         `gorm:"size:64" json:"order_no"`
+	Amount          float64        `gorm:"type:decimal(12,2);not null" json:"amount"`
+	Type            string         `gorm:"size:32;default:new;comment:new/renew/upgrade/combined" json:"type"`
+	Status          int            `gorm:"default:0;comment:0=pending 1=paid 2=cancelled 3=overdue 4=refunded" json:"status"`
+	PaidAt          *time.Time     `json:"paid_at"`
+	DueDate         time.Time      `gorm:"index" json:"due_date"`
+	Payment         string         `gorm:"size:64" json:"payment"`
+	PaymentNotes    string         `gorm:"size:256" json:"payment_notes"`
+	Credit          float64        `gorm:"type:decimal(12,2);default:0" json:"credit"`
+	UseCreditLimit  int            `gorm:"default:0" json:"use_credit_limit"`
+	Notes           string         `gorm:"type:text" json:"notes"`
+	Remark          string         `gorm:"size:256" json:"remark"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type InvoiceService struct {
@@ -199,6 +205,96 @@ func (s *InvoiceService) GetList(page, pageSize int, status *int, userID *uint) 
 
 	offset, limit := Paginate(page, pageSize)
 	if err := query.Offset(offset).Limit(limit).Order("id DESC").Find(&invoices).Error; err != nil {
+		return nil, 0, err
+	}
+	return invoices, total, nil
+}
+
+// GetListEnhanced 发票列表（支持复杂筛选：金额区间/时间范围/行项描述/付款方式细分）
+func (s *InvoiceService) GetListEnhanced(page, pageSize int, status *int, userID *uint,
+	totalSmall, totalBig, createTimeStart, createTimeEnd,
+	dueTimeStart, dueTimeEnd, paidTimeStart, paidTimeEnd,
+	payment, lineItemDesc, invType, saleID, invoiceID,
+	orderField, sort string) ([]Invoice, int64, error) {
+	var invoices []Invoice
+	var total int64
+
+	query := s.db.Model(&Invoice{})
+
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+	if userID != nil {
+		query = query.Where("user_id = ?", *userID)
+	}
+
+	// 金额区间
+	if totalSmall != "" {
+		query = query.Where("amount >= ?", totalSmall)
+	}
+	if totalBig != "" {
+		query = query.Where("amount <= ?", totalBig)
+	}
+
+	// 时间范围
+	if createTimeStart != "" {
+		query = query.Where("created_at >= ?", createTimeStart)
+	}
+	if createTimeEnd != "" {
+		query = query.Where("created_at <= ?", createTimeEnd+" 23:59:59")
+	}
+	if dueTimeStart != "" {
+		query = query.Where("due_date >= ?", dueTimeStart)
+	}
+	if dueTimeEnd != "" {
+		query = query.Where("due_date <= ?", dueTimeEnd+" 23:59:59")
+	}
+	if paidTimeStart != "" {
+		query = query.Where("paid_at >= ?", paidTimeStart)
+	}
+	if paidTimeEnd != "" {
+		query = query.Where("paid_at <= ?", paidTimeEnd+" 23:59:59")
+	}
+
+	// 付款方式细分
+	if payment != "" {
+		if payment == "creditLimitPay" {
+			query = query.Where("use_credit_limit = 1")
+		} else if payment == "creditPay" {
+			query = query.Where("credit > 0")
+		} else {
+			query = query.Where("payment = ?", payment)
+		}
+	}
+
+	// 行项描述
+	if lineItemDesc != "" {
+		subQuery := s.db.Table("invoice_items").Select("invoice_id").Where("description LIKE ?", "%"+lineItemDesc+"%")
+		query = query.Where("id IN (?)", subQuery)
+	}
+
+	// 发票类型
+	if invType != "" {
+		query = query.Where("type = ?", invType)
+	}
+
+	// 销售筛选
+	if saleID != "" {
+		query = query.Joins("JOIN users ON users.id = invoices.user_id").Where("users.sale_id = ?", saleID)
+	}
+
+	// 发票号搜索
+	if invoiceID != "" {
+		query = query.Where("id LIKE ? OR invoice_no LIKE ?", "%"+invoiceID+"%", "%"+invoiceID+"%")
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset, limit := Paginate(page, pageSize)
+	orderClause := fmt.Sprintf("%s %s", orderField, sort)
+	if err := query.Offset(offset).Limit(limit).Order(orderClause).Find(&invoices).Error; err != nil {
 		return nil, 0, err
 	}
 	return invoices, total, nil

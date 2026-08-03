@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -873,6 +874,124 @@ type CreateCustomPromoRequest struct {
 	Type        string  `json:"type" binding:"required,oneof=percentage fixed override free"`
 	Value       float64 `json:"value"`
 	Description string  `json:"description"`
+}
+
+// ==================== P0-5: CheckProduct ====================
+
+// CheckProduct 校验产品试用/购买资格
+func (s *OrderService) CheckProduct(productID, userID uint) (map[string]interface{}, error) {
+	// 查找产品
+	var product Product
+	if err := s.db.First(&product, productID).Error; err != nil {
+		return nil, errors.New("product not found")
+	}
+
+	// 查找用户
+	var user struct {
+		ID           uint
+		Email        string
+		PhoneNumber  string
+		WechatID     string
+		RealName     string
+		IsVerified   int
+	}
+	if err := s.db.Table("users").Where("id = ?", userID).
+		Select("id, email, phone_number, wechat_id, real_name, is_verified").Scan(&user).Error; err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	// 检查产品试用条件（payontrial_condition）
+	var errors_list []string
+	config := product.Config
+	if config != "" {
+		// 解析试用条件配置
+		var productConfig map[string]interface{}
+		if err := json.Unmarshal([]byte(config), &productConfig); err == nil {
+			if conditions, ok := productConfig["payontrial_condition"].([]interface{}); ok {
+				for _, cond := range conditions {
+					switch cond {
+					case "realname":
+						if user.IsVerified == 0 {
+							errors_list = append(errors_list, "实名认证")
+						}
+					case "email":
+						if user.Email == "" {
+							errors_list = append(errors_list, "邮箱验证")
+						}
+					case "phone":
+						if user.PhoneNumber == "" {
+							errors_list = append(errors_list, "手机验证")
+						}
+					case "wechat":
+						if user.WechatID == "" {
+							errors_list = append(errors_list, "微信验证")
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 检查库存
+	if product.StockControl && product.Stock >= 0 && product.Stock < 1 {
+		errors_list = append(errors_list, "库存不足")
+	}
+
+	// 检查产品状态
+	if product.Status != 1 {
+		errors_list = append(errors_list, "产品已下架")
+	}
+
+	result := map[string]interface{}{
+		"valid":       len(errors_list) == 0,
+		"errors":      errors_list,
+		"product_id":  productID,
+		"user_id":     userID,
+	}
+	return result, nil
+}
+
+// ==================== P3-17: GetOrderConfig ====================
+
+// GetOrderConfig 获取下单配置（产品定价/配置选项）
+func (s *OrderService) GetOrderConfig(productID uint, cycle string) (map[string]interface{}, error) {
+	var product Product
+	if err := s.db.First(&product, productID).Error; err != nil {
+		return nil, errors.New("product not found")
+	}
+
+	basePrice := product.Price
+
+	// 计算周期价格
+	price := basePrice
+	switch cycle {
+	case "quarterly":
+		price = basePrice * 3 * 0.95
+	case "semi-annually":
+		price = basePrice * 6 * 0.90
+	case "annually":
+		price = basePrice * 12 * 0.85
+	case "biennially":
+		price = basePrice * 24 * 0.80
+	case "triennially":
+		price = basePrice * 36 * 0.75
+	}
+
+	// 获取配置选项
+	var options []map[string]interface{}
+	s.db.Table("config_options").Where("product_id = ?", productID).Find(&options)
+
+	// 获取自定义字段
+	var customFields []map[string]interface{}
+	s.db.Table("custom_fields").Where("`group` = 'product' AND relid = ?", productID).Find(&customFields)
+
+	return map[string]interface{}{
+		"product":       product,
+		"price":         price,
+		"billing_cycle": cycle,
+		"options":       options,
+		"custom_fields": customFields,
+	}, nil
 }
 
 // SearchPageConfig returns filter configuration for the order search page.

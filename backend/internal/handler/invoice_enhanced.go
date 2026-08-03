@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
 
 	"anchorfinance/internal/service"
@@ -105,7 +106,7 @@ func (h *InvoiceEnhancedHandler) GetInvoiceSummary(c *gin.Context) {
 
 // ==================== Invoice Operations ====================
 
-// AddPayInvoice 添加支付记录
+// AddPayInvoice 添加支付记录（管理员手动入账，支持网关/交易号/手续费）
 func (h *InvoiceEnhancedHandler) AddPayInvoice(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -114,23 +115,35 @@ func (h *InvoiceEnhancedHandler) AddPayInvoice(c *gin.Context) {
 	}
 
 	var req struct {
-		Amount float64 `json:"amount" binding:"required,gt=0"`
-		Method string  `json:"method" binding:"required"`
+		Amount   float64 `json:"amount" binding:"required,gt=0"`
+		Method   string  `json:"method"`
+		Gateway  string  `json:"gateway"`
+		TransID  string  `json:"trans_id"`
+		Fees     float64 `json:"fees"`
+		PayTime  string  `json:"pay_time"`
+		Email    bool    `json:"email"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
 
-	invoice, err := h.svc.AddPayInvoice(uint(id), req.Amount, req.Method)
+	// 兼容: method 或 gateway 均可
+	gw := req.Gateway
+	if gw == "" {
+		gw = req.Method
+	}
+
+	invoice, err := h.svc.AddPayInvoiceEx(uint(id), req.Amount, gw, req.TransID, req.Fees, req.PayTime)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
 
-	// 记录操作日志
 	ip := c.ClientIP()
-	h.svc.LogAction(uint(id), c.GetUint("user_id"), "payment_added", "手动添加支付记录", ip)
+	h.svc.LogAction(uint(id), c.GetUint("user_id"), "payment_added", fmt.Sprintf("手动入账 %.2f via %s", req.Amount, gw), ip)
+
+	// TODO: 如果 email=true，发送付款确认邮件
 
 	response.Success(c, invoice)
 }
@@ -445,4 +458,46 @@ func (h *InvoiceEnhancedHandler) DuplicateInvoice(c *gin.Context) {
 	h.svc.LogAction(invoice.ID, c.GetUint("user_id"), "duplicated", "复制账单", ip)
 
 	response.Success(c, invoice)
+}
+
+// ==================== P0-2: ApplyCreditLimit ====================
+
+// ApplyCreditLimit 使用信用额支付账单
+func (h *InvoiceEnhancedHandler) ApplyCreditLimit(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	if err := h.svc.ApplyCreditLimit(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	ip := c.ClientIP()
+	h.svc.LogAction(uint(id), c.GetUint("user_id"), "credit_limit_applied", "使用信用额支付", ip)
+
+	response.SuccessMsg(c, "信用额支付成功")
+}
+
+// ==================== P0-4: ExecuteRenew ====================
+
+// ExecuteRenew 执行续费操作
+func (h *InvoiceEnhancedHandler) ExecuteRenew(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	if err := h.svc.ExecuteRenew(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	ip := c.ClientIP()
+	h.svc.LogAction(uint(id), c.GetUint("user_id"), "renew_executed", "执行续费操作", ip)
+
+	response.SuccessMsg(c, "续费成功")
 }

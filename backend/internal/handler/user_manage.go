@@ -1114,3 +1114,57 @@ func (h *UserManageHandler) AddRemarkLog(c *gin.Context) {
 	}
 	response.SuccessMsg(c, "remark log added")
 }
+
+// ==================== P1-7: GetBlackList ====================
+
+// GetBlackList 获取黑名单列表
+func (h *UserManageHandler) GetBlackList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	users, total, err := h.svc.GetBlackList(page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, users, total, page, pageSize)
+}
+
+// ==================== P1-7: RemoveBlackList ====================
+
+// RemoveBlackList 从黑名单移除
+func (h *UserManageHandler) RemoveBlackList(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	if err := h.svc.RemoveBlackList(uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "已从黑名单移除")
+}
+
+// ==================== P3-21: UserInvoice ====================
+
+// UserInvoice 用户发票列表（独立页面）
+func (h *UserManageHandler) UserInvoice(c *gin.Context) {
+	uid, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	status := c.Query("status")
+
+	invoices, total, err := h.svc.GetUserInvoices(uint(uid), page, pageSize, status)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, invoices, total, page, pageSize)
+}

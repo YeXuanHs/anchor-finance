@@ -705,6 +705,210 @@ func (s *InvoiceEnhancedService) DuplicateInvoice(invoiceID uint) (*Invoice, err
 	return newInvoice, nil
 }
 
+// ==================== Extended AddPay (P0-1) ====================
+
+// AddPayInvoiceEx 管理员手动入账（支持网关/交易号/手续费/入账时间）
+func (s *InvoiceEnhancedService) AddPayInvoiceEx(invoiceID uint, amount float64, gateway, transID string, fees float64, payTime string) (*Invoice, error) {
+	inv, err := s.getInvoiceByID(invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	if inv.Status == 2 {
+		return nil, errors.New("cannot pay a cancelled invoice")
+	}
+	if inv.Status == 1 {
+		return nil, errors.New("invoice is already paid")
+	}
+	if amount <= 0 {
+		return nil, errors.New("payment amount must be positive")
+	}
+	if amount > inv.Amount {
+		return nil, fmt.Errorf("payment amount %.2f exceeds invoice amount %.2f", amount, inv.Amount)
+	}
+
+	now := time.Now()
+	var payAt time.Time
+	if payTime != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05", payTime); err == nil {
+			payAt = t
+		} else if t, err := time.Parse("2006-01-02", payTime); err == nil {
+			payAt = t
+		} else {
+			payAt = now
+		}
+	} else {
+		payAt = now
+	}
+
+	status := 2 // 部分支付
+	if amount >= inv.Amount {
+		status = 1 // 全额支付
+	}
+
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		updates := map[string]interface{}{
+			"status":        status,
+			"payment":       gateway,
+			"payment_notes": transID,
+		}
+		if status == 1 {
+			updates["paid_at"] = &payAt
+		}
+		if err := tx.Model(inv).Updates(updates).Error; err != nil {
+			return err
+		}
+
+		// 创建交易记录
+		transaction := &InvoiceTransaction{
+			TransactionNo: util.GenerateTransactionNo(),
+			InvoiceID:     invoiceID,
+			UserID:        inv.UserID,
+			Amount:        amount,
+			Gateway:       gateway,
+			Type:          "payment",
+			Status:        1,
+			CompletedAt:   &payAt,
+		}
+		if err := tx.Create(transaction).Error; err != nil {
+			return err
+		}
+
+		// 扣除手续费记录
+		if fees > 0 {
+			feeRecord := &InvoiceTransaction{
+				TransactionNo: util.GenerateTransactionNo(),
+				InvoiceID:     invoiceID,
+				UserID:        inv.UserID,
+				Amount:        fees,
+				Gateway:       gateway,
+				Type:          "fee",
+				Status:        1,
+				CompletedAt:   &payAt,
+			}
+			if err := tx.Create(feeRecord).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	s.log.Infof("payment added to invoice %s: %.2f via %s (trans=%s)", inv.InvoiceNo, amount, gateway, transID)
+	return s.getInvoiceByID(invoiceID)
+}
+
+// ApplyCreditLimit 使用信用额支付账单 (P0-2)
+func (s *InvoiceEnhancedService) ApplyCreditLimit(invoiceID uint) error {
+	inv, err := s.getInvoiceByID(invoiceID)
+	if err != nil {
+		return err
+	}
+	if inv.Status != 0 {
+		return errors.New("只能对未支付账单使用信用额支付")
+	}
+
+	// 查找用户信用额设置
+	var client struct {
+		ID                uint
+		IsOpenCreditLimit int
+		CreditLimit       float64
+		Credit            float64
+	}
+	if err := s.db.Table("clients").Where("id = ?", inv.UserID).
+		Select("id, is_open_credit_limit, credit_limit, credit").Scan(&client).Error; err != nil {
+		return errors.New("用户不存在")
+	}
+	if client.IsOpenCreditLimit == 0 {
+		return errors.New("信用额未开通,不可使用信用额支付")
+	}
+
+	// 检查信用额余额（信用额度 + 余额 - 已使用）
+	usedLimit := 0.0
+	s.db.Table("invoices").Where("user_id = ? AND use_credit_limit = 1 AND status IN (0,1)", inv.UserID).
+		Select("COALESCE(SUM(total), 0)").Scan(&usedLimit)
+	available := client.CreditLimit + client.Credit - usedLimit
+	if available < inv.Amount {
+		return errors.New("当前信用额余额不足,不可使用信用额支付")
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		now := time.Now()
+		return tx.Model(inv).Updates(map[string]interface{}{
+			"status":            1,
+			"use_credit_limit":  1,
+			"paid_at":           &now,
+		}).Error
+	})
+}
+
+// ExecuteRenew 执行续费操作 - 处理已支付的续费账单，延长服务到期时间 (P0-4)
+func (s *InvoiceEnhancedService) ExecuteRenew(invoiceID uint) error {
+	inv, err := s.getInvoiceByID(invoiceID)
+	if err != nil {
+		return err
+	}
+	if inv.Status != 1 {
+		return errors.New("只能对已支付账单执行续费")
+	}
+	if inv.Type != "renew" {
+		return errors.New("非续费账单")
+	}
+
+	// 查找关联的主机/服务
+	var host struct {
+		ID        uint
+		ProductID uint
+		BillingCycle string
+	}
+	if err := s.db.Table("host").Where("orderid = ?", inv.OrderID).First(&host).Error; err != nil {
+		// 尝试通过 invoice remark 查找 hostID
+		return errors.New("未找到关联的服务")
+	}
+
+	// 计算续费时长
+	months := 1
+	switch host.BillingCycle {
+	case "monthly":
+		months = 1
+	case "quarterly":
+		months = 3
+	case "semi-annually":
+		months = 6
+	case "annually":
+		months = 12
+	case "biennially":
+		months = 24
+	case "triennially":
+		months = 36
+	}
+
+	// 延长到期时间
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var svc struct {
+			ID        uint
+			ExpiredAt *time.Time
+			Status    int16
+		}
+		if err := tx.Table("client_services").Where("id = ?", host.ID).First(&svc).Error; err != nil {
+			// 如果没找到 client_service，尝试更新 host 表
+			return tx.Table("host").Where("id = ?", host.ID).
+				Update("nextduedate", gorm.Expr("DATE_ADD(nextduedate, INTERVAL ? MONTH)", months)).Error
+		}
+
+		base := time.Now()
+		if svc.ExpiredAt != nil && svc.ExpiredAt.After(time.Now()) {
+			base = *svc.ExpiredAt
+		}
+		newExpiry := base.AddDate(0, months, 0)
+		return tx.Table("client_services").Where("id = ?", host.ID).Updates(map[string]interface{}{
+			"expired_at": newExpiry,
+			"status":     1, // active
+		}).Error
+	})
+}
+
 // ==================== Helpers ====================
 
 // InvoiceTransaction 账单交易记录（service层自定义，简化版）

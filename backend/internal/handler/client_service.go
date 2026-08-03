@@ -464,3 +464,98 @@ func (h *ClientServiceHandler) Refund(c *gin.Context) {
 
 	response.SuccessMsg(c, "refund processed")
 }
+
+// ==================== P1-10: HostRenew ====================
+
+// HostRenew 单台主机续费
+func (h *ClientServiceHandler) HostRenew(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid host id")
+		return
+	}
+
+	var req struct {
+		Cycle string `json:"cycle" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	result, err := h.svc.HostRenew(uint(id), req.Cycle)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
+// ==================== P1-11: UpgradeConfig ====================
+
+// UpgradeConfig 升级配置
+func (h *ClientServiceHandler) UpgradeConfig(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid host id")
+		return
+	}
+
+	var req struct {
+		NewProductID uint   `json:"new_product_id" binding:"required"`
+		Cycle        string `json:"cycle"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	result, err := h.svc.UpgradeConfig(uint(id), req.NewProductID, req.Cycle)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
+// ==================== P3-20: AdminGetLinkAgeList ====================
+
+// AdminGetLinkAgeList 获取联动筛选列表（产品/分组下拉）
+func (h *ClientServiceHandler) AdminGetLinkAgeList(c *gin.Context) {
+	groupID := c.Query("group_id")
+
+	var products []map[string]interface{}
+	query := h.svc.GetDB().Table("products").Select("id, name, group_id").Where("status = 1")
+	if groupID != "" {
+		query = query.Where("group_id = ?", groupID)
+	}
+	query.Order("sort_order ASC, id ASC").Find(&products)
+
+	var groups []map[string]interface{}
+	h.svc.GetDB().Table("product_groups").Select("id, name").Order("sort_order ASC").Find(&groups)
+
+	response.Success(c, gin.H{
+		"products": products,
+		"groups":   groups,
+	})
+}
+
+// ==================== P3-20: GetProductList ====================
+
+// GetProductList 获取产品列表（下拉选择用）
+func (h *ClientServiceHandler) GetProductList(c *gin.Context) {
+	groupID := c.Query("group_id")
+	keyword := c.Query("keyword")
+
+	var products []map[string]interface{}
+	query := h.svc.GetDB().Table("products").Select("id, name, price, billing_cycle, group_id").Where("status = 1")
+	if groupID != "" {
+		query = query.Where("group_id = ?", groupID)
+	}
+	if keyword != "" {
+		query = query.Where("name LIKE ?", "%"+keyword+"%")
+	}
+	query.Order("sort_order ASC, id ASC").Limit(100).Find(&products)
+
+	response.Success(c, gin.H{"data": products})
+}

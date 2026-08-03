@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"time"
 
 	"anchorfinance/internal/service"
 	"anchorfinance/pkg/logger"
@@ -470,4 +471,177 @@ func (h *ProductHandler) GetUpstreamPrice(c *gin.Context) {
 		return
 	}
 	response.Success(c, data)
+}
+
+// ==================== P1-6: EditResProduct ====================
+
+// EditResProduct 编辑资源产品（含独立字段：api_type/rate/pay_type/password_show/host_show 等）
+func (h *ProductHandler) EditResProduct(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid product id")
+		return
+	}
+
+	var req struct {
+		Name            *string  `json:"name"`
+		Description     *string  `json:"description"`
+		PayType         *string  `json:"pay_type"`
+		APIType         *string  `json:"api_type"`
+		Rate            *float64 `json:"rate"`
+		PasswordShow    *bool    `json:"password_show"`
+		PasswordRuleLen *int     `json:"password_rule_len_num"`
+		HostShow        *bool    `json:"host_show"`
+		HostRuleLen     *int     `json:"host_rule_len_num"`
+		Config          *string  `json:"config"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if req.APIType != nil && *req.APIType == "" {
+		response.BadRequest(c, "接口类型不能为空")
+		return
+	}
+	if req.PayType != nil && *req.PayType == "" {
+		response.BadRequest(c, "必须有有效的付费类型")
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.PayType != nil {
+		updates["pay_type"] = *req.PayType
+	}
+	if req.APIType != nil {
+		updates["api_type"] = *req.APIType
+	}
+	if req.Rate != nil {
+		updates["rate"] = *req.Rate
+	}
+	if req.PasswordShow != nil {
+		updates["password_show"] = *req.PasswordShow
+	}
+	if req.PasswordRuleLen != nil {
+		updates["password_rule_len_num"] = *req.PasswordRuleLen
+	}
+	if req.HostShow != nil {
+		updates["host_show"] = *req.HostShow
+	}
+	if req.HostRuleLen != nil {
+		updates["host_rule_len_num"] = *req.HostRuleLen
+	}
+	if req.Config != nil {
+		updates["config"] = *req.Config
+	}
+
+	if len(updates) == 0 {
+		response.BadRequest(c, "no fields to update")
+		return
+	}
+
+	if err := h.productSvc.UpdateProductFields(uint(id), updates); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "资源产品更新成功")
+}
+
+// ==================== P3-16: SelectType ====================
+
+// SelectType 根据产品类型获取导航分组
+func (h *ProductHandler) SelectType(c *gin.Context) {
+	productType := c.Query("type")
+	groupID := 3
+	switch productType {
+	case "dcim", "server":
+		groupID = 1
+	case "cloud", "dcimcloud":
+		groupID = 2
+	}
+
+	var group map[string]interface{}
+	if err := h.productSvc.GetDB().Table("nav_groups").Where("id = ?", groupID).First(&group).Error; err != nil {
+		response.NotFound(c, "group not found")
+		return
+	}
+	response.Success(c, gin.H{"data": group})
+}
+
+// ==================== P3-16: Selectcates ====================
+
+// Selectcates 获取产品关联的下载分类
+func (h *ProductHandler) Selectcates(c *gin.Context) {
+	productID, _ := strconv.ParseUint(c.Query("productid"), 10, 64)
+
+	// 获取已关联的分类
+	var selected []map[string]interface{}
+	h.productSvc.GetDB().Table("download_categories dc").
+		Select("dc.id, dc.name").
+		Joins("JOIN product_downloads pd ON pd.download_category_id = dc.id").
+		Where("pd.product_id = ?", productID).
+		Scan(&selected)
+
+	// 获取未关联的分类
+	var unselected []map[string]interface{}
+	h.productSvc.GetDB().Table("download_categories dc").
+		Select("dc.id, dc.name").
+		Where("dc.id NOT IN (?)",
+			h.productSvc.GetDB().Table("product_downloads").Select("download_category_id").Where("product_id = ?", productID)).
+		Scan(&unselected)
+
+	response.Success(c, gin.H{
+		"select":   selected,
+		"selectno": unselected,
+	})
+}
+
+// ==================== P3-16: Downloadcates ====================
+
+// Downloadcates 获取产品关联的下载文件列表
+func (h *ProductHandler) Downloadcates(c *gin.Context) {
+	productID, _ := strconv.ParseUint(c.Query("productid"), 10, 64)
+
+	var downloads []map[string]interface{}
+	h.productSvc.GetDB().Table("download_files df").
+		Select("df.id, df.title, df.description, df.file_path").
+		Joins("JOIN product_downloads pd ON pd.download_id = df.id").
+		Where("pd.product_id = ?", productID).
+		Scan(&downloads)
+
+	response.Success(c, gin.H{"data": downloads})
+}
+
+// ==================== P3-16: AddDownloadcats ====================
+
+// AddDownloadcats 添加下载分类
+func (h *ProductHandler) AddDownloadcats(c *gin.Context) {
+	var req struct {
+		CatID       uint   `json:"catid"`
+		Title       string `json:"title" binding:"required,max=255"`
+		Description string `json:"description"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	data := map[string]interface{}{
+		"parent_id":   req.CatID,
+		"name":        req.Title,
+		"description": req.Description,
+		"created_at":  time.Now(),
+		"updated_at":  time.Now(),
+	}
+	if err := h.productSvc.GetDB().Table("download_categories").Create(&data).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "下载分类添加成功")
 }

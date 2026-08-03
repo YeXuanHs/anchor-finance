@@ -242,29 +242,17 @@ const currentTransfer = ref<Transfer | null>(null)
 const formRef = ref<FormInstance>()
 
 const stats = reactive({
-  sent: 5,
-  received: 3,
-  completed: 6,
-  pending: 2
+  sent: 0,
+  received: 0,
+  completed: 0,
+  pending: 0
 })
 
-const sentList = ref<Transfer[]>([
-  { id: 'TRF20260801001', productName: '云服务器 - 进阶型', targetUser: 'user_b@example.com', transferCode: 'A8K3M2', createTime: '2026-08-01', status: 'pending', remark: '项目交接' },
-  { id: 'TRF20260728002', productName: '独立服务器 - E5-2680', targetUser: 'user_c@example.com', transferCode: 'B9L4N3', createTime: '2026-07-28', status: 'accepted' },
-  { id: 'TRF20260720003', productName: '虚拟主机 - 企业型', targetUser: 'user_d@example.com', transferCode: 'C1M5O4', createTime: '2026-07-20', status: 'rejected' }
-])
+const sentList = ref<Transfer[]>([])
 
-const receivedList = ref<Transfer[]>([
-  { id: 'TRF20260802001', productName: 'CDN 加速 - 专业版', fromUser: 'admin@example.com', createTime: '2026-08-02', status: 'pending' },
-  { id: 'TRF20260730002', productName: 'SSL证书 - 企业型', fromUser: 'user_a@example.com', createTime: '2026-07-30', status: 'accepted' }
-])
+const receivedList = ref<Transfer[]>([])
 
-const myProducts = ref<Product[]>([
-  { id: 1, name: '云服务器 - 进阶型', ip: '192.168.1.100' },
-  { id: 2, name: '独立服务器 - E5-2680', ip: '10.0.0.50' },
-  { id: 3, name: '虚拟主机 - 企业型', domain: 'example.com' },
-  { id: 4, name: 'CDN 加速 - 专业版' }
-])
+const myProducts = ref<Product[]>([])
 
 const transferForm = reactive({
   productId: '',

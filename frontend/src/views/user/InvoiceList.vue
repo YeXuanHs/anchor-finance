@@ -193,20 +193,13 @@ const filterForm = reactive({
 })
 
 const stats = reactive({
-  total: 24,
-  pending: 3,
-  issued: 18,
-  totalAmount: '56,880.00'
+  total: 0,
+  pending: 0,
+  issued: 0,
+  totalAmount: '0.00'
 })
 
-const invoices = ref<Invoice[]>([
-  { id: 1, invoiceNo: 'INV20260726001', type: 'normal', title: '深圳市智简魔方科技有限公司', taxNo: '91440300MA5F1234AB', amount: '588.00', applyDate: '2026-07-26', status: 'pending', statusText: '待审核' },
-  { id: 2, invoiceNo: 'INV20260720002', type: 'special', title: '北京云创科技有限公司', taxNo: '91110108MA01ABCDEF', amount: '2,388.00', applyDate: '2026-07-20', status: 'issued', statusText: '已开具', trackingNo: 'SF1234567890' },
-  { id: 3, invoiceNo: 'INV20260715003', type: 'normal', title: '上海数据港股份有限公司', taxNo: '91310000MA1FL567GH', amount: '1,188.00', applyDate: '2026-07-15', status: 'shipped', statusText: '已邮寄', trackingNo: 'YT9876543210' },
-  { id: 4, invoiceNo: 'INV20260710004', type: 'normal', title: '广州云计算有限公司', taxNo: '91440101MA5D890IJ', amount: '499.00', applyDate: '2026-07-10', status: 'issued', statusText: '已开具' },
-  { id: 5, invoiceNo: 'INV20260705005', type: 'special', title: '杭州网络技术有限公司', taxNo: '91330100MA2B3456KL', amount: '5,888.00', applyDate: '2026-07-05', status: 'rejected', statusText: '已驳回', remark: '税号信息有误，请重新申请' },
-  { id: 6, invoiceNo: 'INV20260630006', type: 'normal', title: '深圳市智简魔方科技有限公司', taxNo: '91440300MA5F1234AB', amount: '299.00', applyDate: '2026-06-30', status: 'shipped', statusText: '已邮寄', trackingNo: 'ZTO1234567890' }
-])
+const invoices = ref<Invoice[]>([])
 
 const filteredInvoices = computed(() => {
   let result = invoices.value

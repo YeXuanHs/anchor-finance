@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
 
 	"anchorfinance/internal/service"
@@ -504,6 +505,106 @@ func (h *InvoiceHandler) GetRenewInvoices(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
 	invoices, total, err := h.enhancedSvc.GetRenewInvoices(page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, invoices, total, page, pageSize)
+}
+
+// ==================== P1-12: Notes ====================
+
+// NotesPage 获取发票备注页面数据
+func (h *InvoiceHandler) NotesPage(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	inv, err := h.invoiceSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "invoice not found")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"id":    id,
+		"notes": inv.Notes,
+	})
+}
+
+// Notes 更新发票备注
+func (h *InvoiceHandler) Notes(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid invoice id")
+		return
+	}
+
+	var req struct {
+		Notes string `json:"notes"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.invoiceSvc.UpdateInvoice(uint(id), map[string]interface{}{"notes": req.Notes}); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "备注已更新")
+}
+
+// ==================== P2-14: Enhanced GetList ====================
+
+// GetListEnhanced 发票列表（支持复杂筛选：金额区间/时间范围/行项描述/付款方式细分）
+func (h *InvoiceHandler) GetListEnhanced(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	orderField := c.DefaultQuery("order", "id")
+	sort := c.DefaultQuery("sort", "desc")
+
+	var status *int
+	if s := c.Query("status"); s != "" {
+		v, _ := strconv.Atoi(s)
+		status = &v
+	}
+	var userID *uint
+	if u := c.Query("uid"); u != "" {
+		v, _ := strconv.ParseUint(u, 10, 64)
+		uid := uint(v)
+		userID = &uid
+	}
+
+	// 金额区间
+	totalSmall := c.Query("total_small")
+	totalBig := c.Query("total_big")
+	// 时间范围
+	createTimeStart := c.Query("create_time_start")
+	createTimeEnd := c.Query("create_time_end")
+	dueTimeStart := c.Query("due_time_start")
+	dueTimeEnd := c.Query("due_time_end")
+	paidTimeStart := c.Query("paid_time_start")
+	paidTimeEnd := c.Query("paid_time_end")
+	// 付款方式细分
+	payment := c.Query("payment")
+	// 行项描述
+	lineItemDesc := c.Query("lineitem_desc")
+	// 发票类型
+	invType := c.Query("type")
+	// 销售
+	saleID := c.Query("sale_id")
+	// 发票号
+	invoiceID := c.Query("invoice_id")
+
+	invoices, total, err := h.invoiceSvc.GetListEnhanced(page, pageSize, status, userID,
+		totalSmall, totalBig, createTimeStart, createTimeEnd,
+		dueTimeStart, dueTimeEnd, paidTimeStart, paidTimeEnd,
+		payment, lineItemDesc, invType, saleID, invoiceID,
+		orderField, sort)
 	if err != nil {
 		response.ServerError(c, err.Error())
 		return

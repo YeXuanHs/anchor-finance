@@ -535,3 +535,83 @@ func (h *TicketHandler) TicketStatistics(c *gin.Context) {
 	}
 	response.Success(c, stats)
 }
+
+// ==================== P1-8: DownloadAttachment ====================
+
+// DownloadAttachment 下载工单附件
+func (h *TicketHandler) DownloadAttachment(c *gin.Context) {
+	attID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid attachment id")
+		return
+	}
+
+	att, err := h.ticketSvc.GetAttachmentByID(uint(attID))
+	if err != nil {
+		response.NotFound(c, "attachment not found")
+		return
+	}
+
+	c.FileAttachment(att.FilePath, att.FileName)
+}
+
+// ==================== P1-9: TicketReceive ====================
+
+// TicketReceive 工单接单/领取
+func (h *TicketHandler) TicketReceive(c *gin.Context) {
+	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid ticket id")
+		return
+	}
+
+	adminID := c.GetUint("user_id")
+	if err := h.ticketSvc.ReceiveTicket(uint(ticketID), adminID); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "工单已领取")
+}
+
+// ==================== P2-15: Enhanced GetList ====================
+
+// GetListEnhanced returns all tickets with department permission and advanced filters (admin).
+func (h *TicketHandler) GetListEnhanced(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	keyword := c.Query("keyword")
+
+	var status *int
+	if s := c.Query("status"); s != "" {
+		v, _ := strconv.Atoi(s)
+		status = &v
+	}
+	var deptID *uint
+	if d := c.Query("dept_id"); d != "" {
+		v, _ := strconv.ParseUint(d, 10, 64)
+		did := uint(v)
+		deptID = &did
+	}
+	var assigneeID *uint
+	if a := c.Query("assignee_id"); a != "" {
+		v, _ := strconv.ParseUint(a, 10, 64)
+		aid := uint(v)
+		assigneeID = &aid
+	}
+	var userID *uint
+	if u := c.Query("user_id"); u != "" {
+		v, _ := strconv.ParseUint(u, 10, 64)
+		uid := uint(v)
+		userID = &uid
+	}
+	priority := c.Query("priority")
+	startTime := c.Query("start_time")
+	endTime := c.Query("end_time")
+
+	tickets, total, err := h.ticketSvc.GetListEnhanced(page, pageSize, status, keyword, deptID, assigneeID, userID, priority, startTime, endTime)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, tickets, total, page, pageSize)
+}

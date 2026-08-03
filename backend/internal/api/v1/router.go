@@ -115,6 +115,18 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.GET("/homepage/base-info", publicHandler.GetHomepageBaseInfo)
 	r.GET("/downloads", publicHandler.GetUserDownloads)
 
+	// 知识库（公开接口）
+	knowledgeBaseSvc := service.NewKnowledgeBaseService(deps.DB, deps.Log)
+	knowledgeBaseHandler := handler.NewKnowledgeBaseHandler(knowledgeBaseSvc, deps.Log)
+	r.GET("/knowledge/categories", knowledgeBaseHandler.ListCategories)
+	r.GET("/knowledge/articles", knowledgeBaseHandler.ListArticles)
+	r.GET("/knowledge/articles/:id", knowledgeBaseHandler.GetArticle)
+
+	// 公告/新闻（公开接口）
+	newsHandler := handler.NewNewsHandler(deps.DB, deps.Log)
+	r.GET("/news", newsHandler.GetPublishedList)
+	r.GET("/news/:id", newsHandler.GetPublishedDetail)
+
 	// 语言包（公开接口）
 	langSvc := service.NewLanguageService(deps.DB, deps.Log)
 	langHandler := handler.NewLanguageHandler(langSvc, deps.Log)
