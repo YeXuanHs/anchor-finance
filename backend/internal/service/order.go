@@ -183,6 +183,87 @@ func (s *OrderService) Pay(orderID uint) (*Order, error) {
 	return s.GetByID(orderID)
 }
 
+// PayWithMethod pays an order with a specific payment method.
+func (s *OrderService) PayWithMethod(userID, orderID uint, paymentMethod string) (*Order, error) {
+	var order Order
+	if err := s.db.First(&order, orderID).Error; err != nil {
+		return nil, err
+	}
+	if order.UserID != userID {
+		return nil, errors.New("unauthorized")
+	}
+	if order.Status != 0 {
+		return nil, errors.New("order is not pending")
+	}
+
+	// Default to balance payment
+	if paymentMethod == "" {
+		paymentMethod = "balance"
+	}
+
+	// Balance payment: deduct from user balance
+	if paymentMethod == "balance" {
+		var user struct {
+			Balance float64
+		}
+		if err := s.db.Table("users").Where("id = ?", userID).Select("balance").First(&user).Error; err != nil {
+			return nil, errors.New("user not found")
+		}
+		if user.Balance < order.TotalPrice {
+			return nil, errors.New("insufficient balance")
+		}
+		// Deduct balance
+		if err := s.db.Exec("UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?",
+			order.TotalPrice, userID, order.TotalPrice).Error; err != nil {
+			return nil, errors.New("balance deduction failed")
+		}
+		// Record transaction
+		s.db.Exec(`INSERT INTO balance_logs (user_id, type, amount, before_balance, after_balance, description, created_at)
+			VALUES (?, 'payment', ?, ?, ?, ?, ?)`,
+			userID, order.TotalPrice, user.Balance, user.Balance-order.TotalPrice,
+			"Order payment: "+order.OrderNo, time.Now().Unix())
+	}
+
+	// Mark paid and create records
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&order).Updates(map[string]interface{}{
+			"status":         1,
+			"payment_method": paymentMethod,
+			"paid_at":        time.Now(),
+		}).Error; err != nil {
+			return err
+		}
+		if _, err := s.invSvc.CreateWithTx(tx, order.UserID, order.ID, order.OrderNo, order.TotalPrice); err != nil {
+			return err
+		}
+		now := time.Now()
+		expire := calcExpire(now, order.Period, order.PeriodUnit)
+		up := &UserProduct{
+			UserID:    order.UserID,
+			ProductID: order.ProductID,
+			OrderID:   order.ID,
+			OrderNo:   order.OrderNo,
+			StartAt:   now,
+			ExpireAt:  expire,
+			Status:    1,
+		}
+		return tx.Create(up).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	s.log.Infof("order paid via %s: %s", paymentMethod, order.OrderNo)
+	if s.provSvc != nil {
+		go func() {
+			if err := s.provSvc.ProvisionOrder(order.ID); err != nil {
+				s.log.Errorf("auto-provision for order %d failed: %v", order.ID, err)
+			}
+		}()
+	}
+	return s.GetByID(orderID)
+}
+
 // Cancel sets order status to cancelled.
 func (s *OrderService) Cancel(orderID uint) error {
 	var order Order

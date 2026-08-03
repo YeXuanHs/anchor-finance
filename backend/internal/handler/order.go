@@ -218,7 +218,13 @@ func (h *OrderHandler) GetUserOrders(c *gin.Context) {
 	response.SuccessPage(c, orders, total, page, pageSize)
 }
 
+// PayRequest is the payload for order payment.
+type PayRequest struct {
+	PaymentMethod string `json:"payment_method"` // balance, alipay, wechat, etc.
+}
+
 // Pay marks an order as paid, creating invoice + user_product.
+// POST /orders/:id/pay
 func (h *OrderHandler) Pay(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -226,7 +232,12 @@ func (h *OrderHandler) Pay(c *gin.Context) {
 		return
 	}
 
-	order, err := h.orderSvc.Pay(uint(id))
+	var req PayRequest
+	// 兼容无 body 的请求（默认 balance）
+	_ = c.ShouldBindJSON(&req)
+
+	userID := c.GetUint("user_id")
+	order, err := h.orderSvc.PayWithMethod(userID, uint(id), req.PaymentMethod)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
