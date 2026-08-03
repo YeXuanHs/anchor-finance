@@ -5,20 +5,20 @@
     <!-- Hero Section -->
     <section class="hero-section">
       <div class="container">
-        <h1 class="hero-title">帮助中心</h1>
-        <p class="hero-desc">找到您需要的答案</p>
+        <h1 class="hero-title">{{ $t('helpCenter.title') }}</h1>
+        <p class="hero-desc">{{ $t('helpCommon.foundAnswer') }}</p>
         
         <!-- Search -->
         <div class="search-wrapper">
           <el-input
             v-model="searchQuery"
             size="large"
-            placeholder="搜索问题或关键词..."
+            :placeholder="$t('helpCenter.searchPlaceholder')"
             :prefix-icon="Search"
             @keyup.enter="handleSearch"
           >
             <template #append>
-              <el-button @click="handleSearch">搜索</el-button>
+              <el-button @click="handleSearch">{{ $t('common.search') }}</el-button>
             </template>
           </el-input>
         </div>
@@ -29,8 +29,8 @@
     <section class="section hot-questions">
       <div class="container">
         <div class="section-header">
-          <h2>热门问题</h2>
-          <p>常见问题快速解答</p>
+          <h2>{{ $t('helpCenter.hotQuestions') }}</h2>
+          <p>{{ $t('helpCommon.commonQuestions') }}</p>
         </div>
         
         <div class="question-list">
@@ -52,8 +52,8 @@
     <section class="section categories-section">
       <div class="container">
         <div class="section-header">
-          <h2>问题分类</h2>
-          <p>按类别查找帮助</p>
+          <h2>{{ $t('helpCenter.questionCategories') }}</h2>
+          <p>{{ $t('helpCommon.searchByCategory') }}</p>
         </div>
         
         <div class="categories-grid">
@@ -63,7 +63,7 @@
             </div>
             <h3>{{ cat.name }}</h3>
             <p>{{ cat.desc }}</p>
-            <span class="article-count">{{ cat.count }} 篇文章</span>
+            <span class="article-count">{{ cat.count }} {{ $t('helpCommon.articles') }}</span>
           </div>
         </div>
       </div>
@@ -75,27 +75,27 @@
         <div class="links-grid">
           <div class="link-card">
             <el-icon :size="40"><Tickets /></el-icon>
-            <h3>提交工单</h3>
-            <p>遇到问题？提交工单获取技术支持</p>
-            <el-button type="primary" @click="$router.push('/user/tickets')">提交工单</el-button>
+            <h3>{{ $t('helpCommon.submitTicket') }}</h3>
+            <p>{{ $t('helpCommon.ticketDesc') }}</p>
+            <el-button type="primary" @click="$router.push('/user/tickets')">{{ $t('helpCommon.submitTicket') }}</el-button>
           </div>
           <div class="link-card">
             <el-icon :size="40"><ChatDotRound /></el-icon>
-            <h3>在线客服</h3>
-            <p>工作时间在线客服，即时解答您的问题</p>
-            <el-button type="primary">联系客服</el-button>
+            <h3>{{ $t('helpCommon.onlineService') }}</h3>
+            <p>{{ $t('helpCommon.onlineServiceDesc') }}</p>
+            <el-button type="primary">{{ $t('helpCommon.contactService') }}</el-button>
           </div>
           <div class="link-card">
             <el-icon :size="40"><Document /></el-icon>
-            <h3>知识库</h3>
-            <p>详细的技术文档和教程</p>
-            <el-button type="primary" @click="$router.push('/knowledge-base')">查看文档</el-button>
+            <h3>{{ $t('helpCommon.knowledgeBase') }}</h3>
+            <p>{{ $t('helpCommon.knowledgeBaseDesc') }}</p>
+            <el-button type="primary" @click="$router.push('/knowledge-base')">{{ $t('helpCommon.viewDocs') }}</el-button>
           </div>
           <div class="link-card">
             <el-icon :size="40"><VideoCamera /></el-icon>
-            <h3>视频教程</h3>
-            <p>直观的视频操作指南</p>
-            <el-button type="primary">观看视频</el-button>
+            <h3>{{ $t('helpCommon.videoTutorial') }}</h3>
+            <p>{{ $t('helpCommon.videoTutorialDesc') }}</p>
+            <el-button type="primary">{{ $t('helpCommon.watchVideo') }}</el-button>
           </div>
         </div>
       </div>
@@ -108,6 +108,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import request from '@/utils/request'
 import { 
   Search, QuestionFilled, ArrowRight, Tickets, ChatDotRound, 
@@ -115,8 +116,8 @@ import {
 } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
-import request from '@/utils/request'
 
+const { t } = useI18n()
 const router = useRouter()
 const searchQuery = ref('')
 

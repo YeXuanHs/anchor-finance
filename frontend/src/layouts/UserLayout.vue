@@ -7,8 +7,8 @@
     <aside class="sidebar" :class="{ 'mobile-open': sidebarVisible }">
       <div class="sidebar-header">
         <div class="logo" @click="$router.push('/')">
-          <img src="/logo.png" alt="锚点财务" class="logo-img" />
-          <span class="logo-text">锚点财务</span>
+          <img src="/logo.png" :alt="$t('userLayout.brandName')" class="logo-img" />
+          <span class="logo-text">{{ $t('userLayout.brandName') }}</span>
         </div>
         <el-icon class="sidebar-close-mobile" :size="18" @click="sidebarVisible = false"><Close /></el-icon>
       </div>
@@ -18,7 +18,7 @@
         <el-avatar :size="48" class="user-avatar">{{ userInitial }}</el-avatar>
         <div class="user-card-info">
           <span class="user-card-name">{{ username }}</span>
-          <el-tag type="info" size="small" effect="dark" round>普通用户</el-tag>
+          <el-tag type="info" size="small" effect="dark" round>{{ $t('userLayout.normalUser') }}</el-tag>
         </div>
       </div>
 
@@ -114,6 +114,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, markRaw } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import {
   Fold, Close, Bell, ArrowDown, User, Setting, SwitchButton,
@@ -123,6 +124,7 @@ import {
 import request from '@/utils/request'
 import LanguageSwitcher from '@/components/LanguageSwitch.vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
@@ -176,7 +178,7 @@ const currentPageName = computed(() => {
     }
     return ''
   }
-  return findName(menuList.value) || '用户中心'
+  return findName(menuList.value) || t('helpCommon.userCenter')
 })
 
 // 获取菜单

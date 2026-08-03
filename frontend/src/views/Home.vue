@@ -222,8 +222,8 @@
     <section id="partners" class="section partners-section">
       <div class="container">
         <div class="section-header">
-          <h2 class="section-title">合作伙伴</h2>
-          <p class="section-subtitle">与行业领先企业携手共进</p>
+          <h2 class="section-title">{{ $t('landing.partners') }}</h2>
+          <p class="section-subtitle">{{ $t('landing.partnersDesc') }}</p>
         </div>
         <div class="partners-grid">
           <div v-for="partner in partners" :key="partner.id" class="partner-card">
@@ -239,10 +239,10 @@
         <div class="footer-grid">
           <div class="footer-col">
             <div class="footer-logo">
-              <img src="/logo.png" alt="锚点财务" />
-              <span>锚点财务</span>
+              <img src="/logo.png" :alt="$t('landing.brandName')" />
+              <span>{{ $t('landing.brandName') }}</span>
             </div>
-            <p class="footer-desc">{{ siteSettings.site_description || '高效、安全的财务管理平台' }}</p>
+            <p class="footer-desc">{{ siteSettings.site_description || $t('landing.defaultDesc') }}</p>
             <div class="footer-contact">
               <p v-if="siteSettings.contact_phone"><el-icon><Phone /></el-icon> {{ siteSettings.contact_phone }}</p>
               <p v-if="siteSettings.contact_email"><el-icon><Message /></el-icon> {{ siteSettings.contact_email }}</p>
@@ -250,7 +250,7 @@
             </div>
           </div>
           <div class="footer-col">
-            <h4>产品服务</h4>
+            <h4>{{ $t('landing.productServices') }}</h4>
             <ul>
               <li v-for="group in productGroups" :key="group.id">
                 <router-link :to="`/products?group=${group.id}`">{{ group.name }}</router-link>
@@ -268,7 +268,7 @@
           </div>
         </div>
         <div class="footer-bottom">
-          <p>{{ siteSettings.copyright || `© ${new Date().getFullYear()} 锚点财务 All Rights Reserved` }}</p>
+          <p>{{ siteSettings.copyright || `© ${new Date().getFullYear()} ${$t('landing.brandName')} ${$t('landing.allRightsReserved')}` }}</p>
           <p v-if="siteSettings.icp">{{ siteSettings.icp }}</p>
         </div>
       </div>
@@ -299,9 +299,9 @@ const bottomNavs = ref([])
 // 从API获取的数据（默认数据作为后备，优先从 API 加载）
 const banners = ref([
   // TODO: 以下为硬编码营销文案，应从 /api/v1/banners 或数据库动态获取
-  { id: 1, title: '高性能云服务器', description: '企业级云服务器，99.9% SLA 保障', badge: '热门推荐', video: '/carousel/2.webm', btn_text: '立即选购', link: '/products' },
-  { id: 2, title: '全球节点覆盖', description: '遍布全球 30+ 数据中心节点', badge: '全球布局', video: '/carousel/3.webm', btn_text: '立即选购', link: '/products' },
-  { id: 3, title: '专业技术支持', description: '7×24小时专业技术团队', badge: '专业服务', video: '/carousel/4.webm', btn_text: '联系我们', link: '/tickets/create' }
+  { id: 1, title: t('landing.highPerfCloud'), description: t('landing.highPerfDesc'), badge: t('landing.hotRecommend'), video: '/carousel/2.webm', btn_text: t('landing.buyNow'), link: '/products' },
+  { id: 2, title: t('landing.globalNodes'), description: t('landing.globalNodesDesc'), badge: t('landing.globalLayout'), video: '/carousel/3.webm', btn_text: t('landing.buyNow'), link: '/products' },
+  { id: 3, title: t('landing.proTechSupport'), description: t('landing.proTechSupportDesc'), badge: t('landing.proService'), video: '/carousel/4.webm', btn_text: t('landing.contactUs'), link: '/tickets/create' }
 ])
 
 const productGroups = ref([])
@@ -312,60 +312,60 @@ const siteSettings = ref({})
 
 // 快捷入口
 const quickEntries = [
-  { id: 1, title: '云服务器', icon: 'Monitor', link: '/products?group=cloud' },
-  { id: 2, title: '独立服务器', icon: 'Cpu', link: '/products?group=dedicated' },
-  { id: 3, title: '域名注册', icon: 'Connection', link: '/products?group=domain' },
-  { id: 4, title: 'SSL证书', icon: 'Shield', link: '/products?group=ssl' }
+  { id: 1, title: t('landing.cloudServer'), icon: 'Monitor', link: '/products?group=cloud' },
+  { id: 2, title: t('landing.dedicatedServer'), icon: 'Cpu', link: '/products?group=dedicated' },
+  { id: 3, title: t('landing.domainRegistration'), icon: 'Connection', link: '/products?group=domain' },
+  { id: 4, title: t('landing.sslCertificate'), icon: 'Shield', link: '/products?group=ssl' }
 ]
 
 // 解决方案
 const solutions = [
   {
     id: 1,
-    title: '企业上云',
+    title: t('landing.enterpriseCloud'),
     icon: 'OfficeBuilding',
-    description: '为企业提供一站式上云解决方案',
-    features: ['弹性扩展', '高可用架构', '安全合规', '成本优化']
+    description: t('landing.enterpriseCloudDesc'),
+    features: [t('landing.featureElastic'), t('landing.featureHA'), t('landing.featureSecure'), t('landing.featureCost')]
   },
   {
     id: 2,
-    title: '电商解决方案',
+    title: t('landing.ecommerceSolution'),
     icon: 'ShoppingBag',
-    description: '助力电商业务快速发展',
-    features: ['高并发处理', 'CDN加速', '数据安全', '稳定可靠']
+    description: t('landing.ecommerceSolutionDesc'),
+    features: [t('landing.featureHighConcurrency'), t('landing.featureCDN'), t('landing.featureDataSecurity'), t('landing.featureStable')]
   },
   {
     id: 3,
-    title: '游戏加速',
+    title: t('landing.gameAcceleration'),
     icon: 'TrendCharts',
-    description: '低延迟高带宽游戏服务器',
-    features: ['全球节点', 'DDoS防护', '低延迟', '弹性伸缩']
+    description: t('landing.gameAccelerationDesc'),
+    features: [t('landing.featureGlobalNodes'), t('landing.featureDDoS'), t('landing.featureLowLatency'), t('landing.featureElasticScale')]
   },
   {
     id: 4,
-    title: '大数据分析',
+    title: t('landing.bigDataAnalytics'),
     icon: 'DataLine',
-    description: '海量数据存储与分析解决方案',
-    features: ['海量存储', '实时分析', '数据挖掘', '可视化']
+    description: t('landing.bigDataAnalyticsDesc'),
+    features: [t('landing.featureMassStorage'), t('landing.featureRealtimeAnalysis'), t('landing.featureDataMining'), t('landing.featureVisualization')]
   }
 ]
 
 // 核心优势
 const features = [
-  { id: 1, title: '99.9%可用性', icon: 'Shield', description: '企业级SLA保障，确保业务持续稳定运行' },
-  { id: 2, title: '弹性扩展', icon: 'TrendCharts', description: '按需配置，灵活升降，满足业务增长需求' },
-  { id: 3, title: '7×24支持', icon: 'Headset', description: '专业技术团队全天候在线，快速响应' },
-  { id: 4, title: '全球节点', icon: 'Connection', description: '覆盖全球30+数据中心，就近接入极速体验' },
-  { id: 5, title: '安全可靠', icon: 'Shield', description: '多层安全防护，保障数据安全无忧' },
-  { id: 6, title: '高性价比', icon: 'TrendCharts', description: '优质资源配置，合理价格体系' }
+  { id: 1, title: t('landing.availability99'), icon: 'Shield', description: t('landing.availability99Desc') },
+  { id: 2, title: t('landing.elasticScaling'), icon: 'TrendCharts', description: t('landing.elasticScalingDesc') },
+  { id: 3, title: t('landing.support24x7'), icon: 'Headset', description: t('landing.support24x7Desc') },
+  { id: 4, title: t('landing.globalNodesFeature'), icon: 'Connection', description: t('landing.globalNodesFeatureDesc') },
+  { id: 5, title: t('landing.securityReliable'), icon: 'Shield', description: t('landing.securityReliableDesc') },
+  { id: 6, title: t('landing.costEffective'), icon: 'TrendCharts', description: t('landing.costEffectiveDesc') }
 ]
 
 // 数据统计
 const stats = [
-  { id: 1, value: '10,000+', label: '服务客户' },
-  { id: 2, value: '99.9%', label: '可用性保障' },
-  { id: 3, value: '30+', label: '数据中心' },
-  { id: 4, value: '7×24', label: '技术支持' }
+  { id: 1, value: '10,000+', label: t('landing.statClients') },
+  { id: 2, value: '99.9%', label: t('landing.statAvailability') },
+  { id: 3, value: '30+', label: t('landing.statDataCenters') },
+  { id: 4, value: '7×24', label: t('landing.statTechSupport') }
 ]
 
 // 获取数据

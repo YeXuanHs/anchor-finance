@@ -6,8 +6,8 @@
     <section class="breadcrumb-section">
       <div class="container">
         <el-breadcrumb separator="/">
-          <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item :to="{ path: '/help' }">帮助中心</el-breadcrumb-item>
+          <el-breadcrumb-item :to="{ path: '/' }">{{ $t('common.home') }}</el-breadcrumb-item>
+          <el-breadcrumb-item :to="{ path: '/help' }">{{ $t('helpCenter.title') }}</el-breadcrumb-item>
           <el-breadcrumb-item>{{ categoryName }}</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
@@ -29,7 +29,7 @@
           <el-input
             v-model="searchQuery"
             size="large"
-            placeholder="在该分类中搜索..."
+            :placeholder="$t('helpCommon.searchInCategory')"
             :prefix-icon="Search"
             clearable
             @keyup.enter="handleSearch"
@@ -55,7 +55,7 @@
                   <el-icon :size="24" color="#409eff"><Folder /></el-icon>
                   <div class="sub-info">
                     <h3>{{ sub.name }}</h3>
-                    <span>{{ sub.count }} 篇文章</span>
+                    <span>{{ sub.count }} {{ $t('helpCommon.articles') }}</span>
                   </div>
                 </div>
               </div>
@@ -77,7 +77,7 @@
                     <div class="article-meta">
                       <span>
                         <el-icon><View /></el-icon>
-                        {{ article.views }} 次阅读
+                        {{ article.views }} {{ $t('helpCommon.readCount') }}
                       </span>
                       <span>
                         <el-icon><Clock /></el-icon>
@@ -89,7 +89,7 @@
                 </div>
               </div>
 
-              <el-empty v-if="!loading && articles.length === 0" description="该分类暂无文章" />
+              <el-empty v-if="!loading && articles.length === 0" :description="$t('helpCommon.noArticlesInCategory')" />
 
               <div class="pagination-wrapper" v-if="total > pageSize">
                 <el-pagination
@@ -109,7 +109,7 @@
           <el-col :span="7">
             <div class="sidebar">
               <div class="sidebar-card">
-                <h3 class="sidebar-title">帮助分类</h3>
+                <h3 class="sidebar-title">{{ $t('helpCommon.helpCategory') }}</h3>
                 <div class="category-nav">
                   <div
                     v-for="cat in allCategories"
@@ -126,15 +126,15 @@
               </div>
 
               <div class="sidebar-card">
-                <h3 class="sidebar-title">需要更多帮助？</h3>
+                <h3 class="sidebar-title">{{ $t('helpCommon.needMoreHelp') }}</h3>
                 <div class="help-actions">
                   <el-button type="primary" plain @click="$router.push('/user/tickets')">
                     <el-icon><Tickets /></el-icon>
-                    提交工单
+                    {{ $t('helpCommon.submitTicket') }}
                   </el-button>
                   <el-button @click="$router.push('/help/search')">
                     <el-icon><Search /></el-icon>
-                    搜索帮助
+                    {{ $t('helpCommon.searchHelp') }}
                   </el-button>
                 </div>
               </div>
@@ -151,6 +151,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   Search, Document, View, Clock, ArrowRight, Folder, Tickets,
   ShoppingCart, Wallet, Setting, Connection
@@ -159,6 +160,7 @@ import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const searchQuery = ref('')
@@ -200,7 +202,7 @@ const currentCategory = computed(() =>
   allCategories.value.find(c => c.id === Number(categoryId.value))
 )
 
-const categoryName = computed(() => currentCategory.value?.name || '帮助分类')
+const categoryName = computed(() => currentCategory.value?.name || t('helpCommon.helpCategory'))
 const categoryDesc = computed(() => currentCategory.value?.description || '')
 const categoryIcon = computed(() => currentCategory.value?.icon || 'Folder')
 

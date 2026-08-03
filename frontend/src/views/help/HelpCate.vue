@@ -3,15 +3,15 @@
     <SiteHeader />
     <div class="hero-section">
       <div class="container">
-        <h1>帮助中心</h1>
-        <p>浏览帮助分类，快速找到您需要的答案</p>
+        <h1>{{ $t('helpCenter.title') }}</h1>
+        <p>{{ $t('helpCommon.browseHelpDesc') }}</p>
         <div class="search-box">
-          <el-input v-model="searchKeyword" placeholder="搜索帮助文档..." size="large" clearable @keyup.enter="handleSearch">
+          <el-input v-model="searchKeyword" :placeholder="$t('helpCommon.searchHelpDocs')" size="large" clearable @keyup.enter="handleSearch">
             <template #prefix>
               <el-icon><Search /></el-icon>
             </template>
             <template #append>
-              <el-button @click="handleSearch">搜索</el-button>
+              <el-button @click="handleSearch">{{ $t('common.search') }}</el-button>
             </template>
           </el-input>
         </div>
@@ -29,7 +29,7 @@
               <div class="cat-info">
                 <h3>{{ cat.name }}</h3>
                 <p>{{ cat.description }}</p>
-                <span class="article-count">{{ cat.article_count }} 篇文章</span>
+                <span class="article-count">{{ cat.article_count }} {{ $t('helpCommon.articles') }}</span>
               </div>
               <el-icon class="arrow"><ArrowRight /></el-icon>
             </div>
@@ -38,14 +38,14 @@
         <el-col :span="8">
           <div class="sidebar">
             <div class="sidebar-card">
-              <h3>热门问题</h3>
+              <h3>{{ $t('helpCenter.hotQuestions') }}</h3>
               <div v-for="item in hotQuestions" :key="item.id" class="hot-item" @click="goArticle(item.id)">
                 <span class="hot-rank" :class="{ top: item.rank <= 3 }">{{ item.rank }}</span>
                 <span class="hot-title">{{ item.title }}</span>
               </div>
             </div>
             <div class="sidebar-card">
-              <h3>常见标签</h3>
+              <h3>{{ $t('helpCommon.commonTags') }}</h3>
               <div class="tags">
                 <el-tag v-for="tag in tags" :key="tag" class="tag-item" @click="searchByTag(tag)">{{ tag }}</el-tag>
               </div>
@@ -61,11 +61,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Search, ArrowRight, Document, Setting, Monitor, CreditCard, ChatDotRound, Star } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'
 
+const { t } = useI18n()
 const router = useRouter()
 const searchKeyword = ref('')
 

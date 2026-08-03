@@ -6,12 +6,12 @@
     <section class="breadcrumb-section">
       <div class="container">
         <el-breadcrumb separator="/">
-          <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item :to="{ path: '/help' }">帮助中心</el-breadcrumb-item>
+          <el-breadcrumb-item :to="{ path: '/' }">{{ $t('common.home') }}</el-breadcrumb-item>
+          <el-breadcrumb-item :to="{ path: '/help' }">{{ $t('helpCenter.title') }}</el-breadcrumb-item>
           <el-breadcrumb-item :to="{ path: `/help/category/${article.category_id}` }">
             {{ article.category_name }}
           </el-breadcrumb-item>
-          <el-breadcrumb-item>{{ article.title || '文章详情' }}</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ article.title || $t('helpCommon.articleDetail') }}</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
     </section>
@@ -28,7 +28,7 @@
                     <el-tag type="info">{{ article.category_name }}</el-tag>
                     <h1 class="article-title">{{ article.title }}</h1>
                     <div class="article-meta">
-                      <span><el-icon><View /></el-icon> {{ article.views || 0 }} 次阅读</span>
+                      <span><el-icon><View /></el-icon> {{ article.views || 0 }} {{ $t('helpCommon.readCount') }}</span>
                       <span><el-icon><Clock /></el-icon> {{ article.updated_at }}</span>
                     </div>
                   </div>
@@ -36,7 +36,7 @@
 
                   <!-- Tags -->
                   <div class="article-tags" v-if="article.tags?.length">
-                    <span class="tag-label">标签：</span>
+                    <span class="tag-label">{{ $t('helpCommon.tagLabel') }}</span>
                     <el-tag v-for="tag in article.tags" :key="tag" size="small" effect="plain">
                       {{ tag }}
                     </el-tag>
@@ -44,21 +44,21 @@
 
                   <!-- Feedback -->
                   <div class="article-feedback">
-                    <p>这篇文章对您有帮助吗？</p>
+                    <p>{{ $t('helpCommon.isHelpful') }}</p>
                     <div class="feedback-actions">
                       <el-button
                         :type="feedback === 'yes' ? 'success' : 'default'"
                         @click="submitFeedback('yes')"
                       >
                         <el-icon style="margin-right: 4px;"><CircleCheck /></el-icon>
-                        有帮助 ({{ article.helpful || 0 }})
+                        {{ $t('helpCommon.helpfulYes') }} ({{ article.helpful || 0 }})
                       </el-button>
                       <el-button
                         :type="feedback === 'no' ? 'danger' : 'default'"
                         @click="submitFeedback('no')"
                       >
                         <el-icon style="margin-right: 4px;"><CircleClose /></el-icon>
-                        没帮助
+                        {{ $t('helpCommon.helpfulNo') }}
                       </el-button>
                     </div>
                   </div>
@@ -66,11 +66,11 @@
                   <!-- Navigation -->
                   <div class="article-nav">
                     <div class="nav-item" v-if="prevArticle" @click="goToContent(prevArticle.id)">
-                      <span class="nav-label">上一篇</span>
+                      <span class="nav-label">{{ $t('helpCommon.prevArticle') }}</span>
                       <span class="nav-title">{{ prevArticle.title }}</span>
                     </div>
                     <div class="nav-item nav-next" v-if="nextArticle" @click="goToContent(nextArticle.id)">
-                      <span class="nav-label">下一篇</span>
+                      <span class="nav-label">{{ $t('helpCommon.nextArticle') }}</span>
                       <span class="nav-title">{{ nextArticle.title }}</span>
                     </div>
                   </div>
@@ -84,7 +84,7 @@
             <aside class="sidebar">
               <!-- Table of Contents -->
               <div class="sidebar-card toc-card" v-if="article.toc?.length">
-                <h3 class="sidebar-title">目录</h3>
+                <h3 class="sidebar-title">{{ $t('helpCommon.tableOfContents') }}</h3>
                 <div class="toc-list">
                   <div
                     v-for="(item, index) in article.toc"
@@ -99,7 +99,7 @@
 
               <!-- Related Articles -->
               <div class="sidebar-card" v-if="relatedArticles.length > 0">
-                <h3 class="sidebar-title">相关文章</h3>
+                <h3 class="sidebar-title">{{ $t('helpCommon.relatedArticles') }}</h3>
                 <div class="related-list">
                   <div
                     v-for="item in relatedArticles"
@@ -115,13 +115,13 @@
 
               <!-- Help Actions -->
               <div class="sidebar-card">
-                <h3 class="sidebar-title">需要更多帮助？</h3>
+                <h3 class="sidebar-title">{{ $t('helpCommon.needMoreHelp') }}</h3>
                 <div class="help-actions">
                   <el-button type="primary" plain style="width: 100%;" @click="$router.push('/user/tickets')">
-                    提交工单
+                    {{ $t('helpCommon.submitTicket') }}
                   </el-button>
                   <el-button style="width: 100%;" @click="$router.push('/help')">
-                    返回帮助中心
+                    {{ $t('helpCommon.backToHelp') }}
                   </el-button>
                 </div>
               </div>
@@ -138,12 +138,14 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { View, Clock, CircleCheck, CircleClose, Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const loading = ref(true)
@@ -221,7 +223,7 @@ const submitFeedback = async (type: string) => {
     await request.post(`/api/v2/help/articles/${article.value.id}/feedback`, {
       helpful: type === 'yes'
     })
-    ElMessage.success('感谢您的反馈！')
+    ElMessage.success(t('helpCenter.thankFeedback'))
   } catch (error) {
     console.error('提交反馈失败:', error)
   }

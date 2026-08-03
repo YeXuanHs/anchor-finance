@@ -1,17 +1,17 @@
 <template>
   <div class="products-page">
     <div class="page-header">
-      <h1 class="page-title">我的产品</h1>
+      <h1 class="page-title">{{ $t('myProducts.title') }}</h1>
       <el-button type="primary" @click="$router.push('/products')">
-        <el-icon><Plus /></el-icon>购买新产品
+        <el-icon><Plus /></el-icon>{{ $t('myProducts.buyNew') }}
       </el-button>
     </div>
 
     <el-radio-group v-model="statusFilter" class="status-filter">
-      <el-radio-button value="all">全部</el-radio-button>
-      <el-radio-button value="active">使用中</el-radio-button>
-      <el-radio-button value="suspended">暂停</el-radio-button>
-      <el-radio-button value="expired">已失效</el-radio-button>
+      <el-radio-button value="all">{{ $t('helpCommon.all') }}</el-radio-button>
+      <el-radio-button value="active">{{ $t('myProducts.active') }}</el-radio-button>
+      <el-radio-button value="suspended">{{ $t('myProducts.suspended') }}</el-radio-button>
+      <el-radio-button value="expired">{{ $t('myProducts.expired') }}</el-radio-button>
     </el-radio-group>
 
     <div class="products-grid">
@@ -42,37 +42,37 @@
 
         <div class="product-meta">
           <div class="meta-item">
-            <span class="meta-label">到期时间</span>
+            <span class="meta-label">{{ $t('myProducts.dueDate') }}</span>
             <span class="meta-value">{{ product.expiry }}</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">费用</span>
+            <span class="meta-label">{{ $t('helpCommon.cost') }}</span>
             <span class="meta-value price">¥{{ product.price }}/月</span>
           </div>
         </div>
 
         <div class="product-actions">
-          <el-button size="small" @click="handleManage(product)">管理</el-button>
+          <el-button size="small" @click="handleManage(product)">{{ $t('myProducts.manage') }}</el-button>
           <el-button
             v-if="product.status === 'active'"
             size="small"
             type="primary"
             plain
             @click="handleRenew(product)"
-          >续费</el-button>
+          >{{ $t('myProducts.renew') }}</el-button>
           <el-button
             v-if="product.status === 'suspended'"
             size="small"
             type="warning"
             plain
             @click="handleReactivate(product)"
-          >恢复</el-button>
+          >{{ $t('helpCommon.reactivate') }}</el-button>
         </div>
       </el-card>
     </div>
 
-    <el-empty v-if="filteredProducts.length === 0" description="暂无产品">
-      <el-button type="primary" @click="$router.push('/products')">去购买</el-button>
+    <el-empty v-if="filteredProducts.length === 0" :description="$t('myProducts.noProducts')">
+      <el-button type="primary" @click="$router.push('/products')">{{ $t('helpCommon.goToBuy') }}</el-button>
     </el-empty>
   </div>
 </template>
@@ -80,10 +80,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Plus, Monitor, Connection, Lock, Coin } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const statusFilter = ref('all')
@@ -130,8 +132,8 @@ function getStatusType(status: string) {
 function handleManage(product: Product) {
   router.push(`/user/products/${product.id}`)
 }
-function handleRenew(product: Product) { ElMessage.info(`续费产品：${product.name}`) }
-function handleReactivate(product: Product) { ElMessage.info(`恢复产品：${product.name}`) }
+function handleRenew(product: Product) { ElMessage.info(`${t('helpCommon.renewProduct')}${product.name}`) }
+function handleReactivate(product: Product) { ElMessage.info(`${t('helpCommon.reactivateProduct')}${product.name}`) }
 </script>
 
 <style scoped>
