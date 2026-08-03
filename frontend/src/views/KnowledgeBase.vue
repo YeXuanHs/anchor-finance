@@ -7,17 +7,17 @@
           <div class="logo-icon">
             <n-icon size="24" color="#fff"><AnchorOutline /></n-icon>
           </div>
-          <span class="logo-text">锚点财务</span>
+          <span class="logo-text">{{ $t('landing.brandName') }}</span>
         </router-link>
         <nav class="nav-links">
-          <router-link to="/" class="nav-link">首页</router-link>
-          <router-link to="/products" class="nav-link">产品</router-link>
-          <a href="#" class="nav-link">公告</a>
-          <router-link to="/knowledge" class="nav-link active">帮助中心</router-link>
+          <router-link to="/" class="nav-link">{{ $t('common.home') }}</router-link>
+          <router-link to="/products" class="nav-link">{{ $t('menu.products') }}</router-link>
+          <a href="#" class="nav-link">{{ $t('landing.announcement') }}</a>
+          <router-link to="/knowledge" class="nav-link active">{{ $t('menu.knowledgeBase') }}</router-link>
         </nav>
         <div class="header-actions">
-          <n-button text @click="$router.push('/login')">登录</n-button>
-          <n-button type="primary" round size="small" @click="$router.push('/register')">免费注册</n-button>
+          <n-button text @click="$router.push('/login')">{{ $t('landing.login') }}</n-button>
+          <n-button type="primary" round size="small" @click="$router.push('/register')">{{ $t('landing.freeRegister') }}</n-button>
         </div>
       </div>
     </header>
@@ -26,8 +26,8 @@
     <div class="breadcrumb-bar">
       <div class="breadcrumb-inner">
         <n-breadcrumb>
-          <n-breadcrumb-item @click="$router.push('/')">首页</n-breadcrumb-item>
-          <n-breadcrumb-item>帮助中心</n-breadcrumb-item>
+          <n-breadcrumb-item @click="$router.push('/')">{{ $t('common.home') }}</n-breadcrumb-item>
+          <n-breadcrumb-item>{{ $t('menu.knowledgeBase') }}</n-breadcrumb-item>
         </n-breadcrumb>
       </div>
     </div>
@@ -35,11 +35,11 @@
     <!-- Search Banner -->
     <div class="search-banner">
       <div class="search-inner">
-        <h1 class="search-title">帮助中心</h1>
-        <p class="search-subtitle">搜索您需要的帮助信息</p>
+        <h1 class="search-title">{{ $t('knowledgeBase.title') }}</h1>
+        <p class="search-subtitle">{{ $t('knowledgeBase.searchHelp') }}</p>
         <n-input
           v-model:value="searchKeyword"
-          placeholder="搜索文章标题或关键词..."
+          placeholder="{{ $t('knowledgeBase.searchPlaceholder') }}"
           size="large"
           round
           clearable
@@ -60,7 +60,7 @@
           <div class="sidebar-card">
             <h3 class="sidebar-title">
               <n-icon size="18" color="#1890ff"><FolderOpenOutline /></n-icon>
-              文章分类
+              {{ $t('knowledgeBase.articleCategories') }}
             </h3>
             <n-tree
               :data="categoryTree"
@@ -76,7 +76,7 @@
           <div class="sidebar-card hot-articles">
             <h3 class="sidebar-title">
               <n-icon size="18" color="#ff7a45"><FlameOutline /></n-icon>
-              热门文章
+              {{ $t('knowledgeBase.hotArticles') }}
             </h3>
             <div class="hot-list">
               <div
@@ -114,13 +114,13 @@
               size="small"
               @click="clearCategories"
             >
-              清除筛选
+              {{ $t('knowledgeBase.clearFilter') }}
             </n-button>
           </div>
 
           <!-- Result Info -->
           <div class="result-info">
-            <span>共 <strong>{{ filteredArticles.length }}</strong> 篇文章</span>
+            <span>{{ $t('knowledgeBase.totalArticles', { count: filteredArticles.length }) }}</span>
           </div>
 
           <!-- Article Cards -->
@@ -173,8 +173,8 @@
           <!-- Empty State -->
           <div v-if="filteredArticles.length === 0" class="empty-state">
             <n-icon size="64" color="#c9cdd4"><DocumentTextOutline /></n-icon>
-            <p>暂无匹配的文章</p>
-            <n-button type="primary" @click="clearFilters">清除筛选</n-button>
+            <p>{{ $t('knowledgeBase.noMatchingArticles') }}</p>
+            <n-button type="primary" @click="clearFilters">{{ $t('knowledgeBase.clearFilter') }}</n-button>
           </div>
 
           <!-- Pagination -->
@@ -194,6 +194,7 @@
 
 <script setup lang="ts">
 import { ref, computed, h } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   AnchorOutline,
   SearchOutline,
@@ -212,6 +213,8 @@ import {
 } from '@vicons/ionicons5'
 import { NIcon } from 'naive-ui'
 import type { TreeOption } from 'naive-ui'
+
+const { t } = useI18n()
 
 const searchKeyword = ref('')
 const selectedCategories = ref<string[]>([])
@@ -242,7 +245,7 @@ const fetchArticles = async () => {
       articles.value = result.data.items.map((item: any) => ({
         id: item.id,
         title: item.title,
-        category: item.category_name || '未分类',
+        category: item.category_name || t('knowledgeBase.uncategorized'),
         summary: item.summary || item.content?.substring(0, 100) + '...',
         content: item.content,
         views: item.views || 0,
@@ -264,7 +267,7 @@ const categoryTree = computed<TreeOption[]>(() => {
   return [
     {
       key: 'all',
-      label: '全部文章',
+      label: t('knowledgeBase.allArticles'),
       prefix: () => h(NIcon, { size: 16, color: '#1890ff' }, { default: () => h(DocumentTextOutline) }),
       suffix: () => h('span', { class: 'tree-count' }, articles.value.length),
       children: categories.map(cat => ({

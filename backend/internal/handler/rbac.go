@@ -83,7 +83,7 @@ func (h *RbacHandler) DeleteRole(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "role deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // GetPermissions returns all permissions grouped by module.
@@ -116,7 +116,7 @@ func (h *RbacHandler) AssignRole(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "roles assigned")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // GetUserRoles returns roles for a user.
@@ -178,7 +178,7 @@ func (h *RbacHandler) AddRole(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "role added")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // EditRolePage returns data for editing a role.
@@ -215,7 +215,7 @@ func (h *RbacHandler) EditRole(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "role updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // Delete deletes a role (system roles excluded).
@@ -233,7 +233,7 @@ func (h *RbacHandler) Delete(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "role deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // CopyRole duplicates a role.
@@ -252,5 +252,5 @@ func (h *RbacHandler) CopyRole(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "role copied")
+	response.SuccessMsg(c, "请求成功")
 }

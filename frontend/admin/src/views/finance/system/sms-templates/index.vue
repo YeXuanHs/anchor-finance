@@ -161,7 +161,7 @@ const getStatusText = (status: number) => {
 const fetchConfig = async () => {
   configLoading.value = true
   try {
-    const res = await request.get({ url: '/api/admin/config/message/mobile' })
+    const res = await request.get({ url: '/api/admin/config/messages/mobile' })
     if (res?.msg_config) Object.assign(smsConfig, res.msg_config)
   } catch (error) {
     console.error(error)
@@ -172,7 +172,7 @@ const fetchConfig = async () => {
 
 const handleSaveConfig = async () => {
   try {
-    await request.post({ url: '/api/admin/config/message/mobile', data: smsConfig, showSuccessMessage: true })
+    await request.put({ url: '/api/admin/config/messages/mobile', data: smsConfig, showSuccessMessage: true })
   } catch (error) {
     ElMessage.error('保存失败')
   }
@@ -181,7 +181,7 @@ const handleSaveConfig = async () => {
 const handleTestSms = async () => {
   try {
     const { value } = await ElMessageBox.prompt('请输入测试手机号', '测试短信')
-    await request.post({ url: '/api/admin/config/message/sms/test', data: { phone: value } })
+    await request.post({ url: '/api/admin/config/messages/mobile/test', data: { phone: value } })
     ElMessage.success('测试短信已发送')
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('发送失败')
@@ -192,7 +192,7 @@ const fetchTemplates = async () => {
   templateLoading.value = true
   try {
     const res = await request.get({
-      url: '/api/admin/config/message/template/list',
+      url: '/api/admin/sms/templates',
       params: { ...searchForm, page: pagination.page, limit: pagination.limit }
     })
     if (res) {
@@ -208,7 +208,7 @@ const fetchTemplates = async () => {
 
 const handleCheckStatus = async () => {
   try {
-    await request.post({ url: '/api/admin/config/message/template/status' })
+    await request.get({ url: '/api/admin/sms/templates' })
     ElMessage.success('审核状态已刷新')
     fetchTemplates()
   } catch (error) {
@@ -243,9 +243,9 @@ const handleSaveTemplate = async () => {
     saveLoading.value = true
     try {
       if (isEdit.value && editingId.value) {
-        await request.put({ url: `/api/admin/config/message/template/${editingId.value}`, data: templateForm, showSuccessMessage: true })
+        await request.put({ url: `/api/admin/sms/templates/${editingId.value}`, data: templateForm, showSuccessMessage: true })
       } else {
-        await request.post({ url: '/api/admin/config/message/template', data: templateForm, showSuccessMessage: true })
+        await request.post({ url: '/api/admin/sms/templates', data: templateForm, showSuccessMessage: true })
       }
       dialogVisible.value = false
       fetchTemplates()
@@ -260,7 +260,7 @@ const handleSaveTemplate = async () => {
 const handleSubmitCheck = async (row: any) => {
   try {
     await ElMessageBox.confirm(`确定提交模板 "${row.title}" 进行审核吗？`, '提示')
-    await request.post({ url: '/api/admin/config/message/template/check', data: { ids: [row.id], type: row.sms_operator } })
+    await request.post({ url: '/api/admin/sms/send', data: { template_id: row.id } })
     ElMessage.success('已提交审核')
     fetchTemplates()
   } catch (error) {
@@ -271,7 +271,7 @@ const handleSubmitCheck = async (row: any) => {
 const handleDelete = async (row: any) => {
   try {
     await ElMessageBox.confirm(`确定删除模板 "${row.title}" 吗？`, '提示')
-    await request.delete({ url: '/api/admin/config/message/template', data: { ids: [row.id], type: row.sms_operator }, showSuccessMessage: true })
+    await request.delete({ url: `/api/admin/sms/templates/${row.id}`, showSuccessMessage: true })
     fetchTemplates()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('删除失败')

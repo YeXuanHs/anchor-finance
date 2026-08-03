@@ -100,7 +100,7 @@ func (h *ClientServiceHandler) Update(c *gin.Context) {
 		response.ServerError(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "service updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // Suspend pauses an active service.
@@ -121,7 +121,7 @@ func (h *ClientServiceHandler) Suspend(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "service suspended")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // Terminate permanently terminates a service.
@@ -142,7 +142,7 @@ func (h *ClientServiceHandler) Terminate(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "service terminated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // Renew extends a service's expiry.
@@ -166,7 +166,7 @@ func (h *ClientServiceHandler) Renew(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "service renewed")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // Resume reactivates a suspended service.
@@ -257,7 +257,7 @@ func (h *ClientServiceHandler) MyServiceAutoRenew(c *gin.Context) {
 		response.ServerError(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "auto-renew updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // GetByStatus returns service status constants.
@@ -291,7 +291,7 @@ func (h *ClientServiceHandler) PostTransfer(c *gin.Context) {
 		return
 	}
 
-	response.SuccessMsg(c, "service transferred successfully")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // DeleteHost deletes a host/service (admin).
@@ -315,7 +315,7 @@ func (h *ClientServiceHandler) DeleteHost(c *gin.Context) {
 		return
 	}
 
-	response.SuccessMsg(c, "services deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // PostBatchRenewPage returns batch renew page data (admin).
@@ -462,7 +462,7 @@ func (h *ClientServiceHandler) Refund(c *gin.Context) {
 		return
 	}
 
-	response.SuccessMsg(c, "refund processed")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // ==================== P1-10: HostRenew ====================

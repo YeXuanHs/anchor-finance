@@ -81,7 +81,7 @@ func (h *SystemLogHandler) Delete(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "system log deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // Cleanup deletes old system logs.

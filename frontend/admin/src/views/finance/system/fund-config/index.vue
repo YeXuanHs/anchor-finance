@@ -77,7 +77,7 @@ const financeForm = reactive({
 const fetchConfig = async () => {
   loading.value = true
   try {
-    const res = await request.get({ url: '/api/admin/config/fund' })
+    const res = await request.get({ url: '/api/admin/config/recharge' })
     if (res?.data) {
       Object.assign(rechargeForm, res.data.recharge || {})
       Object.assign(financeForm, res.data.finance || {})
@@ -92,7 +92,7 @@ const fetchConfig = async () => {
 const handleSaveRecharge = async () => {
   saveLoading.value = true
   try {
-    await request.put({ url: '/api/admin/config/fund/recharge', data: rechargeForm, showSuccessMessage: true })
+    await request.put({ url: '/api/admin/config/recharge', data: rechargeForm, showSuccessMessage: true })
   } catch (error) {
     ElMessage.error('保存失败')
   } finally {
@@ -103,7 +103,7 @@ const handleSaveRecharge = async () => {
 const handleSaveFinance = async () => {
   saveLoading.value = true
   try {
-    await request.put({ url: '/api/admin/config/fund/finance', data: financeForm, showSuccessMessage: true })
+    await request.put({ url: '/api/admin/config/recharge', data: financeForm, showSuccessMessage: true })
   } catch (error) {
     ElMessage.error('保存失败')
   } finally {

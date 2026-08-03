@@ -4,8 +4,8 @@
     <header class="header" :class="{ 'header-scrolled': scrolled }">
       <div class="header-inner">
         <div class="logo" @click="$router.push('/')">
-          <img src="/logo.png" alt="锚点财务" class="logo-img" />
-          <span class="logo-text">锚点财务</span>
+          <img src="/logo.png" alt="{{ $t('landing.brandName') }}" class="logo-img" />
+          <span class="logo-text">{{ $t('landing.brandName') }}</span>
         </div>
         <nav class="nav-links">
           <!-- 动态导航 - 从数据库读取 -->
@@ -31,10 +31,10 @@
           <LanguageSwitch />
           <el-button text class="login-btn" @click="$router.push('/login')">
             <el-icon :size="16" style="margin-right: 4px;"><User /></el-icon>
-            登录
+            {{ $t('landing.login') }}
           </el-button>
           <el-button type="primary" round size="default" @click="$router.push('/register')">
-            免费注册
+            {{ $t('landing.freeRegister') }}
           </el-button>
         </div>
       </div>
@@ -68,10 +68,10 @@
                 <div class="slide-actions">
                   <el-button type="primary" size="large" round @click="$router.push(banner.link || '/products')">
                     <el-icon style="margin-right: 6px;"><Position /></el-icon>
-                    {{ banner.btn_text || '立即选购' }}
+                    {{ banner.btn_text || $t('landing.buyNow') }}
                   </el-button>
                   <el-button size="large" round class="slide-ghost-btn" @click="$router.push('/products')">
-                    了解更多
+                    {{ $t('landing.learnMore') }}
                   </el-button>
                 </div>
               </div>
@@ -112,8 +112,8 @@
     <section id="hot-products" class="section hot-products-section">
       <div class="container">
         <div class="section-header">
-          <h2 class="section-title">热门产品推荐</h2>
-          <p class="section-subtitle">精选高性价比产品，满足各种业务需求</p>
+          <h2 class="section-title">{{ $t('landing.hotProducts') }}</h2>
+          <p class="section-subtitle">{{ $t('landing.hotProductsDesc') }}</p>
         </div>
         <div class="products-grid">
           <div
@@ -131,13 +131,13 @@
             <div class="product-price">
               <span class="price-symbol">¥</span>
               <span class="price-value">{{ product.price }}</span>
-              <span class="price-unit">/月起</span>
+              <span class="price-unit">{{ $t('landing.priceFrom') }}</span>
             </div>
-            <el-button type="primary" round class="product-btn">立即选购</el-button>
+            <el-button type="primary" round class="product-btn">{{ $t('landing.buyNow') }}</el-button>
           </div>
         </div>
         <div class="section-more">
-          <el-button @click="$router.push('/products')">查看更多产品 <el-icon><ArrowRight /></el-icon></el-button>
+          <el-button @click="$router.push('/products')">{{ $t('landing.viewMoreProducts') }} <el-icon><ArrowRight /></el-icon></el-button>
         </div>
       </div>
     </section>
@@ -146,8 +146,8 @@
     <section id="solutions" class="section solutions-section">
       <div class="container">
         <div class="section-header">
-          <h2 class="section-title">解决方案</h2>
-          <p class="section-subtitle">为不同行业提供专业的云服务解决方案</p>
+          <h2 class="section-title">{{ $t('landing.solutions') }}</h2>
+          <p class="section-subtitle">{{ $t('landing.solutionsDesc') }}</p>
         </div>
         <div class="solutions-grid">
           <div v-for="solution in solutions" :key="solution.id" class="solution-card">
@@ -159,7 +159,7 @@
             <ul class="solution-features">
               <li v-for="feature in solution.features" :key="feature">{{ feature }}</li>
             </ul>
-            <el-button link type="primary">了解详情 <el-icon><ArrowRight /></el-icon></el-button>
+            <el-button link type="primary">{{ $t('landing.understandDetail') }} <el-icon><ArrowRight /></el-icon></el-button>
           </div>
         </div>
       </div>
@@ -169,8 +169,8 @@
     <section id="features" class="section features-section">
       <div class="container">
         <div class="section-header">
-          <h2 class="section-title">为什么选择我们</h2>
-          <p class="section-subtitle">专业、稳定、高效的云服务提供商</p>
+          <h2 class="section-title">{{ $t('landing.whyChooseUs') }}</h2>
+          <p class="section-subtitle">{{ $t('landing.whyChooseUsDesc') }}</p>
         </div>
         <div class="features-grid">
           <div v-for="feature in features" :key="feature.id" class="feature-card">
@@ -200,8 +200,8 @@
     <section id="announcements" class="section announcements-section">
       <div class="container">
         <div class="section-header">
-          <h2 class="section-title">新闻公告</h2>
-          <p class="section-subtitle">了解最新动态和行业资讯</p>
+          <h2 class="section-title">{{ $t('landing.newsAnnouncements') }}</h2>
+          <p class="section-subtitle">{{ $t('landing.newsDesc') }}</p>
         </div>
         <div class="news-grid">
           <div v-for="news in announcements" :key="news.id" class="news-card" @click="$router.push(`/news/${news.id}`)">
@@ -277,7 +277,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   ArrowDown, ArrowLeft, ArrowRight, User, Lightning, Position, Monitor,
   Phone, Message, Location, TrendCharts, Shield, Headset, Cpu, Connection,
@@ -286,6 +287,7 @@ import {
 import request from '@/utils/request'
 import LanguageSwitch from '@/components/LanguageSwitch.vue'
 
+const { t } = useI18n()
 const carouselRef = ref()
 const scrolled = ref(false)
 const currentSlide = ref(0)

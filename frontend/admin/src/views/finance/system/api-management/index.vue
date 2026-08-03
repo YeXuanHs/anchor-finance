@@ -90,7 +90,7 @@ const fetchApiList = async () => {
   loading.value = true
   try {
     const res = await request.get({
-      url: '/api/admin/api',
+      url: '/api/admin/api-keys',
       params: { page: pagination.page, limit: pagination.limit }
     })
     if (res) {
@@ -117,7 +117,7 @@ const handleAdd = async () => {
     if (!valid) return
     addLoading.value = true
     try {
-      await request.post({ url: '/api/admin/api', data: addForm, showSuccessMessage: true })
+      await request.post({ url: '/api/admin/api-keys', data: addForm, showSuccessMessage: true })
       addDialogVisible.value = false
       fetchApiList()
     } catch (error) {
@@ -131,7 +131,7 @@ const handleAdd = async () => {
 const handleDelete = async (row: ApiItem) => {
   try {
     await ElMessageBox.confirm(`确定删除API "${row.username}" 吗？`, '提示')
-    await request.delete({ url: '/api/admin/api', data: { id: row.id }, showSuccessMessage: true })
+    await request.delete({ url: `/api/admin/api-keys/${row.id}`, showSuccessMessage: true })
     fetchApiList()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('删除失败')

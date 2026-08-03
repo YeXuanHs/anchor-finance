@@ -967,7 +967,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/system/language", systemHandler.GetSystemLanguage)
 
 		// 设置模块
-		settingHandler := handler.NewSettingHandler(deps.Log)
+		settingHandler := handler.NewSettingHandler(deps.Log, deps.DB)
 		admin.GET("/setting/notification", settingHandler.GetNotificationSettings)
 		admin.PUT("/setting/notification", settingHandler.SaveNotificationSettings)
 		admin.GET("/setting/maintenance", settingHandler.GetMaintenanceMode)

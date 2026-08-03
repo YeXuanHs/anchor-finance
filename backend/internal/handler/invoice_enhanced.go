@@ -164,7 +164,7 @@ func (h *InvoiceEnhancedHandler) DeletePayInvoice(c *gin.Context) {
 	ip := c.ClientIP()
 	h.svc.LogAction(uint(id), c.GetUint("user_id"), "payment_deleted", "删除支付记录", ip)
 
-	response.SuccessMsg(c, "payment record deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // RefundInvoice 处理退款
@@ -271,7 +271,7 @@ func (h *InvoiceEnhancedHandler) DeleteNote(c *gin.Context) {
 		response.NotFound(c, "note not found")
 		return
 	}
-	response.SuccessMsg(c, "note deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // ==================== Combine Invoices ====================
@@ -333,7 +333,7 @@ func (h *InvoiceEnhancedHandler) SendInvoiceEmail(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "invoice email sent")
+	response.SuccessMsg(c, "发送成功")
 }
 
 // InvoiceEmail 获取账单邮件模板

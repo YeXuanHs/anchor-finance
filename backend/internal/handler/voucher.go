@@ -48,7 +48,7 @@ func (h *VoucherHandler) PostRate(c *gin.Context) {
 		response.ServerError(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "rate config updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // GetVoucherList 获取发票申请列表
@@ -73,7 +73,7 @@ func (h *VoucherHandler) GetVoucherList(c *gin.Context) {
 func (h *VoucherHandler) GetVoucherDetail(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid voucher id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -99,11 +99,11 @@ func (h *VoucherHandler) PostVoucherStatus(c *gin.Context) {
 	}
 
 	if req.Status != "Reject" && req.Status != "Send" {
-		response.BadRequest(c, "invalid status, must be Reject or Send")
+		response.BadRequest(c, "参数错误")
 		return
 	}
 	if len(req.Notes) > 500 {
-		response.BadRequest(c, "notes too long (max 500 chars)")
+		response.BadRequest(c, "备注不超过500个字符")
 		return
 	}
 
@@ -111,7 +111,7 @@ func (h *VoucherHandler) PostVoucherStatus(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "voucher status updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // ==================== 用户接口 ====================
@@ -190,7 +190,7 @@ func (h *VoucherHandler) UpdateVoucherType(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid voucher type id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -222,7 +222,7 @@ func (h *VoucherHandler) DeleteVoucherType(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "voucher type deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // ==================== 收件地址 ====================
@@ -265,7 +265,7 @@ func (h *VoucherHandler) UpdateVoucherPost(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid voucher post id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -297,5 +297,5 @@ func (h *VoucherHandler) DeleteVoucherPost(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "voucher post deleted")
+	response.SuccessMsg(c, "删除成功")
 }

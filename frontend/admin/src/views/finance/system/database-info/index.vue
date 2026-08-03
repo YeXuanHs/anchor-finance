@@ -61,7 +61,7 @@ const dbInfo = reactive({
 const fetchDatabaseInfo = async () => {
   loading.value = true
   try {
-    const res = await request.get({ url: '/api/admin/system/database-info' })
+    const res = await request.get({ url: '/api/admin/system/database' })
     if (res) Object.assign(dbInfo, res)
   } catch (error) {
     ElMessage.error('获取数据库信息失败')
@@ -74,7 +74,7 @@ const handleOptimize = async () => {
   try {
     await ElMessageBox.confirm('确定要优化所有数据库表吗？', '提示')
     optimizeLoading.value = true
-    await request.post({ url: '/api/admin/system/optimize-tables', showSuccessMessage: true })
+    await request.post({ url: '/api/admin/system/database/optimize', showSuccessMessage: true })
     fetchDatabaseInfo()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('优化失败')
@@ -86,7 +86,7 @@ const handleOptimize = async () => {
 const handleBackup = async () => {
   try {
     await ElMessageBox.confirm('确定要备份数据库吗？', '提示')
-    await request.post({ url: '/api/admin/system/backup-database', showSuccessMessage: true })
+    await request.post({ url: '/api/admin/system/database/backup', showSuccessMessage: true })
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('备份失败')
   }

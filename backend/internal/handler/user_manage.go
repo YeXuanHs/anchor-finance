@@ -98,7 +98,7 @@ func (h *UserManageHandler) Close(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "client closed")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // Delete deletes a client account (soft/hard).
@@ -115,7 +115,7 @@ func (h *UserManageHandler) Delete(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "client deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // Ban disables a client account.
@@ -136,7 +136,7 @@ func (h *UserManageHandler) Ban(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "client banned")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // Unban re-enables a client account.
@@ -152,7 +152,7 @@ func (h *UserManageHandler) Unban(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "client unbanned")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // CancelBan cancels a ban request.
@@ -168,7 +168,7 @@ func (h *UserManageHandler) CancelBan(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "ban cancelled")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // ==================== Client Profile ====================
@@ -209,7 +209,7 @@ func (h *UserManageHandler) UpdateProfile(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "profile updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // GetHosts returns a client's hosts.
@@ -371,7 +371,7 @@ func (h *UserManageHandler) DeleteNote(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "note deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // ==================== Client Authorization ====================
@@ -395,7 +395,7 @@ func (h *UserManageHandler) Authorize(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "client authorized")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // GetAuth returns auth settings for a client.
@@ -438,7 +438,7 @@ func (h *UserManageHandler) AssignGroup(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "group assigned")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // RemoveFromGroup removes a client from a group.
@@ -460,7 +460,7 @@ func (h *UserManageHandler) RemoveFromGroup(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "removed from group")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // ==================== Certification ====================
@@ -585,7 +585,7 @@ func (h *UserManageHandler) AdjustBalance(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "balance adjusted")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // ResetPassword sets a new password for a user.
@@ -609,7 +609,7 @@ func (h *UserManageHandler) ResetPassword(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "password reset")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // GetStatus returns user status information.
@@ -664,7 +664,7 @@ func (h *UserManageHandler) DelReason(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "cancel reason deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // GetCancelReasons returns all cancel reasons.
@@ -693,7 +693,7 @@ func (h *UserManageHandler) AddCancelReason(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "cancel reason added")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // ==================== 充值发票 ====================
@@ -838,7 +838,7 @@ func (h *UserManageHandler) HostBindSale(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "sale bound successfully")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // ==================== 关联用户列表 ====================
@@ -969,7 +969,7 @@ func (h *UserManageHandler) CertifiPersonModify(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "personal certification modified")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // CertifiCompanyDetail returns company certification details.
@@ -1008,7 +1008,7 @@ func (h *UserManageHandler) CertifiCompanyModify(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "company certification modified")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // UserProductaccounts returns product accounts for a user.
@@ -1062,7 +1062,7 @@ func (h *UserManageHandler) DeleteCancelRequest(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "cancel request deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // AddRecordLog adds an operation record log.
@@ -1087,7 +1087,7 @@ func (h *UserManageHandler) AddRecordLog(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "record log added")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // AddRemarkLog adds a remark log for a user.
@@ -1112,7 +1112,7 @@ func (h *UserManageHandler) AddRemarkLog(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "remark log added")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // ==================== P1-7: GetBlackList ====================

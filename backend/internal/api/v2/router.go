@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"anchorfinance/internal/handler"
 	"anchorfinance/internal/api/middleware"
+	"anchorfinance/internal/model"
 	"anchorfinance/internal/service"
 	"anchorfinance/pkg/auth"
 	"anchorfinance/pkg/logger"

@@ -30,13 +30,13 @@ func (h *InvoiceHandler) SetEnhancedService(svc *service.InvoiceEnhancedService)
 func (h *InvoiceHandler) GetDetail(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
 	invoice, err := h.invoiceSvc.GetByID(uint(id))
 	if err != nil {
-		response.NotFound(c, "invoice not found")
+		response.NotFound(c, "ID错误")
 		return
 	}
 	response.Success(c, invoice)
@@ -60,7 +60,7 @@ func (h *InvoiceHandler) GetUserInvoices(c *gin.Context) {
 func (h *InvoiceHandler) Pay(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -68,14 +68,14 @@ func (h *InvoiceHandler) Pay(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "invoice paid")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // Cancel cancels a pending invoice.
 func (h *InvoiceHandler) Cancel(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -83,7 +83,7 @@ func (h *InvoiceHandler) Cancel(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "invoice cancelled")
+	response.SuccessMsg(c, "取消成功")
 }
 
 // GetList returns all invoices (admin).
@@ -143,7 +143,7 @@ func (h *InvoiceHandler) GetCombineInvoices(c *gin.Context) {
 
 	userID, err := strconv.ParseUint(c.Query("user_id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid user_id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -164,7 +164,7 @@ func (h *InvoiceHandler) InvoiceLog(c *gin.Context) {
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -185,7 +185,7 @@ func (h *InvoiceHandler) Duplicate(c *gin.Context) {
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -206,7 +206,7 @@ func (h *InvoiceHandler) Option(c *gin.Context) {
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -224,7 +224,7 @@ func (h *InvoiceHandler) Option(c *gin.Context) {
 
 	invoice, err := h.invoiceSvc.GetByID(uint(id))
 	if err != nil {
-		response.NotFound(c, "invoice not found")
+		response.NotFound(c, "ID错误")
 		return
 	}
 
@@ -274,19 +274,19 @@ func (h *InvoiceHandler) AddPayInvoicePage(c *gin.Context) {
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
 	inv, err := h.invoiceSvc.GetByID(uint(id))
 	if err != nil {
-		response.NotFound(c, "invoice not found")
+		response.NotFound(c, "ID错误")
 		return
 	}
 
 	user, err := h.invoiceSvc.GetUser(inv.UserID)
 	if err != nil {
-		response.NotFound(c, "user not found")
+		response.NotFound(c, "用户不存在")
 		return
 	}
 
@@ -307,7 +307,7 @@ func (h *InvoiceHandler) DeletePayInvoice(c *gin.Context) {
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -318,20 +318,20 @@ func (h *InvoiceHandler) DeletePayInvoice(c *gin.Context) {
 
 	adminID := c.GetUint("admin_id")
 	h.enhancedSvc.LogAction(uint(id), adminID, "payment_deleted", "payment record deleted", c.ClientIP())
-	response.SuccessMsg(c, "payment deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // InvoicePayAfterHandle handles post-payment processing (admin).
 func (h *InvoiceHandler) InvoicePayAfterHandle(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
 	inv, err := h.invoiceSvc.GetByID(uint(id))
 	if err != nil {
-		response.NotFound(c, "invoice not found")
+		response.NotFound(c, "ID错误")
 		return
 	}
 
@@ -368,7 +368,7 @@ func (h *InvoiceHandler) BatchStatus(c *gin.Context) {
 		}
 	}
 
-	response.SuccessMsg(c, "invoices status updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // MarkPaid marks invoices as paid (admin).
@@ -387,7 +387,7 @@ func (h *InvoiceHandler) MarkPaid(c *gin.Context) {
 		}
 	}
 
-	response.SuccessMsg(c, "invoices marked as paid")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // MarkUnpaid marks invoices as unpaid (admin).
@@ -406,7 +406,7 @@ func (h *InvoiceHandler) MarkUnpaid(c *gin.Context) {
 		}
 	}
 
-	response.SuccessMsg(c, "invoices marked as unpaid")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // BatchDelete deletes multiple invoices (admin).
@@ -425,7 +425,7 @@ func (h *InvoiceHandler) BatchDelete(c *gin.Context) {
 		}
 	}
 
-	response.SuccessMsg(c, "invoices deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // SendInvoiceEmail sends invoice email (admin).
@@ -437,7 +437,7 @@ func (h *InvoiceHandler) SendInvoiceEmail(c *gin.Context) {
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -446,7 +446,7 @@ func (h *InvoiceHandler) SendInvoiceEmail(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "invoice email sent")
+	response.SuccessMsg(c, "发送成功")
 }
 
 // Refund processes a refund for an invoice (admin).
@@ -458,7 +458,7 @@ func (h *InvoiceHandler) Refund(c *gin.Context) {
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -518,13 +518,13 @@ func (h *InvoiceHandler) GetRenewInvoices(c *gin.Context) {
 func (h *InvoiceHandler) NotesPage(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
 	inv, err := h.invoiceSvc.GetByID(uint(id))
 	if err != nil {
-		response.NotFound(c, "invoice not found")
+		response.NotFound(c, "ID错误")
 		return
 	}
 
@@ -538,7 +538,7 @@ func (h *InvoiceHandler) NotesPage(c *gin.Context) {
 func (h *InvoiceHandler) Notes(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -619,7 +619,7 @@ func (h *InvoiceHandler) GetListEnhanced(c *gin.Context) {
 func (h *InvoiceHandler) EditItem(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid item id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -645,7 +645,7 @@ func (h *InvoiceHandler) EditItem(c *gin.Context) {
 	}
 
 	if len(updates) == 0 {
-		response.BadRequest(c, "no fields to update")
+		response.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -654,7 +654,7 @@ func (h *InvoiceHandler) EditItem(c *gin.Context) {
 		return
 	}
 
-	response.SuccessMsg(c, "invoice item updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // DeleteItems deletes multiple invoice items (admin).
@@ -674,7 +674,7 @@ func (h *InvoiceHandler) DeleteItems(c *gin.Context) {
 		}
 	}
 
-	response.SuccessMsg(c, "invoice items deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // DelAccount removes a payment record from an invoice (admin).
@@ -682,7 +682,7 @@ func (h *InvoiceHandler) DeleteItems(c *gin.Context) {
 func (h *InvoiceHandler) DelAccount(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid invoice id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -696,5 +696,5 @@ func (h *InvoiceHandler) DelAccount(c *gin.Context) {
 		h.enhancedSvc.LogAction(uint(id), adminID, "account_deleted", "payment account deleted", c.ClientIP())
 	}
 
-	response.SuccessMsg(c, "invoice account deleted")
+	response.SuccessMsg(c, "删除成功")
 }

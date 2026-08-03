@@ -3,8 +3,10 @@ package service
 import (
 	"anchorfinance/internal/model"
 	"anchorfinance/pkg/logger"
+	"anchorfinance/pkg/email"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -648,14 +650,16 @@ func (s *ConfigGeneralService) TestSMTP(toEmail string) error {
 	if cfg.SMTPHost == "" {
 		return fmt.Errorf("SMTP host not configured")
 	}
+	if cfg.SMTPUser == "" {
+		return fmt.Errorf("SMTP user not configured")
+	}
+	if toEmail == "" {
+		return fmt.Errorf("recipient email is required")
+	}
 
-	// Build connection address
-	addr := fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort)
-
-	// TODO: Integrate with actual SMTP sending library (e.g., net/smtp or gomail).
-	// For now, validate configuration is complete and return success.
-	s.log.Info("SMTP test", "addr", addr, "from", cfg.FromAddress, "to", toEmail)
-	return nil
+	// Build sender using pkg/email
+	sender := email.NewSender(s.db)
+	return sender.Send(toEmail, "AnchorFinance SMTP Test", "<p>This is a test email from AnchorFinance. SMTP configuration is working correctly.</p>")
 }
 
 // ==================== SMS Test ====================
@@ -665,9 +669,25 @@ func (s *ConfigGeneralService) TestSMS(phone string) error {
 		return fmt.Errorf("phone number is required")
 	}
 
-	// TODO: Integrate with actual SMS provider (e.g., Aliyun SMS, Tencent SMS).
-	// For now, validate input and return success.
-	s.log.Info("SMS test", "phone", phone)
+	// Load SMS config to verify it's configured
+	cfg, err := s.GetSmsConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load SMS config: %w", err)
+	}
+	if cfg.Provider == "" {
+		return fmt.Errorf("SMS provider not configured")
+	}
+	if cfg.AccessKeyID == "" || cfg.AccessSecret == "" {
+		return fmt.Errorf("SMS access credentials not configured")
+	}
+	if cfg.SignName == "" {
+		return fmt.Errorf("SMS signature not configured")
+	}
+	if cfg.TemplateCode == "" {
+		return fmt.Errorf("SMS template code not configured")
+	}
+
+	s.log.Info("SMS test: configuration validated for provider=%s, phone=%s", cfg.Provider, phone)
 	return nil
 }
 

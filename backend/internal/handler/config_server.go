@@ -103,7 +103,7 @@ func (h *ConfigServerHandler) Delete(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "server config deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // BatchUpdateStatus batch-updates status for server configs.
@@ -121,7 +121,7 @@ func (h *ConfigServerHandler) BatchUpdateStatus(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "server configs status updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // BatchDelete batch-deletes server configs.
@@ -138,7 +138,7 @@ func (h *ConfigServerHandler) BatchDelete(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "server configs deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // UpdateSort updates sort order for a server config.
@@ -161,7 +161,7 @@ func (h *ConfigServerHandler) UpdateSort(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "sort order updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // ---------- Server Template ----------
@@ -230,7 +230,7 @@ func (h *ConfigServerHandler) DeleteTemplate(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "template deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // helper: convert comma-separated string to uint slice
@@ -351,7 +351,7 @@ func (h *ConfigServerHandler) EditServersPost(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "server updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // DeleteServers deletes a server.
@@ -369,7 +369,7 @@ func (h *ConfigServerHandler) DeleteServers(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "server deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // GroupsList returns paginated server groups.

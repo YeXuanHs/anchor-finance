@@ -103,7 +103,7 @@ func (h *EmailTemplateHandler) Delete(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "template deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // Preview renders a template with provided data.
@@ -151,7 +151,7 @@ func (h *EmailTemplateHandler) SendTest(c *gin.Context) {
 		response.ServerError(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "test message sent")
+	response.SuccessMsg(c, "发送成功")
 }
 
 // GetSendLogs returns send logs with pagination.

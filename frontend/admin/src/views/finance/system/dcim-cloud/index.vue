@@ -237,7 +237,7 @@ const handleSync = async (row: any) => {
 
 const handleRefreshStatus = async (row: any) => {
   try {
-    const data = await request.post({ url: `/api/admin/dcim-cloud/servers/${row.id}/refresh` })
+    const data = await request.post({ url: `/api/admin/dcim-cloud/servers/${row.id}/sync` })
     ElMessage.success(data.msg || '刷新成功')
     fetchData()
   } catch (error) {
@@ -248,7 +248,11 @@ const handleRefreshStatus = async (row: any) => {
 const handleRefreshAll = async () => {
   refreshAllLoading.value = true
   try {
-    await request.post({ url: '/api/admin/dcim-cloud/servers/refresh-all' })
+    // 后端无批量刷新接口，逐个同步
+    const list = tableData.value
+    for (const row of list) {
+      await request.post({ url: `/api/admin/dcim-cloud/servers/${row.id}/sync` })
+    }
     ElMessage.success('刷新完成')
     fetchData()
   } catch (error) {
@@ -260,7 +264,7 @@ const handleRefreshAll = async () => {
 
 const handleDelete = async (row: any) => {
   try {
-    await request.post({ url: '/api/admin/dcim-cloud/servers/delete', params: { id: row.id } })
+    await request.delete({ url: `/api/admin/dcim-cloud/servers/${row.id}` })
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {
@@ -274,8 +278,11 @@ const handleSubmit = async () => {
     if (!valid) return
     submitLoading.value = true
     try {
-      const url = formData.id ? '/api/admin/dcim-cloud/servers/edit' : '/api/admin/dcim-cloud/servers/add'
-      await request.post({ url, params: { ...formData } })
+      if (formData.id) {
+        await request.put({ url: `/api/admin/dcim-cloud/servers/${formData.id}`, params: { ...formData } })
+      } else {
+        await request.post({ url: '/api/admin/dcim-cloud/servers', params: { ...formData } })
+      }
       ElMessage.success(formData.id ? '编辑成功' : '添加成功')
       dialogVisible.value = false
       fetchData()

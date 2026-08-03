@@ -122,7 +122,7 @@ const fetchSystemInfo = async () => {
 
 const handleCheckUpdate = async () => {
   try {
-    const res = await request.get({ url: '/api/admin/system/last-version' })
+    const res = await request.get({ url: '/api/admin/system/check-update' })
     if (res?.last_version) {
       ElMessage.info(`最新版本: ${res.last_version}`)
     }
@@ -133,7 +133,7 @@ const handleCheckUpdate = async () => {
 
 const handleDatabaseInfo = async () => {
   try {
-    const res = await request.get({ url: '/api/admin/system/database-info' })
+    const res = await request.get({ url: '/api/admin/system/database' })
     if (res) {
       Object.assign(dbInfo, res)
       dbDialogVisible.value = true
@@ -146,7 +146,7 @@ const handleDatabaseInfo = async () => {
 const handleOptimize = async () => {
   try {
     await ElMessageBox.confirm('确定要优化数据库表吗？', '提示')
-    await request.post({ url: '/api/admin/system/optimize-tables' })
+    await request.post({ url: '/api/admin/system/database/optimize' })
     ElMessage.success('数据库优化完成')
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('优化失败')
@@ -156,7 +156,7 @@ const handleOptimize = async () => {
 const handleBackup = async () => {
   try {
     await ElMessageBox.confirm('确定要备份数据库吗？', '提示')
-    await request.post({ url: '/api/admin/system/backup-database' })
+    await request.post({ url: '/api/admin/system/database/backup' })
     ElMessage.success('数据库备份完成')
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('备份失败')

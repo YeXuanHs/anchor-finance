@@ -106,7 +106,7 @@ const fetchAuthList = async () => {
   loading.value = true
   try {
     const res = await request.get({
-      url: '/api/admin/clients/authentication',
+      url: '/api/admin/certifications',
       params: { page: pagination.page, limit: pagination.limit }
     })
     if (res) {
@@ -123,7 +123,7 @@ const fetchAuthList = async () => {
 const handleApprove = async (row: any) => {
   try {
     await ElMessageBox.confirm('确定通过此认证申请吗？', '提示')
-    await request.put({ url: `/api/admin/clients/authentication/${row.id}/approve`, showSuccessMessage: true })
+    await request.post({ url: `/api/admin/certifications/${row.id}/review`, data: { status: 1 }, showSuccessMessage: true })
     fetchAuthList()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('操作失败')
@@ -143,9 +143,9 @@ const handleReject = async () => {
   }
   actionLoading.value = true
   try {
-    await request.put({
-      url: `/api/admin/clients/authentication/${currentAuth.value.id}/reject`,
-      data: { reason: rejectReason.value },
+    await request.post({
+      url: `/api/admin/certifications/${currentAuth.value.id}/review`,
+      data: { status: 2, reason: rejectReason.value },
       showSuccessMessage: true
     })
     rejectDialogVisible.value = false

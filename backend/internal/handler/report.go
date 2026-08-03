@@ -181,7 +181,7 @@ func (h *ReportHandler) UpdateSystemInfoModulesSort(c *gin.Context) {
 			return
 		}
 	}
-	response.SuccessMsg(c, "module sort order updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // GetYearIncomeStatistics 年度收入统计（按货币、按月分组）

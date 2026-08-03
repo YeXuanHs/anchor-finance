@@ -26,7 +26,7 @@
             <n-form-item path="username">
               <n-input
                 v-model:value="passwordForm.username"
-                placeholder="请输入用户名/邮箱"
+                placeholder="{{ $t('login.placeholderUsername') }}"
                 size="large"
                 :input-props="{ autocomplete: 'username' }"
               >
@@ -41,7 +41,7 @@
                 v-model:value="passwordForm.password"
                 type="password"
                 show-password-on="click"
-                placeholder="请输入密码"
+                placeholder="{{ $t('login.placeholderPassword') }}"
                 size="large"
                 :input-props="{ autocomplete: 'current-password' }"
               >
@@ -57,7 +57,7 @@
               <div v-if="captchaType === 'image'" class="captcha-row">
                 <n-input
                   v-model:value="passwordForm.captcha"
-                  placeholder="请输入验证码"
+                  placeholder="{{ $t('login.placeholderCaptcha') }}"
                   size="large"
                   @keyup.enter="handlePasswordLogin"
                 >
@@ -83,7 +83,7 @@
             </n-form-item>
 
             <div class="login-options">
-              <n-checkbox v-model:checked="passwordForm.remember">记住我</n-checkbox>
+              <n-checkbox v-model:checked="passwordForm.remember">{{ $t('login.rememberMe') }}</n-checkbox>
               <router-link to="/forgot-password" class="link-text">{{ $t('auth.forgotPassword') }}</router-link>
             </div>
 
@@ -95,7 +95,7 @@
               class="login-btn"
               @click="handlePasswordLogin"
             >
-              登录
+              {{ $t('auth.login') }}
             </n-button>
           </n-form>
         </n-tab-pane>
@@ -106,7 +106,7 @@
             <n-form-item path="phone">
               <n-input
                 v-model:value="smsForm.phone"
-                placeholder="请输入手机号"
+                placeholder="{{ $t('login.placeholderPhone') }}"
                 size="large"
               >
                 <template #prefix>
@@ -121,7 +121,7 @@
               <div v-if="captchaType === 'image'" class="captcha-row">
                 <n-input
                   v-model:value="smsForm.imageCaptcha"
-                  placeholder="请输入图形验证码"
+                  placeholder="{{ $t('login.placeholderImageCaptcha') }}"
                   size="large"
                 >
                   <template #prefix>
@@ -149,7 +149,7 @@
               <div class="captcha-row">
                 <n-input
                   v-model:value="smsForm.smsCode"
-                  placeholder="请输入短信验证码"
+                  placeholder="{{ $t('login.placeholderSmsCode') }}"
                   size="large"
                   @keyup.enter="handleSmsLogin"
                 >
@@ -164,7 +164,7 @@
                   class="sms-btn"
                   @click="handleSendSms"
                 >
-                  {{ smsCooldown > 0 ? `${smsCooldown}s` : '获取验证码' }}
+                  {{ smsCooldown > 0 ? `${smsCooldown}s` : $t('auth.getCode') }}
                 </n-button>
               </div>
             </n-form-item>
@@ -177,7 +177,7 @@
               class="login-btn"
               @click="handleSmsLogin"
             >
-              登录
+              {{ $t('auth.login') }}
             </n-button>
           </n-form>
         </n-tab-pane>
@@ -186,7 +186,7 @@
       <!-- 第三方登录 -->
       <template v-if="hasThirdPartyLogin">
         <div class="login-divider">
-          <span>其他登录方式</span>
+          <span>{{ $t('login.otherLoginMethods') }}</span>
         </div>
 
         <div class="third-party-login">
@@ -200,7 +200,7 @@
                 </template>
               </n-button>
             </template>
-            微信登录
+            {{ $t('login.wechatLogin') }}
           </n-tooltip>
           <n-tooltip trigger="hover">
             <template #trigger>
@@ -212,7 +212,7 @@
                 </template>
               </n-button>
             </template>
-            QQ登录
+            {{ $t('login.qqLogin') }}
           </n-tooltip>
           <n-tooltip trigger="hover">
             <template #trigger>
@@ -224,7 +224,7 @@
                 </template>
               </n-button>
             </template>
-            GitHub登录
+            {{ $t('login.githubLogin') }}
           </n-tooltip>
           <n-tooltip trigger="hover">
             <template #trigger>
@@ -239,7 +239,7 @@
                 </template>
               </n-button>
             </template>
-            Google登录
+            {{ $t('login.googleLogin') }}
           </n-tooltip>
         </div>
       </template>
@@ -257,6 +257,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import type { FormInst, FormRules } from 'naive-ui'
@@ -279,6 +280,7 @@ const route = useRoute()
 const message = useMessage()
 const userStore = useUserStore()
 const configStore = useConfigStore()
+const { t } = useI18n()
 
 const activeTab = ref('password')
 const loading = ref(false)
@@ -336,24 +338,24 @@ const showSmsCaptcha = computed(() => {
 
 // 动态规则
 const passwordRules = computed<FormRules>(() => ({
-  username: { required: true, message: '请输入用户名', trigger: 'blur' },
-  password: { required: true, message: '请输入密码', trigger: 'blur' },
+  username: { required: true, message: t('login.pleaseEnterUsername'), trigger: 'blur' },
+  password: { required: true, message: t('auth.pleaseEnterPassword'), trigger: 'blur' },
   // 如果是图形验证码模式，需要验证验证码
   ...(captchaType.value === 'image' && showLoginCaptcha.value ? {
-    captcha: { required: true, message: '请输入验证码', trigger: 'blur' }
+    captcha: { required: true, message: t('login.pleaseEnterCaptcha'), trigger: 'blur' }
   } : {})
 }))
 
 const smsRules = computed<FormRules>(() => ({
   phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+    { required: true, message: t('auth.pleaseEnterPhone'), trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: t('login.pleaseEnterCorrectPhone'), trigger: 'blur' }
   ],
   // 如果是图形验证码模式，需要验证图形验证码
   ...(captchaType.value === 'image' && showSmsCaptcha.value ? {
-    imageCaptcha: { required: true, message: '请输入图形验证码', trigger: 'blur' }
+    imageCaptcha: { required: true, message: t('login.pleaseEnterImageCaptcha'), trigger: 'blur' }
   } : {}),
-  smsCode: { required: true, message: '请输入短信验证码', trigger: 'blur' }
+  smsCode: { required: true, message: t('login.pleaseEnterSmsCode'), trigger: 'blur' }
 }))
 
 // 获取验证码状态
@@ -408,7 +410,7 @@ function handleGeetestSmsSuccess(result: any) {
 
 // 极验验证错误回调
 function handleGeetestError(error: string) {
-  message.error(error || '验证失败')
+  message.error(error || t('login.verificationFailed'))
 }
 
 onMounted(async () => {
@@ -444,7 +446,7 @@ async function handlePasswordLogin() {
       if (captchaType.value === 'geetest') {
         // 极验验证码
         if (!geetestResult.value) {
-          message.error('请先完成验证')
+          message.error(t('login.pleaseCompleteVerification'))
           return
         }
         loginParams.geetest = geetestResult.value
@@ -455,11 +457,11 @@ async function handlePasswordLogin() {
     }
 
     await userStore.login(loginParams.username, loginParams.password, loginParams.captcha)
-    message.success('登录成功')
+    message.success(t('login.loginSuccess'))
     const redirect = (route.query.redirect as string) || '/user/dashboard'
     router.push(redirect)
   } catch (error: any) {
-    message.error(error.message || '登录失败')
+    message.error(error.message || t('login.loginFailed'))
     if (captchaType.value === 'image' && showLoginCaptcha.value) {
       refreshCaptcha()
     }
@@ -478,7 +480,7 @@ async function handleSendSms() {
     await smsFormRef.value?.validate(['phone', ...(captchaType.value === 'image' && showSmsCaptcha.value ? ['imageCaptcha'] : [])])
     sendingSms.value = true
     await request.post('/api/v1/captcha/sms', { phone: smsForm.value.phone })
-    message.success('验证码已发送')
+    message.success(t('login.smsSent'))
     smsCooldown.value = 60
     cooldownTimer = setInterval(() => {
       smsCooldown.value--
@@ -487,7 +489,7 @@ async function handleSendSms() {
       }
     }, 1000)
   } catch {
-    message.error('请先填写手机号' + (captchaType.value === 'image' && showSmsCaptcha.value ? '和图形验证码' : ''))
+    message.error(t('login.pleaseFillPhone') + (captchaType.value === 'image' && showSmsCaptcha.value ? t('login.andImageCaptcha') : ''))
   } finally {
     sendingSms.value = false
   }
@@ -509,7 +511,7 @@ async function handleSmsLogin() {
       if (captchaType.value === 'geetest') {
         // 极验验证码
         if (!geetestSmsResult.value) {
-          message.error('请先完成验证')
+          message.error(t('login.pleaseCompleteVerification'))
           return
         }
         loginParams.geetest = geetestSmsResult.value
@@ -522,11 +524,11 @@ async function handleSmsLogin() {
     const res = await request.post('/api/v1/login/sms', loginParams)
     userStore.setToken(res.data.data.token)
     userStore.setUserInfo(res.data.data.user)
-    message.success('登录成功')
+    message.success(t('login.loginSuccess'))
     const redirect = (route.query.redirect as string) || '/user/dashboard'
     router.push(redirect)
   } catch (error: any) {
-    message.error(error.message || '登录失败')
+    message.error(error.message || t('login.loginFailed'))
   } finally {
     loading.value = false
   }

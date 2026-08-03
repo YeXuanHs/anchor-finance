@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 
+	"anchorfinance/internal/model"
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/response"
 
@@ -18,6 +20,38 @@ type SettingHandler struct {
 
 func NewSettingHandler(log *logger.Logger, db *gorm.DB) *SettingHandler {
 	return &SettingHandler{log: log, db: db}
+}
+
+// saveConfigMap upserts a set of key-value pairs into the system_configs table.
+func (h *SettingHandler) saveConfigMap(configs map[string]string, group string) error {
+	return h.db.Transaction(func(tx *gorm.DB) error {
+		for key, value := range configs {
+			result := tx.Where("key = ?", key).
+				Assign(model.SystemConfig{Value: value}).
+				FirstOrCreate(&model.SystemConfig{
+					Key:   key,
+					Value: value,
+					Group: group,
+					Name:  key,
+					Type:  "string",
+				})
+			if result.Error != nil {
+				return result.Error
+			}
+		}
+		return nil
+	})
+}
+
+// loadConfigMap loads key-value pairs from system_configs for the given keys.
+func (h *SettingHandler) loadConfigMap(keys []string) map[string]string {
+	var configs []model.SystemConfig
+	h.db.Where("key IN ?", keys).Find(&configs)
+	m := make(map[string]string, len(configs))
+	for _, c := range configs {
+		m[c.Key] = c.Value
+	}
+	return m
 }
 
 // GetNotificationSettings 获取通知设置
@@ -62,6 +96,23 @@ func (h *SettingHandler) SaveNotificationSettings(c *gin.Context) {
 		return
 	}
 
+	configs := map[string]string{
+		"notification_email_enabled":    fmt.Sprintf("%v", req.EmailEnabled),
+		"notification_email_host":       req.EmailHost,
+		"notification_email_port":       fmt.Sprintf("%d", req.EmailPort),
+		"notification_email_username":   req.EmailUsername,
+		"notification_email_password":   req.EmailPassword,
+		"notification_email_from":       req.EmailFrom,
+		"notification_email_encryption": req.EmailEncryption,
+		"notification_sms_enabled":      fmt.Sprintf("%v", req.SmsEnabled),
+		"notification_sms_provider":     req.SmsProvider,
+		"notification_sms_api_key":      req.SmsApiKey,
+	}
+	if err := h.saveConfigMap(configs, "notification"); err != nil {
+		response.ServerError(c, "保存失败")
+		return
+	}
+
 	h.log.Info("saving notification settings")
 	response.SuccessMsg(c, "通知设置已保存")
 }
@@ -89,6 +140,19 @@ func (h *SettingHandler) SetMaintenanceMode(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	allowedIPsJSON, _ := json.Marshal(req.AllowedIPs)
+	configs := map[string]string{
+		"main_tenance_mode":            boolStr(req.Enabled),
+		"main_tenance_mode_message":    req.Message,
+		"main_tenance_mode_allowed_ips": string(allowedIPsJSON),
+		"main_tenance_mode_start_time": req.StartTime,
+		"main_tenance_mode_end_time":   req.EndTime,
+	}
+	if err := h.saveConfigMap(configs, "maintenance"); err != nil {
+		response.ServerError(c, "保存失败")
 		return
 	}
 
@@ -154,6 +218,14 @@ func (h *SettingHandler) SaveCronSettings(c *gin.Context) {
 		return
 	}
 
+	jobsJSON, _ := json.Marshal(req.Jobs)
+	if err := h.saveConfigMap(map[string]string{
+		"cron_jobs": string(jobsJSON),
+	}, "cron"); err != nil {
+		response.ServerError(c, "保存失败")
+		return
+	}
+
 	h.log.Info("saving cron settings, jobs count: %d", len(req.Jobs))
 	response.SuccessMsg(c, "定时任务配置已保存")
 }
@@ -193,6 +265,24 @@ func (h *SettingHandler) SaveSiteSettings(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	configs := map[string]string{
+		"site_name":        req.SiteName,
+		"site_url":         req.SiteURL,
+		"site_logo":        req.SiteLogo,
+		"site_description": req.SiteDescription,
+		"site_keywords":    req.SiteKeywords,
+		"site_icp":         req.SiteIcp,
+		"site_copyright":   req.SiteCopyright,
+		"site_footer":      req.SiteFooter,
+		"default_language": req.DefaultLanguage,
+		"default_timezone": req.DefaultTimezone,
+		"date_format":      req.DateFormat,
+	}
+	if err := h.saveConfigMap(configs, "general"); err != nil {
+		response.ServerError(c, "保存失败")
 		return
 	}
 
@@ -253,6 +343,27 @@ func (h *SettingHandler) SavePaymentSettings(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	configs := map[string]string{
+		"payment_alipay_enabled":      fmt.Sprintf("%v", req.Alipay.Enabled),
+		"payment_alipay_app_id":       req.Alipay.AppID,
+		"payment_alipay_private_key":  req.Alipay.PrivateKey,
+		"payment_alipay_public_key":   req.Alipay.PublicKey,
+		"payment_alipay_notify_url":   req.Alipay.NotifyURL,
+		"payment_wechat_enabled":      fmt.Sprintf("%v", req.Wechat.Enabled),
+		"payment_wechat_app_id":       req.Wechat.AppID,
+		"payment_wechat_mch_id":       req.Wechat.MchID,
+		"payment_wechat_api_key":      req.Wechat.ApiKey,
+		"payment_wechat_notify_url":   req.Wechat.NotifyURL,
+		"payment_stripe_enabled":      fmt.Sprintf("%v", req.Stripe.Enabled),
+		"payment_stripe_public_key":   req.Stripe.PublicKey,
+		"payment_stripe_secret_key":   req.Stripe.SecretKey,
+		"payment_stripe_webhook_key":  req.Stripe.WebhookKey,
+	}
+	if err := h.saveConfigMap(configs, "payment"); err != nil {
+		response.ServerError(c, "保存失败")
 		return
 	}
 
@@ -426,4 +537,11 @@ func (h *SettingHandler) BackupDatabaseEmail(c *gin.Context) {
 func (h *SettingHandler) DeactivateEmail(c *gin.Context) {
 	h.db.Table("system_configs").Where("setting = ?", "daily_email_backup_status").Update("value", "0")
 	response.SuccessMsg(c, "邮件备份已停用")
+}
+
+func boolStr(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
 }

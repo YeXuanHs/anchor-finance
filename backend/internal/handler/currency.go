@@ -126,7 +126,7 @@ func (h *CurrencyHandler) AdminDelete(c *gin.Context) {
 		return
 	}
 
-	response.SuccessMsg(c, "currency deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // AdminUpdateRate updates only the exchange rate of a currency (admin).
@@ -186,7 +186,7 @@ func (h *CurrencyHandler) AdminSetDefault(c *gin.Context) {
 		return
 	}
 
-	response.SuccessMsg(c, "default currency updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // AdminUpdateAllPrices recalculates all pricing based on the default currency rates.

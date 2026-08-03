@@ -107,7 +107,7 @@ const configForm = reactive({
 
 const fetchConfig = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/system/user-tastes' })
+    const data = await request.get({ url: '/api/admin/user-tastes' })
     if (data) {
       Object.assign(configForm, data)
     }
@@ -119,7 +119,7 @@ const fetchConfig = async () => {
 const handleSave = async () => {
   saveLoading.value = true
   try {
-    await request.put({ url: '/api/admin/system/user-tastes', params: { ...configForm } })
+    await request.put({ url: '/api/admin/user-tastes', params: { ...configForm } })
     ElMessage.success('保存成功')
   } catch (error) {
     ElMessage.error('保存失败')

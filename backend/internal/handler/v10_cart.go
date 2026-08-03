@@ -64,7 +64,7 @@ func (h *V10CartHandler) UpdateItem(c *gin.Context) {
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid cart item id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -89,7 +89,7 @@ func (h *V10CartHandler) RemoveItem(c *gin.Context) {
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid cart item id")
+		response.BadRequest(c, "ID错误")
 		return
 	}
 
@@ -97,7 +97,7 @@ func (h *V10CartHandler) RemoveItem(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "item removed from cart")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // ClearCart clears all items from the cart.
@@ -109,7 +109,7 @@ func (h *V10CartHandler) ClearCart(c *gin.Context) {
 		response.ServerError(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "cart cleared")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // ApplyCoupon applies a coupon code to the cart.
@@ -127,7 +127,7 @@ func (h *V10CartHandler) ApplyCoupon(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "coupon applied")
+	response.SuccessMsg(c, "优惠码应用成功")
 }
 
 // RemoveCoupon removes the coupon from the cart.
@@ -139,7 +139,7 @@ func (h *V10CartHandler) RemoveCoupon(c *gin.Context) {
 		response.ServerError(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "coupon removed")
+	response.SuccessMsg(c, "优惠码移除成功")
 }
 
 // Checkout creates orders from cart items.

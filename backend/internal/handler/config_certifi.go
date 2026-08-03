@@ -51,7 +51,7 @@ func (h *ConfigCertifiHandler) UpdateConfig(c *gin.Context) {
 		response.ServerError(c, err.Error())
 		return
 	}
-	response.SuccessMsg(c, "certification config updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // GetCertSetting 获取认证设置页面数据

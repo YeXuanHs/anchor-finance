@@ -213,7 +213,7 @@ func (h *AccountHandler) Save(c *gin.Context) {
 		return
 	}
 
-	response.SuccessMsg(c, "account record created")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // Read returns a single transaction record (admin).
@@ -287,7 +287,7 @@ func (h *AccountHandler) Update(c *gin.Context) {
 		return
 	}
 
-	response.SuccessMsg(c, "account updated")
+	response.SuccessMsg(c, "请求成功")
 }
 
 // Delete deletes transaction records (admin).
@@ -311,7 +311,7 @@ func (h *AccountHandler) Delete(c *gin.Context) {
 		}
 	}
 
-	response.SuccessMsg(c, "accounts deleted")
+	response.SuccessMsg(c, "删除成功")
 }
 
 // SearchPage returns search page data (gateways, sale list).
