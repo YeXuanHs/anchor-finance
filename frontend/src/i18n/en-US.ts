@@ -17,7 +17,7 @@ export default {
     myServices: 'Product List', orders: 'Order Details', upgrade: 'Upgrade', account: 'Account',
     profile: 'Basic Info', security: 'Security', verification: 'Verification',
     messages: 'Messages', contacts: 'Contacts', oauthBind: 'OAuth', finance: 'Finance',
-    invoices: 'Invoices', wallet: 'Recharge', coupons: 'Voucher', support: 'Support',
+    invoices: 'Invoices', wallet: 'Recharge', support: 'Support',
     tickets: 'Tickets', createTicket: 'New Ticket', knowledgeBase: 'Help Center',
     downloads: 'File Download', news: 'News Center', referral: 'Referral', marketplace: 'Marketplace',
     personalInfo: 'Account Info', securityCenter: 'Security',
@@ -458,16 +458,6 @@ export default {
   },
   pay: {
     bill: 'Bill', payImmediately: 'Pay Now', return: 'Back'
-  },
-  coupon: {
-    enterCode: 'Enter code', redeem: 'Redeem',
-    available: 'Available', used: 'Used', expired: 'Expired',
-    minSpend: 'Min spend {amount}', expireAt: 'Expires',
-    useNow: 'Use Now', empty: 'No coupons',
-    enterCodeHint: 'Please enter a code',
-    redeemSuccess: 'Redeemed successfully',
-    redeemFailed: 'Redeem failed, check your code',
-    useCoupon: 'Use coupon: {name}'
   },
   addFunds: {
     title: 'Recharge',

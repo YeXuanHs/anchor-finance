@@ -379,11 +379,6 @@ const router = createRouter({
           component: () => import('@/views/user/Contacts.vue')
         },
         {
-          path: 'coupons',
-          name: 'UserCoupons',
-          component: () => import('@/views/user/Coupons.vue')
-        },
-        {
           path: 'referral',
           name: 'UserReferral',
           component: () => import('@/views/user/Referral.vue')

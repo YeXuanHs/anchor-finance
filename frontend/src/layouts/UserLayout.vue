@@ -66,7 +66,7 @@
           </el-icon>
           <!-- Breadcrumb -->
           <el-breadcrumb separator="/">
-            <el-breadcrumb-item :to="{ path: '/user/dashboard' }">首页</el-breadcrumb-item>
+            <el-breadcrumb-item :to="{ path: '/user/dashboard' }">{{ $t('menu.dashboard') }}</el-breadcrumb-item>
             <el-breadcrumb-item>{{ currentPageName }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
@@ -85,13 +85,13 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">
-                  <el-icon><User /></el-icon>个人资料
+                  <el-icon><User /></el-icon>{{ $t('menu.profile') }}
                 </el-dropdown-item>
                 <el-dropdown-item command="security">
-                  <el-icon><Setting /></el-icon>安全设置
+                  <el-icon><Setting /></el-icon>{{ $t('menu.security') }}
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
-                  <el-icon><SwitchButton /></el-icon>退出登录
+                  <el-icon><SwitchButton /></el-icon>{{ $t('menu.logOut') }}
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>

@@ -56,7 +56,7 @@ type VoucherPost struct {
 	Region     string         `gorm:"type:varchar(100);not null;default:''" json:"region"`
 	Detail     string         `gorm:"type:varchar(500);not null;default:''" json:"detail"`
 	Post       string         `gorm:"type:varchar(50);not null;default:''" json:"post"`
-	IsDefault  bool           `gorm:"column:\"default\";not null;default:false" json:"is_default"`
+	IsDefault  bool           `gorm:"column:is_default;not null;default:false" json:"is_default"`
 	CreateTime int64          `gorm:"not null;default:0" json:"create_time"`
 	UpdateTime int64          `gorm:"not null;default:0" json:"update_time"`
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`

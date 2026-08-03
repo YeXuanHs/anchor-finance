@@ -352,6 +352,36 @@ export const financeRoutes: AppRouteRecord = {
             title: '发票审核',
             icon: 'ep:document-checked'
           }
+        },
+        {
+          path: 'invoice-detail/:id',
+          name: 'InvoiceDetail',
+          component: () => import('@/views/finance/orders/invoice-detail/index.vue'),
+          meta: {
+            title: '账单详情',
+            icon: 'ep:document',
+            isHide: true
+          }
+        },
+        {
+          path: 'order-detail/:id',
+          name: 'OrderDetail',
+          component: () => import('@/views/finance/orders/order-detail/index.vue'),
+          meta: {
+            title: '订单详情',
+            icon: 'ep:document',
+            isHide: true
+          }
+        },
+        {
+          path: 'create',
+          name: 'CreateOrder',
+          component: () => import('@/views/finance/orders/create/index.vue'),
+          meta: {
+            title: '创建订单',
+            icon: 'ep:plus',
+            isHide: true
+          }
         }
       ]
     },
@@ -547,7 +577,7 @@ export const financeRoutes: AppRouteRecord = {
           name: 'Vouchers',
           component: () => import('@/views/finance/marketing/vouchers/index.vue'),
           meta: {
-            title: '代金券',
+            title: '发票管理',
             icon: 'ep:coin'
           }
         },

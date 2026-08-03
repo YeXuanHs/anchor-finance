@@ -17,7 +17,7 @@ export default {
     myServices: '產品列表', orders: '訂單詳情', upgrade: '產品升降級', account: '帳戶',
     profile: '基礎資料', security: '安全', verification: '實名認證',
     messages: '訊息中心', contacts: '聯絡人管理', oauthBind: '三方登入', finance: '財務資訊',
-    invoices: '帳單列表', wallet: '儲值', coupons: '代金券', support: '技術支援',
+    invoices: '帳單列表', wallet: '儲值', support: '技術支援',
     tickets: '工單列表', createTicket: '新建工單', knowledgeBase: '幫助中心',
     downloads: '文件下載', news: '新聞中心', referral: '推介計劃', marketplace: '交易市場',
     personalInfo: '帳戶資訊', securityCenter: '安全',
@@ -455,16 +455,6 @@ export default {
   },
   pay: {
     bill: '帳單', payImmediately: '立即支付', return: '返回'
-  },
-  coupon: {
-    enterCode: '輸入兌換碼', redeem: '兌換',
-    available: '可使用', used: '已使用', expired: '已過期',
-    minSpend: '滿{amount}可用', expireAt: '有效期至',
-    useNow: '立即使用', empty: '暫無代金券',
-    enterCodeHint: '請輸入兌換碼',
-    redeemSuccess: '兌換成功',
-    redeemFailed: '兌換失敗，請檢查兌換碼',
-    useCoupon: '使用代金券：{name}'
   },
   addFunds: {
     title: '帳戶儲值',

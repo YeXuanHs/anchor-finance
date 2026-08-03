@@ -3,7 +3,7 @@
     <el-card shadow="never">
       <template #header>
         <div class="card-header">
-          <span>发票管理</span>
+          <span>账单管理</span>
           <el-button type="primary" @click="handleExport">
             <el-icon><Download /></el-icon>
             导出

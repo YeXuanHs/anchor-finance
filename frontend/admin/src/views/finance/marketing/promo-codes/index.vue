@@ -228,7 +228,7 @@ const fetchList = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/sales',
+      url: '/api/admin/promo-codes',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -280,7 +280,7 @@ const handleEdit = (row: any) => {
 const handleToggleStatus = async (row: any) => {
   try {
     await request.put({
-      url: `/api/admin/sales/${row.id}`,
+      url: `/api/admin/promo-codes/${row.id}`,
       params: { is_enabled: row.is_enabled }
     })
     ElMessage.success(row.is_enabled ? '已启用' : '已禁用')
@@ -292,7 +292,7 @@ const handleToggleStatus = async (row: any) => {
 
 const handleDelete = async (row: any) => {
   try {
-    await request.del({ url: `/api/admin/sales/${row.id}` })
+    await request.del({ url: `/api/admin/promo-codes/${row.id}` })
     ElMessage.success('删除成功')
     fetchList()
   } catch (error) {
@@ -309,9 +309,9 @@ const handleSubmit = async () => {
     submitLoading.value = true
     try {
       if (formData.id) {
-        await request.put({ url: `/api/admin/sales/${formData.id}`, params: formData })
+        await request.put({ url: `/api/admin/promo-codes/${formData.id}`, params: formData })
       } else {
-        await request.post({ url: '/api/admin/sales', params: formData })
+        await request.post({ url: '/api/admin/promo-codes', params: formData })
       }
       ElMessage.success(formData.id ? '更新成功' : '新增成功')
       dialogVisible.value = false
