@@ -282,7 +282,7 @@ function getStatusText(status: string) {
 async function fetchTransfers() {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/host/transfer')
+    const { data } = await request.get('/api/v1/product-diverts')
     if (data?.data) {
       sentList.value = data.data.sent || sentList.value
       receivedList.value = data.data.received || receivedList.value
@@ -299,7 +299,7 @@ async function fetchTransfers() {
 
 async function fetchMyProducts() {
   try {
-    const { data } = await request.get('/api/v1/host')
+    const { data } = await request.get('/api/v2/hosts')
     if (data?.data?.list) {
       myProducts.value = data.data.list.map((item: any) => ({
         id: item.id,
@@ -319,7 +319,7 @@ async function submitTransfer() {
     if (valid) {
       submitLoading.value = true
       try {
-        await request.post('/api/v1/host/transfer', {
+        await request.post('/api/v1/product-diverts', {
           host_id: transferForm.productId,
           target_user: transferForm.targetUser,
           remark: transferForm.remark
@@ -346,7 +346,7 @@ async function cancelTransfer(row: Transfer) {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.post(`/api/v1/host/transfer/${row.id}/cancel`)
+    await request.post(`/api/v1/product-diverts/${row.id}/cancel`)
     row.status = 'cancelled'
     ElMessage.success('已撤回')
   } catch (e: any) {
@@ -363,7 +363,7 @@ async function acceptTransfer(row: Transfer) {
       cancelButtonText: '取消',
       type: 'info'
     })
-    await request.post(`/api/v1/host/transfer/${row.id}/accept`)
+    await request.post(`/api/v1/product-diverts/${row.id}/accept`)
     row.status = 'accepted'
     ElMessage.success('已接受转移')
   } catch (e: any) {
@@ -380,7 +380,7 @@ async function rejectTransfer(row: Transfer) {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.post(`/api/v1/host/transfer/${row.id}/reject`)
+    await request.post(`/api/v1/product-diverts/${row.id}/reject`)
     row.status = 'rejected'
     ElMessage.success('已拒绝转移')
   } catch (e: any) {
@@ -394,7 +394,7 @@ async function acceptByCode() {
   if (!acceptCode.value) return
   acceptLoading.value = true
   try {
-    await request.post('/api/v1/host/transfer/accept', {
+    await request.post('/api/v1/product-diverts/accept', {
       code: acceptCode.value
     })
     ElMessage.success('已接受产品转移')

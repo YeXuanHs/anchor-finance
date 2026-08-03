@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import request from '@/utils/request'
@@ -112,13 +112,7 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-const tableData = ref<WithdrawItem[]>([
-  { id: 'WD20260727001', created_at: '2026-07-27 09:00:00', amount: 2000.00, fee: 2.00, actual_amount: 1998.00, method: 'alipay', account: '138****8888', status: 'success', completed_at: '2026-07-27 12:30:00' },
-  { id: 'WD20260726002', created_at: '2026-07-26 14:20:00', amount: 5000.00, fee: 5.00, actual_amount: 4995.00, method: 'bank', account: '6222 **** **** 1234', status: 'processing', completed_at: '-' },
-  { id: 'WD20260725003', created_at: '2026-07-25 10:15:00', amount: 1000.00, fee: 1.00, actual_amount: 999.00, method: 'alipay', account: '139****6666', status: 'success', completed_at: '2026-07-25 16:45:00' },
-  { id: 'WD20260724004', created_at: '2026-07-24 18:45:00', amount: 3000.00, fee: 3.00, actual_amount: 2997.00, method: 'bank', account: '6228 **** **** 5678', status: 'rejected', completed_at: '-' },
-  { id: 'WD20260723005', created_at: '2026-07-23 14:00:00', amount: 500.00, fee: 0.50, actual_amount: 499.50, method: 'alipay', account: '136****9999', status: 'success', completed_at: '2026-07-24 09:00:00' },
-])
+const tableData = ref<WithdrawItem[]>([])
 
 const methodLabel = (method: string) => {
   const map: Record<string, string> = { alipay: '支付宝', bank: '银行卡' }
@@ -143,7 +137,7 @@ const statusTagType = (status: string) => {
 const handleSearch = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/v1/balances/logs', { params: { page: currentPage.value, page_size: pageSize.value, type: 'withdraw' } })
+    const res = await request.get('/api/v2/balance/logs', { params: { page: currentPage.value, page_size: pageSize.value, type: 'withdraw' } })
     tableData.value = res.data.data.list
     total.value = res.data.data.total
   } finally {
@@ -162,6 +156,10 @@ const handleReset = () => {
 const handleDetail = (row: WithdrawItem) => {
   router.push(`/user/orders/${row.order_id}`)
 }
+
+onMounted(() => {
+  handleSearch()
+})
 
 defineExpose({ handleSearch })
 </script>

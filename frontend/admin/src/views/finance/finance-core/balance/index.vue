@@ -305,8 +305,11 @@ const handleRecharge = async () => {
     submitLoading.value = true
     try {
       await request.post({
-        url: '/api/admin/balances/recharge',
-        params: rechargeForm,
+        url: `/api/admin/user-manage/${rechargeForm.user_id}/balance`,
+        params: {
+          amount: rechargeForm.amount,
+          description: rechargeForm.remark || '管理员充值'
+        },
         showSuccessMessage: true
       })
       rechargeDialogVisible.value = false
@@ -329,8 +332,11 @@ const handleDeduct = async () => {
     submitLoading.value = true
     try {
       await request.post({
-        url: '/api/admin/balances/deduct',
-        params: deductForm,
+        url: `/api/admin/user-manage/${deductForm.user_id}/balance`,
+        params: {
+          amount: -deductForm.amount,
+          description: deductForm.remark || '管理员扣款'
+        },
         showSuccessMessage: true
       })
       deductDialogVisible.value = false

@@ -83,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
@@ -106,16 +106,7 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-const tableData = ref<AccountsItem[]>([
-  { id: 'ACC20260727001', created_at: '2026-07-27 09:30:00', type: 'recharge', amount: 500.00, before_balance: 12080.50, after_balance: 12580.50, related_order: '-', remark: '支付宝充值' },
-  { id: 'ACC20260726002', created_at: '2026-07-26 15:20:00', type: 'expense', amount: -299.00, before_balance: 12379.50, after_balance: 12080.50, related_order: 'ORD20260726001', remark: '购买产品A' },
-  { id: 'ACC20260725003', created_at: '2026-07-25 10:15:00', type: 'refund', amount: 99.00, before_balance: 12280.50, after_balance: 12379.50, related_order: 'RF20260725001', remark: '订单取消退款' },
-  { id: 'ACC20260724004', created_at: '2026-07-24 18:45:00', type: 'expense', amount: -158.00, before_balance: 12438.50, after_balance: 12280.50, related_order: 'ORD20260724001', remark: '购买产品B' },
-  { id: 'ACC20260723005', created_at: '2026-07-23 14:00:00', type: 'withdraw', amount: -2000.00, before_balance: 14438.50, after_balance: 12438.50, related_order: 'WD20260723001', remark: '提现到银行卡' },
-  { id: 'ACC20260722006', created_at: '2026-07-22 08:30:00', type: 'recharge', amount: 1000.00, before_balance: 13438.50, after_balance: 14438.50, related_order: '-', remark: '微信充值' },
-  { id: 'ACC20260721007', created_at: '2026-07-21 20:10:00', type: 'transfer_in', amount: 500.00, before_balance: 12938.50, after_balance: 13438.50, related_order: '-', remark: '好友转账' },
-  { id: 'ACC20260720008', created_at: '2026-07-20 11:25:00', type: 'transfer_out', amount: -200.00, before_balance: 13138.50, after_balance: 12938.50, related_order: '-', remark: '转出到其他账户' },
-])
+const tableData = ref<AccountsItem[]>([])
 
 const typeLabel = (type: string) => {
   const map: Record<string, string> = {
@@ -144,7 +135,7 @@ const typeTagType = (type: string) => {
 const handleSearch = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/v1/balances/logs', { params: { page: currentPage.value, page_size: pageSize.value } })
+    const res = await request.get('/api/v2/balance/logs', { params: { page: currentPage.value, page_size: pageSize.value } })
     tableData.value = res.data.data.list
     total.value = res.data.data.total
   } finally {
@@ -159,6 +150,10 @@ const handleReset = () => {
   currentPage.value = 1
   handleSearch()
 }
+
+onMounted(() => {
+  handleSearch()
+})
 
 defineExpose({ handleSearch })
 </script>

@@ -92,7 +92,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import request from '@/utils/http'
+import request from '@/utils/request'
 
 const route = useRoute()
 

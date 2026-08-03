@@ -119,7 +119,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Wallet, CircleCheck, Warning } from '@element-plus/icons-vue'
-import request from '@/utils/http'
+import request from '@/utils/request'
 
 const router = useRouter()
 const loading = ref(false)

@@ -120,7 +120,7 @@ import {
   HomeFilled, Box, ShoppingCart, Wallet, Tickets, Ticket, Connection,
   Postcard, UserFilled, Lock, Folder, Download, Document, Promotion, TrendCharts, Shop
 } from '@element-plus/icons-vue'
-import request from '@/utils/http'
+import request from '@/utils/request'
 import LanguageSwitcher from '@/components/LanguageSwitch.vue'
 
 const router = useRouter()

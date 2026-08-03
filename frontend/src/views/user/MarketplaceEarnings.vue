@@ -152,7 +152,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Coin, TrendCharts, Wallet, Document, Download } from '@element-plus/icons-vue'
-import request from '@/utils/http'
+import request from '@/utils/request'
 
 const loading = ref(false)
 const submitting = ref(false)

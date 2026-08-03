@@ -177,72 +177,17 @@ const stats = ref({
   total_cleaned: '0 TB'
 })
 
-const trafficData = ref([
-  { label: '00:00', value: 120, isAttack: false },
-  { label: '02:00', value: 80, isAttack: false },
-  { label: '04:00', value: 60, isAttack: false },
-  { label: '06:00', value: 90, isAttack: false },
-  { label: '08:00', value: 150, isAttack: false },
-  { label: '10:00', value: 200, isAttack: false },
-  { label: '12:00', value: 350, isAttack: true },
-  { label: '14:00', value: 180, isAttack: false },
-  { label: '16:00', value: 160, isAttack: false },
-  { label: '18:00', value: 140, isAttack: false },
-  { label: '20:00', value: 170, isAttack: false },
-  { label: '22:00', value: 130, isAttack: false }
-])
+const trafficData = ref<{ label: string; value: number; isAttack: boolean }[]>([])
 
 const maxTraffic = computed(() => {
   return Math.max(...trafficData.value.map(item => item.value), 1)
 })
 
-const recentAttacks = ref([
-  {
-    id: 1,
-    type: 'DDoS',
-    target_ip: '192.168.1.100',
-    peak: '45.6 Gbps',
-    duration: '15分钟',
-    time: '2024-01-15 14:30',
-    status: 'mitigated',
-    level: 'high'
-  },
-  {
-    id: 2,
-    type: 'CC',
-    target_ip: '192.168.1.101',
-    peak: '12.3万QPS',
-    duration: '8分钟',
-    time: '2024-01-15 10:15',
-    status: 'mitigated',
-    level: 'medium'
-  },
-  {
-    id: 3,
-    type: 'SYN Flood',
-    target_ip: '192.168.1.100',
-    peak: '28.9 Gbps',
-    duration: '22分钟',
-    time: '2024-01-14 22:45',
-    status: 'mitigated',
-    level: 'low'
-  }
-])
+const recentAttacks = ref<any[]>([])
 
-const protectionStatus = ref([
-  { ip: '192.168.1.100', domain: 'example.com', protected: true, bandwidth: '100Gbps' },
-  { ip: '192.168.1.101', domain: 'api.example.com', protected: true, bandwidth: '50Gbps' },
-  { ip: '192.168.1.102', domain: '', protected: false, bandwidth: '10Gbps' }
-])
+const protectionStatus = ref<any[]>([])
 
-const currentPackage = ref({
-  name: '高级防护套餐',
-  bandwidth: '200Gbps',
-  ip_count: 10,
-  expire_date: '2024-12-31',
-  price: 799,
-  usage: 35
-})
+const currentPackage = ref<any>(null)
 
 const fetchTrafficData = async () => {
   try {

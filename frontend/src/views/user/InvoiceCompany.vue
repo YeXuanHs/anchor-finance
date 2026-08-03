@@ -168,51 +168,14 @@ const filterForm = reactive({
   invoiceType: ''
 })
 
-const companies = ref<CompanyInfo[]>([
-  {
-    id: 1,
-    companyName: '深圳市智简魔方科技有限公司',
-    taxNo: '91440300MA5F1234AB',
-    invoiceType: 'special',
-    bankName: '中国工商银行深圳科技园支行',
-    bankAccount: '4000 1234 5678 9012',
-    registerAddress: '深圳市南山区科技园南区A栋301',
-    registerPhone: '0755-12345678',
-    isDefault: true,
-    updateTime: '2026-07-26'
-  },
-  {
-    id: 2,
-    companyName: '北京云创科技有限公司',
-    taxNo: '91110108MA01ABCDEF',
-    invoiceType: 'normal',
-    bankName: '',
-    bankAccount: '',
-    registerAddress: '',
-    registerPhone: '',
-    isDefault: false,
-    updateTime: '2026-07-20'
-  },
-  {
-    id: 3,
-    companyName: '上海数据港股份有限公司',
-    taxNo: '91310000MA1FL567GH',
-    invoiceType: 'special',
-    bankName: '中国建设银行上海浦东支行',
-    bankAccount: '6217 0012 3456 7890',
-    registerAddress: '上海市浦东新区张江高科技园区B座',
-    registerPhone: '021-87654321',
-    isDefault: false,
-    updateTime: '2026-07-15'
-  }
-])
+const companies = ref<CompanyInfo[]>([])
 
 const loading = ref(false)
 
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/contacts/default')
+    const { data } = await request.get('/api/v2/contacts/default')
     if (data?.data) {
       companies.value = data.data.list || data.data || []
       total.value = companies.value.length

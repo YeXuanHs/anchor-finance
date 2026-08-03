@@ -161,7 +161,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import request from '@/utils/http'
+import request from '@/utils/request'
 
 const router = useRouter()
 const route = useRoute()

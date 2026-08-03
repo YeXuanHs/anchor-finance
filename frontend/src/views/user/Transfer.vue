@@ -67,7 +67,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import request from '@/utils/http'
+import request from '@/utils/request'
 const activeTab = ref('sent')
 const sentList = ref([])
 const receivedList = ref([])

@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import request from '@/utils/request'
@@ -99,13 +99,7 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-const tableData = ref<RefundItem[]>([
-  { id: 'RF20260727001', order_id: 'ORD20260720001', created_at: '2026-07-27 10:30:00', amount: 299.00, type: 'order', status: 'success', reason: '商品质量问题' },
-  { id: 'RF20260726002', order_id: 'ORD20260719002', created_at: '2026-07-26 16:20:00', amount: 99.00, type: 'order', status: 'reviewing', reason: '订单取消退款' },
-  { id: 'RF20260725003', order_id: 'RC20260725003', created_at: '2026-07-25 11:15:00', amount: 500.00, type: 'recharge', status: 'success', reason: '充值错误退款' },
-  { id: 'RF20260724004', order_id: 'ORD20260718004', created_at: '2026-07-24 19:45:00', amount: 158.00, type: 'order', status: 'rejected', reason: '不符合退款条件' },
-  { id: 'RF20260723005', order_id: '-', created_at: '2026-07-23 15:00:00', amount: 200.00, type: 'other', status: 'success', reason: '系统补偿退款' },
-])
+const tableData = ref<RefundItem[]>([])
 
 const typeLabel = (type: string) => {
   const map: Record<string, string> = { order: '订单退款', recharge: '充值退款', other: '其他' }
@@ -125,7 +119,7 @@ const statusTagType = (status: string) => {
 const handleSearch = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/v1/balances/logs', { params: { page: currentPage.value, page_size: pageSize.value, type: 'refund' } })
+    const res = await request.get('/api/v2/balance/logs', { params: { page: currentPage.value, page_size: pageSize.value, type: 'refund' } })
     tableData.value = res.data.data.list
     total.value = res.data.data.total
   } finally {
@@ -144,6 +138,10 @@ const handleReset = () => {
 const handleDetail = (row: RefundItem) => {
   router.push(`/user/orders/${row.order_id}`)
 }
+
+onMounted(() => {
+  handleSearch()
+})
 
 defineExpose({ handleSearch })
 </script>

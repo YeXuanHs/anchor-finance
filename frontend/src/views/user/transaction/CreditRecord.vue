@@ -103,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
@@ -155,13 +155,7 @@ const scoreColor = computed(() => {
   return '#ff4d4f'
 })
 
-const tableData = ref<CreditItem[]>([
-  { id: 'CR001', created_at: '2026-07-27 10:00:00', type: 'increase', change: 5, before_score: 80, after_score: 85, source: 'payment', remark: '订单按时付款奖励' },
-  { id: 'CR002', created_at: '2026-07-25 15:30:00', type: 'decrease', change: -10, before_score: 90, after_score: 80, source: 'cancel', remark: '频繁取消订单' },
-  { id: 'CR003', created_at: '2026-07-20 09:00:00', type: 'increase', change: 3, before_score: 87, after_score: 90, source: 'payment', remark: '连续按时付款奖励' },
-  { id: 'CR004', created_at: '2026-07-15 14:20:00', type: 'restore', change: 5, before_score: 82, after_score: 87, source: 'system', remark: '系统信用恢复' },
-  { id: 'CR005', created_at: '2026-07-10 11:45:00', type: 'decrease', change: -20, before_score: 100, after_score: 80, source: 'violation', remark: '违规操作处罚' },
-])
+const tableData = ref<CreditItem[]>([])
 
 const typeLabel = (type: string) => {
   const map: Record<string, string> = { increase: '信用增加', decrease: '信用扣减', restore: '信用恢复' }
@@ -181,7 +175,7 @@ const sourceLabel = (source: string) => {
 const handleSearch = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/v1/credit/logs', { params: { page: currentPage.value, page_size: pageSize.value } })
+    const res = await request.get('/api/v2/credit/logs', { params: { page: currentPage.value, page_size: pageSize.value } })
     tableData.value = res.data.data.list
     total.value = res.data.data.total
   } finally {
@@ -196,6 +190,10 @@ const handleReset = () => {
   currentPage.value = 1
   handleSearch()
 }
+
+onMounted(() => {
+  handleSearch()
+})
 
 defineExpose({ handleSearch })
 </script>

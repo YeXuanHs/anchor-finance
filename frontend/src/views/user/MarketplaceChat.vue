@@ -106,7 +106,7 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import request from '@/utils/http'
+import request from '@/utils/request'
 import { useUserStore } from '@/stores/user'
 
 const route = useRoute()

@@ -172,10 +172,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Search, Key, View, Hide, CopyDocument } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
 interface ApiKey {
   id: string
@@ -213,41 +214,25 @@ const newKeyData = reactive({
   secretKey: ''
 })
 
-const apiKeys = ref<ApiKey[]>([
-  {
-    id: '1',
-    name: '生产环境密钥',
-    apiKey: 'ak_prod_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
-    secretKey: 'sk_prod_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    permissions: ['read', 'write'],
-    status: 'active',
-    lastUsed: '2026-07-27 15:30:00',
-    createdAt: '2026-06-01 10:00:00',
-    visible: false
-  },
-  {
-    id: '2',
-    name: '测试环境密钥',
-    apiKey: 'ak_test_q1w2e3r4t5y6u7i8o9p0a1s2d3f4g5h6',
-    secretKey: 'sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    permissions: ['read'],
-    status: 'active',
-    lastUsed: '2026-07-26 09:15:00',
-    createdAt: '2026-05-15 14:30:00',
-    visible: false
-  },
-  {
-    id: '3',
-    name: '旧版密钥（已废弃）',
-    apiKey: 'ak_old_z1x2c3v4b5n6m7a8s9d0f1g2h3j4k5l6',
-    secretKey: 'sk_old_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    permissions: ['read', 'write', 'delete'],
-    status: 'disabled',
-    lastUsed: '2026-04-20 18:00:00',
-    createdAt: '2026-01-10 08:00:00',
-    visible: false
+const apiKeys = ref<ApiKey[]>([])
+
+const fetchApiKeys = async () => {
+  loading.value = true
+  try {
+    const { data } = await request.get('/api/v1/api-keys')
+    if (data?.data) {
+      apiKeys.value = (data.data.list || data.data || []).map((k: any) => ({ ...k, visible: false }))
+    }
+  } catch (e) {
+    console.error('Failed to fetch API keys:', e)
+  } finally {
+    loading.value = false
   }
-])
+}
+
+onMounted(() => {
+  fetchApiKeys()
+})
 
 const filteredKeys = computed(() => {
   if (!searchKeyword.value) return apiKeys.value

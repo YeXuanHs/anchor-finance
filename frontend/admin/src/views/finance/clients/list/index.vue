@@ -181,7 +181,7 @@ const fetchClients = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/users',
+      url: '/api/admin/user-manage',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -255,7 +255,7 @@ const handleView = (row: any) => {
 const handleLoginAs = async (row: any) => {
   try {
     const data = await request.post({
-      url: `/api/admin/users/${row.id}/login-as`
+      url: `/api/admin/user-manage/${row.id}/login-as`
     })
     if (data.url) {
       window.open(data.url, '_blank')
@@ -269,7 +269,7 @@ const handleLoginAs = async (row: any) => {
 const handleDelete = async (row: any) => {
   try {
     await request.del({
-      url: `/api/admin/users/${row.id}`
+      url: `/api/admin/user-manage/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchClients()
@@ -287,7 +287,7 @@ const handleSubmit = async () => {
 
     submitLoading.value = true
     try {
-      const url = formData.id ? `/api/admin/users/${formData.id}` : '/api/admin/users'
+      const url = formData.id ? `/api/admin/user-manage/${formData.id}` : '/api/admin/user-manage'
       
       if (formData.id) {
         await request.put({ url, params: formData })

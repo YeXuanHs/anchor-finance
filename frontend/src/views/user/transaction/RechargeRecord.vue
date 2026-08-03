@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import request from '@/utils/request'
@@ -99,13 +99,7 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-const tableData = ref<RechargeItem[]>([
-  { id: 'RC20260727001', created_at: '2026-07-27 09:30:00', amount: 500.00, pay_method: 'alipay', status: 'success', remark: '支付宝充值' },
-  { id: 'RC20260726002', created_at: '2026-07-26 15:20:00', amount: 1000.00, pay_method: 'wechat', status: 'success', remark: '微信充值' },
-  { id: 'RC20260725003', created_at: '2026-07-25 10:15:00', amount: 2000.00, pay_method: 'bank', status: 'success', remark: '银行卡充值' },
-  { id: 'RC20260724004', created_at: '2026-07-24 18:45:00', amount: 200.00, pay_method: 'alipay', status: 'pending', remark: '待确认' },
-  { id: 'RC20260723005', created_at: '2026-07-23 14:00:00', amount: 5000.00, pay_method: 'bank', status: 'success', remark: '大额充值' },
-])
+const tableData = ref<RechargeItem[]>([])
 
 const payMethodLabel = (method: string) => {
   const map: Record<string, string> = { alipay: '支付宝', wechat: '微信', bank: '银行卡' }
@@ -130,7 +124,7 @@ const statusTagType = (status: string) => {
 const handleSearch = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/v1/balances/logs', { params: { page: currentPage.value, page_size: pageSize.value, type: 'recharge' } })
+    const res = await request.get('/api/v2/balance/logs', { params: { page: currentPage.value, page_size: pageSize.value, type: 'recharge' } })
     tableData.value = res.data.data.list
     total.value = res.data.data.total
   } finally {
@@ -149,6 +143,10 @@ const handleReset = () => {
 const handleDetail = (row: RechargeItem) => {
   router.push(`/user/orders/${row.order_id}`)
 }
+
+onMounted(() => {
+  handleSearch()
+})
 
 defineExpose({ handleSearch })
 </script>

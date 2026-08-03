@@ -20,7 +20,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import request from '@/utils/http'
+import request from '@/utils/request'
 const providers = ref<any[]>([])
 const fetchData = async () => {
   const { data } = await request.get({ url: '/api/v1/oauth/providers' })

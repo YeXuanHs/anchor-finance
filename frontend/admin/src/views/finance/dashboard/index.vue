@@ -224,11 +224,11 @@ const searchTags = [
 // 快捷操作
 const quickActions = [
   { label: '新增客户', icon: Plus, route: '/finance/clients/list' },
-  { label: '创建订单', icon: ShoppingCart, route: '/finance/orders/create' },
+  { label: '创建订单', icon: ShoppingCart, route: '/finance/orders/list' },
   { label: '处理工单', icon: Tickets, route: '/finance/tickets/list' },
   { label: '客户列表', icon: UserFilled, route: '/finance/clients/list' },
   { label: '产品管理', icon: Setting, route: '/finance/products/list' },
-  { label: '系统设置', icon: Setting, route: '/finance/system/basic' },
+  { label: '系统设置', icon: Setting, route: '/finance/system/general' },
 ]
 
 const handleGlobalSearch = () => {

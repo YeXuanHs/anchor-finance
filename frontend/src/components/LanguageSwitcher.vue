@@ -58,7 +58,7 @@ onMounted(async () => {
   
   // 从后端获取可用语言
   try {
-    const { default: request } = await import('@/utils/http')
+    const { default: request } = await import('@/utils/request')
     const res = await request.get('/api/v1/languages')
     if (res.data?.data?.length) {
       languages.value = res.data.data.map((l: any) => ({

@@ -288,7 +288,7 @@ const handleAudit = async (row: any, targetStatus: number) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.put({
+    await request.post({
       url: `/api/admin/orders/${row.id}/status`,
       params: { status: targetStatus }
     })
@@ -306,7 +306,7 @@ const handleAuditFromDetail = async (targetStatus: number) => {
   const action = targetStatus === 2 ? '通过' : '驳回'
   auditLoading.value = true
   try {
-    await request.put({
+    await request.post({
       url: `/api/admin/orders/${detailData.value.id}/status`,
       params: {
         status: targetStatus,

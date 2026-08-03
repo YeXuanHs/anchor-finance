@@ -301,7 +301,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, ChatDotRound } from '@element-plus/icons-vue'
-import request from '@/utils/http'
+import request from '@/utils/request'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()

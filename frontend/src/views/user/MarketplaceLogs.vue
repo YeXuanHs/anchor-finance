@@ -76,7 +76,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
-import request from '@/utils/http'
+import request from '@/utils/request'
 
 const loading = ref(false)
 const actionFilter = ref('')

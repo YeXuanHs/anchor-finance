@@ -24,13 +24,13 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import request from '@/utils/http'
+import request from '@/utils/request'
 const loading = ref(false)
 const contracts = ref([])
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/contracts')
+    const { data } = await request.get('/api/v2/contracts')
     contracts.value = data || []
   } finally { loading.value = false }
 }

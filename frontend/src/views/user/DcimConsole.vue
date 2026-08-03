@@ -467,13 +467,7 @@ const trafficData = reactive({
 })
 
 // 操作日志
-const logs = ref([
-  { time: '2026-08-02 10:30:00', action: '开机', detail: '服务器正常启动', operator: '管理员', ip: '192.168.1.1', result: '成功' },
-  { time: '2026-08-01 18:00:00', action: '关机', detail: '计划维护关机', operator: '管理员', ip: '192.168.1.1', result: '成功' },
-  { time: '2026-07-30 14:20:00', action: '重启', detail: '系统更新后重启', operator: '用户', ip: '10.0.0.50', result: '成功' },
-  { time: '2026-07-28 09:15:00', action: '密码重置', detail: '重置root密码', operator: '用户', ip: '10.0.0.50', result: '成功' },
-  { time: '2026-07-25 16:45:00', action: '救援模式', detail: '进入Linux救援系统', operator: '管理员', ip: '192.168.1.1', result: '成功' }
-])
+const logs = ref<any[]>([])
 
 // 获取服务器信息
 async function fetchServerInfo() {
