@@ -75,7 +75,7 @@ const tags = ref<string[]>(['服务器', '域名', '支付', '退款', '续费',
 
 const fetchCategories = async () => {
   try {
-    const res = await request.get('/api/v1/help/categories')
+    const res = await request.get('/api/v2/help/categories')
     categories.value = res.data?.data || [
       { id: 1, name: '服务器相关', description: '云服务器、VPS、独立服务器常见问题', icon: 'Monitor', color: '#409eff', article_count: 45 },
       { id: 2, name: '域名相关', description: '域名注册、解析、备案等问题', icon: 'Document', color: '#67c23a', article_count: 32 },
@@ -89,7 +89,7 @@ const fetchCategories = async () => {
 
 const fetchHotQuestions = async () => {
   try {
-    const res = await request.get('/api/v1/help/hot')
+    const res = await request.get('/api/v2/help/hot')
     hotQuestions.value = res.data?.data || [
       { id: 1, title: '如何重置服务器密码？', rank: 1 },
       { id: 2, title: '域名解析如何设置？', rank: 2 },

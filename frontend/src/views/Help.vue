@@ -152,8 +152,8 @@ const goToCategory = (id: number) => {
 onMounted(async () => {
   try {
     const [catRes, hotRes] = await Promise.all([
-      request.get('/api/v1/help/categories'),
-      request.get('/api/v1/help/articles/hot', { params: { limit: 6 } })
+      request.get('/api/v2/help/categories'),
+      request.get('/api/v2/help/articles/hot', { params: { limit: 6 } })
     ])
     if (catRes?.data?.data?.list?.length) {
       categories.value = catRes.data.data.list

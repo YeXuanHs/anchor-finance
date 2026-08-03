@@ -278,8 +278,8 @@ const fetchWalletData = async () => {
   loading.value = true
   try {
     const [balanceRes, recordsRes] = await Promise.all([
-      request.get('/api/v1/balance'),
-      request.get('/api/v1/balances/logs', { params: { page: pagination.page, page_size: pagination.pageSize } })
+      request.get('/api/v2/balance'),
+      request.get('/api/v2/balance/logs', { params: { page: pagination.page, page_size: pagination.pageSize } })
     ])
     if (balanceRes?.data?.data) {
       const d = balanceRes.data.data
@@ -367,7 +367,7 @@ async function handleRecharge() {
   try {
     await rechargeFormRef.value?.validate()
     recharging.value = true
-    const res = await request.post('/api/v1/balances/recharge', { amount: rechargeForm.value.amount, payment_method: rechargeForm.value.payMethod })
+    const res = await request.post('/api/v2/balance/recharge', { amount: rechargeForm.value.amount, payment_method: rechargeForm.value.payMethod })
     balance.value += rechargeForm.value.amount || 0
     message.success('充值成功')
     showRechargeModal.value = false
@@ -387,7 +387,7 @@ async function handleWithdraw() {
       return
     }
     withdrawing.value = true
-    await request.post('/api/v1/balances/withdraw', { amount: withdrawForm.value.amount, method: withdrawForm.value.account })
+    await request.post('/api/v2/balance/withdraw', { amount: withdrawForm.value.amount, method: withdrawForm.value.account })
     message.success('提现申请已提交')
     showWithdrawModal.value = false
     withdrawForm.value.amount = null

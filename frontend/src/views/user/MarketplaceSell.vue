@@ -204,7 +204,7 @@ onMounted(() => {
 
 async function fetchMyHosts() {
   try {
-    const res = await request.get('/v1/user/hosts')
+    const res = await request.get('/api/v1/user/hosts')
     myHosts.value = res.data?.list || res.data || []
   } catch (e) {
     console.error(e)
@@ -213,7 +213,7 @@ async function fetchMyHosts() {
 
 async function fetchMyListings() {
   try {
-    const res = await request.get('/v1/marketplace/listings/mine')
+    const res = await request.get('/api/v1/marketplace/listings/mine')
     myListings.value = res.data || []
   } catch (e) {
     console.error(e)
@@ -226,7 +226,7 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
-    await request.post('/v1/marketplace/listings', form.value)
+    await request.post('/api/v1/marketplace/listings', form.value)
     ElMessage.success('挂售成功')
     form.value = { host_id: undefined, sell_price: 10, description: '' }
     fetchMyListings()
@@ -249,7 +249,7 @@ function editListing(row: any) {
 async function saveEdit() {
   editing.value = true
   try {
-    await request.put(`/v1/marketplace/listings/${editForm.value.id}`, {
+    await request.put(`/api/v1/marketplace/listings/${editForm.value.id}`, {
       sell_price: editForm.value.sell_price,
       description: editForm.value.description
     })
@@ -268,7 +268,7 @@ async function removeListing(row: any) {
     await ElMessageBox.confirm('确定要下架此挂售吗？', '提示', {
       type: 'warning'
     })
-    await request.delete(`/v1/marketplace/listings/${row.id}`)
+    await request.delete(`/api/v1/marketplace/listings/${row.id}`)
     ElMessage.success('下架成功')
     fetchMyListings()
   } catch (e: any) {

@@ -349,7 +349,7 @@ onMounted(() => {
 async function fetchListings() {
   loading.value = true
   try {
-    const res = await request.get('/v1/marketplace/listings', {
+    const res = await request.get('/api/v1/marketplace/listings', {
       params: {
         page: currentPage.value,
         page_size: pageSize.value,
@@ -379,7 +379,7 @@ async function fetchConfig() {
 
 async function fetchUnreadCount() {
   try {
-    const res = await request.get('/v1/marketplace/unread-count')
+    const res = await request.get('/api/v1/marketplace/unread-count')
     unreadCount.value = res.data?.unread_count || 0
   } catch (e) {
     console.error(e)
@@ -421,7 +421,7 @@ async function confirmPurchase() {
   if (!purchaseListing.value) return
   purchasing.value = true
   try {
-    const res = await request.post('/v1/marketplace/orders', {
+    const res = await request.post('/api/v1/marketplace/orders', {
       listing_id: purchaseListing.value.id,
       payment_method: purchaseType.value
     })

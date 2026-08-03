@@ -51,7 +51,7 @@ function generateKey(): string {
 async function refresh() {
   try {
     captchaKey.value = generateKey()
-    const response = await request.get('/captcha/image/json', {
+    const response = await request.get('/api/v1/captcha/image/json', {
       params: { key: captchaKey.value },
       responseType: 'json'
     })
@@ -74,7 +74,7 @@ function onInput(value: string) {
 // Verify captcha
 async function verify(): Promise<boolean> {
   try {
-    await request.post('/captcha/image/verify', {
+    await request.post('/api/v1/captcha/image/verify', {
       key: captchaKey.value,
       captcha_id: captchaId.value,
       digits: inputValue.value

@@ -167,7 +167,7 @@ async function fetchList() {
       params.start_date = dateRange.value[0]
       params.end_date = dateRange.value[1]
     }
-    const res = await request.get('/v1/credit/used-detail', { params })
+    const res = await request.get('/api/v1/credit/used-detail', { params })
     tableData.value = res.data?.data?.list || res.data?.list || []
     total.value = res.data?.data?.total || 0
   } catch {
@@ -179,7 +179,7 @@ async function fetchList() {
 
 async function fetchSummary() {
   try {
-    const res = await request.get('/v1/credit/used-summary')
+    const res = await request.get('/api/v1/credit/used-summary')
     summary.value = res.data?.data || summary.value
   } catch {}
 }

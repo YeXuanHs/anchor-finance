@@ -147,7 +147,7 @@ onMounted(() => {
 async function fetchSessions() {
   loadingSessions.value = true
   try {
-    const res = await request.get('/v1/marketplace/chat-sessions')
+    const res = await request.get('/api/v1/marketplace/chat-sessions')
     sessions.value = res.data || []
   } catch (e) {
     console.error(e)
@@ -159,7 +159,7 @@ async function fetchSessions() {
 async function loadDirectChat(listingId: number, userId: number) {
   // 创建或加载直接聊天
   try {
-    const res = await request.get(`/v1/marketplace/messages/${listingId}/${userId}`, {
+    const res = await request.get(`/api/v1/marketplace/messages/${listingId}/${userId}`, {
       params: { page: 1, page_size: 50 }
     })
     messages.value = res.data?.list || []
@@ -194,7 +194,7 @@ async function fetchMessages() {
       : currentSession.value.user1_id
 
     const res = await request.get(
-      `/v1/marketplace/messages/${currentSession.value.listing_id}/${otherId}`,
+      `/api/v1/marketplace/messages/${currentSession.value.listing_id}/${otherId}`,
       { params: { page: 1, page_size: 100 } }
     )
     messages.value = res.data?.list || []
@@ -215,7 +215,7 @@ async function sendMessage() {
       ? currentSession.value.user2_id
       : currentSession.value.user1_id
 
-    await request.post('/v1/marketplace/messages', {
+    await request.post('/api/v1/marketplace/messages', {
       receiver_id: otherId,
       listing_id: currentSession.value.listing_id,
       content: inputMessage.value.trim()

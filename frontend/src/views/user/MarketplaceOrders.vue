@@ -170,8 +170,8 @@ async function fetchOrders() {
   loading.value = true
   try {
     const endpoint = activeTab.value === 'buyer'
-      ? '/v1/marketplace/orders/buyer'
-      : '/v1/marketplace/orders/seller'
+      ? '/api/v1/marketplace/orders/buyer'
+      : '/api/v1/marketplace/orders/seller'
 
     const res = await request.get(endpoint, {
       params: {
@@ -191,7 +191,7 @@ async function fetchOrders() {
 async function payOrder(order: any) {
   try {
     await ElMessageBox.confirm('确定要支付此订单吗？', '确认支付', { type: 'warning' })
-    await request.post(`/v1/marketplace/orders/${order.id}/pay`)
+    await request.post(`/api/v1/marketplace/orders/${order.id}/pay`)
     ElMessage.success('支付成功')
     fetchOrders()
   } catch (e: any) {
@@ -204,7 +204,7 @@ async function payOrder(order: any) {
 async function cancelOrder(order: any) {
   try {
     await ElMessageBox.confirm('确定要取消此订单吗？款项将退回余额。', '取消订单', { type: 'warning' })
-    await request.post(`/v1/marketplace/orders/${order.id}/cancel`)
+    await request.post(`/api/v1/marketplace/orders/${order.id}/cancel`)
     ElMessage.success('订单已取消')
     fetchOrders()
   } catch (e: any) {
@@ -217,7 +217,7 @@ async function cancelOrder(order: any) {
 async function completeOrder(order: any) {
   try {
     await ElMessageBox.confirm('确认交易已经完成？确认后服务器将自动转移给买家。', '确认完成', { type: 'success' })
-    await request.post(`/v1/marketplace/orders/${order.id}/complete`)
+    await request.post(`/api/v1/marketplace/orders/${order.id}/complete`)
     ElMessage.success('交易已完成')
     fetchOrders()
   } catch (e: any) {

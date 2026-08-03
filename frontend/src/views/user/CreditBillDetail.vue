@@ -216,7 +216,7 @@ async function fetchBillDetail() {
   if (!id) return
   loading.value = true
   try {
-    const res = await request.get(`/v1/credit/bills/${id}`)
+    const res = await request.get(`/api/v1/credit/bills/${id}`)
     billInfo.value = res.data?.data || res.data || billInfo.value
     repayAmount.value = billInfo.value.remaining || 0
   } catch (e) {
@@ -230,7 +230,7 @@ async function fetchRepayRecords() {
   const id = route.params.id as string
   if (!id) return
   try {
-    const res = await request.get(`/v1/credit/bills/${id}/repayments`)
+    const res = await request.get(`/api/v1/credit/bills/${id}/repayments`)
     repayRecords.value = res.data?.data?.list || res.data?.list || []
   } catch {
     repayRecords.value = []
@@ -244,7 +244,7 @@ async function handleRepay() {
   }
   submitting.value = true
   try {
-    await request.post(`/v1/credit/bills/${route.params.id}/repay`, { amount: repayAmount.value })
+    await request.post(`/api/v1/credit/bills/${route.params.id}/repay`, { amount: repayAmount.value })
     ElMessage.success('还款成功')
     repayDialogVisible.value = false
     fetchBillDetail()

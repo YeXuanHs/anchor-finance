@@ -182,7 +182,7 @@ const currentPageName = computed(() => {
 // 获取菜单
 const fetchMenus = async () => {
   try {
-    const { data } = await request.get('/v1/user/menus')
+    const { data } = await request.get('/api/v1/user/menus')
     if (data) {
       menuList.value = Array.isArray(data) ? data : []
     }
