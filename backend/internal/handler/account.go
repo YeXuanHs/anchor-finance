@@ -103,7 +103,7 @@ func (h *AccountHandler) Create(c *gin.Context) {
 
 	var invoices []uint
 	if uid != "" {
-		h.db.Model(&model.Invoice{}).Where("uid = ?", uid).Pluck("id", &invoices)
+		h.db.Model(&model.Invoice{}).Where("user_id = ?", uid).Pluck("id", &invoices)
 	}
 
 	response.Success(c, gin.H{
@@ -123,7 +123,7 @@ func (h *AccountHandler) CreateInvoice(c *gin.Context) {
 	}
 
 	var invoices []uint
-	h.db.Model(&model.Invoice{}).Where("uid = ?", uid).Pluck("id", &invoices)
+	h.db.Model(&model.Invoice{}).Where("user_id = ?", uid).Pluck("id", &invoices)
 
 	response.Success(c, gin.H{"invoices": invoices})
 }
@@ -232,7 +232,7 @@ func (h *AccountHandler) Read(c *gin.Context) {
 	}
 
 	var invoices []uint
-	h.db.Model(&model.Invoice{}).Where("uid = ?", account.UID).Pluck("id", &invoices)
+	h.db.Model(&model.Invoice{}).Where("user_id = ?", account.UID).Pluck("id", &invoices)
 
 	var gateways []model.PaymentGateway
 	h.db.Where("status = ?", 1).Find(&gateways)

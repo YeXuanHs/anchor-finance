@@ -153,12 +153,6 @@
   </div>
 </template>
 
-<!-- TODO: 完善任务队列页面功能
-  1. 添加任务优先级排序
-  2. 添加任务执行日志查看
-  3. 添加队列健康状态监控
-  4. 添加Worker状态查看
--->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'

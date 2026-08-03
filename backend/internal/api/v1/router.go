@@ -177,6 +177,22 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		auth.GET("/invoices/:id", invoiceHandler.Get)
 		auth.POST("/invoices/:id/pay", invoiceHandler.Pay)
 
+		// 发票申请（Voucher）
+		voucherSvc := service.NewVoucherService(deps.DB, deps.Log)
+		voucherHandler := handler.NewVoucherHandler(voucherSvc, deps.Log)
+		auth.GET("/user/vouchers", voucherHandler.GetUserVoucherList)
+		auth.POST("/user/vouchers", voucherHandler.CreateUserVoucher)
+		// 发票抬头
+		auth.GET("/user/voucher-types", voucherHandler.GetVoucherTypes)
+		auth.POST("/user/voucher-types", voucherHandler.CreateVoucherType)
+		auth.PUT("/user/voucher-types/:id", voucherHandler.UpdateVoucherType)
+		auth.DELETE("/user/voucher-types/:id", voucherHandler.DeleteVoucherType)
+		// 收件地址
+		auth.GET("/user/voucher-posts", voucherHandler.GetVoucherPosts)
+		auth.POST("/user/voucher-posts", voucherHandler.CreateVoucherPost)
+		auth.PUT("/user/voucher-posts/:id", voucherHandler.UpdateVoucherPost)
+		auth.DELETE("/user/voucher-posts/:id", voucherHandler.DeleteVoucherPost)
+
 		// 工单
 		auth.POST("/tickets", ticketHandler.Create)
 		auth.GET("/tickets", ticketHandler.List)

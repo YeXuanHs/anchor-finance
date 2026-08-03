@@ -1,9 +1,8 @@
 package handler
 
 import (
-	"net/http"
-
 	"anchorfinance/internal/model"
+	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -23,10 +22,10 @@ func NewExpressHandler(db *gorm.DB) *ExpressHandler {
 func (h *ExpressHandler) List(c *gin.Context) {
 	var expresses []model.Express
 	if err := h.db.Order("sort_order ASC, id ASC").Find(&expresses).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取列表失败"})
+		response.ServerError(c, "获取列表失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": expresses})
+	response.Success(c, expresses)
 }
 
 // Create 创建快递
@@ -40,7 +39,7 @@ func (h *ExpressHandler) Create(c *gin.Context) {
 		SortOrder int     `json:"sort_order"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		response.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -57,10 +56,10 @@ func (h *ExpressHandler) Create(c *gin.Context) {
 		SortOrder: req.SortOrder,
 	}
 	if err := h.db.Create(&express).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建失败"})
+		response.ServerError(c, "创建失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": express, "message": "创建成功"})
+	response.Success(c, express)
 }
 
 // Update 更新快递
@@ -75,7 +74,7 @@ func (h *ExpressHandler) Update(c *gin.Context) {
 		SortOrder int     `json:"sort_order"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		response.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -90,10 +89,10 @@ func (h *ExpressHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.db.Model(&model.Express{}).Where("id = ?", id).Updates(updates).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+		response.ServerError(c, "更新失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "更新成功"})
+	response.SuccessMsg(c, "更新成功")
 }
 
 // Delete 删除快递
@@ -101,10 +100,10 @@ func (h *ExpressHandler) Update(c *gin.Context) {
 func (h *ExpressHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.db.Delete(&model.Express{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除失败"})
+		response.ServerError(c, "删除失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	response.SuccessMsg(c, "删除成功")
 }
 
 // ========== 取消原因 ==========
@@ -123,10 +122,10 @@ func NewCancelReasonHandler(db *gorm.DB) *CancelReasonHandler {
 func (h *CancelReasonHandler) List(c *gin.Context) {
 	var reasons []model.CancelReason
 	if err := h.db.Order("sort_order ASC, id ASC").Find(&reasons).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取列表失败"})
+		response.ServerError(c, "获取列表失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": reasons})
+	response.Success(c, reasons)
 }
 
 // Create 创建取消原因
@@ -138,7 +137,7 @@ func (h *CancelReasonHandler) Create(c *gin.Context) {
 		SortOrder int    `json:"sort_order"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		response.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -153,10 +152,10 @@ func (h *CancelReasonHandler) Create(c *gin.Context) {
 		SortOrder: req.SortOrder,
 	}
 	if err := h.db.Create(&reason).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建失败"})
+		response.ServerError(c, "创建失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": reason, "message": "创建成功"})
+	response.Success(c, reason)
 }
 
 // Update 更新取消原因
@@ -169,7 +168,7 @@ func (h *CancelReasonHandler) Update(c *gin.Context) {
 		SortOrder int    `json:"sort_order"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		response.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -182,10 +181,10 @@ func (h *CancelReasonHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.db.Model(&model.CancelReason{}).Where("id = ?", id).Updates(updates).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+		response.ServerError(c, "更新失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "更新成功"})
+	response.SuccessMsg(c, "更新成功")
 }
 
 // Delete 删除取消原因
@@ -193,10 +192,10 @@ func (h *CancelReasonHandler) Update(c *gin.Context) {
 func (h *CancelReasonHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.db.Delete(&model.CancelReason{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除失败"})
+		response.ServerError(c, "删除失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	response.SuccessMsg(c, "删除成功")
 }
 
 // ========== BaseInfo Handler ==========
@@ -215,10 +214,10 @@ func NewBaseInfoHandler(db *gorm.DB) *BaseInfoHandler {
 func (h *BaseInfoHandler) List(c *gin.Context) {
 	var infos []model.BaseInfo
 	if err := h.db.Order("sort_order ASC, id ASC").Find(&infos).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取列表失败"})
+		response.ServerError(c, "获取列表失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": infos})
+	response.Success(c, infos)
 }
 
 // Create 创建首页信息
@@ -233,7 +232,7 @@ func (h *BaseInfoHandler) Create(c *gin.Context) {
 		IsActive  *bool  `json:"is_active"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		response.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -251,10 +250,10 @@ func (h *BaseInfoHandler) Create(c *gin.Context) {
 		IsActive:  isActive,
 	}
 	if err := h.db.Create(&info).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建失败"})
+		response.ServerError(c, "创建失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": info, "message": "创建成功"})
+	response.Success(c, info)
 }
 
 // Update 更新首页信息
@@ -270,7 +269,7 @@ func (h *BaseInfoHandler) Update(c *gin.Context) {
 		IsActive  *bool  `json:"is_active"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		response.BadRequest(c, "参数错误")
 		return
 	}
 
@@ -286,10 +285,10 @@ func (h *BaseInfoHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.db.Model(&model.BaseInfo{}).Where("id = ?", id).Updates(updates).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+		response.ServerError(c, "更新失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "更新成功"})
+	response.SuccessMsg(c, "更新成功")
 }
 
 // Delete 删除首页信息
@@ -297,10 +296,10 @@ func (h *BaseInfoHandler) Update(c *gin.Context) {
 func (h *BaseInfoHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.db.Delete(&model.BaseInfo{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除失败"})
+		response.ServerError(c, "删除失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	response.SuccessMsg(c, "删除成功")
 }
 
 // GetActive 获取启用的首页信息（前台）
@@ -308,8 +307,8 @@ func (h *BaseInfoHandler) Delete(c *gin.Context) {
 func (h *BaseInfoHandler) GetActive(c *gin.Context) {
 	var infos []model.BaseInfo
 	if err := h.db.Where("is_active = ?", true).Order("sort_order ASC").Find(&infos).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取列表失败"})
+		response.ServerError(c, "获取列表失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": infos})
+	response.Success(c, infos)
 }

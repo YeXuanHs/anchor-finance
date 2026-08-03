@@ -90,13 +90,6 @@
   </div>
 </template>
 
-<!-- TODO: 完善数据迁移页面功能
-  1. 实现实际的迁移逻辑
-  2. 添加迁移进度实时更新
-  3. 添加迁移日志查看
-  4. 添加迁移回滚功能
-  5. 添加数据映射配置
--->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'

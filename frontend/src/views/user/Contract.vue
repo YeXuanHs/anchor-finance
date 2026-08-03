@@ -1,21 +1,21 @@
 <template>
   <div class="contract-page">
     <el-card>
-      <template #header><span>我的合同</span></template>
+      <template #header><span>{{ $t('contractPage.title') }}</span></template>
       <el-table :data="contracts" v-loading="loading">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="title" label="合同标题" />
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="title" :label="$t('contractPage.contractTitle')" />
+        <el-table-column prop="status" :label="$t('contractPage.status')" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'signed' ? 'success' : 'warning'">{{ row.status === 'signed' ? '已签署' : '待签署' }}</el-tag>
+            <el-tag :type="row.status === 'signed' ? 'success' : 'warning'">{{ row.status === 'signed' ? $t('contractPage.signed') : $t('contractPage.pendingSign') }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="200">
+        <el-table-column prop="created_at" :label="$t('contractPage.createTime')" width="180" />
+        <el-table-column :label="$t('contractPage.operating')" width="200">
           <template #default="{ row }">
-            <el-button type="primary" link>查看</el-button>
-            <el-button v-if="row.status !== 'signed'" type="success" link>签署</el-button>
-            <el-button type="info" link>下载PDF</el-button>
+            <el-button type="primary" link>{{ $t('contractPage.view') }}</el-button>
+            <el-button v-if="row.status !== 'signed'" type="success" link>{{ $t('contractPage.sign') }}</el-button>
+            <el-button type="info" link>{{ $t('contractPage.downloadPdf') }}</el-button>
           </template>
         </el-table-column>
       </el-table>

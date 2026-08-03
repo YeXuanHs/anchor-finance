@@ -20,5 +20,5 @@ type Express struct {
 }
 
 func (Express) TableName() string {
-	return "expresses"
+	return "express"
 }

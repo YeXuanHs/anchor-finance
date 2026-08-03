@@ -134,12 +134,6 @@
   </div>
 </template>
 
-<!-- TODO: 完善统计概览页面功能
-  1. 添加图表组件（收入趋势、订单趋势等）
-  2. 添加数据自动刷新
-  3. 添加数据导出功能
-  4. 添加自定义仪表盘配置
--->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'

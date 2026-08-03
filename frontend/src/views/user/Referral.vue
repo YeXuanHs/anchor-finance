@@ -1,28 +1,28 @@
 <template>
   <div class="referral-page">
     <div class="page-header">
-      <h1 class="page-title">推介计划</h1>
+      <h1 class="page-title">{{ $t('menu.referral') }}</h1>
     </div>
 
     <!-- Banner Card -->
     <el-card shadow="never" class="banner-card">
       <div class="banner-content">
         <div class="banner-text">
-          <h2>邀请好友，获得佣金</h2>
-          <p>每成功邀请一位好友注册并消费，您将获得 <strong>10%</strong> 的消费佣金</p>
+          <h2>{{ $t('referral.registerThroughPromotion') }}</h2>
+          <p>{{ $t('referral.successfulPromotion') }}</p>
         </div>
         <div class="banner-stats">
           <div class="banner-stat">
             <span class="stat-num">{{ totalReferrals }}</span>
-            <span class="stat-label">已邀请人数</span>
+            <span class="stat-label">{{ $t('affiliate.registeredUsers') }}</span>
           </div>
           <div class="banner-stat">
             <span class="stat-num">¥{{ totalEarnings }}</span>
-            <span class="stat-label">累计佣金</span>
+            <span class="stat-label">{{ $t('affiliate.commission') }}</span>
           </div>
           <div class="banner-stat">
             <span class="stat-num">¥{{ availableBalance }}</span>
-            <span class="stat-label">可提现余额</span>
+            <span class="stat-label">{{ $t('affiliate.availableAmount') }}</span>
           </div>
         </div>
       </div>
@@ -36,8 +36,8 @@
             <el-icon :size="28"><ShoppingCart /></el-icon>
           </div>
           <div class="nav-info">
-            <span class="nav-title">购买记录</span>
-            <span class="nav-desc">查看推广订单详情</span>
+            <span class="nav-title">{{ $t('affiliate.orderTime') }}</span>
+            <span class="nav-desc">{{ $t('referral.promotionRecord') }}</span>
           </div>
           <el-icon class="nav-arrow"><ArrowRight /></el-icon>
         </div>
@@ -48,8 +48,8 @@
             <el-icon :size="28"><User /></el-icon>
           </div>
           <div class="nav-info">
-            <span class="nav-title">推介用户</span>
-            <span class="nav-desc">管理推介用户列表</span>
+            <span class="nav-title">{{ $t('affiliate.registeredUsers') }}</span>
+            <span class="nav-desc">{{ $t('affiliate.sharePromotionTip') }}</span>
           </div>
           <el-icon class="nav-arrow"><ArrowRight /></el-icon>
         </div>
@@ -60,8 +60,8 @@
             <el-icon :size="28"><Wallet /></el-icon>
           </div>
           <div class="nav-info">
-            <span class="nav-title">提现记录</span>
-            <span class="nav-desc">申请提现与记录</span>
+            <span class="nav-title">{{ $t('affiliate.withdrawalAmount') }}</span>
+            <span class="nav-desc">{{ $t('affiliate.immediateWithdrawal') }}</span>
           </div>
           <el-icon class="nav-arrow"><ArrowRight /></el-icon>
         </div>
@@ -71,23 +71,23 @@
     <!-- Referral Code Card -->
     <el-card shadow="never" class="code-card">
       <template #header>
-        <span class="card-title">我的推介码</span>
+        <span class="card-title">{{ $t('affiliate.offerLink') }}</span>
       </template>
       <div class="code-area">
         <el-input v-model="referralCode" readonly size="large" class="code-input">
           <template #append>
             <el-button @click="handleCopy">
-              <el-icon><CopyDocument /></el-icon>复制
+              <el-icon><CopyDocument /></el-icon>{{ $t('common.copy') }}
             </el-button>
           </template>
         </el-input>
-        <p class="code-hint">将推介码分享给好友，好友注册时填写即可</p>
+        <p class="code-hint">{{ $t('referral.registerThroughPromotion') }}</p>
       </div>
       <div class="share-links">
-        <span class="share-label">分享链接：</span>
+        <span class="share-label">{{ $t('affiliate.recommendedLinks') }}：</span>
         <el-input v-model="shareLink" readonly size="small" style="flex: 1;">
           <template #append>
-            <el-button @click="handleCopyLink">复制链接</el-button>
+            <el-button @click="handleCopyLink">{{ $t('affiliate.sharePromotionLinks') }}</el-button>
           </template>
         </el-input>
       </div>
@@ -97,12 +97,12 @@
     <el-card shadow="never" class="records-card">
       <template #header>
         <div class="card-header">
-          <span class="card-title">最近邀请记录</span>
-          <el-button type="primary" link @click="$router.push('/user/affiliate/buy-record')">查看全部</el-button>
+          <span class="card-title">{{ $t('referral.promotionRecord') }}</span>
+          <el-button type="primary" link @click="$router.push('/user/affiliate/buy-record')">{{ $t('home.viewMore') }}</el-button>
         </div>
       </template>
-      <el-table :data="referralRecords" stripe style="width: 100%" empty-text="暂无邀请记录">
-        <el-table-column prop="username" label="用户" min-width="120">
+      <el-table :data="referralRecords" stripe style="width: 100%" :empty-text="$t('common.noData')">
+        <el-table-column prop="username" :label="$t('tableSearch.clientUsername')" min-width="120">
           <template #default="{ row }">
             <div class="user-cell">
               <el-avatar :size="28" class="record-avatar">{{ row.username.charAt(0) }}</el-avatar>
@@ -110,18 +110,18 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="registerDate" label="注册时间" width="130" />
-        <el-table-column prop="spent" label="消费金额" width="120">
+        <el-table-column prop="registerDate" :label="$t('transaction.registrationTime')" width="130" />
+        <el-table-column prop="spent" :label="$t('affiliate.orderAmount')" width="120">
           <template #default="{ row }">
             <span class="amount-text">¥{{ row.spent }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="commission" label="佣金金额" width="120">
+        <el-table-column prop="commission" :label="$t('affiliate.commission')" width="120">
           <template #default="{ row }">
             <span class="commission-text">¥{{ row.commission }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" :label="$t('common.status')" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 'settled' ? 'success' : 'warning'" size="small" effect="light" round>
               {{ row.statusText }}
@@ -134,7 +134,7 @@
     <!-- Rules Card -->
     <el-card shadow="never" class="rules-card">
       <template #header>
-        <span class="card-title">佣金规则</span>
+        <span class="card-title">{{ $t('coupon.redeem') }}</span>
       </template>
       <el-timeline>
         <el-timeline-item v-for="(rule, i) in rules" :key="i" :type="i === 0 ? 'primary' : ''">
@@ -148,8 +148,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { CopyDocument, ShoppingCart, User, Wallet, ArrowRight } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const referralCode = ref('')
@@ -175,21 +178,21 @@ onMounted(async () => {
 })
 
 const rules = [
-  '好友通过您的推介码或链接注册即绑定推介关系',
-  '好友每次消费后，您将获得消费金额 10% 的佣金',
-  '佣金将在好友付款后 7 个工作日内结算到您的账户余额',
-  '佣金可用于平台内所有产品消费，不可提现',
-  '推介关系一旦绑定，永久有效'
+  t('referral.registerThroughPromotion'),
+  t('referral.successfulPromotion'),
+  t('affiliate.getRebateTip'),
+  t('affiliate.sharePromotionTip'),
+  t('affiliate.registerThroughPromotion')
 ]
 
 function handleCopy() {
   navigator.clipboard?.writeText(referralCode.value)
-  ElMessage.success('推介码已复制')
+  ElMessage.success(t('affiliate.copySuccess'))
 }
 
 function handleCopyLink() {
   navigator.clipboard?.writeText(shareLink.value)
-  ElMessage.success('分享链接已复制')
+  ElMessage.success(t('affiliate.copySuccess'))
 }
 </script>
 

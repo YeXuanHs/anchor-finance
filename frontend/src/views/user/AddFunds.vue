@@ -3,13 +3,13 @@
     <el-card class="page-card">
       <template #header>
         <div class="card-header">
-          <span>账户充值</span>
-          <span class="balance">当前余额：<em>¥{{ balance.toFixed(2) }}</em></span>
+          <span>{{ $t('addFunds.title') }}</span>
+          <span class="balance">{{ $t('addFunds.currentBalance') }}<em>¥{{ balance.toFixed(2) }}</em></span>
         </div>
       </template>
 
       <el-form label-position="top">
-        <el-form-item label="充值金额">
+        <el-form-item :label="$t('addFunds.amount')">
           <div class="amount-presets">
             <el-button
               v-for="preset in presetAmounts"
@@ -25,12 +25,12 @@
             :min="1"
             :max="50000"
             :precision="2"
-            placeholder="或输入自定义金额"
+            :placeholder="$t('addFunds.customAmount')"
             style="width: 100%; margin-top: 12px"
           />
         </el-form-item>
 
-        <el-form-item label="支付方式">
+        <el-form-item :label="$t('addFunds.paymentMethod')">
           <div class="payment-methods" v-loading="loadingGateways">
             <div
               v-for="method in paymentMethods"
@@ -43,13 +43,13 @@
               <span class="method-label">{{ method.title }}</span>
               <el-icon v-if="paymentMethod === method.name" class="check-icon"><Check /></el-icon>
             </div>
-            <el-empty v-if="!loadingGateways && paymentMethods.length === 0" description="暂无可用支付方式" />
+            <el-empty v-if="!loadingGateways && paymentMethods.length === 0" :description="$t('addFunds.noPaymentMethod')" />
           </div>
         </el-form-item>
 
         <el-form-item>
           <el-button type="primary" size="large" :loading="submitting" :disabled="!paymentMethod" @click="handleRecharge">
-            确认充值 ¥{{ amount?.toFixed(2) || '0.00' }}
+            {{ $t('addFunds.confirmRecharge') }} ¥{{ amount?.toFixed(2) || '0.00' }}
           </el-button>
         </el-form-item>
       </el-form>
@@ -58,24 +58,24 @@
     <el-card class="page-card">
       <template #header>
         <div class="card-header">
-          <span>充值记录</span>
+          <span>{{ $t('addFunds.rechargeRecord') }}</span>
         </div>
       </template>
 
       <el-table :data="records" style="width: 100%">
-        <el-table-column prop="created_at" label="时间" width="180" />
-        <el-table-column prop="amount" label="金额">
+        <el-table-column prop="created_at" :label="$t('addFunds.time')" width="180" />
+        <el-table-column prop="amount" :label="$t('addFunds.amountLabel')">
           <template #default="{ row }">
             <span class="text-success">+¥{{ row.amount?.toFixed(2) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="payment_method" label="支付方式" />
-        <el-table-column prop="status" label="状态">
+        <el-table-column prop="payment_method" :label="$t('addFunds.paymentMethodLabel')" />
+        <el-table-column prop="status" :label="$t('addFunds.status')">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="transaction_no" label="交易号" />
+        <el-table-column prop="transaction_no" :label="$t('addFunds.transactionNo')" />
       </el-table>
 
       <div class="pagination-wrap">
@@ -97,7 +97,10 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Check } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import request from '@/utils/request'
+
+const { t } = useI18n()
 
 const balance = ref(0)
 const amount = ref<number | undefined>(100)
@@ -120,7 +123,6 @@ interface PaymentMethod {
 
 const paymentMethods = ref<PaymentMethod[]>([])
 
-// 获取支付类型图标
 const getIconUrl = (code: string) => {
   const icons: Record<string, string> = {
     alipay: '/assets/payment/alipay.png',
@@ -155,20 +157,18 @@ const getStatusType = (status: string) => {
 
 const getStatusText = (status: string) => {
   const map: Record<string, string> = {
-    success: '成功',
-    pending: '处理中',
-    failed: '失败'
+    success: t('addFunds.statusSuccess'),
+    pending: t('addFunds.statusPending'),
+    failed: t('addFunds.statusFailed')
   }
   return map[status] || status
 }
 
-// 加载支付方式
 const loadPaymentMethods = async () => {
   loadingGateways.value = true
   try {
     const { data } = await request.get('/api/v1/payment-methods')
     paymentMethods.value = data?.data || []
-    // 默认选中第一个
     if (paymentMethods.value.length > 0 && !paymentMethod.value) {
       paymentMethod.value = paymentMethods.value[0].name
     }
@@ -181,11 +181,11 @@ const loadPaymentMethods = async () => {
 
 const handleRecharge = async () => {
   if (!amount.value || amount.value <= 0) {
-    ElMessage.warning('请输入有效的充值金额')
+    ElMessage.warning(t('addFunds.enterValidAmount'))
     return
   }
   if (!paymentMethod.value) {
-    ElMessage.warning('请选择支付方式')
+    ElMessage.warning(t('addFunds.selectPaymentMethod'))
     return
   }
   submitting.value = true
@@ -197,13 +197,13 @@ const handleRecharge = async () => {
     if (data?.data?.pay_url) {
       window.location.href = data.data.pay_url
     } else if (data?.data?.type === 'bank_transfer') {
-      ElMessage.info('请按照银行转账信息完成汇款后联系客服确认')
+      ElMessage.info(t('addFunds.bankTransferTip'))
     } else {
-      ElMessage.success('充值请求已提交')
+      ElMessage.success(t('addFunds.rechargeSubmitted'))
       loadRecords()
     }
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.message || '充值失败')
+    ElMessage.error(e.response?.data?.message || t('addFunds.rechargeFailed'))
   } finally {
     submitting.value = false
   }

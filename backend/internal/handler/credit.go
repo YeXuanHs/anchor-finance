@@ -811,14 +811,14 @@ func (h *CreditHandler) AdminIndex(c *gin.Context) {
 	// Calculate amount to be settled
 	var amountToBeSettled float64
 	h.db.Model(&model.Invoice{}).
-		Where("status = ? AND use_credit_limit = ? AND invoice_id = ? AND uid = ?", "Paid", 1, 0, uid).
+		Where("status = ? AND use_credit_limit = ? AND linked_invoice_id = ? AND user_id = ?", 1, 1, 0, uid).
 		Select("COALESCE(SUM(total), 0)").
 		Scan(&amountToBeSettled)
 
 	// Calculate unpaid
 	var unpaid float64
 	h.db.Model(&model.Invoice{}).
-		Where("type = ? AND status = ? AND uid = ?", "credit_limit", "Unpaid", uid).
+		Where("type = ? AND status = ? AND user_id = ?", "credit_limit", 0, uid).
 		Select("COALESCE(SUM(total), 0)").
 		Scan(&unpaid)
 
@@ -838,7 +838,7 @@ func (h *CreditHandler) AdminIndex(c *gin.Context) {
 	// Get this month's bill
 	var thisMonthBill map[string]interface{}
 	h.db.Table("invoices").
-		Where("type = ? AND uid = ? AND credit_limit_prepayment = 0", "credit_limit", uid).
+		Where("type = ? AND user_id = ? AND credit_limit_prepayment = 0", "credit_limit", uid).
 		Where("created_at >= ?", time.Now().Format("2006-01")).
 		Order("created_at DESC").
 		Limit(1).
@@ -918,16 +918,16 @@ func (h *CreditHandler) AdminCreditInvoiceList(c *gin.Context) {
 	query := h.db.Model(&model.Invoice{}).Where("use_credit_limit = ?", 1)
 
 	if uid != "" {
-		query = query.Where("uid = ?", uid)
+		query = query.Where("user_id = ?", uid)
 	}
 	if paymentStatus != "" {
 		switch paymentStatus {
 		case "Paid":
-			query = query.Where("status = ?", "Paid")
+			query = query.Where("status = ?", 1)
 		case "Unpaid":
-			query = query.Where("status = ? AND due_time > ?", "Unpaid", time.Now().Unix())
+			query = query.Where("status = ? AND due_date > ?", 0, time.Now())
 		case "Overdue":
-			query = query.Where("status = ? AND due_time <= ?", "Unpaid", time.Now().Unix())
+			query = query.Where("status = ? AND due_date <= ?", 0, time.Now())
 		}
 	}
 
@@ -999,7 +999,7 @@ func (h *CreditHandler) GetSearch(c *gin.Context) {
 
 	// Apply filters
 	if uid := c.Query("uid"); uid != "" {
-		query = query.Where("uid = ?", uid)
+		query = query.Where("user_id = ?", uid)
 	}
 	if status := c.Query("status"); status != "" {
 		query = query.Where("status = ?", status)
@@ -1007,11 +1007,11 @@ func (h *CreditHandler) GetSearch(c *gin.Context) {
 	if paymentStatus := c.Query("payment_status"); paymentStatus != "" {
 		switch paymentStatus {
 		case "Paid":
-			query = query.Where("status = ?", "Paid")
+			query = query.Where("status = ?", 1)
 		case "Unpaid":
-			query = query.Where("status = ? AND due_time > ?", "Unpaid", time.Now().Unix())
+			query = query.Where("status = ? AND due_date > ?", 0, time.Now())
 		case "Overdue":
-			query = query.Where("status = ? AND due_time <= ?", "Unpaid", time.Now().Unix())
+			query = query.Where("status = ? AND due_date <= ?", 0, time.Now())
 		}
 	}
 	if startTime := c.Query("start_time"); startTime != "" {

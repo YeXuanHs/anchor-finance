@@ -6,7 +6,7 @@
           <div class="balance-info">
             <div class="balance-label">
               <n-icon :component="WalletOutline" size="20" />
-              <span>账户余额</span>
+              <span>{{ $t('wallet.balance') }}</span>
             </div>
             <div class="balance-amount">
               <span class="currency">¥</span>
@@ -15,11 +15,11 @@
             <div class="balance-actions">
               <n-button type="primary" size="large" @click="showRechargeModal = true">
                 <template #icon><n-icon :component="AddCircleOutline" /></template>
-                充值
+                {{ $t('wallet.recharge') }}
               </n-button>
               <n-button size="large" @click="showWithdrawModal = true">
                 <template #icon><n-icon :component="ArrowUpOutline" /></template>
-                提现
+                {{ $t('wallet.withdraw') }}
               </n-button>
             </div>
           </div>
@@ -33,13 +33,13 @@
 
       <div class="stats-row">
         <n-card class="stat-card" :bordered="false">
-          <n-statistic label="本月充值" :value="monthlyRecharge" precision="2" prefix="¥" />
+          <n-statistic :label="$t('wallet.monthlyRecharge')" :value="monthlyRecharge" precision="2" prefix="¥" />
         </n-card>
         <n-card class="stat-card" :bordered="false">
-          <n-statistic label="本月消费" :value="monthlyExpense" precision="2" prefix="¥" />
+          <n-statistic :label="$t('wallet.monthlyExpense')" :value="monthlyExpense" precision="2" prefix="¥" />
         </n-card>
         <n-card class="stat-card" :bordered="false">
-          <n-statistic label="冻结金额" :value="frozenAmount" precision="2" prefix="¥" />
+          <n-statistic :label="$t('wallet.frozenAmount')" :value="frozenAmount" precision="2" prefix="¥" />
         </n-card>
       </div>
     </div>
@@ -47,10 +47,10 @@
     <n-card class="records-card" :bordered="false">
       <template #header>
         <div class="records-header">
-          <span class="records-title">余额变动记录</span>
+          <span class="records-title">{{ $t('wallet.balanceRecord') }}</span>
           <n-input
             v-model:value="searchKeyword"
-            placeholder="搜索备注..."
+            :placeholder="$t('wallet.searchRemark')"
             clearable
             style="width: 240px"
           >
@@ -62,11 +62,11 @@
       </template>
 
       <n-tabs v-model:value="activeType" type="segment" animated class="type-tabs">
-        <n-tab-pane name="all" tab="全部" />
-        <n-tab-pane name="recharge" tab="充值" />
-        <n-tab-pane name="expense" tab="消费" />
-        <n-tab-pane name="refund" tab="退款" />
-        <n-tab-pane name="withdraw" tab="提现" />
+        <n-tab-pane name="all" :tab="$t('wallet.all')" />
+        <n-tab-pane name="recharge" :tab="$t('wallet.rechargeType')" />
+        <n-tab-pane name="expense" :tab="$t('wallet.expense')" />
+        <n-tab-pane name="refund" :tab="$t('wallet.refund')" />
+        <n-tab-pane name="withdraw" :tab="$t('wallet.withdrawType')" />
       </n-tabs>
 
       <n-data-table
@@ -79,16 +79,16 @@
       />
     </n-card>
 
-    <!-- 充值弹窗 -->
-    <n-modal v-model:show="showRechargeModal" preset="card" title="账户充值" style="width: 480px" :bordered="false">
+    <!-- Recharge Modal -->
+    <n-modal v-model:show="showRechargeModal" preset="card" :title="$t('wallet.rechargeTitle')" style="width: 480px" :bordered="false">
       <n-form ref="rechargeFormRef" :model="rechargeForm" :rules="rechargeRules">
-        <n-form-item label="充值金额" path="amount">
+        <n-form-item :label="$t('wallet.rechargeAmount')" path="amount">
           <n-input-number
             v-model:value="rechargeForm.amount"
             :min="1"
             :max="50000"
             :precision="2"
-            placeholder="请输入充值金额"
+            :placeholder="$t('wallet.enterRechargeAmount')"
             size="large"
             style="width: 100%"
           >
@@ -107,7 +107,7 @@
           </n-button>
         </div>
 
-        <n-form-item label="支付方式" path="payMethod">
+        <n-form-item :label="$t('wallet.payMethod')" path="payMethod">
           <n-radio-group v-model:value="rechargeForm.payMethod">
             <div class="pay-methods">
               <n-radio value="alipay">
@@ -115,7 +115,7 @@
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="#1677FF">
                     <path d="M21.422 15.358c-3.492 1.464-6.924-0.096-9.348-1.776 0.78-2.016 1.32-4.392 1.32-6.78 0-1.176-0.18-2.292-0.456-3.324h-3.12v4.536h5.64v1.8H11.04v1.224c1.872 0.864 3.708 1.8 5.604 1.8 1.416 0 2.856-0.624 3.78-1.62v3.936zM12.012 2.484C6.48 2.484 2.004 6.96 2.004 12.492s4.476 10.008 10.008 10.008 10.008-4.476 10.008-10.008-4.476-10.008-10.008-10.008zm0 18c-4.416 0-8-3.584-8-8s3.584-8 8-8 8 3.584 8 8-3.584 8-8 8z"/>
                   </svg>
-                  支付宝
+                  {{ $t('wallet.alipay') }}
                 </div>
               </n-radio>
               <n-radio value="wechat">
@@ -123,13 +123,13 @@
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="#07c160">
                     <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348z"/>
                   </svg>
-                  微信支付
+                  {{ $t('wallet.wechatPay') }}
                 </div>
               </n-radio>
               <n-radio value="bank">
                 <div class="pay-method-label">
                   <n-icon :component="CardOutline" size="20" color="#1890ff" />
-                  银行卡
+                  {{ $t('wallet.bankCard') }}
                 </div>
               </n-radio>
             </div>
@@ -139,28 +139,28 @@
 
       <template #footer>
         <div class="modal-footer">
-          <n-button @click="showRechargeModal = false">取消</n-button>
+          <n-button @click="showRechargeModal = false">{{ $t('wallet.cancel') }}</n-button>
           <n-button type="primary" :loading="recharging" @click="handleRecharge">
-            确认充值
+            {{ $t('wallet.confirmRecharge') }}
           </n-button>
         </div>
       </template>
     </n-modal>
 
-    <!-- 提现弹窗 -->
-    <n-modal v-model:show="showWithdrawModal" preset="card" title="申请提现" style="width: 480px" :bordered="false">
+    <!-- Withdraw Modal -->
+    <n-modal v-model:show="showWithdrawModal" preset="card" :title="$t('wallet.withdrawTitle')" style="width: 480px" :bordered="false">
       <n-form ref="withdrawFormRef" :model="withdrawForm" :rules="withdrawRules">
-        <n-form-item label="可提现余额">
+        <n-form-item :label="$t('wallet.availableBalance')">
           <div class="available-balance">¥{{ balance.toFixed(2) }}</div>
         </n-form-item>
 
-        <n-form-item label="提现金额" path="amount">
+        <n-form-item :label="$t('wallet.withdrawAmount')" path="amount">
           <n-input-number
             v-model:value="withdrawForm.amount"
             :min="1"
             :max="balance"
             :precision="2"
-            placeholder="请输入提现金额"
+            :placeholder="$t('wallet.enterWithdrawAmount')"
             size="large"
             style="width: 100%"
           >
@@ -168,10 +168,10 @@
           </n-input-number>
         </n-form-item>
 
-        <n-form-item label="提现账户" path="account">
+        <n-form-item :label="$t('wallet.withdrawAccount')" path="account">
           <n-input
             v-model:value="withdrawForm.account"
-            placeholder="请输入银行卡号或支付宝账号"
+            :placeholder="$t('wallet.enterAccount')"
             size="large"
           >
             <template #prefix>
@@ -180,11 +180,11 @@
           </n-input>
         </n-form-item>
 
-        <n-form-item label="提现备注" path="remark">
+        <n-form-item :label="$t('wallet.withdrawRemark')" path="remark">
           <n-input
             v-model:value="withdrawForm.remark"
             type="textarea"
-            placeholder="选填"
+            :placeholder="$t('wallet.optional')"
             :rows="2"
           />
         </n-form-item>
@@ -192,9 +192,9 @@
 
       <template #footer>
         <div class="modal-footer">
-          <n-button @click="showWithdrawModal = false">取消</n-button>
+          <n-button @click="showWithdrawModal = false">{{ $t('wallet.cancel') }}</n-button>
           <n-button type="primary" :loading="withdrawing" @click="handleWithdraw">
-            提交申请
+            {{ $t('wallet.submitApply') }}
           </n-button>
         </div>
       </template>
@@ -206,6 +206,7 @@
 import { ref, computed, reactive, h, onMounted } from 'vue'
 import request from '@/utils/request'
 import { useMessage } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import type { FormInst, FormRules, DataTableColumns } from 'naive-ui'
 import { NTag } from 'naive-ui'
 import {
@@ -216,6 +217,7 @@ import {
   CardOutline
 } from '@vicons/ionicons5'
 
+const { t } = useI18n()
 const message = useMessage()
 
 const balance = ref(0)
@@ -248,16 +250,16 @@ const withdrawForm = ref({
 
 const rechargeRules: FormRules = {
   amount: [
-    { required: true, type: 'number', message: '请输入充值金额', trigger: 'blur' }
+    { required: true, type: 'number', message: t('wallet.enterRechargeAmount'), trigger: 'blur' }
   ],
-  payMethod: { required: true, message: '请选择支付方式', trigger: 'change' }
+  payMethod: { required: true, message: t('wallet.payMethod'), trigger: 'change' }
 }
 
 const withdrawRules: FormRules = {
   amount: [
-    { required: true, type: 'number', message: '请输入提现金额', trigger: 'blur' }
+    { required: true, type: 'number', message: t('wallet.enterWithdrawAmount'), trigger: 'blur' }
   ],
-  account: { required: true, message: '请输入提现账户', trigger: 'blur' }
+  account: { required: true, message: t('wallet.withdrawAccount'), trigger: 'blur' }
 }
 
 interface RecordItem {
@@ -321,9 +323,9 @@ const typeColorMap: Record<string, string> = {
 }
 
 const columns: DataTableColumns<RecordItem> = [
-  { title: '时间', key: 'time', width: 180 },
+  { title: t('wallet.time'), key: 'time', width: 180 },
   {
-    title: '类型',
+    title: t('wallet.type'),
     key: 'type',
     width: 100,
     render(row) {
@@ -331,7 +333,7 @@ const columns: DataTableColumns<RecordItem> = [
     }
   },
   {
-    title: '金额',
+    title: t('wallet.amount'),
     key: 'amount',
     width: 120,
     render(row) {
@@ -341,14 +343,14 @@ const columns: DataTableColumns<RecordItem> = [
     }
   },
   {
-    title: '余额',
+    title: t('wallet.balanceLabel'),
     key: 'balance',
     width: 120,
     render(row) {
       return h('span', {}, `¥${row.balance.toFixed(2)}`)
     }
   },
-  { title: '备注', key: 'remark', ellipsis: { tooltip: true } }
+  { title: t('wallet.remark'), key: 'remark', ellipsis: { tooltip: true } }
 ]
 
 const filteredRecords = computed(() => {
@@ -369,11 +371,11 @@ async function handleRecharge() {
     recharging.value = true
     const res = await request.post('/api/v2/balance/recharge', { amount: rechargeForm.value.amount, payment_method: rechargeForm.value.payMethod })
     balance.value += rechargeForm.value.amount || 0
-    message.success('充值成功')
+    message.success(t('wallet.rechargeSuccess'))
     showRechargeModal.value = false
     rechargeForm.value.amount = null
   } catch {
-    message.error('请正确填写充值信息')
+    message.error(t('wallet.fillRechargeInfo'))
   } finally {
     recharging.value = false
   }
@@ -383,18 +385,18 @@ async function handleWithdraw() {
   try {
     await withdrawFormRef.value?.validate()
     if ((withdrawForm.value.amount || 0) > balance.value) {
-      message.error('提现金额不能超过余额')
+      message.error(t('wallet.withdrawExceed'))
       return
     }
     withdrawing.value = true
     await request.post('/api/v2/balance/withdraw', { amount: withdrawForm.value.amount, method: withdrawForm.value.account })
-    message.success('提现申请已提交')
+    message.success(t('wallet.withdrawSubmitted'))
     showWithdrawModal.value = false
     withdrawForm.value.amount = null
     withdrawForm.value.account = ''
     withdrawForm.value.remark = ''
   } catch {
-    message.error('请正确填写提现信息')
+    message.error(t('wallet.fillWithdrawInfo'))
   } finally {
     withdrawing.value = false
   }

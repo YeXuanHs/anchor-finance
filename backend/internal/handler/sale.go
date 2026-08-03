@@ -307,7 +307,7 @@ func (h *SaleHandler) GetStatistics(c *gin.Context) {
 		startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	}
 
-	query := h.db.Model(&model.Invoice{}).Where("status = ? AND created_at >= ?", "Paid", startTime)
+	query := h.db.Model(&model.Invoice{}).Where("status = ? AND created_at >= ?", 1, startTime)
 	if saleID > 0 {
 		query = query.Where("sale_id = ?", saleID)
 	}
@@ -321,7 +321,7 @@ func (h *SaleHandler) GetStatistics(c *gin.Context) {
 	lastMonthStart := time.Date(now.Year(), now.Month()-1, 1, 0, 0, 0, 0, now.Location())
 	lastMonthEnd := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	var lastMonthAmount float64
-	h.db.Model(&model.Invoice{}).Where("status = ? AND created_at >= ? AND created_at < ?", "Paid", lastMonthStart, lastMonthEnd).
+	h.db.Model(&model.Invoice{}).Where("status = ? AND created_at >= ? AND created_at < ?", 1, lastMonthStart, lastMonthEnd).
 		Select("COALESCE(SUM(total), 0)").Scan(&lastMonthAmount)
 
 	rate := float64(0)

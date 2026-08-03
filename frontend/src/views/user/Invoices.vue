@@ -1,13 +1,13 @@
 <template>
   <div class="invoices-page">
     <div class="page-header">
-      <h1 class="page-title">账单管理</h1>
+      <h1 class="page-title">{{ $t('menu.invoices') }}</h1>
       <div class="header-right">
-        <el-select v-model="statusFilter" placeholder="账单状态" clearable style="width: 140px;">
-          <el-option label="全部" value="all" />
-          <el-option label="待支付" value="unpaid" />
-          <el-option label="已支付" value="paid" />
-          <el-option label="已逾期" value="overdue" />
+        <el-select v-model="statusFilter" :placeholder="$t('invoice.whole')" clearable style="width: 140px;">
+          <el-option :label="$t('invoice.whole')" value="all" />
+          <el-option :label="$t('invoice.unpaid')" value="unpaid" />
+          <el-option :label="$t('invoice.paid')" value="paid" />
+          <el-option :label="$t('invoice.overdue')" value="overdue" />
         </el-select>
       </div>
     </div>
@@ -18,7 +18,7 @@
           <el-icon :size="28" color="#fa8c16"><Wallet /></el-icon>
           <div class="summary-info">
             <span class="summary-value">¥{{ summaryPending }}</span>
-            <span class="summary-label">待支付金额</span>
+            <span class="summary-label">{{ $t('invoice.unpaid') }}</span>
           </div>
         </div>
       </el-card>
@@ -27,7 +27,7 @@
           <el-icon :size="28" color="#52c41a"><CircleCheck /></el-icon>
           <div class="summary-info">
             <span class="summary-value">¥{{ summaryPaid }}</span>
-            <span class="summary-label">已支付金额</span>
+            <span class="summary-label">{{ $t('invoice.paid') }}</span>
           </div>
         </div>
       </el-card>
@@ -36,38 +36,38 @@
           <el-icon :size="28" color="#0056FF"><Document /></el-icon>
           <div class="summary-info">
             <span class="summary-value">{{ totalInvoices }}</span>
-            <span class="summary-label">账单总数</span>
+            <span class="summary-label">{{ $t('common.total') }}</span>
           </div>
         </div>
       </el-card>
     </div>
 
     <el-card shadow="never" class="table-card">
-      <el-table :data="filteredInvoices" stripe style="width: 100%" empty-text="暂无账单">
-        <el-table-column prop="id" label="账单号" width="140">
+      <el-table :data="filteredInvoices" stripe style="width: 100%" :empty-text="$t('common.noData')">
+        <el-table-column prop="id" :label="$t('invoice.billNo')" width="140">
           <template #default="{ row }">
             <span class="mono-text">{{ row.id }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="description" label="账单描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="product" label="关联产品" min-width="140" show-overflow-tooltip />
-        <el-table-column prop="amount" label="金额" width="110">
+        <el-table-column prop="description" :label="$t('common.description')" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="product" :label="$t('service.product')" min-width="140" show-overflow-tooltip />
+        <el-table-column prop="amount" :label="$t('invoice.amount')" width="110">
           <template #default="{ row }">
             <span class="amount-text">¥{{ row.amount }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="dueDate" label="到期日" width="120" />
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="dueDate" :label="$t('invoice.overdueTime')" width="120" />
+        <el-table-column prop="status" :label="$t('common.status')" width="100">
           <template #default="{ row }">
             <el-tag :type="getInvoiceStatusType(row.status)" size="small" effect="light" round>
               {{ row.statusText }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column :label="$t('common.operating')" width="120" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.status !== 'paid'" type="primary" size="small" @click="handlePay(row)">支付</el-button>
-            <el-button type="primary" size="small" link>详情</el-button>
+            <el-button v-if="row.status !== 'paid'" type="primary" size="small" @click="handlePay(row)">{{ $t('invoice.pay') }}</el-button>
+            <el-button type="primary" size="small" link>{{ $t('common.view') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -88,8 +88,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { Wallet, CircleCheck, Document } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+
+const { t } = useI18n()
 
 const statusFilter = ref('all')
 const currentPage = ref(1)
@@ -134,7 +137,7 @@ function getInvoiceStatusType(status: string) {
 }
 
 function handlePay(invoice: Invoice) {
-  ElMessage.info(`正在跳转支付：${invoice.id}`)
+  ElMessage.info(`${t('invoice.pay')}: ${invoice.id}`)
 }
 </script>
 

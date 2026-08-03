@@ -75,11 +75,6 @@
   </div>
 </template>
 
-<!-- TODO: 完善二次确认配置页面功能
-  1. 实现配置保存到后端
-  2. 添加确认方式测试功能
-  3. 添加操作日志查看
--->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
