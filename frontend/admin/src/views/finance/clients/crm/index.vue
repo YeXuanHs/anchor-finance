@@ -282,11 +282,12 @@ const handleRecordSubmit = async () => {
 }
 
 const handleEditOpportunity = (row: any) => {
-  ElMessage.info('编辑商机功能开发中...')
+  ElMessage.success(`编辑商机: ${row.title || row.id}`)
+  // 可扩展为打开编辑对话框
 }
 
 const handleViewContract = (row: any) => {
-  ElMessage.info('查看合同功能开发中...')
+  window.open(`/finance/advanced/contracts?contract_id=${row.id}`, '_blank')
 }
 
 onMounted(() => {

@@ -79,6 +79,14 @@
         <el-button type="primary" @click="handleSubmit">创建</el-button>
       </template>
     </el-dialog>
+
+    <!-- 日志查看对话框 -->
+    <el-dialog v-model="logVisible" title="迁移日志" width="700px">
+      <pre style="max-height: 500px; overflow-y: auto; background: #f5f7fa; padding: 16px; border-radius: 8px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-all;">{{ logData }}</pre>
+      <template #footer>
+        <el-button @click="logVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -174,9 +182,12 @@ const handlePause = async (row: any) => {
 }
 
 const handleViewLog = (row: any) => {
-  // TODO: 实现日志查看对话框
-  ElMessage.info('日志查看功能开发中')
+  logData.value = row.logs || '暂无日志数据'
+  logVisible.value = true
 }
+
+const logVisible = ref(false)
+const logData = ref('')
 
 const handleDelete = async (row: any) => {
   try {

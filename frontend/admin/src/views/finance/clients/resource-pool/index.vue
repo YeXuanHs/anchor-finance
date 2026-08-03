@@ -186,7 +186,9 @@ const handleEdit = (row: any) => {
 }
 
 const handleViewDetail = (row: any) => {
-  ElMessage.info('查看详情功能开发中...')
+  dialogTitle.value = '资源池详情'
+  Object.assign(formData, row)
+  dialogVisible.value = true
 }
 
 const handleDelete = async (row: any) => {
