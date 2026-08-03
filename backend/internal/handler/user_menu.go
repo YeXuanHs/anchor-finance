@@ -123,7 +123,6 @@ func (h *UserMenuHandler) getDefaultMenus() []*model.MenuItem {
 			Children: []*model.MenuItem{
 				{ID: 19, Name: "账单列表", URL: "/user/invoices"},
 				{ID: 24, Name: "账户充值", URL: "/user/wallet"},
-				{ID: 25, Name: "优惠券", URL: "/user/coupons"},
 			},
 		},
 		{

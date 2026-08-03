@@ -134,7 +134,7 @@
     <!-- Rules Card -->
     <el-card shadow="never" class="rules-card">
       <template #header>
-        <span class="card-title">{{ $t('coupon.redeem') }}</span>
+        <span class="card-title">{{ $t('affiliate.promotionRecord') }}</span>
       </template>
       <el-timeline>
         <el-timeline-item v-for="(rule, i) in rules" :key="i" :type="i === 0 ? 'primary' : ''">
