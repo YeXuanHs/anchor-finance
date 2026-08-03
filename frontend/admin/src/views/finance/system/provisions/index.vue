@@ -88,7 +88,7 @@ const formData = ref({
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/admin/provisions')
+    const { data } = await request.get('/api/admin/provisions')
     tableData.value = data?.data || []
   } catch (error) {
     console.error(error)
@@ -112,9 +112,9 @@ const handleEdit = (row: any) => {
 const handleSubmit = async () => {
   try {
     if (formData.value.id) {
-      await request.put(`/admin/provisions/${formData.value.id}`, formData.value)
+      await request.put(`/api/admin/provisions/${formData.value.id}`, formData.value)
     } else {
-      await request.post('/admin/provisions', formData.value)
+      await request.post('/api/admin/provisions', formData.value)
     }
     ElMessage.success('操作成功')
     dialogVisible.value = false
@@ -126,7 +126,7 @@ const handleSubmit = async () => {
 
 const handleTest = async (row: any) => {
   try {
-    await request.post(`/admin/provisions/${row.id}/test`)
+    await request.post(`/api/admin/provisions/${row.id}/test`)
     ElMessage.success('连接成功')
   } catch (error) {
     ElMessage.error('连接失败')
@@ -136,7 +136,7 @@ const handleTest = async (row: any) => {
 const handleDelete = async (row: any) => {
   await ElMessageBox.confirm('确定删除该供应？', '提示', { type: 'warning' })
   try {
-    await request.delete(`/admin/provisions/${row.id}`)
+    await request.delete(`/api/admin/provisions/${row.id}`)
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {

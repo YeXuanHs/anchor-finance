@@ -56,7 +56,7 @@ const formData = ref({ user_id: '', content: '' })
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/admin/user-remarks', { params: { search: search.value } })
+    const { data } = await request.get('/api/admin/user-remarks', { params: { search: search.value } })
     tableData.value = data?.data || []
   } catch (error) {
     console.error(error)
@@ -72,7 +72,7 @@ const handleCreate = () => {
 
 const handleSubmit = async () => {
   try {
-    await request.post('/admin/user-remarks', formData.value)
+    await request.post('/api/admin/user-remarks', formData.value)
     ElMessage.success('添加成功')
     dialogVisible.value = false
     fetchData()
@@ -84,7 +84,7 @@ const handleSubmit = async () => {
 const handleDelete = async (row: any) => {
   await ElMessageBox.confirm('确定删除该备注？', '提示', { type: 'warning' })
   try {
-    await request.delete(`/admin/user-remarks/${row.id}`)
+    await request.delete(`/api/admin/user-remarks/${row.id}`)
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {

@@ -47,7 +47,7 @@ const tableData = ref([])
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/admin/community/posts')
+    const { data } = await request.get('/api/admin/community/posts')
     tableData.value = data?.data || []
   } catch (error) {
     console.error(error)
@@ -71,7 +71,7 @@ const handleComments = (row: any) => {
 const handleDelete = async (row: any) => {
   await ElMessageBox.confirm('确定删除该帖子？', '提示', { type: 'warning' })
   try {
-    await request.delete(`/admin/community/posts/${row.id}`)
+    await request.delete(`/api/admin/community/posts/${row.id}`)
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {

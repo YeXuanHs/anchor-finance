@@ -74,7 +74,7 @@ const currentLog = ref({})
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/admin/log-records', {
+    const { data } = await request.get('/api/admin/log-records', {
       params: { page: page.value, page_size: pageSize.value, search: search.value }
     })
     tableData.value = data?.data?.list || []
@@ -94,7 +94,7 @@ const handleDetail = (row: any) => {
 const handleClean = async () => {
   await ElMessageBox.confirm('确定清理过期日志？', '提示', { type: 'warning' })
   try {
-    await request.post('/admin/log-records/clean')
+    await request.post('/api/admin/log-records/clean')
     ElMessage.success('清理成功')
     fetchData()
   } catch (error) {

@@ -97,7 +97,7 @@ const themeForm = ref({
 
 const fetchSettings = async () => {
   try {
-    const { data } = await request.get('/admin/site-settings')
+    const { data } = await request.get('/api/admin/site-settings')
     if (data?.data) {
       Object.assign(basicForm.value, data.data)
       Object.assign(contactForm.value, data.data)
@@ -110,7 +110,7 @@ const fetchSettings = async () => {
 
 const handleSaveBasic = async () => {
   try {
-    await request.put('/admin/site-settings', basicForm.value)
+    await request.put('/api/admin/site-settings', basicForm.value)
     ElMessage.success('保存成功')
   } catch (error) {
     console.error(error)
@@ -119,7 +119,7 @@ const handleSaveBasic = async () => {
 
 const handleSaveContact = async () => {
   try {
-    await request.put('/admin/site-settings', contactForm.value)
+    await request.put('/api/admin/site-settings', contactForm.value)
     ElMessage.success('保存成功')
   } catch (error) {
     console.error(error)
@@ -128,7 +128,7 @@ const handleSaveContact = async () => {
 
 const handleSaveTheme = async () => {
   try {
-    await request.put('/admin/site-settings', themeForm.value)
+    await request.put('/api/admin/site-settings', themeForm.value)
     ElMessage.success('保存成功')
   } catch (error) {
     console.error(error)

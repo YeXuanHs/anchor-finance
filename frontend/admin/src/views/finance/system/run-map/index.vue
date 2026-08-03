@@ -41,7 +41,7 @@ const tableData = ref([])
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/admin/run-map')
+    const { data } = await request.get('/api/admin/run-map')
     tableData.value = data?.data || []
   } catch (error) {
     console.error(error)
@@ -52,7 +52,7 @@ const fetchData = async () => {
 
 const handleRepeat = async (row: any) => {
   try {
-    await request.post(`/admin/run-map/${row.id}/repeat`)
+    await request.post(`/api/admin/run-map/${row.id}/repeat`)
     ElMessage.success('重试已触发')
     fetchData()
   } catch (error) {

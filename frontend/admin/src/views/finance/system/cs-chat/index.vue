@@ -200,14 +200,14 @@ const workingHours = reactive({ enabled: false, weekdays: ['周一','周二','�
 const stats = reactive<any>({})
 
 const loadSessions = async () => {
-  const { data } = await request.get('/admin/cs/sessions', { params: sessionFilter })
+  const { data } = await request.get('/api/admin/cs/sessions', { params: sessionFilter })
   sessions.value = data?.items || []
   sessionTotal.value = data?.total || 0
 }
 
 const openSession = async (row: any) => {
   currentSession.value = row
-  const { data } = await request.get(`/admin/cs/sessions/${row.id}`)
+  const { data } = await request.get(`/api/admin/cs/sessions/${row.id}`)
   messages.value = data?.messages || []
   currentSession.value = data?.session || row
   showChat.value = true
@@ -217,56 +217,56 @@ const openSession = async (row: any) => {
 
 const sendReply = async () => {
   if (!replyContent.value.trim()) return
-  await request.post(`/admin/cs/sessions/${currentSession.value.id}/reply`, { content: replyContent.value })
+  await request.post(`/api/admin/cs/sessions/${currentSession.value.id}/reply`, { content: replyContent.value })
   replyContent.value = ''
   openSession(currentSession.value)
 }
 
 const transferToHuman = async () => {
-  await request.post(`/admin/cs/sessions/${currentSession.value.id}/transfer`)
+  await request.post(`/api/admin/cs/sessions/${currentSession.value.id}/transfer`)
   ElMessage.success('已转人工')
   openSession(currentSession.value)
 }
 
 const closeSession = async (row: any) => {
   await ElMessageBox.confirm('确定关闭此会话？', '提示')
-  await request.post(`/admin/cs/sessions/${row.id}/close`)
+  await request.post(`/api/admin/cs/sessions/${row.id}/close`)
   ElMessage.success('已关闭')
   loadSessions()
 }
 
 const loadAIConfig = async () => {
-  const { data } = await request.get('/admin/cs/ai-config')
+  const { data } = await request.get('/api/admin/cs/ai-config')
   if (data) Object.assign(aiConfig, data)
 }
 
 const saveAIConfig = async () => {
-  await request.put('/admin/cs/ai-config', aiConfig)
+  await request.put('/api/admin/cs/ai-config', aiConfig)
   ElMessage.success('保存成功')
 }
 
 const loadAppearance = async () => {
-  const { data } = await request.get('/admin/cs/appearance')
+  const { data } = await request.get('/api/admin/cs/appearance')
   if (data) Object.assign(appearance, data)
 }
 
 const saveAppearance = async () => {
-  await request.put('/admin/cs/appearance', appearance)
+  await request.put('/api/admin/cs/appearance', appearance)
   ElMessage.success('保存成功')
 }
 
 const loadWorkingHours = async () => {
-  const { data } = await request.get('/admin/cs/working-hours')
+  const { data } = await request.get('/api/admin/cs/working-hours')
   if (data) Object.assign(workingHours, data)
 }
 
 const saveWorkingHours = async () => {
-  await request.put('/admin/cs/working-hours', workingHours)
+  await request.put('/api/admin/cs/working-hours', workingHours)
   ElMessage.success('保存成功')
 }
 
 const loadStats = async () => {
-  const { data } = await request.get('/admin/cs/stats')
+  const { data } = await request.get('/api/admin/cs/stats')
   if (data) Object.assign(stats, data)
 }
 

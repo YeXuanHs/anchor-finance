@@ -73,12 +73,12 @@ const config = reactive<any>({
 })
 
 const loadConfig = async () => {
-  const { data } = await request.get('/admin/ai-shopping/config')
+  const { data } = await request.get('/api/admin/ai-shopping/config')
   if (data) Object.assign(config, data)
 }
 
 const saveConfig = async () => {
-  await request.put('/admin/ai-shopping/config', config)
+  await request.put('/api/admin/ai-shopping/config', config)
   ElMessage.success('保存成功')
 }
 

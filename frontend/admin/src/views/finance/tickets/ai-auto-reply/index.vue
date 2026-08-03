@@ -280,24 +280,24 @@ const testForm = reactive({ subject: '', content: '', dept_id: 1 })
 const testResult = ref<any>(null)
 
 const loadDashboard = async () => {
-  const { data } = await request.get('/admin/ai-ticket/dashboard')
+  const { data } = await request.get('/api/admin/ai-ticket/dashboard')
   if (data) Object.assign(dashboard, data)
 }
 const saveDashboard = async () => {
-  await request.put('/admin/ai-ticket/dashboard', dashboard)
+  await request.put('/api/admin/ai-ticket/dashboard', dashboard)
   ElMessage.success('保存成功')
 }
 
 const loadKnowledge = async () => {
-  const { data } = await request.get('/admin/ai-ticket/knowledge', { params: { keyword: kbSearch.value } })
+  const { data } = await request.get('/api/admin/ai-ticket/knowledge', { params: { keyword: kbSearch.value } })
   knowledgeList.value = Array.isArray(data) ? data : []
 }
 const editKB = (row: any) => { editingKB.value = row; Object.assign(kbForm, row); showKBDialog.value = true }
 const saveKB = async () => {
   if (editingKB.value) {
-    await request.put(`/admin/ai-ticket/knowledge/${editingKB.value.id}`, kbForm)
+    await request.put(`/api/admin/ai-ticket/knowledge/${editingKB.value.id}`, kbForm)
   } else {
-    await request.post('/admin/ai-ticket/knowledge', kbForm)
+    await request.post('/api/admin/ai-ticket/knowledge', kbForm)
   }
   ElMessage.success('保存成功')
   showKBDialog.value = false
@@ -307,26 +307,26 @@ const saveKB = async () => {
 }
 const deleteKB = async (row: any) => {
   await ElMessageBox.confirm('确定删除？', '提示')
-  await request.delete(`/admin/ai-ticket/knowledge/${row.id}`)
+  await request.delete(`/api/admin/ai-ticket/knowledge/${row.id}`)
   ElMessage.success('删除成功')
   loadKnowledge()
 }
 const importDefault = async () => {
-  await request.post('/admin/ai-ticket/knowledge/import')
+  await request.post('/api/admin/ai-ticket/knowledge/import')
   ElMessage.success('导入完成')
   loadKnowledge()
 }
 
 const loadRules = async () => {
-  const { data } = await request.get('/admin/ai-ticket/rules')
+  const { data } = await request.get('/api/admin/ai-ticket/rules')
   rules.value = Array.isArray(data) ? data : []
 }
 const editRule = (row: any) => { editingRule.value = row; Object.assign(ruleForm, row); showRuleDialog.value = true }
 const saveRule = async () => {
   if (editingRule.value) {
-    await request.put(`/admin/ai-ticket/rules/${editingRule.value.id}`, ruleForm)
+    await request.put(`/api/admin/ai-ticket/rules/${editingRule.value.id}`, ruleForm)
   } else {
-    await request.post('/admin/ai-ticket/rules', ruleForm)
+    await request.post('/api/admin/ai-ticket/rules', ruleForm)
   }
   ElMessage.success('保存成功')
   showRuleDialog.value = false
@@ -336,26 +336,26 @@ const saveRule = async () => {
 }
 const deleteRule = async (row: any) => {
   await ElMessageBox.confirm('确定删除？', '提示')
-  await request.delete(`/admin/ai-ticket/rules/${row.id}`)
+  await request.delete(`/api/admin/ai-ticket/rules/${row.id}`)
   ElMessage.success('删除成功')
   loadRules()
 }
 
 const loadQueue = async () => {
-  const { data } = await request.get('/admin/ai-ticket/queue')
+  const { data } = await request.get('/api/admin/ai-ticket/queue')
   queue.value = data?.items || []
-  const { data: stats } = await request.get('/admin/ai-ticket/queue/stats')
+  const { data: stats } = await request.get('/api/admin/ai-ticket/queue/stats')
   if (stats) Object.assign(queueStats, stats)
 }
 
 const loadProcessLogs = async () => {
-  const { data } = await request.get('/admin/ai-ticket/process-logs', { params: { page: logPage.value } })
+  const { data } = await request.get('/api/admin/ai-ticket/process-logs', { params: { page: logPage.value } })
   processLogs.value = data?.items || []
   logTotal.value = data?.total || 0
 }
 
 const testAutoReply = async () => {
-  const { data } = await request.post('/admin/ai-ticket/test', testForm)
+  const { data } = await request.post('/api/admin/ai-ticket/test', testForm)
   testResult.value = data
 }
 

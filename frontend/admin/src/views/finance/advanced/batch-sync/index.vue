@@ -42,7 +42,7 @@ const tableData = ref([])
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/admin/batch-sync')
+    const { data } = await request.get('/api/admin/batch-sync')
     tableData.value = data?.data || []
   } catch (error) {
     console.error(error)
@@ -53,7 +53,7 @@ const fetchData = async () => {
 
 const handleExecute = async (row: any) => {
   try {
-    await request.post(`/admin/batch-sync/${row.id}/execute`)
+    await request.post(`/api/admin/batch-sync/${row.id}/execute`)
     ElMessage.success('开始执行')
     fetchData()
   } catch (error) {

@@ -45,7 +45,7 @@ const getStatusText = (status: number) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/admin/client-services')
+    const { data } = await request.get('/api/admin/client-services')
     tableData.value = data?.data || []
   } catch (error) {
     console.error(error)
@@ -57,7 +57,7 @@ const fetchData = async () => {
 const handleSuspend = async (row: any) => {
   await ElMessageBox.confirm('确定暂停该服务？', '提示', { type: 'warning' })
   try {
-    await request.post(`/admin/client-services/${row.id}/suspend`)
+    await request.post(`/api/admin/client-services/${row.id}/suspend`)
     ElMessage.success('暂停成功')
     fetchData()
   } catch (error) {
@@ -68,7 +68,7 @@ const handleSuspend = async (row: any) => {
 const handleTerminate = async (row: any) => {
   await ElMessageBox.confirm('确定终止该服务？此操作不可逆！', '警告', { type: 'error' })
   try {
-    await request.post(`/admin/client-services/${row.id}/terminate`)
+    await request.post(`/api/admin/client-services/${row.id}/terminate`)
     ElMessage.success('终止成功')
     fetchData()
   } catch (error) {
