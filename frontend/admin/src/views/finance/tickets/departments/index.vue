@@ -141,7 +141,7 @@ const fetchDepartments = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/ticket-departments',
+      url: '/api/admin/ticket-depts',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -187,7 +187,7 @@ const handleEdit = (row: Department) => {
 const handleDelete = async (row: Department) => {
   try {
     await request.del({
-      url: `/api/admin/ticket-departments/${row.id}`
+      url: `/api/admin/ticket-depts/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchDepartments()
@@ -206,12 +206,12 @@ const handleSubmit = async () => {
     try {
       if (formData.id) {
         await request.put({
-          url: `/api/admin/ticket-departments/${formData.id}`,
+          url: `/api/admin/ticket-depts/${formData.id}`,
           params: formData
         })
       } else {
         await request.post({
-          url: '/api/admin/ticket-departments',
+          url: '/api/admin/ticket-depts',
           params: formData
         })
       }

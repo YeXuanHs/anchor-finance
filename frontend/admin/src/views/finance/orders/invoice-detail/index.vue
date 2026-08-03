@@ -223,7 +223,7 @@ const handleSend = async () => {
 
   actionLoading.value = true
   try {
-    await request.post({ url: `/api/admin/bills/${id}/send` })
+    await request.post({ url: `/api/admin/invoices/${id}/email` })
     ElMessage.success('账单发送成功')
     fetchBill()
   } catch (error) {

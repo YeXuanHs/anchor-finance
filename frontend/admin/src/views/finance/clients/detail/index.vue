@@ -441,7 +441,7 @@ const fetchTabData = async (tab: string) => {
     transactions: async () => {
       transactionsLoading.value = true
       try {
-        transactions.value = await request.get({ url: `/api/admin/account?user_id=${id}` }) || []
+        transactions.value = await request.get({ url: `/api/admin/accounts?user_id=${id}` }) || []
       } finally { transactionsLoading.value = false }
     },
     tickets: async () => {
@@ -485,7 +485,7 @@ const handleViewBill = (row: any) => {
 
 const handleSendBill = async (row: any) => {
   try {
-    await request.post({ url: `/api/admin/bills/${row.id}/send` })
+    await request.post({ url: `/api/admin/invoices/${row.id}/email` })
     ElMessage.success('账单发送成功')
     fetchTabData('bills')
   } catch (error) {

@@ -171,8 +171,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/invoices/:id/pay", invoiceEnhancedHandler.AddPayInvoice)
 		admin.POST("/invoices/:id/apply-credit-limit", invoiceEnhancedHandler.ApplyCreditLimit)
 		admin.POST("/invoices/:id/execute-renew", invoiceEnhancedHandler.ExecuteRenew)
-		admin.GET("/invoices/:id/notes-page", invoiceEnhancedHandler.NotesPage)
-		admin.PUT("/invoices/:id/notes-page", invoiceEnhancedHandler.NotesUpdate)
+		admin.GET("/invoices/:id/notes-page", invoiceHandler.NotesPage)
+		admin.PUT("/invoices/:id/notes-page", invoiceHandler.Notes)
 		admin.DELETE("/invoices/:id/pay", invoiceEnhancedHandler.DeletePayInvoice)
 		admin.POST("/invoices/:id/refund", invoiceEnhancedHandler.RefundInvoice)
 		admin.GET("/invoices/:id/refund-page", invoiceEnhancedHandler.GetRefundPage)
@@ -2065,8 +2065,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		}
 
 		// ==================== ACFP 模块（anchor_cloud_finance_pro） ====================
-		acfpModulesSvc := service.NewACFPModulesService(deps.DB, deps.Log)
-		acfpModulesHandler := handler.NewACFPModulesHandler(acfpModulesSvc, deps.Log)
+		acfpModulesSvc := service.NewACFPService(deps.DB, deps.Log)
+		acfpModulesHandler := handler.NewACFPHandler(acfpModulesSvc, deps.Log)
 		acfp := admin.Group("/acfp")
 		{
 			// 通用模块配置
@@ -2087,15 +2087,15 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 			acfp.GET("/ip-history", acfpModulesHandler.GetIPHistory)
 
 			// 限量发售
-			acfp.GET("/limited-sale", acfpModulesHandler.GetLimitedSaleList)
-			acfp.POST("/limited-sale", acfpModulesHandler.AddLimitedSale)
+			acfp.GET("/limited-sale", acfpModulesHandler.ListLimitedSales)
+			acfp.POST("/limited-sale", acfpModulesHandler.SetLimitedSale)
 			acfp.PUT("/limited-sale/:id", acfpModulesHandler.UpdateLimitedSale)
 			acfp.DELETE("/limited-sale/:id", acfpModulesHandler.DeleteLimitedSale)
 			acfp.POST("/limited-sale/:id/reset-quota", acfpModulesHandler.ResetLimitedSaleQuota)
 
 			// 价格锁定
-			acfp.GET("/price-lock", acfpModulesHandler.GetPriceLockList)
-			acfp.POST("/price-lock", acfpModulesHandler.SavePriceLock)
+			acfp.GET("/price-lock", acfpModulesHandler.ListPriceLocks)
+			acfp.POST("/price-lock", acfpModulesHandler.SetPriceLock)
 			acfp.DELETE("/price-lock/:id", acfpModulesHandler.DeletePriceLock)
 
 			// 批量商品修改
@@ -2111,11 +2111,11 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 			// 缓存预热
 			acfp.GET("/cache-warm/status", acfpModulesHandler.GetCacheWarmStatus)
-			acfp.POST("/cache-warm/trigger", acfpModulesHandler.TriggerCacheWarm)
+			acfp.POST("/cache-warm/trigger", acfpModulesHandler.WarmCache)
 
 			// 系统日志
-			acfp.GET("/logs", acfpModulesHandler.GetACFPLogs)
-			acfp.POST("/logs/clean", acfpModulesHandler.CleanACFPLogs)
+			acfp.GET("/logs", acfpModulesHandler.ListLogs)
+			acfp.POST("/logs/clean", acfpModulesHandler.CleanLogs)
 
 		// 业务列表 Pro
 		acfp.GET("/business-list", acfpModulesHandler.GetBusinessList)

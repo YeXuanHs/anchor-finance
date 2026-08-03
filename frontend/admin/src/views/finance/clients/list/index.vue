@@ -181,7 +181,7 @@ const fetchClients = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/user-manage',
+      url: '/api/admin/user-manage/search',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -287,12 +287,10 @@ const handleSubmit = async () => {
 
     submitLoading.value = true
     try {
-      const url = formData.id ? `/api/admin/user-manage/${formData.id}` : '/api/admin/user-manage'
-      
       if (formData.id) {
-        await request.put({ url, params: formData })
+        await request.put({ url: `/api/admin/user-manage/${formData.id}/profile`, params: formData })
       } else {
-        await request.post({ url, params: formData })
+        await request.post({ url: '/api/admin/user-manage', params: formData })
       }
       
       ElMessage.success(formData.id ? '更新成功' : '添加成功')

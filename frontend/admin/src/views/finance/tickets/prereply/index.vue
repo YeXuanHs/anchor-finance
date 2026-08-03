@@ -193,7 +193,7 @@ const fetchPreReplies = async () => {
 const fetchDepartments = async () => {
   try {
     const data = await request.get({
-      url: '/api/admin/ticket-departments'
+      url: '/api/admin/ticket-depts'
     })
     departments.value = data || []
   } catch (error) {
