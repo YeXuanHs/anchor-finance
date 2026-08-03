@@ -1,19 +1,28 @@
 <template>
-  <div class="contacts-page">
+  <div class="blacklist-page">
     <el-card shadow="never">
       <template #header>
         <div class="card-header">
-          <span>联系人管理</span>
+          <span>黑名单管理</span>
+          <el-button type="primary" @click="handleAdd">
+            <el-icon><Plus /></el-icon>
+            添加黑名单
+          </el-button>
         </div>
       </template>
 
       <!-- 搜索栏 -->
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="姓名/邮箱/电话" clearable />
+          <el-input v-model="searchForm.keyword" placeholder="邮箱/IP/手机号" clearable />
         </el-form-item>
-        <el-form-item label="用户ID">
-          <el-input v-model="searchForm.user_id" placeholder="用户ID" clearable />
+        <el-form-item label="类型">
+          <el-select v-model="searchForm.type" placeholder="全部" clearable>
+            <el-option label="邮箱" value="email" />
+            <el-option label="IP" value="ip" />
+            <el-option label="手机号" value="phone" />
+            <el-option label="域名" value="domain" />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">搜索</el-button>
@@ -24,24 +33,25 @@
       <!-- 数据表格 -->
       <el-table :data="tableData" v-loading="loading" style="width: 100%" border>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="user_id" label="用户ID" width="100" />
-        <el-table-column prop="username" label="关联用户" width="120" />
-        <el-table-column prop="name" label="姓名" width="120" />
-        <el-table-column prop="email" label="邮箱" min-width="180" />
-        <el-table-column prop="phone" label="电话" width="140" />
-        <el-table-column prop="is_default" label="默认" width="80">
+        <el-table-column prop="type" label="类型" width="100">
           <template #default="{ row }">
-            <el-tag v-if="row.is_default" type="success" size="small">是</el-tag>
-            <span v-else>-</span>
+            <el-tag size="small">{{ typeMap[row.type] || row.type }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
+        <el-table-column prop="value" label="屏蔽值" min-width="200" />
+        <el-table-column prop="reason" label="原因" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="expires_at" label="过期时间" width="180">
+          <template #default="{ row }">
+            {{ row.expires_at || '永久' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" label="添加时间" width="180" />
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-popconfirm title="确定删除该联系人吗？" @confirm="handleDelete(row)">
+            <el-popconfirm title="确定移除该黑名单吗？" @confirm="handleDelete(row)">
               <template #reference>
-                <el-button type="danger" link>删除</el-button>
+                <el-button type="danger" link>移除</el-button>
               </template>
             </el-popconfirm>
           </template>
@@ -62,23 +72,30 @@
       </div>
     </el-card>
 
-    <!-- 编辑对话框 -->
+    <!-- 添加/编辑对话框 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="formData" :rules="formRules" ref="formRef" label-width="100px">
-        <el-form-item label="姓名" prop="name">
-          <el-input v-model="formData.name" placeholder="请输入姓名" />
+        <el-form-item label="类型" prop="type">
+          <el-select v-model="formData.type" placeholder="请选择类型">
+            <el-option label="邮箱" value="email" />
+            <el-option label="IP" value="ip" />
+            <el-option label="手机号" value="phone" />
+            <el-option label="域名" value="domain" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="formData.email" placeholder="请输入邮箱" />
+        <el-form-item label="屏蔽值" prop="value">
+          <el-input v-model="formData.value" placeholder="请输入屏蔽值" />
         </el-form-item>
-        <el-form-item label="电话" prop="phone">
-          <el-input v-model="formData.phone" placeholder="请输入电话" />
+        <el-form-item label="原因" prop="reason">
+          <el-input v-model="formData.reason" type="textarea" :rows="3" placeholder="请输入屏蔽原因" />
         </el-form-item>
-        <el-form-item label="地址">
-          <el-input v-model="formData.address" type="textarea" :rows="2" placeholder="请输入地址" />
-        </el-form-item>
-        <el-form-item label="设为默认">
-          <el-switch v-model="formData.is_default" />
+        <el-form-item label="过期时间">
+          <el-date-picker
+            v-model="formData.expires_at"
+            type="datetime"
+            placeholder="留空则永久有效"
+            value-format="YYYY-MM-DD HH:mm:ss"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -91,19 +108,27 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/http'
 
+const typeMap: Record<string, string> = {
+  email: '邮箱',
+  ip: 'IP',
+  phone: '手机号',
+  domain: '域名'
+}
+
 const loading = ref(false)
 const submitLoading = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref('编辑联系人')
+const dialogTitle = ref('添加黑名单')
 const formRef = ref<FormInstance>()
 
 const searchForm = reactive({
   keyword: '',
-  user_id: ''
+  type: ''
 })
 
 const pagination = reactive({
@@ -116,19 +141,18 @@ const tableData = ref<any[]>([])
 
 const formData = reactive({
   id: undefined as number | undefined,
-  name: '',
-  email: '',
-  phone: '',
-  address: '',
-  is_default: false
+  type: 'email',
+  value: '',
+  reason: '',
+  expires_at: ''
 })
 
 const formRules: FormRules = {
-  name: [
-    { required: true, message: '请输入姓名', trigger: 'blur' }
+  type: [
+    { required: true, message: '请选择类型', trigger: 'change' }
   ],
-  email: [
-    { type: 'email', message: '请输入正确的邮箱', trigger: 'blur' }
+  value: [
+    { required: true, message: '请输入屏蔽值', trigger: 'blur' }
   ]
 }
 
@@ -136,7 +160,7 @@ const fetchData = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/contacts',
+      url: '/api/admin/blacklist',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -146,8 +170,7 @@ const fetchData = async () => {
     tableData.value = data.list || []
     pagination.total = data.total || 0
   } catch (error) {
-    console.error('获取联系人列表失败:', error)
-    ElMessage.error('获取联系人列表失败')
+    ElMessage.error('获取黑名单失败')
   } finally {
     loading.value = false
   }
@@ -160,23 +183,33 @@ const handleSearch = () => {
 
 const handleReset = () => {
   searchForm.keyword = ''
-  searchForm.user_id = ''
+  searchForm.type = ''
   handleSearch()
 }
 
+const handleAdd = () => {
+  dialogTitle.value = '添加黑名单'
+  formData.id = undefined
+  formData.type = 'email'
+  formData.value = ''
+  formData.reason = ''
+  formData.expires_at = ''
+  dialogVisible.value = true
+}
+
 const handleEdit = (row: any) => {
-  dialogTitle.value = '编辑联系人'
+  dialogTitle.value = '编辑黑名单'
   Object.assign(formData, row)
   dialogVisible.value = true
 }
 
 const handleDelete = async (row: any) => {
   try {
-    await request.del({ url: `/api/admin/contacts/${row.id}` })
-    ElMessage.success('删除成功')
+    await request.del({ url: `/api/admin/blacklist/${row.id}` })
+    ElMessage.success('移除成功')
     fetchData()
   } catch (error) {
-    ElMessage.error('删除失败')
+    ElMessage.error('操作失败')
   }
 }
 
@@ -188,11 +221,18 @@ const handleSubmit = async () => {
 
     submitLoading.value = true
     try {
-      await request.put({
-        url: `/api/admin/contacts/${formData.id}`,
-        params: { ...formData }
-      })
-      ElMessage.success('更新成功')
+      if (formData.id) {
+        await request.put({
+          url: `/api/admin/blacklist/${formData.id}`,
+          params: { ...formData }
+        })
+      } else {
+        await request.post({
+          url: '/api/admin/blacklist',
+          params: { ...formData }
+        })
+      }
+      ElMessage.success(formData.id ? '更新成功' : '添加成功')
       dialogVisible.value = false
       fetchData()
     } catch (error) {
@@ -218,7 +258,7 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.contacts-page {
+.blacklist-page {
   padding: 20px;
 }
 

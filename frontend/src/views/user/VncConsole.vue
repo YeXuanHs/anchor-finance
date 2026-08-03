@@ -124,7 +124,7 @@ async function fetchServerInfo() {
   if (!hostId) return
 
   try {
-    const { data } = await request.get(`/api/v1/host/${hostId}`)
+    const { data } = await request.get(`/api/v2/hosts/${hostId}`)
     if (data?.data) {
       serverInfo.value = {
         name: data.data.product_name || data.data.name,
@@ -149,7 +149,7 @@ async function connectVnc() {
 
   try {
     // 获取 VNC 连接信息
-    const { data } = await request.get(`/api/v1/host/${hostId}/vnc`)
+    const { data } = await request.get(`/api/v2/hosts/${hostId}/vnc`)
     const vncInfo = data?.data
 
     if (!vncInfo?.url) {

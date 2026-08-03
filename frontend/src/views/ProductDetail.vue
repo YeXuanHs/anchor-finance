@@ -298,9 +298,8 @@ const applyCoupon = async () => {
   if (!couponCode.value) return
   
   try {
-    const { data } = await request.post('/api/v1/coupons/verify', {
-      code: couponCode.value,
-      product_id: product.value.id
+    const { data } = await request.get('/api/v1/promo-codes/validate', {
+      params: { code: couponCode.value, product_id: product.value.id }
     })
     if (data?.ok) {
       ElMessage.success('优惠码已应用')
@@ -314,7 +313,7 @@ const applyCoupon = async () => {
 
 const addToCart = async () => {
   try {
-    const { data } = await request.post('/api/v1/cart/add', {
+    const { data } = await request.post('/api/v2/cart/add', {
       product_id: product.value.id,
       region: selectedRegion.value,
       os: selectedOs.value,

@@ -202,7 +202,7 @@ const fetchResults = async () => {
     if (filterCategory.value) {
       params.category_id = filterCategory.value
     }
-    const { data } = await request.get('/api/v1/help/search', { params })
+    const { data } = await request.get('/api/v2/help/articles/search', { params })
     if (data?.data) {
       articles.value = data.data.list || []
       total.value = data.data.total || 0
@@ -216,7 +216,7 @@ const fetchResults = async () => {
 
 const fetchCategories = async () => {
   try {
-    const { data } = await request.get('/api/v1/help/categories')
+    const { data } = await request.get('/api/v2/help/categories')
     if (data?.data) {
       categories.value = data.data
     }
@@ -250,7 +250,7 @@ onMounted(async () => {
   fetchCategories()
   // Fetch hot keywords
   try {
-    const { data } = await request.get('/api/v1/help/articles/hot', { params: { limit: 6 } })
+    const { data } = await request.get('/api/v2/help/articles/hot', { params: { limit: 6 } })
     if (data?.data?.list?.length) {
       hotKeywords.value = data.data.list.map((a: any) => a.title || a.keyword)
     }

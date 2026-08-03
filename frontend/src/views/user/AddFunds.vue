@@ -166,7 +166,7 @@ const getStatusText = (status: string) => {
 const loadPaymentMethods = async () => {
   loadingGateways.value = true
   try {
-    const { data } = await request.get('/api/v1/payments/gateways')
+    const { data } = await request.get('/api/v2/payment-gateways')
     paymentMethods.value = data?.data || []
     // 默认选中第一个
     if (paymentMethods.value.length > 0 && !paymentMethod.value) {
@@ -190,7 +190,7 @@ const handleRecharge = async () => {
   }
   submitting.value = true
   try {
-    const { data } = await request.post('/api/v1/balances/recharge', {
+    const { data } = await request.post('/api/v2/balance/recharge', {
       amount: amount.value,
       gateway: paymentMethod.value
     })
@@ -211,7 +211,7 @@ const handleRecharge = async () => {
 
 const loadRecords = async () => {
   try {
-    const { data } = await request.get('/api/v1/balances/logs', {
+    const { data } = await request.get('/api/v2/balance/logs', {
       params: { page: currentPage.value, page_size: pageSize.value }
     })
     records.value = data?.data?.list || data?.data?.items || []
@@ -224,7 +224,7 @@ const loadRecords = async () => {
 
 onMounted(async () => {
   try {
-    const { data } = await request.get('/api/v1/balances')
+    const { data } = await request.get('/api/v2/balance')
     balance.value = data?.data?.balance || 0
   } catch {}
   loadPaymentMethods()

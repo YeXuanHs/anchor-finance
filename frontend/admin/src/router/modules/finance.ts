@@ -175,6 +175,44 @@ export const financeRoutes: AppRouteRecord = {
             title: '邮件查看',
             icon: 'ep:message'
           }
+        },
+        {
+          path: 'add',
+          name: 'ClientAdd',
+          component: () => import('@/views/finance/clients/add/index.vue'),
+          meta: {
+            title: '添加客户',
+            icon: 'ep:plus',
+            isHide: true
+          }
+        },
+        {
+          path: 'blacklist',
+          name: 'ClientBlacklist',
+          component: () => import('@/views/finance/clients/blacklist/index.vue'),
+          meta: {
+            title: '黑名单管理',
+            icon: 'ep:circle-close-filled'
+          }
+        },
+        {
+          path: 'sms-log',
+          name: 'SmsLog',
+          component: () => import('@/views/finance/clients/sms-log/index.vue'),
+          meta: {
+            title: '短信日志',
+            icon: 'ep:message'
+          }
+        },
+        {
+          path: 'detail/:id',
+          name: 'ClientDetail',
+          component: () => import('@/views/finance/clients/detail/index.vue'),
+          meta: {
+            title: '客户详情',
+            icon: 'ep:user',
+            isHide: true
+          }
         }
       ]
     },
@@ -296,6 +334,24 @@ export const financeRoutes: AppRouteRecord = {
             title: '流量包订单',
             icon: 'ep:connection'
           }
+        },
+        {
+          path: 'renewal',
+          name: 'RenewalOrders',
+          component: () => import('@/views/finance/orders/renewal/index.vue'),
+          meta: {
+            title: '续费订单',
+            icon: 'ep:refresh'
+          }
+        },
+        {
+          path: 'invoice-audit',
+          name: 'InvoiceAudit',
+          component: () => import('@/views/finance/orders/invoice-audit/index.vue'),
+          meta: {
+            title: '发票审核',
+            icon: 'ep:document-checked'
+          }
         }
       ]
     },
@@ -379,6 +435,25 @@ export const financeRoutes: AppRouteRecord = {
             title: '工单统计',
             icon: 'ep:data-analysis'
           }
+        },
+        {
+          path: 'detail/:id',
+          name: 'TicketDetail',
+          component: () => import('@/views/finance/tickets/detail/index.vue'),
+          meta: {
+            title: '工单详情',
+            icon: 'ep:document',
+            isHide: true
+          }
+        },
+        {
+          path: 'password-config',
+          name: 'TicketPasswordConfig',
+          component: () => import('@/views/finance/tickets/password-config/index.vue'),
+          meta: {
+            title: '密码配置',
+            icon: 'ep:key'
+          }
         }
       ]
     },
@@ -452,7 +527,7 @@ export const financeRoutes: AppRouteRecord = {
     {
       path: 'marketing',
       name: 'Marketing',
-      redirect: '/finance/marketing/coupons',
+      redirect: '/finance/marketing/promo-codes',
       meta: {
         title: '营销推广',
         icon: 'ep:present'
@@ -461,9 +536,9 @@ export const financeRoutes: AppRouteRecord = {
         {
           path: 'coupons',
           name: 'Coupons',
-          component: () => import('@/views/finance/marketing/coupons/index.vue'),
+          redirect: '/finance/marketing/promo-codes',
           meta: {
-            title: '优惠券',
+            title: '优惠券(已废弃)',
             icon: 'ep:ticket'
           }
         },
@@ -539,6 +614,33 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '社区管理',
             icon: 'ep:chat-dot-round'
+          }
+        },
+        {
+          path: 'help',
+          name: 'HelpCenter',
+          component: () => import('@/views/finance/content/help/index.vue'),
+          meta: {
+            title: '帮助中心',
+            icon: 'ep:help'
+          }
+        },
+        {
+          path: 'link-cause',
+          name: 'LinkCause',
+          component: () => import('@/views/finance/content/link-cause/index.vue'),
+          meta: {
+            title: '关联原因',
+            icon: 'ep:connection'
+          }
+        },
+        {
+          path: 'link-knowledge',
+          name: 'LinkKnowledge',
+          component: () => import('@/views/finance/content/link-knowledge/index.vue'),
+          meta: {
+            title: '关联知识库',
+            icon: 'ep:collection'
           }
         }
       ]
@@ -911,6 +1013,51 @@ export const financeRoutes: AppRouteRecord = {
             title: '发票设置',
             icon: 'ep:tickets'
           }
+        },
+        {
+          path: 'captcha',
+          name: 'CaptchaConfig',
+          component: () => import('@/views/finance/system/captcha/index.vue'),
+          meta: {
+            title: '验证码配置',
+            icon: 'ep:lock'
+          }
+        },
+        {
+          path: 'log-cleanup',
+          name: 'LogCleanup',
+          component: () => import('@/views/finance/system/log-cleanup/index.vue'),
+          meta: {
+            title: '日志清理',
+            icon: 'ep:delete'
+          }
+        },
+        {
+          path: 'data-migration',
+          name: 'DataMigration',
+          component: () => import('@/views/finance/system/data-migration/index.vue'),
+          meta: {
+            title: '数据迁移',
+            icon: 'ep:upload'
+          }
+        },
+        {
+          path: 'twice-confirm',
+          name: 'TwiceConfirm',
+          component: () => import('@/views/finance/system/twice-confirm/index.vue'),
+          meta: {
+            title: '二次确认',
+            icon: 'ep:circle-check'
+          }
+        },
+        {
+          path: 'task-queue',
+          name: 'TaskQueue',
+          component: () => import('@/views/finance/system/task-queue/index.vue'),
+          meta: {
+            title: '任务队列',
+            icon: 'ep:list'
+          }
         }
       ]
     },
@@ -1002,6 +1149,62 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '批量同步',
             icon: 'ep:refresh'
+          }
+        }
+      ]
+    },
+    {
+      path: 'statistics',
+      name: 'Statistics',
+      redirect: '/finance/statistics/overview',
+      meta: {
+        title: '统计分析',
+        icon: 'ep:data-analysis'
+      },
+      children: [
+        {
+          path: 'overview',
+          name: 'StatisticsOverview',
+          component: () => import('@/views/finance/statistics/overview/index.vue'),
+          meta: {
+            title: '统计概览',
+            icon: 'ep:pie-chart'
+          }
+        },
+        {
+          path: 'revenue-ranking',
+          name: 'RevenueRanking',
+          component: () => import('@/views/finance/statistics/revenue-ranking/index.vue'),
+          meta: {
+            title: '收入排行',
+            icon: 'ep:trophy'
+          }
+        },
+        {
+          path: 'annual',
+          name: 'AnnualStatistics',
+          component: () => import('@/views/finance/statistics/annual/index.vue'),
+          meta: {
+            title: '年度统计',
+            icon: 'ep:calendar'
+          }
+        },
+        {
+          path: 'product-revenue',
+          name: 'ProductRevenue',
+          component: () => import('@/views/finance/statistics/product-revenue/index.vue'),
+          meta: {
+            title: '产品收入',
+            icon: 'ep:goods'
+          }
+        },
+        {
+          path: 'new-customers',
+          name: 'NewCustomers',
+          component: () => import('@/views/finance/statistics/new-customers/index.vue'),
+          meta: {
+            title: '新客户统计',
+            icon: 'ep:user'
           }
         }
       ]

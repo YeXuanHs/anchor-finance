@@ -139,37 +139,33 @@ func (h *OrderHandler) Preview(c *gin.Context) {
 	// Apply coupon if provided
 	couponDiscount := 0.0
 	if req.CouponCode != "" {
-		var coupon model.Coupon
-		if err := h.db.Where("code = ? AND status = 1", req.CouponCode).First(&coupon).Error; err == nil {
-			now := time.Now()
+		var promo model.PromoCode
+		if err := h.db.Where("code = ? AND status = 1", req.CouponCode).First(&promo).Error; err == nil {
+			now := time.Now().Unix()
 			valid := true
-			if coupon.StartDate != nil && coupon.StartDate.After(now) {
+			if promo.StartTime > 0 && promo.StartTime > now {
 				valid = false
 			}
-			if coupon.EndDate != nil && coupon.EndDate.Before(now) {
+			if promo.ExpirationTime > 0 && promo.ExpirationTime < now {
 				valid = false
 			}
-			if coupon.MaxUses > 0 && coupon.UsedCount >= coupon.MaxUses {
-				valid = false
-			}
-			minOrder, _ := coupon.MinOrderAmount.Float64()
-			if minOrder > 0 && total < minOrder {
+			if promo.MaxTimes > 0 && promo.UsedCount >= promo.MaxTimes {
 				valid = false
 			}
 
 			if valid {
-				couponVal, _ := coupon.Value.Float64()
-				switch coupon.Type {
-				case "percentage":
-					couponDiscount = total * couponVal / 100
-					maxDisc, _ := coupon.MaxDiscount.Float64()
-					if maxDisc > 0 && couponDiscount > maxDisc {
-						couponDiscount = maxDisc
-					}
+				switch promo.Type {
+				case "percent":
+					couponDiscount = total * promo.Value / 100
 				case "fixed":
-					couponDiscount = couponVal
+					couponDiscount = promo.Value
 					if couponDiscount > total {
 						couponDiscount = total
+					}
+				case "override":
+					couponDiscount = total - promo.Value
+					if couponDiscount < 0 {
+						couponDiscount = 0
 					}
 				case "free":
 					couponDiscount = total

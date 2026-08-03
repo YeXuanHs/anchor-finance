@@ -72,7 +72,7 @@ const coupons = ref<Coupon[]>([])
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/coupons')
+    const { data } = await request.get('/api/v2/promo-codes')
     coupons.value = data.data?.list || data.list || data.data || []
   } catch (e) { console.error(e) } finally { loading.value = false }
 })
@@ -84,10 +84,10 @@ const filteredCoupons = computed(() => {
 async function handleRedeem() {
   if (!redeemCode.value) { ElMessage.warning('请输入兑换码'); return }
   try {
-    await request.post('/api/v1/coupons/redeem', { code: redeemCode.value })
+    await request.post('/api/v2/promo-codes/validate', { code: redeemCode.value })
     ElMessage.success('兑换成功')
     redeemCode.value = ''
-    const { data } = await request.get('/api/v1/coupons')
+    const { data } = await request.get('/api/v2/promo-codes')
     coupons.value = data.data?.list || data.list || data.data || []
   } catch (e: any) { ElMessage.error(e?.message || '兑换失败，请检查兑换码') }
 }

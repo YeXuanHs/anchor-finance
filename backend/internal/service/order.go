@@ -10,7 +10,6 @@ import (
 	"anchorfinance/internal/util"
 	"anchorfinance/pkg/logger"
 
-	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -264,25 +263,25 @@ func (s *OrderService) AdminCreateOrder(adminID uint, req AdminCreateOrderReques
 	}
 
 	var totalAmount float64
-	var coupon *model.Coupon
+	var promo *model.PromoCode
 
 	// Validate promo code if provided
 	if req.PromoCode != "" {
-		var c model.Coupon
-		if err := s.db.Where("code = ? AND status = 1", req.PromoCode).First(&c).Error; err != nil {
+		var p model.PromoCode
+		if err := s.db.Where("code = ? AND status = 1", req.PromoCode).First(&p).Error; err != nil {
 			return nil, errors.New("invalid promo code")
 		}
-		now := time.Now()
-		if c.StartDate != nil && now.Before(*c.StartDate) {
+		now := time.Now().Unix()
+		if p.StartTime > 0 && now < p.StartTime {
 			return nil, errors.New("promo code not yet active")
 		}
-		if c.EndDate != nil && now.After(*c.EndDate) {
+		if p.ExpirationTime > 0 && now > p.ExpirationTime {
 			return nil, errors.New("promo code has expired")
 		}
-		if c.MaxUses > 0 && c.UsedCount >= c.MaxUses {
+		if p.MaxTimes > 0 && p.UsedCount >= p.MaxTimes {
 			return nil, errors.New("promo code usage limit reached")
 		}
-		coupon = &c
+		promo = &p
 	}
 
 	// Validate products and calculate total
@@ -348,33 +347,28 @@ func (s *OrderService) AdminCreateOrder(adminID uint, req AdminCreateOrderReques
 		items = append(items, itemResult{product: product, item: item, price: price})
 	}
 
-	// Apply coupon discount
+	// Apply promo code discount
 	var discountAmount float64
-	var couponID *uint
-	if coupon != nil {
-		couponVal, _ := coupon.Value.Float64()
-		switch coupon.Type {
-		case "percentage":
-			discountAmount = totalAmount * couponVal / 100
-			maxDisc, _ := coupon.MaxDiscount.Float64()
-			if maxDisc > 0 && discountAmount > maxDisc {
-				discountAmount = maxDisc
-			}
+	var promoID *uint
+	if promo != nil {
+		switch promo.Type {
+		case "percent":
+			discountAmount = totalAmount * promo.Value / 100
 		case "fixed":
-			discountAmount = couponVal
+			discountAmount = promo.Value
 			if discountAmount > totalAmount {
 				discountAmount = totalAmount
 			}
 		case "override":
-			discountAmount = totalAmount - couponVal
+			discountAmount = totalAmount - promo.Value
 			if discountAmount < 0 {
 				discountAmount = 0
 			}
 		case "free":
 			discountAmount = totalAmount
 		}
-		cid := coupon.ID
-		couponID = &cid
+		pid := promo.ID
+		promoID = &pid
 	}
 
 	finalTotal := totalAmount - discountAmount
@@ -418,15 +412,16 @@ func (s *OrderService) AdminCreateOrder(adminID uint, req AdminCreateOrderReques
 		}
 
 		// Record coupon usage
-		if coupon != nil {
-			if err := tx.Model(coupon).Update("used_count", gorm.Expr("used_count + 1")).Error; err != nil {
+		// Record promo code usage
+		if promo != nil {
+			if err := tx.Model(promo).Update("used_count", gorm.Expr("used_count + 1")).Error; err != nil {
 				return err
 			}
-			usageLog := model.CouponUsageLog{
-				CouponID: coupon.ID,
-				UserID:   req.UserID,
-				OrderID:  order.ID,
-				Discount: discountAmount,
+			usageLog := model.PromoCodeLog{
+				PromoID: promo.ID,
+				UserID:  req.UserID,
+				OrderID: order.ID,
+				Amount:  discountAmount,
 			}
 			if err := tx.Create(&usageLog).Error; err != nil {
 				return err
@@ -790,36 +785,31 @@ func (s *OrderService) GetMultiTotal(items []MultiProductItem, couponCode string
 
 	// Apply coupon
 	if couponCode != "" {
-		var coupon model.Coupon
-		if err := s.db.Where("code = ? AND status = 1", couponCode).First(&coupon).Error; err == nil {
-			now := time.Now()
+		var promo model.PromoCode
+		if err := s.db.Where("code = ? AND status = 1", couponCode).First(&promo).Error; err == nil {
+			now := time.Now().Unix()
 			valid := true
-			if coupon.StartDate != nil && now.Before(*coupon.StartDate) {
+			if promo.StartTime > 0 && now < promo.StartTime {
 				valid = false
 			}
-			if coupon.EndDate != nil && now.After(*coupon.EndDate) {
+			if promo.ExpirationTime > 0 && now > promo.ExpirationTime {
 				valid = false
 			}
-			if coupon.MaxUses > 0 && coupon.UsedCount >= coupon.MaxUses {
+			if promo.MaxTimes > 0 && promo.UsedCount >= promo.MaxTimes {
 				valid = false
 			}
 
 			if valid {
-				couponVal, _ := coupon.Value.Float64()
-				switch coupon.Type {
-				case "percentage":
-					result.Discount = result.Subtotal * couponVal / 100
-					maxDisc, _ := coupon.MaxDiscount.Float64()
-					if maxDisc > 0 && result.Discount > maxDisc {
-						result.Discount = maxDisc
-					}
+				switch promo.Type {
+				case "percent":
+					result.Discount = result.Subtotal * promo.Value / 100
 				case "fixed":
-					result.Discount = couponVal
+					result.Discount = promo.Value
 					if result.Discount > result.Subtotal {
 						result.Discount = result.Subtotal
 					}
 				case "override":
-					result.Discount = result.Subtotal - couponVal
+					result.Discount = result.Subtotal - promo.Value
 					if result.Discount < 0 {
 						result.Discount = 0
 					}
@@ -839,39 +829,36 @@ func (s *OrderService) GetMultiTotal(items []MultiProductItem, couponCode string
 }
 
 // ApplyCustomPromo creates a custom promo code for an order.
-func (s *OrderService) ApplyCustomPromo(req CreateCustomPromoRequest) (*model.Coupon, error) {
+func (s *OrderService) ApplyCustomPromo(req CreateCustomPromoRequest) (*model.PromoCode, error) {
 	// Check if code already exists
-	var existing model.Coupon
+	var existing model.PromoCode
 	if err := s.db.Where("code = ?", req.Code).First(&existing).Error; err == nil {
 		return nil, errors.New("promo code already exists")
 	}
 
-	coupon := &model.Coupon{
-		Code:   req.Code,
-		Name:   req.Name,
-		Type:   req.Type,
-		Status: 1,
-	}
-	if req.Value > 0 {
-		coupon.Value = decimal.NewFromFloat(req.Value)
-	}
-	if req.Description != "" {
-		coupon.Description = req.Description
+	now := time.Now().Unix()
+	promo := &model.PromoCode{
+		Code:           req.Code,
+		Type:           req.Type,
+		Value:          req.Value,
+		Status:         1,
+		StartTime:      now,
+		ExpirationTime: now + 365*24*3600, // default 1 year
 	}
 
-	if err := s.db.Create(coupon).Error; err != nil {
+	if err := s.db.Create(promo).Error; err != nil {
 		return nil, err
 	}
 
 	s.log.Infof("custom promo created: %s", req.Code)
-	return coupon, nil
+	return promo, nil
 }
 
 // CreateCustomPromoRequest is the payload for creating a custom promo.
 type CreateCustomPromoRequest struct {
 	Code        string  `json:"code" binding:"required,max=10"`
 	Name        string  `json:"name" binding:"required"`
-	Type        string  `json:"type" binding:"required,oneof=percentage fixed override free"`
+	Type        string  `json:"type" binding:"required,oneof=percent fixed override free"`
 	Value       float64 `json:"value"`
 	Description string  `json:"description"`
 }

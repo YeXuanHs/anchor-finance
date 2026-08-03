@@ -294,8 +294,9 @@ const currentSlide = ref(0)
 const topNavs = ref([])
 const bottomNavs = ref([])
 
-// 从API获取的数据
+// 从API获取的数据（默认数据作为后备，优先从 API 加载）
 const banners = ref([
+  // TODO: 以下为硬编码营销文案，应从 /api/v1/banners 或数据库动态获取
   { id: 1, title: '高性能云服务器', description: '企业级云服务器，99.9% SLA 保障', badge: '热门推荐', video: '/carousel/2.webm', btn_text: '立即选购', link: '/products' },
   { id: 2, title: '全球节点覆盖', description: '遍布全球 30+ 数据中心节点', badge: '全球布局', video: '/carousel/3.webm', btn_text: '立即选购', link: '/products' },
   { id: 3, title: '专业技术支持', description: '7×24小时专业技术团队', badge: '专业服务', video: '/carousel/4.webm', btn_text: '联系我们', link: '/tickets/create' }
@@ -380,10 +381,14 @@ const fetchData = async () => {
       bottomNavs.value = bottomNavRes.data.data
     }
     
-    // 获取轮播图
-    const bannerRes = await request.get('/api/v1/banners')
-    if (bannerRes.data?.data?.length) {
-      banners.value = bannerRes.data.data
+    // 获取轮播图（从站点设置中获取 banners，或使用独立 API）
+    try {
+      const bannerRes = await request.get('/api/v1/banners')
+      if (bannerRes.data?.data?.length) {
+        banners.value = bannerRes.data.data
+      }
+    } catch {
+      // banners API 不可用时保留默认数据
     }
     
     // 获取产品分组
@@ -393,7 +398,7 @@ const fetchData = async () => {
     }
     
     // 获取热门产品（销量前4）
-    const hotRes = await request.get('/api/v1/products/hot', { params: { limit: 4 } })
+    const hotRes = await request.get('/api/v2/products/hot', { params: { limit: 4 } })
     if (hotRes.data?.data) {
       hotProducts.value = hotRes.data.data
     }
@@ -404,14 +409,14 @@ const fetchData = async () => {
       announcements.value = newsRes.data.data
     }
     
-    // 获取合作伙伴
-    const partnerRes = await request.get('/api/v1/partners')
-    if (partnerRes.data?.data) {
-      partners.value = partnerRes.data.data
-    }
+    // 获取合作伙伴（后端暂无此 API，保留空数组）
+    // const partnerRes = await request.get('/api/v1/partners')
+    // if (partnerRes.data?.data) {
+    //   partners.value = partnerRes.data.data
+    // }
     
     // 获取站点设置
-    const settingRes = await request.get('/api/v1/settings')
+    const settingRes = await request.get('/api/v1/settings/public')
     if (settingRes.data?.data) {
       siteSettings.value = settingRes.data.data
     }

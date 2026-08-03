@@ -9,9 +9,9 @@
 
     <el-radio-group v-model="statusFilter" class="status-filter">
       <el-radio-button value="all">全部</el-radio-button>
-      <el-radio-button value="active">运行中</el-radio-button>
-      <el-radio-button value="suspended">已暂停</el-radio-button>
-      <el-radio-button value="expired">已过期</el-radio-button>
+      <el-radio-button value="active">使用中</el-radio-button>
+      <el-radio-button value="suspended">暂停</el-radio-button>
+      <el-radio-button value="expired">已失效</el-radio-button>
     </el-radio-group>
 
     <div class="products-grid">

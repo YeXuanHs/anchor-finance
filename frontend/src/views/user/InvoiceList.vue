@@ -271,7 +271,7 @@ onMounted(() => {
 async function fetchInvoices() {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/invoices', {
+    const { data } = await request.get('/api/v2/invoices', {
       params: {
         page: currentPage.value,
         limit: pageSize.value,

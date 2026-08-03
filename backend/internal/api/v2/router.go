@@ -53,8 +53,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	contactsSvc := service.NewClientContactService(deps.DB)
 	contactsHandler := handler.NewContactsHandler(contactsSvc, log)
 
-	couponSvc := service.NewCouponService(deps.DB)
-	couponHandler := handler.NewCouponHandler(couponSvc)
+	promoCodeSvc := service.NewPromoCodeService(deps.DB, deps.Log)
+	promoCodeHandler := handler.NewPromoCodeHandler(deps.DB, deps.Log)
 
 	announceSvc := service.NewAnnounceService(deps.DB, log)
 	announceHandler := handler.NewAnnounceHandler(announceSvc, log)
@@ -225,8 +225,16 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.PUT("/contacts/:id/default", contactsHandler.SetDefault)
 		user.GET("/contacts/default", contactsHandler.GetDefault)
 
-		// 优惠券
-		user.GET("/coupons", couponHandler.GetUserCoupons)
+		// 优惠码
+		user.GET("/promo-codes", func(c *gin.Context) {
+			userID := c.GetUint("user_id")
+			promos, err := promoCodeSvc.GetUserPromoCodes(userID)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "failed to get promo codes"})
+				return
+			}
+			c.JSON(200, gin.H{"data": promos})
+		})
 
 		// 系统消息
 		user.GET("/messages", systemMsgHandler.GetList)

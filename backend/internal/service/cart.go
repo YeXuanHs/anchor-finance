@@ -30,11 +30,11 @@ type CartService struct {
 	db    *gorm.DB
 	log   *logger.Logger
 	oSvc  *OrderService
-	cSvc  *CouponService
+	pSvc  *PromoCodeService
 }
 
-func NewCartService(db *gorm.DB, log *logger.Logger, oSvc *OrderService, cSvc *CouponService) *CartService {
-	return &CartService{db: db, log: log, oSvc: oSvc, cSvc: cSvc}
+func NewCartService(db *gorm.DB, log *logger.Logger, oSvc *OrderService, pSvc *PromoCodeService) *CartService {
+	return &CartService{db: db, log: log, oSvc: oSvc, pSvc: pSvc}
 }
 
 // GetCart returns all cart items for a user with product info.
@@ -157,18 +157,18 @@ func (s *CartService) Checkout(userID uint, couponCode string) ([]*Order, error)
 		for _, item := range items {
 			// Apply coupon discount if provided
 			totalPrice := item.Product.Price * float64(item.Quantity)
-			var couponID *uint
-			if couponCode != "" && s.cSvc != nil {
-				discount, coupon, err := s.cSvc.Validate(couponCode, userID, item.ProductID, totalPrice)
-				if err == nil && coupon != nil {
+			var promoID *uint
+			if couponCode != "" && s.pSvc != nil {
+				discount, promo, err := s.pSvc.Validate(couponCode, userID, item.ProductID, totalPrice)
+				if err == nil && promo != nil {
 					totalPrice -= discount
 					if totalPrice < 0 {
 						totalPrice = 0
 					}
-					cid := coupon.ID
-					couponID = &cid
-					// Record coupon usage
-					_ = s.cSvc.Apply(coupon.ID, userID, 0, discount) // orderID will be set after creation
+					pid := promo.ID
+					promoID = &pid
+					// Record promo code usage
+					_ = s.pSvc.Apply(promo.ID, userID, 0, discount) // orderID will be set after creation
 				}
 			}
 
@@ -198,7 +198,7 @@ func (s *CartService) Checkout(userID uint, couponCode string) ([]*Order, error)
 			orders = append(orders, order)
 			s.log.Infof("order created from cart: %s (user=%d, product=%d)",
 				order.OrderNo, userID, item.ProductID)
-			_ = couponID // used for tracking
+			_ = promoID // used for tracking
 		}
 
 		// Clear cart

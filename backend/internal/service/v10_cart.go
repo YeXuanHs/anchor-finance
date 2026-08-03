@@ -35,11 +35,11 @@ type V10CartService struct {
 	db    *gorm.DB
 	log   *logger.Logger
 	oSvc  *OrderService
-	cSvc  *CouponService
+	pSvc  *PromoCodeService
 }
 
-func NewV10CartService(db *gorm.DB, log *logger.Logger, oSvc *OrderService, cSvc *CouponService) *V10CartService {
-	return &V10CartService{db: db, log: log, oSvc: oSvc, cSvc: cSvc}
+func NewV10CartService(db *gorm.DB, log *logger.Logger, oSvc *OrderService, pSvc *PromoCodeService) *V10CartService {
+	return &V10CartService{db: db, log: log, oSvc: oSvc, pSvc: pSvc}
 }
 
 type V10AddToCartRequest struct {
@@ -93,10 +93,10 @@ func (s *V10CartService) GetCart(userID uint) (*V10CartSummary, error) {
 	}
 
 	// Apply coupon discount
-	if couponCode != "" && s.cSvc != nil {
+	if couponCode != "" && s.pSvc != nil {
 		summary.CouponCode = couponCode
 		for _, item := range items {
-			discount, _, err := s.cSvc.Validate(couponCode, userID, item.ProductID, float64(item.Product.Price)*float64(item.Quantity))
+			discount, _, err := s.pSvc.Validate(couponCode, userID, item.ProductID, float64(item.Product.Price)*float64(item.Quantity))
 			if err == nil {
 				summary.Discount += discount
 			}
@@ -213,15 +213,15 @@ func (s *V10CartService) ClearCart(userID uint) error {
 
 // ApplyCoupon applies a coupon code to all cart items.
 func (s *V10CartService) ApplyCoupon(userID uint, couponCode string) error {
-	if s.cSvc == nil {
-		return errors.New("coupon service not available")
+	if s.pSvc == nil {
+		return errors.New("promo code service not available")
 	}
 
-	// Validate coupon exists
+	// Validate promo code exists
 	var count int64
-	s.db.Table("coupons").Where("code = ? AND status = 1", couponCode).Count(&count)
+	s.db.Table("promo_codes").Where("code = ? AND status = 1", couponCode).Count(&count)
 	if count == 0 {
-		return errors.New("invalid coupon code")
+		return errors.New("invalid promo code")
 	}
 
 	// Apply to all cart items
@@ -230,7 +230,7 @@ func (s *V10CartService) ApplyCoupon(userID uint, couponCode string) error {
 		return err
 	}
 
-	s.log.Infof("coupon applied to cart: user=%d coupon=%s", userID, couponCode)
+	s.log.Infof("promo code applied to cart: user=%d code=%s", userID, couponCode)
 	return nil
 }
 
@@ -256,8 +256,8 @@ func (s *V10CartService) Checkout(userID uint) ([]interface{}, error) {
 			totalPrice := float64(item.Product.Price) * float64(item.Quantity)
 
 			// Apply coupon if present
-			if item.CouponCode != "" && s.cSvc != nil {
-				discount, _, err := s.cSvc.Validate(item.CouponCode, userID, item.ProductID, totalPrice)
+			if item.CouponCode != "" && s.pSvc != nil {
+				discount, _, err := s.pSvc.Validate(item.CouponCode, userID, item.ProductID, totalPrice)
 				if err == nil {
 					totalPrice -= discount
 					if totalPrice < 0 {

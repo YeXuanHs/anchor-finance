@@ -602,8 +602,28 @@ const router = createRouter({
           path: 'ddos/my-ip',
           name: 'DdosMyIp',
           component: () => import('@/views/user/DdosMyIp.vue')
+        },
+        {
+          path: 'dcim-console/:id',
+          name: 'DcimConsole',
+          component: () => import('@/views/user/DcimConsole.vue')
+        },
+        {
+          path: 'vnc-console/:id',
+          name: 'VncConsole',
+          component: () => import('@/views/user/VncConsole.vue')
+        },
+        {
+          path: 'product-transfer',
+          name: 'ProductTransfer',
+          component: () => import('@/views/user/ProductTransfer.vue')
         }
       ]
+    },
+    {
+      path: '/announcements',
+      name: 'Announcements',
+      component: () => import('@/views/Announcements.vue')
     },
     {
       path: '/:pathMatch(.*)*',

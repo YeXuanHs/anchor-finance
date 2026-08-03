@@ -359,7 +359,7 @@ const smsRules = computed<FormRules>(() => ({
 // 获取验证码状态
 async function fetchCaptchaStatus() {
   try {
-    const res = await request.get('/api/v1/captcha/status')
+    const res = await request.get('/api/v1/captcha/config')
     if (res.data?.data) {
       captchaStatus.value = res.data.data
     }
@@ -371,7 +371,7 @@ async function fetchCaptchaStatus() {
 // 获取验证码类型配置
 async function fetchCaptchaType() {
   try {
-    const res = await request.get('/api/v1/config/public')
+    const res = await request.get('/api/v1/settings/public')
     if (res.data?.data?.captcha_type) {
       captchaType.value = res.data.data.captcha_type
     }
@@ -383,7 +383,7 @@ async function fetchCaptchaType() {
 async function refreshCaptcha() {
   try {
     captchaKey.value = Math.random().toString(36).substring(2, 15)
-    const res = await request.get('/api/v1/captcha/image/json', {
+    const res = await request.get('/api/v1/captcha/generate', {
       params: { key: captchaKey.value }
     })
     if (res.data) {

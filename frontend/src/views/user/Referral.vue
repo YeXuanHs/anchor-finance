@@ -1,15 +1,15 @@
 <template>
   <div class="referral-page">
     <div class="page-header">
-      <h1 class="page-title">推广联盟</h1>
+      <h1 class="page-title">推介计划</h1>
     </div>
 
     <!-- Banner Card -->
     <el-card shadow="never" class="banner-card">
       <div class="banner-content">
         <div class="banner-text">
-          <h2>邀请好友，赚取返利</h2>
-          <p>每成功邀请一位好友注册并消费，您将获得 <strong>10%</strong> 的消费返利</p>
+          <h2>邀请好友，获得佣金</h2>
+          <p>每成功邀请一位好友注册并消费，您将获得 <strong>10%</strong> 的消费佣金</p>
         </div>
         <div class="banner-stats">
           <div class="banner-stat">
@@ -18,7 +18,7 @@
           </div>
           <div class="banner-stat">
             <span class="stat-num">¥{{ totalEarnings }}</span>
-            <span class="stat-label">累计返利</span>
+            <span class="stat-label">累计佣金</span>
           </div>
           <div class="banner-stat">
             <span class="stat-num">¥{{ availableBalance }}</span>
@@ -48,8 +48,8 @@
             <el-icon :size="28"><User /></el-icon>
           </div>
           <div class="nav-info">
-            <span class="nav-title">推荐用户</span>
-            <span class="nav-desc">管理推荐用户列表</span>
+            <span class="nav-title">推介用户</span>
+            <span class="nav-desc">管理推介用户列表</span>
           </div>
           <el-icon class="nav-arrow"><ArrowRight /></el-icon>
         </div>
@@ -71,7 +71,7 @@
     <!-- Referral Code Card -->
     <el-card shadow="never" class="code-card">
       <template #header>
-        <span class="card-title">我的推荐码</span>
+        <span class="card-title">我的推介码</span>
       </template>
       <div class="code-area">
         <el-input v-model="referralCode" readonly size="large" class="code-input">
@@ -81,7 +81,7 @@
             </el-button>
           </template>
         </el-input>
-        <p class="code-hint">将推荐码分享给好友，好友注册时填写即可</p>
+        <p class="code-hint">将推介码分享给好友，好友注册时填写即可</p>
       </div>
       <div class="share-links">
         <span class="share-label">分享链接：</span>
@@ -116,7 +116,7 @@
             <span class="amount-text">¥{{ row.spent }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="commission" label="返利金额" width="120">
+        <el-table-column prop="commission" label="佣金金额" width="120">
           <template #default="{ row }">
             <span class="commission-text">¥{{ row.commission }}</span>
           </template>
@@ -134,7 +134,7 @@
     <!-- Rules Card -->
     <el-card shadow="never" class="rules-card">
       <template #header>
-        <span class="card-title">返利规则</span>
+        <span class="card-title">佣金规则</span>
       </template>
       <el-timeline>
         <el-timeline-item v-for="(rule, i) in rules" :key="i" :type="i === 0 ? 'primary' : ''">
@@ -175,16 +175,16 @@ onMounted(async () => {
 })
 
 const rules = [
-  '好友通过您的推荐码或链接注册即绑定推荐关系',
-  '好友每次消费后，您将获得消费金额 10% 的返利',
-  '返利金额将在好友付款后 7 个工作日内结算到您的账户余额',
-  '返利金额可用于平台内所有产品消费，不可提现',
-  '推荐关系一旦绑定，永久有效'
+  '好友通过您的推介码或链接注册即绑定推介关系',
+  '好友每次消费后，您将获得消费金额 10% 的佣金',
+  '佣金将在好友付款后 7 个工作日内结算到您的账户余额',
+  '佣金可用于平台内所有产品消费，不可提现',
+  '推介关系一旦绑定，永久有效'
 ]
 
 function handleCopy() {
   navigator.clipboard?.writeText(referralCode.value)
-  ElMessage.success('推荐码已复制')
+  ElMessage.success('推介码已复制')
 }
 
 function handleCopyLink() {

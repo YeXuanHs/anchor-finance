@@ -102,7 +102,7 @@ const renewHost = (server: any) => {
 const handlePowerOn = async (server: any) => {
   try {
     await ElMessageBox.confirm('确定要启动该服务器吗？', '确认开机', { type: 'info' })
-    await request.post(`/api/v1/user/products/${server.id}/power-on`)
+    await request.post(`/api/v2/user/products/${server.id}/power-on`)
     ElMessage.success('开机指令已发送')
     loadServers()
   } catch (e: any) {
@@ -113,7 +113,7 @@ const handlePowerOn = async (server: any) => {
 const handlePowerOff = async (server: any) => {
   try {
     await ElMessageBox.confirm('确定要关闭该服务器吗？此操作可能导致服务中断。', '确认关机', { type: 'warning' })
-    await request.post(`/api/v1/user/products/${server.id}/power-off`)
+    await request.post(`/api/v2/user/products/${server.id}/power-off`)
     ElMessage.success('关机指令已发送')
     loadServers()
   } catch (e: any) {
@@ -124,7 +124,7 @@ const handlePowerOff = async (server: any) => {
 const handleReboot = async (server: any) => {
   try {
     await ElMessageBox.confirm('确定要重启该服务器吗？', '确认重启', { type: 'warning' })
-    await request.post(`/api/v1/user/products/${server.id}/reboot`)
+    await request.post(`/api/v2/user/products/${server.id}/reboot`)
     ElMessage.success('重启指令已发送')
     loadServers()
   } catch (e: any) {
@@ -135,7 +135,7 @@ const handleReboot = async (server: any) => {
 const loadServers = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/user/products', { params: { group: 'other' } })
+    const { data } = await request.get('/api/v2/user/products', { params: { group: 'other' } })
     servers.value = data?.data?.list || data?.data?.items || data?.data || []
   } catch {
     servers.value = []

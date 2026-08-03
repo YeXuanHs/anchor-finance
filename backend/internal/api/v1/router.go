@@ -46,8 +46,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	cartHandler := handler.NewCartHandler(deps.CartSvc)
 
 	// ─── V10云 ───
-	couponSvcForV10Cloud := service.NewCouponService(deps.DB, deps.Log)
-	v10CloudSvc := service.NewV10CloudService(deps.DB, deps.Log, deps.OrdSvc, couponSvcForV10Cloud)
+	promoCodeSvcForV10Cloud := service.NewPromoCodeService(deps.DB, deps.Log)
+	v10CloudSvc := service.NewV10CloudService(deps.DB, deps.Log, deps.OrdSvc, promoCodeSvcForV10Cloud)
 	v10CloudHandler := handler.NewV10CloudHandler(v10CloudSvc, deps.Log)
 
 	// ─── 验证码 ───
@@ -188,7 +188,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		auth.PUT("/cart/:id", cartHandler.Update)
 		auth.DELETE("/cart/:id", cartHandler.Remove)
 		auth.POST("/cart/checkout", cartHandler.Checkout)
-		auth.POST("/cart/coupon", cartHandler.ApplyCoupon)
 
 		// V10云
 		auth.POST("/v10cloud/order", v10CloudHandler.CreateOrder)

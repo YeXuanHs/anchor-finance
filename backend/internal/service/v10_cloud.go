@@ -18,11 +18,11 @@ type V10CloudService struct {
 	db    *gorm.DB
 	log   *logger.Logger
 	oSvc  *OrderService
-	cSvc  *CouponService
+	pSvc  *PromoCodeService
 }
 
-func NewV10CloudService(db *gorm.DB, log *logger.Logger, oSvc *OrderService, cSvc *CouponService) *V10CloudService {
-	return &V10CloudService{db: db, log: log, oSvc: oSvc, cSvc: cSvc}
+func NewV10CloudService(db *gorm.DB, log *logger.Logger, oSvc *OrderService, pSvc *PromoCodeService) *V10CloudService {
+	return &V10CloudService{db: db, log: log, oSvc: oSvc, pSvc: pSvc}
 }
 
 // ─────────────────────────── Request / Response DTOs ───────────────────────────
@@ -438,8 +438,8 @@ func (s *V10CloudService) CreateOrder(userID uint, cartItemIDs []uint, couponCod
 			totalPrice := item.TotalPrice
 
 			// Apply coupon if provided
-			if couponCode != "" && s.cSvc != nil {
-				discount, _, err := s.cSvc.Validate(couponCode, userID, item.ProductID, totalPrice)
+			if couponCode != "" && s.pSvc != nil {
+				discount, _, err := s.pSvc.Validate(couponCode, userID, item.ProductID, totalPrice)
 				if err == nil {
 					totalPrice -= discount
 					if totalPrice < 0 {

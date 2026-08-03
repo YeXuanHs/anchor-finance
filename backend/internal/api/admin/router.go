@@ -64,6 +64,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		dashboardHandler := handler.NewDashboardHandler(deps.DB)
 		admin.GET("/dashboard/income-trend", dashboardHandler.GetIncomeTrend)
 		admin.GET("/dashboard/product-distribution", dashboardHandler.GetProductDistribution)
+		admin.GET("/dashboard/global-search", dashboardHandler.GlobalSearch)
+		admin.GET("/dashboard/admin-index", dashboardHandler.GetAdminIndex)
 
 		// 用户管理
 		admin.GET("/users", userHandler.GetUserList)
@@ -1300,6 +1302,18 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// 基本信息
 		admin.GET("/agent/base-info", agentEnhancedHandler.GetBaseInfo)
 
+		// TODO: [P2] 资源池代理商相关功能
+		// - 资源池分配与管理
+		// - 代理商等级体系
+		// - 代理商业绩报表
+		// - 代理商佣金结算增强
+
+		// TODO: [P2] 开发者管理
+		// - 开发者注册与审核
+		// - API密钥管理
+		// - 开发者文档
+		// - 开发者计费
+
 		// ==================== 聚合登录 ====================
 		if deps.JWTMgr != nil {
 			aggregateLoginSvc := service.NewAggregateLoginService(deps.DB, deps.Log, deps.UserSvc, deps.JWTMgr, deps.BaseURL)
@@ -1330,8 +1344,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		}
 
 		// ==================== 购物车 ====================
-		couponSvcForCart := service.NewCouponService(deps.DB, deps.Log)
-		cartSvc := service.NewCartService(deps.DB, deps.Log, deps.OrdSvc, couponSvcForCart)
+		promoCodeSvcForCart := service.NewPromoCodeService(deps.DB, deps.Log)
+		cartSvc := service.NewCartService(deps.DB, deps.Log, deps.OrdSvc, promoCodeSvcForCart)
 		cartHandler := handler.NewCartHandler(cartSvc)
 		admin.GET("/cart", cartHandler.GetCart)
 		admin.POST("/cart", cartHandler.AddToCart)
@@ -1399,15 +1413,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.DELETE("/contracts/tpl/:id", contractHandler.DeleteTpl)
 		admin.GET("/contracts/page", contractHandler.ContractPage)
 		admin.POST("/contracts/page", contractHandler.ContractPagePost)
-
-		// ==================== 优惠券 ====================
-		couponSvc := service.NewCouponService(deps.DB, deps.Log)
-		couponHandler := handler.NewCouponHandler(couponSvc)
-		admin.POST("/coupons/validate", couponHandler.ValidateCoupon)
-		admin.GET("/coupons", couponHandler.ListCoupons)
-		admin.POST("/coupons", couponHandler.CreateCoupon)
-		admin.PUT("/coupons/:id", couponHandler.UpdateCoupon)
-		admin.DELETE("/coupons/:id", couponHandler.DeleteCoupon)
 
 		// ==================== 信用额度 ====================
 		creditSvc := service.NewCreditService(deps.DB, deps.Log)
@@ -1772,8 +1777,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.DELETE("/user-levels/:id", userLevelHandler.AdminDelete)
 
 		// ==================== v10购物车 ====================
-		couponSvcForV10 := service.NewCouponService(deps.DB, deps.Log)
-		v10CartSvc := service.NewV10CartService(deps.DB, deps.Log, deps.OrdSvc, couponSvcForV10)
+		promoCodeSvcForV10 := service.NewPromoCodeService(deps.DB, deps.Log)
+		v10CartSvc := service.NewV10CartService(deps.DB, deps.Log, deps.OrdSvc, promoCodeSvcForV10)
 		v10CartHandler := handler.NewV10CartHandler(v10CartSvc, deps.Log)
 		admin.GET("/v10/cart", v10CartHandler.GetCart)
 		admin.GET("/v10/cart/count", v10CartHandler.GetItemCount)
@@ -1786,8 +1791,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/v10/cart/checkout", v10CartHandler.Checkout)
 
 		// ==================== V10云管理 ====================
-		couponSvcForV10Cloud := service.NewCouponService(deps.DB, deps.Log)
-		v10CloudSvc := service.NewV10CloudService(deps.DB, deps.Log, deps.OrdSvc, couponSvcForV10Cloud)
+		promoCodeSvcForV10Cloud := service.NewPromoCodeService(deps.DB, deps.Log)
+		v10CloudSvc := service.NewV10CloudService(deps.DB, deps.Log, deps.OrdSvc, promoCodeSvcForV10Cloud)
 		v10CloudHandler := handler.NewV10CloudHandler(v10CloudSvc, deps.Log)
 
 		// 产品浏览

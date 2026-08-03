@@ -59,8 +59,8 @@ func NewServer(cfg *config.Config, jwtMgr *auth.JWTManager) *Server {
 	provSvc := service.NewProvisionService(dbConn, log)
 	ordSvc := service.NewOrderService(dbConn, log, invSvc, provSvc)
 	ticSvc := service.NewTicketService(dbConn, log)
-	couponSvc := service.NewCouponService(dbConn, log)
-	cartSvc := service.NewCartService(dbConn, log, ordSvc, couponSvc)
+	promoCodeSvc := service.NewPromoCodeService(dbConn, log)
+	cartSvc := service.NewCartService(dbConn, log, ordSvc, promoCodeSvc)
 	frontendURL := db.GetSystemSetting("frontend_url")
 	oauthSvc := service.NewOAuthService(dbConn, log, userSvc, frontendURL)
 

@@ -476,7 +476,7 @@ async function fetchServerInfo() {
 
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v1/host/${hostId}`)
+    const { data } = await request.get(`/api/v2/hosts/${hostId}`)
     if (data?.data) {
       const info = data.data
       serverInfo.name = info.product_name || info.name || ''
@@ -531,7 +531,7 @@ async function handlePowerAction(action: string) {
     })
 
     actionLoading.value = action
-    await request.post(`/api/v1/host/${hostId}/${config.api}`)
+    await request.post(`/api/v2/hosts/${hostId}/${config.api}`)
     ElMessage.success('操作已提交')
 
     // 更新状态
@@ -562,7 +562,7 @@ async function confirmRescue() {
 
   rescueLoading.value = true
   try {
-    await request.post(`/api/v1/host/${hostId}/rescue`, {
+    await request.post(`/api/v2/hosts/${hostId}/rescue`, {
       type: rescueForm.type,
       password: rescueForm.password
     })
@@ -587,7 +587,7 @@ async function confirmResetPassword() {
 
   passwordLoading.value = true
   try {
-    await request.post(`/api/v1/host/${hostId}/reset-password`, {
+    await request.post(`/api/v2/hosts/${hostId}/reset-password`, {
       user: passwordForm.user === 'custom' ? passwordForm.username : passwordForm.user,
       password: passwordForm.password
     })
@@ -614,7 +614,7 @@ async function confirmFormat() {
     })
 
     formatLoading.value = true
-    await request.post(`/api/v1/host/${hostId}/format`, {
+    await request.post(`/api/v2/hosts/${hostId}/format`, {
       type: formatForm.type
     })
     showFormatDialog.value = false
@@ -645,7 +645,7 @@ async function cancelTask() {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.post(`/api/v1/host/${hostId}/cancel-task`)
+    await request.post(`/api/v2/hosts/${hostId}/cancel-task`)
     ElMessage.success('任务已取消')
   } catch (e: any) {
     if (e !== 'cancel') {
@@ -661,7 +661,7 @@ async function fetchLogs() {
 
   logLoading.value = true
   try {
-    const { data } = await request.get(`/api/v1/host/${hostId}/log`)
+    const { data } = await request.get(`/api/v2/hosts/${hostId}/log`)
     if (data?.data?.list) {
       logs.value = data.data.list
     }
