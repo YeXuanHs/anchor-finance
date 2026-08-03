@@ -178,7 +178,7 @@ const fetchBill = async () => {
 
   loading.value = true
   try {
-    const data = await request.get({ url: `/api/admin/bills/${id}` })
+    const data = await request.get({ url: `/api/admin/invoices/${id}` })
     bill.value = data.bill || data
   } catch (error) {
     console.error('获取账单详情失败:', error)
@@ -194,7 +194,7 @@ const fetchPayments = async () => {
 
   paymentsLoading.value = true
   try {
-    const data = await request.get({ url: `/api/admin/bills/${id}/payments` })
+    const data = await request.get({ url: `/api/admin/invoices/${id}/payments` })
     payments.value = data || []
   } catch (error) {
     console.error('获取支付记录失败:', error)
@@ -243,7 +243,7 @@ const handleRefund = async () => {
     })
 
     actionLoading.value = true
-    await request.post({ url: `/api/admin/bills/${id}/refund` })
+    await request.post({ url: `/api/admin/invoices/${id}/refund` })
     ElMessage.success('退款成功')
     fetchBill()
   } catch (error: any) {
@@ -261,7 +261,7 @@ const handleCancel = async () => {
 
   actionLoading.value = true
   try {
-    await request.post({ url: `/api/admin/bills/${id}/cancel` })
+    await request.post({ url: `/api/admin/invoices/${id}/cancel` })
     ElMessage.success('账单已取消')
     fetchBill()
   } catch (error) {
