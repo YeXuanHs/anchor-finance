@@ -200,6 +200,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Download } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/http'
+import { exportToCSV } from '@/utils/export'
 
 // 加载状态
 const loading = ref(false)
@@ -403,8 +404,19 @@ const handleRejectFromDetail = async () => {
 }
 
 // 导出
-const handleExport = () => {
-  ElMessage.info('导出功能开发中...')
+const handleExport = async () => {
+  try {
+    const data = await request.get({ url: '/api/admin/affiliate/records', params: { page: 1, page_size: 9999 } })
+    const list = data.list || data || []
+    exportToCSV(list, [
+      { key: 'id', title: 'ID' },
+      { key: 'user_id', title: '用户ID' },
+      { key: 'amount', title: '金额' },
+      { key: 'status', title: '状态' },
+      { key: 'created_at', title: '时间' }
+    ], '推广记录')
+    ElMessage.success('导出成功')
+  } catch { ElMessage.error('导出失败') }
 }
 
 // 分页大小变化

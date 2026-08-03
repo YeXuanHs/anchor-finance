@@ -132,6 +132,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Download } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/http'
+import { exportToCSV } from '@/utils/export'
 
 const loading = ref(false)
 const detailVisible = ref(false)
@@ -238,8 +239,20 @@ const handleTerminate = async (row: any) => {
   }
 }
 
-const handleExport = () => {
-  ElMessage.info('导出功能开发中...')
+const handleExport = async () => {
+  try {
+    const data = await request.get({ url: '/api/admin/hosts', params: { page: 1, page_size: 9999 } })
+    const list = data.list || data || []
+    exportToCSV(list, [
+      { key: 'id', title: 'ID' },
+      { key: 'hostname', title: '主机名' },
+      { key: 'ip', title: 'IP' },
+      { key: 'user_id', title: '用户ID' },
+      { key: 'status', title: '状态' },
+      { key: 'created_at', title: '创建时间' }
+    ], '主机列表')
+    ElMessage.success('导出成功')
+  } catch { ElMessage.error('导出失败') }
 }
 
 const handleSizeChange = () => {

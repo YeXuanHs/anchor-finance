@@ -174,6 +174,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Download } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/http'
+import { exportToCSV } from '@/utils/export'
 
 // 加载状态
 const loading = ref(false)
@@ -324,8 +325,21 @@ const handleAuditFromDetail = async (targetStatus: number) => {
 }
 
 // 导出
-const handleExport = () => {
-  ElMessage.info('导出功能开发中...')
+const handleExport = async () => {
+  try {
+    const data = await request.get({ url: '/api/admin/orders', params: { page: 1, page_size: 9999, ...searchForm } })
+    const list = data.list || data || []
+    exportToCSV(list, [
+      { key: 'id', title: 'ID' },
+      { key: 'order_no', title: '订单号' },
+      { key: 'user_id', title: '用户ID' },
+      { key: 'product_name', title: '产品' },
+      { key: 'total_price', title: '金额' },
+      { key: 'status', title: '状态' },
+      { key: 'created_at', title: '创建时间' }
+    ], '订单列表')
+    ElMessage.success('导出成功')
+  } catch { ElMessage.error('导出失败') }
 }
 
 // 分页大小变化

@@ -87,6 +87,7 @@ import { Download } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { TableColumnCtx } from 'element-plus'
 import request from '@/utils/http'
+import { exportToCSV } from '@/utils/export'
 
 interface SummaryMethodProps<T = any> {
   columns: TableColumnCtx<T>[]
@@ -174,8 +175,19 @@ const handleViewInvoice = (row: any) => {
   ElMessage.info(`查看账单 #${row.invoice_id}`)
 }
 
-const handleExport = () => {
-  ElMessage.info('导出功能开发中...')
+const handleExport = async () => {
+  try {
+    const data = await request.get({ url: '/api/admin/invoice-items', params: { page: 1, page_size: 9999 } })
+    const list = data.list || data || []
+    exportToCSV(list, [
+      { key: 'id', title: 'ID' },
+      { key: 'invoice_id', title: '发票ID' },
+      { key: 'description', title: '描述' },
+      { key: 'amount', title: '金额' },
+      { key: 'quantity', title: '数量' }
+    ], '发票明细')
+    ElMessage.success('导出成功')
+  } catch { ElMessage.error('导出失败') }
 }
 
 const handleSizeChange = () => {

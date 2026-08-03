@@ -114,6 +114,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Download } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/http'
+import { exportToCSV } from '@/utils/export'
 
 const loading = ref(false)
 
@@ -164,7 +165,19 @@ const fetchData = async () => {
 const handleSearch = () => { pagination.page = 1; fetchData() }
 const handleReset = () => { searchForm.date_range = []; handleSearch() }
 
-const handleExport = () => { ElMessage.info('导出功能开发中...') }
+const handleExport = async () => {
+  try {
+    const data = await request.get({ url: '/api/admin/statistics/sales', params: { page: 1, page_size: 9999 } })
+    const list = data.list || data || []
+    exportToCSV(list, [
+      { key: 'client_name', title: '客户' },
+      { key: 'order_count', title: '订单数' },
+      { key: 'total_amount', title: '总金额' },
+      { key: 'last_order_at', title: '最近下单' }
+    ], '销售统计')
+    ElMessage.success('导出成功')
+  } catch { ElMessage.error('导出失败') }
+}
 
 const handleSizeChange = () => { pagination.page = 1; fetchData() }
 const handlePageChange = () => { fetchData() }

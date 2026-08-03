@@ -192,6 +192,7 @@ import { useRouter } from 'vue-router'
 import { Download } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/http'
+import { exportToCSV } from '@/utils/export'
 
 const router = useRouter()
 
@@ -340,8 +341,21 @@ const handleViewClient = (row: any) => {
   router.push(`/finance/clients/detail/${row.client_id}`)
 }
 
-const handleExport = () => {
-  ElMessage.info('导出功能开发中...')
+const handleExport = async () => {
+  try {
+    const data = await request.get({ url: '/api/admin/accounts', params: { page: 1, page_size: 9999 } })
+    const list = data.list || data || []
+    exportToCSV(list, [
+      { key: 'id', title: 'ID' },
+      { key: 'user_id', title: '用户ID' },
+      { key: 'amount_in', title: '收入' },
+      { key: 'amount_out', title: '支出' },
+      { key: 'currency', title: '货币' },
+      { key: 'description', title: '描述' },
+      { key: 'created_at', title: '时间' }
+    ], '交易流水')
+    ElMessage.success('导出成功')
+  } catch { ElMessage.error('导出失败') }
 }
 
 const handleSizeChange = () => {

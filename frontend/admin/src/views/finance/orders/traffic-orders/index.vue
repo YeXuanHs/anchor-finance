@@ -129,6 +129,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Download } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/http'
+import { exportToCSV } from '@/utils/export'
 
 const loading = ref(false)
 
@@ -215,7 +216,21 @@ const handleRenew = async (row: any) => {
   }
 }
 
-const handleExport = () => { ElMessage.info('导出功能开发中...') }
+const handleExport = async () => {
+  try {
+    const data = await request.get({ url: '/api/admin/orders', params: { page: 1, page_size: 9999, type: 'traffic' } })
+    const list = data.list || data || []
+    exportToCSV(list, [
+      { key: 'id', title: 'ID' },
+      { key: 'order_no', title: '订单号' },
+      { key: 'product_name', title: '产品' },
+      { key: 'amount', title: '金额' },
+      { key: 'status', title: '状态' },
+      { key: 'created_at', title: '创建时间' }
+    ], '流量订单')
+    ElMessage.success('导出成功')
+  } catch { ElMessage.error('导出失败') }
+}
 
 const handleSizeChange = () => { pagination.page = 1; fetchData() }
 const handlePageChange = () => { fetchData() }
