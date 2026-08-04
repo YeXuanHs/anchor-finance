@@ -102,7 +102,7 @@ const sections = ref([
   {
     id: 'contact',
     title: '联系我们',
-    content: '<p>如果您对本隐私政策有任何疑问，请通过以下方式联系我们：</p><ul><li>邮箱：privacy@anchorfinance.com</li><li>电话：400-xxx-xxxx</li><li>地址：中国·北京·海淀区中关村科技园</li></ul>'
+    content: '<p>如果您对本隐私政策有任何疑问，请通过以下方式联系我们：</p><ul><li>邮箱：privacy@anchorfinance.com</li><li>电话：请查看网站底部联系方式</li><li>地址：请查看网站底部地址信息</li></ul>'
   }
 ])
 </script>

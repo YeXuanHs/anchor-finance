@@ -9,8 +9,8 @@
           </div>
           <p class="footer-desc">高效、安全的财务管理系统，助力企业数字化转型</p>
           <div class="footer-contact">
-            <p><el-icon><Phone /></el-icon> 400-xxx-xxxx</p>
-            <p><el-icon><Message /></el-icon> support@anchorfinance.com</p>
+            <p><el-icon><Phone /></el-icon> {{ siteSettings.contact_phone }}</p>
+            <p><el-icon><Message /></el-icon> {{ siteSettings.contact_email }}</p>
           </div>
         </div>
         
@@ -74,10 +74,32 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Phone, Message } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
 const currentYear = computed(() => new Date().getFullYear())
+
+const siteSettings = ref({
+  contact_phone: '400-000-0000',
+  contact_email: 'support@anchorfinance.com',
+  site_name: '锚点财务'
+})
+
+const fetchSiteSettings = async () => {
+  try {
+    const res = await request.get('/api/v1/site/settings')
+    if (res?.data) {
+      siteSettings.value = { ...siteSettings.value, ...res.data }
+    }
+  } catch {
+    // Use defaults
+  }
+}
+
+onMounted(() => {
+  fetchSiteSettings()
+})
 </script>
 
 <style scoped lang="scss">

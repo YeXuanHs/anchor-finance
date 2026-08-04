@@ -114,22 +114,22 @@
           <div class="contact-card">
             <el-icon :size="32"><Location /></el-icon>
             <h3>公司地址</h3>
-            <p>中国·北京·海淀区中关村科技园</p>
+            <p>{{ siteSettings.contact_address }}</p>
           </div>
           <div class="contact-card">
             <el-icon :size="32"><Phone /></el-icon>
             <h3>联系电话</h3>
-            <p>400-xxx-xxxx</p>
+            <p>{{ siteSettings.contact_phone }}</p>
           </div>
           <div class="contact-card">
             <el-icon :size="32"><Message /></el-icon>
             <h3>电子邮箱</h3>
-            <p>support@anchorfinance.com</p>
+            <p>{{ siteSettings.contact_email }}</p>
           </div>
           <div class="contact-card">
             <el-icon :size="32"><Clock /></el-icon>
             <h3>工作时间</h3>
-            <p>周一至周五 9:00-18:00</p>
+            <p>{{ siteSettings.work_time }}</p>
           </div>
         </div>
       </div>
@@ -140,10 +140,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Location, Phone, Message, Clock, Aim, Shield, Cpu, Headset } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
+import request from '@/utils/request'
+
+const siteSettings = ref({
+  contact_address: '中国·北京·海淀区中关村科技园',
+  contact_phone: '400-000-0000',
+  contact_email: 'support@anchorfinance.com',
+  work_time: '周一至周五 9:00-18:00'
+})
+
+const fetchSiteSettings = async () => {
+  try {
+    const res = await request.get('/api/v1/site/settings')
+    if (res?.data) {
+      siteSettings.value = { ...siteSettings.value, ...res.data }
+    }
+  } catch {
+    // Use defaults
+  }
+}
+
+onMounted(() => {
+  fetchSiteSettings()
+})
 
 const history = ref([
   { year: '2018', title: '公司成立', desc: '锚点财务正式成立，开始研发财务管理核心系统' },

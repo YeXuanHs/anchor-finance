@@ -76,8 +76,7 @@
                 <el-icon :size="28"><Location /></el-icon>
               </div>
               <h3>公司地址</h3>
-              <p>中国·北京·海淀区中关村科技园</p>
-              <p>创新大厦A座1201室</p>
+              <p>{{ siteSettings.contact_address }}</p>
             </div>
             
             <div class="info-card">
@@ -85,8 +84,8 @@
                 <el-icon :size="28"><Phone /></el-icon>
               </div>
               <h3>联系电话</h3>
-              <p>销售咨询：400-xxx-xxxx</p>
-              <p>技术支持：400-xxx-xxxx</p>
+              <p>销售咨询：{{ siteSettings.sales_phone || siteSettings.contact_phone }}</p>
+              <p>技术支持：{{ siteSettings.support_phone || siteSettings.contact_phone }}</p>
             </div>
             
             <div class="info-card">
@@ -94,8 +93,8 @@
                 <el-icon :size="28"><Message /></el-icon>
               </div>
               <h3>电子邮箱</h3>
-              <p>销售咨询：sales@anchorfinance.com</p>
-              <p>技术支持：support@anchorfinance.com</p>
+              <p>销售咨询：{{ siteSettings.sales_email || siteSettings.contact_email }}</p>
+              <p>技术支持：{{ siteSettings.contact_email }}</p>
             </div>
             
             <div class="info-card">
@@ -103,8 +102,8 @@
                 <el-icon :size="28"><Clock /></el-icon>
               </div>
               <h3>工作时间</h3>
-              <p>周一至周五：9:00 - 18:00</p>
-              <p>周六：10:00 - 16:00</p>
+              <p>{{ siteSettings.work_time }}</p>
+              <p>节假日休息</p>
             </div>
             
             <!-- Social Media -->
@@ -142,12 +141,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { Location, Phone, Message, Clock, Promotion } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'
+
+const siteSettings = ref({
+  contact_address: '中国·北京·海淀区中关村科技园 创新大厦A座1201室',
+  contact_phone: '400-000-0000',
+  sales_phone: '400-000-0000',
+  support_phone: '400-000-0000',
+  contact_email: 'support@anchorfinance.com',
+  sales_email: 'sales@anchorfinance.com',
+  work_time: '周一至周五 9:00-18:00'
+})
+
+const fetchSiteSettings = async () => {
+  try {
+    const res = await request.get('/api/v1/site/settings')
+    if (res?.data) {
+      siteSettings.value = { ...siteSettings.value, ...res.data }
+    }
+  } catch {
+    // Use defaults
+  }
+}
+
+onMounted(() => {
+  fetchSiteSettings()
+})
 
 const formRef = ref()
 const submitting = ref(false)
