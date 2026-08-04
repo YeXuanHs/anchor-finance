@@ -301,7 +301,10 @@ func (h *OrderHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	_ = id // status update via direct DB in real impl
+	if err := h.db.Model(&model.Order{}).Where("id = ?", id).Update("status", req.Status).Error; err != nil {
+		response.ServerError(c, "failed to update order status")
+		return
+	}
 	response.SuccessMsg(c, "order status updated")
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"anchorfinance/internal/model"
 	"anchorfinance/pkg/logger"
 
 	"gorm.io/datatypes"
@@ -319,17 +320,18 @@ func (s *UpgradeEnhancedService) DoUpgrade(hostID uint, targetProductID uint, ne
 
 	// 如果需要付费，创建订单
 	if priceDiff > 0 {
-		order := map[string]interface{}{
-			"user_id":    userID,
-			"type":       "upgrade",
-			"host_id":    hostID,
-			"product_id": targetProductID,
-			"amount":     priceDiff,
-			"status":     "pending",
+		order := model.Order{
+			UserID:    userID,
+			Type:      "upgrade",
+			HostID:    &hostID,
+			ProductID: &targetProductID,
+			Amount:    priceDiff,
+			Status:    0, // pending
 		}
-
-		logger.Info("Creating upgrade order", "host_id", hostID, "amount", priceDiff)
-		_ = order
+		if err := s.db.Create(&order).Error; err != nil {
+			return nil, fmt.Errorf("create upgrade order: %w", err)
+		}
+		logger.Info("Created upgrade order", "order_id", order.ID, "host_id", hostID, "amount", priceDiff)
 	}
 
 	// 更新主机

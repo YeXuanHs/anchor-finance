@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"anchorfinance/internal/model"
@@ -686,12 +687,10 @@ func (s *HostEnhancedService) GetTrafficUsage(hostID uint) (*TrafficUsageData, e
 
 // GetTrafficChart returns traffic chart data for a host.
 func (s *HostEnhancedService) GetTrafficChart(hostID uint, period string) ([]TrafficChartData, error) {
-	host, err := s.hostSvc.GetByID(hostID)
+	_, err := s.hostSvc.GetByID(hostID)
 	if err != nil {
 		return nil, fmt.Errorf("host not found: %w", err)
 	}
-
-	_ = host
 
 	days := 30
 	switch period {
@@ -701,15 +700,43 @@ func (s *HostEnhancedService) GetTrafficChart(hostID uint, period string) ([]Tra
 		days = 90
 	}
 
+	since := time.Now().AddDate(0, 0, -days)
+	var logs []model.DcimTrafficLog
+	if err := s.db.Where("server_id = ? AND recorded_at >= ?", hostID, since).
+		Order("recorded_at ASC").Find(&logs).Error; err != nil {
+		return nil, fmt.Errorf("query traffic logs: %w", err)
+	}
+
+	// Aggregate by date
+	type daily struct {
+		inBytes  int64
+		outBytes int64
+	}
+	dateMap := make(map[string]*daily)
+	for _, l := range logs {
+		key := l.RecordedAt.Format("2006-01-02")
+		if _, ok := dateMap[key]; !ok {
+			dateMap[key] = &daily{}
+		}
+		dateMap[key].inBytes += l.InBytes
+		dateMap[key].outBytes += l.OutBytes
+	}
+
 	charts := make([]TrafficChartData, 0, days)
 	now := time.Now()
 	for i := days - 1; i >= 0; i-- {
 		d := now.AddDate(0, 0, -i)
+		key := d.Format("2006-01-02")
+		inGB, outGB := 0.0, 0.0
+		if dd, ok := dateMap[key]; ok {
+			inGB = float64(dd.inBytes) / (1024 * 1024 * 1024)
+			outGB = float64(dd.outBytes) / (1024 * 1024 * 1024)
+		}
 		charts = append(charts, TrafficChartData{
-			Date:    d.Format("2006-01-02"),
-			InGB:    0,
-			OutGB:   0,
-			TotalGB: 0,
+			Date:    key,
+			InGB:    math.Round(inGB*100) / 100,
+			OutGB:   math.Round(outGB*100) / 100,
+			TotalGB: math.Round((inGB+outGB)*100) / 100,
 		})
 	}
 

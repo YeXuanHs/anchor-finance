@@ -83,10 +83,26 @@ func (s *MaintenanceService) GetStatus() (*MaintenanceStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	_ = config
+	var cfg struct {
+		Enabled   bool    `json:"enabled"`
+		Message   string  `json:"message"`
+		StartTime *string `json:"start_time"`
+		EndTime   *string `json:"end_time"`
+	}
+	if err := util.UnmarshalJSON(config.Value, &cfg); err != nil {
+		return &MaintenanceStatus{Enabled: false}, nil
+	}
 	status := &MaintenanceStatus{
-		Enabled: false,
-		Message: "",
+		Enabled: cfg.Enabled,
+		Message: cfg.Message,
+	}
+	if cfg.StartTime != nil {
+		t, _ := time.Parse(time.RFC3339, *cfg.StartTime)
+		status.StartTime = &t
+	}
+	if cfg.EndTime != nil {
+		t, _ := time.Parse(time.RFC3339, *cfg.EndTime)
+		status.EndTime = &t
 	}
 	return status, nil
 }
