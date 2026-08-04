@@ -27,11 +27,11 @@ const fetchData = async () => {
   providers.value = data || []
 }
 const handleBind = async (item: any) => {
-  const { data } = await request.get(`/api/v2/oauth/${item.name}`)
-  if (data?.url) window.location.href = data.url
+  const { data } = await request.get(`/api/admin/oauth/${item.name}`)
+  if (data?.data?.url) window.location.href = data.data.url
 }
 const handleUnbind = async (item: any) => {
-  await request.delete(`/api/v2/oauth/${item.name}/unbind`)
+  await request.post('/api/v2/oauth/unbind', { provider: item.name })
   fetchData()
 }
 fetchData()

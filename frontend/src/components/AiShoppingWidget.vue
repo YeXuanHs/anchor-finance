@@ -175,7 +175,7 @@ const sendMessage = async () => {
   nextTick(() => scrollToBottom())
 
   try {
-    const res = await request.post(`/api/v1/ai-shopping/chat/${sessionId.value}`, {
+    const res = await request.post(`/api/v1/ai-shopping/session/${sessionId.value}/message`, {
       message: msg,
       page_context: pageContext.value
     })

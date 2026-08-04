@@ -479,7 +479,7 @@ async function handleSendSms() {
   try {
     await smsFormRef.value?.validate(['phone', ...(captchaType.value === 'image' && showSmsCaptcha.value ? ['imageCaptcha'] : [])])
     sendingSms.value = true
-    await request.post('/api/v1/captcha/sms', { phone: smsForm.value.phone })
+    await request.post('/api/v2/sms/send', { phone: smsForm.value.phone })
     message.success(t('login.smsSent'))
     smsCooldown.value = 60
     cooldownTimer = setInterval(() => {
