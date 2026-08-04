@@ -89,8 +89,8 @@ const formData = ref({
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/admin/advanced-options')
-    tableData.value = data?.data || []
+    const res = await request.get({ url: '/api/admin/advanced-options' })
+    tableData.value = res || []
   } catch (error) {
     console.error(error)
   } finally {
@@ -113,9 +113,9 @@ const handleEdit = (row: any) => {
 const handleSubmit = async () => {
   try {
     if (formData.value.id) {
-      await request.put(`/api/admin/advanced-options/${formData.value.id}`, formData.value)
+      await request.put({ url: `/api/admin/advanced-options/${formData.value.id}`, params: formData.value })
     } else {
-      await request.post('/api/admin/advanced-options', formData.value)
+      await request.post({ url: '/api/admin/advanced-options', params: formData.value })
     }
     ElMessage.success('操作成功')
     dialogVisible.value = false
@@ -128,7 +128,7 @@ const handleSubmit = async () => {
 const handleDelete = async (row: any) => {
   await ElMessageBox.confirm('确定删除该配置项？', '提示', { type: 'warning' })
   try {
-    await request.delete(`/api/admin/advanced-options/${row.id}`)
+    await request.del({ url: `/api/admin/advanced-options/${row.id}` })
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {

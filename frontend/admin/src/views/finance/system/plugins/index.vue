@@ -550,7 +550,7 @@ const handleToggleStatus = async (row: Plugin) => {
 // 删除
 const handleDelete = async (row: Plugin) => {
   try {
-    await request.delete({
+    await request.del({
       url: `/api/admin/plugins/${row.id}`
     })
     ElMessage.success('删除成功')

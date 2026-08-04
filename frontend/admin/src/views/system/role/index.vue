@@ -230,7 +230,7 @@
       type: 'warning'
     })
       .then(async () => {
-        await request.delete({ url: `/api/admin/rbac/roles/${row.roleId}` })
+        await request.del({ url: `/api/admin/rbac/roles/${row.roleId}` })
         ElMessage.success('删除成功')
         refreshData()
       })

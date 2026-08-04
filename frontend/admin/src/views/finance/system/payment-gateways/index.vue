@@ -521,7 +521,7 @@ const handleTest = async (row: PaymentGateway) => {
 // 删除
 const handleDelete = async (row: PaymentGateway) => {
   try {
-    await request.delete({
+    await request.del({
       url: `/api/admin/payment-gateways/${row.id}`
     })
     ElMessage.success('删除成功')

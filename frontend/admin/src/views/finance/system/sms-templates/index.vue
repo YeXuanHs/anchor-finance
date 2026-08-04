@@ -271,7 +271,7 @@ const handleSubmitCheck = async (row: any) => {
 const handleDelete = async (row: any) => {
   try {
     await ElMessageBox.confirm(`确定删除模板 "${row.title}" 吗？`, '提示')
-    await request.delete({ url: `/api/admin/sms/templates/${row.id}`, showSuccessMessage: true })
+    await request.del({ url: `/api/admin/sms/templates/${row.id}`, showSuccessMessage: true })
     fetchTemplates()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('删除失败')

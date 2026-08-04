@@ -255,9 +255,9 @@ onMounted(() => {
 
 async function fetchConfig() {
   try {
-    const res = await request.get('/api/admin/marketplace/config')
-    if (res.data) {
-      config.value = res.data
+    const res = await request.get({ url: '/api/admin/marketplace/config' })
+    if (res) {
+      config.value = res
     }
   } catch (e) {
     console.error(e)
@@ -267,7 +267,7 @@ async function fetchConfig() {
 async function saveConfig() {
   saving.value = true
   try {
-    await request.put('/api/admin/marketplace/config', config.value)
+    await request.put({ url: '/api/admin/marketplace/config', params: config.value })
     ElMessage.success('保存成功')
   } catch (e: any) {
     ElMessage.error(e.message || '保存失败')
@@ -279,15 +279,16 @@ async function saveConfig() {
 async function fetchListings() {
   loadingListings.value = true
   try {
-    const res = await request.get('/api/admin/marketplace/listings', {
+    const res = await request.get({
+      url: '/api/admin/marketplace/listings',
       params: {
         page: listingPage.value,
         page_size: 20,
         status: listingFilter.value
       }
     })
-    listings.value = res.data?.list || []
-    listingTotal.value = res.data?.total || 0
+    listings.value = res?.list || []
+    listingTotal.value = res?.total || 0
   } catch (e) {
     console.error(e)
   } finally {
@@ -298,15 +299,16 @@ async function fetchListings() {
 async function fetchOrders() {
   loadingOrders.value = true
   try {
-    const res = await request.get('/api/admin/marketplace/orders', {
+    const res = await request.get({
+      url: '/api/admin/marketplace/orders',
       params: {
         page: orderPage.value,
         page_size: 20,
         status: orderFilter.value
       }
     })
-    orders.value = res.data?.list || []
-    orderTotal.value = res.data?.total || 0
+    orders.value = res?.list || []
+    orderTotal.value = res?.total || 0
   } catch (e) {
     console.error(e)
   } finally {

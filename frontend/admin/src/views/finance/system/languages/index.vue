@@ -145,8 +145,8 @@ const editingId = ref<number | null>(null)
 // 加载语言列表
 const loadLanguages = async () => {
   try {
-    const res = await request.get('/api/admin/languages')
-    languages.value = res.data.data || []
+    const res = await request.get({ url: '/api/admin/languages' })
+    languages.value = res || []
   } catch (error) {
     console.error('加载语言列表失败:', error)
   }
@@ -177,7 +177,7 @@ const saveLanguage = async () => {
         flag: langForm.value.flag
       })
     } else {
-      await request.post('/api/admin/languages', langForm.value)
+      await request.post({ url: '/api/admin/languages', params: langForm.value })
     }
     ElMessage.success('操作成功')
     langDialogVisible.value = false

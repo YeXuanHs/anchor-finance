@@ -88,8 +88,8 @@ const wechatConfig = ref({ app_id: '', app_secret: '', template_id: '' })
 
 const fetchConfig = async () => {
   try {
-    const { data } = await request.get('/api/admin/config/messages')
-    if (data?.data) {
+    const res = await request.get({ url: '/api/admin/config/messages' })
+    if (res) {
       // 填充配置
     }
   } catch (error) {
@@ -99,7 +99,7 @@ const fetchConfig = async () => {
 
 const handleSaveEmail = async () => {
   try {
-    await request.put('/api/admin/config/messages/email', emailConfig.value)
+    await request.put({ url: '/api/admin/config/messages/email', params: emailConfig.value })
     ElMessage.success('保存成功')
   } catch (error) {
     console.error(error)
@@ -108,7 +108,7 @@ const handleSaveEmail = async () => {
 
 const handleTestEmail = async () => {
   try {
-    await request.post('/api/admin/config/messages/email/test')
+    await request.post({ url: '/api/admin/config/messages/email/test' })
     ElMessage.success('测试邮件已发送')
   } catch (error) {
     console.error(error)
@@ -117,7 +117,7 @@ const handleTestEmail = async () => {
 
 const handleSaveSms = async () => {
   try {
-    await request.put('/api/admin/config/messages/sms', smsConfig.value)
+    await request.put({ url: '/api/admin/config/messages/sms', params: smsConfig.value })
     ElMessage.success('保存成功')
   } catch (error) {
     console.error(error)
@@ -126,7 +126,7 @@ const handleSaveSms = async () => {
 
 const handleTestSms = async () => {
   try {
-    await request.post('/api/admin/config/messages/sms/test')
+    await request.post({ url: '/api/admin/config/messages/sms/test' })
     ElMessage.success('测试短信已发送')
   } catch (error) {
     console.error(error)
@@ -135,7 +135,7 @@ const handleTestSms = async () => {
 
 const handleSaveWechat = async () => {
   try {
-    await request.put('/api/admin/config/messages/wechat', wechatConfig.value)
+    await request.put({ url: '/api/admin/config/messages/wechat', params: wechatConfig.value })
     ElMessage.success('保存成功')
   } catch (error) {
     console.error(error)

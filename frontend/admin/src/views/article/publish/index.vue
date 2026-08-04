@@ -145,10 +145,8 @@
    */
   const getArticleTypes = async () => {
     try {
-      const { data } = await request.get('/api/admin/news/categories')
-      if (data.code === ApiStatus.success) {
-        articleTypes.value = data.data
-      }
+      const res = await request.get({ url: '/api/admin/news/categories' })
+      articleTypes.value = res || []
     } catch (error) {
       console.error('获取文章分类失败:', error)
       ElMessage.error('获取文章分类失败')
@@ -233,11 +231,9 @@
         visible: visible.value
       }
 
-      const { data } = await request.post('/api/admin/news', formData)
-      if (data.code === ApiStatus.success) {
-        ElMessage.success('文章发布成功')
-        router.push({ name: 'ArticleList' })
-      }
+      await request.post({ url: '/api/admin/news', params: formData })
+      ElMessage.success('文章发布成功')
+      router.push({ name: 'ArticleList' })
     } catch (error) {
       console.error('发布文章失败:', error)
       ElMessage.error('发布文章失败')

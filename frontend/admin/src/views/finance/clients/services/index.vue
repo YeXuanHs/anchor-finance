@@ -91,8 +91,8 @@ const getStatusText = (status: number) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/admin/client-services')
-    tableData.value = data?.data || []
+    const res = await request.get({ url: '/api/admin/client-services' })
+    tableData.value = res || []
   } catch (error) {
     console.error(error)
   } finally {
@@ -103,7 +103,7 @@ const fetchData = async () => {
 const handleSuspend = async (row: any) => {
   await ElMessageBox.confirm('确定暂停该服务？', '提示', { type: 'warning' })
   try {
-    await request.post(`/api/admin/client-services/${row.id}/suspend`)
+    await request.post({ url: `/api/admin/client-services/${row.id}/suspend` })
     ElMessage.success('暂停成功')
     fetchData()
   } catch (error) {
@@ -114,7 +114,7 @@ const handleSuspend = async (row: any) => {
 const handleTerminate = async (row: any) => {
   await ElMessageBox.confirm('确定终止该服务？此操作不可逆！', '警告', { type: 'error' })
   try {
-    await request.post(`/api/admin/client-services/${row.id}/terminate`)
+    await request.post({ url: `/api/admin/client-services/${row.id}/terminate` })
     ElMessage.success('终止成功')
     fetchData()
   } catch (error) {
@@ -138,7 +138,7 @@ const handleRenewSubmit = async () => {
     renewSubmitLoading.value = true
     try {
       await request.post({
-        url: `/api/admin/services/${renewForm.service_id}/renew`,
+        url: `/api/admin/client-services/${renewForm.service_id}/renew`,
         params: { duration: renewForm.duration, remark: renewForm.remark }
       })
       ElMessage.success('续费成功')

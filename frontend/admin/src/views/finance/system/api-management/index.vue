@@ -131,7 +131,7 @@ const handleAdd = async () => {
 const handleDelete = async (row: ApiItem) => {
   try {
     await ElMessageBox.confirm(`确定删除API "${row.username}" 吗？`, '提示')
-    await request.delete({ url: `/api/admin/api-keys/${row.id}`, showSuccessMessage: true })
+    await request.del({ url: `/api/admin/api-keys/${row.id}`, showSuccessMessage: true })
     fetchApiList()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('删除失败')

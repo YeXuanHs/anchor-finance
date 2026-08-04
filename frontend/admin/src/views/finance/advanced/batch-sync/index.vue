@@ -66,8 +66,8 @@ const logsList = ref<any[]>([])
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/admin/batch-sync')
-    tableData.value = data?.data || []
+    const res = await request.get({ url: '/api/admin/batch-sync' })
+    tableData.value = res || []
   } catch (error) {
     console.error(error)
   } finally {
@@ -77,7 +77,7 @@ const fetchData = async () => {
 
 const handleExecute = async (row: any) => {
   try {
-    await request.post(`/api/admin/batch-sync/${row.id}/execute`)
+    await request.post({ url: `/api/admin/batch-sync/${row.id}/execute` })
     ElMessage.success('开始执行')
     fetchData()
   } catch (error) {
@@ -89,8 +89,8 @@ const handleLogs = async (row: any) => {
   logsDialogVisible.value = true
   logsLoading.value = true
   try {
-    const { data } = await request.get(`/api/admin/batch-sync/${row.id}/logs`)
-    logsList.value = data?.data || []
+    const res = await request.get({ url: `/api/admin/batch-sync/${row.id}/logs` })
+    logsList.value = res || []
   } catch (error) {
     ElMessage.error('获取日志失败')
   } finally {

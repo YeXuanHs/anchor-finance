@@ -81,8 +81,8 @@ const formData = ref({
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/admin/cron-url')
-    tableData.value = data?.data || []
+    const res = await request.get({ url: '/api/admin/cron-url' })
+    tableData.value = res || []
   } catch (error) {
     console.error(error)
   } finally {
@@ -105,9 +105,9 @@ const handleEdit = (row: any) => {
 const handleSubmit = async () => {
   try {
     if (formData.value.id) {
-      await request.put(`/api/admin/cron-url/${formData.value.id}`, formData.value)
+      await request.put({ url: `/api/admin/cron-url/${formData.value.id}`, params: formData.value })
     } else {
-      await request.post('/api/admin/cron-url', formData.value)
+      await request.post({ url: '/api/admin/cron-url', params: formData.value })
     }
     ElMessage.success('操作成功')
     dialogVisible.value = false
@@ -119,7 +119,7 @@ const handleSubmit = async () => {
 
 const handleStatusChange = async (row: any) => {
   try {
-    await request.post(`/api/admin/cron-url/${row.id}/status`, { status: row.status })
+    await request.post({ url: `/api/admin/cron-url/${row.id}/status`, params: { status: row.status } })
     ElMessage.success('状态更新成功')
   } catch (error) {
     row.status = row.status === 1 ? 0 : 1
@@ -129,7 +129,7 @@ const handleStatusChange = async (row: any) => {
 
 const handleRun = async (row: any) => {
   try {
-    await request.post(`/api/admin/cron-url/${row.id}/run`)
+    await request.post({ url: `/api/admin/cron-url/${row.id}/run` })
     ElMessage.success('任务已触发')
   } catch (error) {
     console.error(error)
@@ -139,7 +139,7 @@ const handleRun = async (row: any) => {
 const handleDelete = async (row: any) => {
   await ElMessageBox.confirm('确定删除该任务？', '提示', { type: 'warning' })
   try {
-    await request.delete(`/api/admin/cron-url/${row.id}`)
+    await request.del({ url: `/api/admin/cron-url/${row.id}` })
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {

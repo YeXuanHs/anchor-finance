@@ -139,11 +139,9 @@
         year: yearVal.value === 'All' ? '' : yearVal.value
       }
 
-      const { data } = await request.get('/api/admin/news', { params })
-      if (data.code === 200) {
-        articleList.value = data.data.list || []
-        total.value = data.data.total || 0
-      }
+      const res = await request.get({ url: '/api/admin/news', params })
+      articleList.value = res?.list || []
+      total.value = res?.total || 0
 
       if (backTop) {
         useCommon().scrollToTop()

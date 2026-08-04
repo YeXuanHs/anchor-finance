@@ -103,10 +103,8 @@ const formData = ref({
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/admin/email-suffixes', {
-      params: { show_inactive: showInactive.value }
-    })
-    suffixList.value = res.data || []
+    const res = await request.get({ url: '/api/admin/email-suffixes', params: { show_inactive: showInactive.value } })
+    suffixList.value = res || []
   } catch (e) {
     ElMessage.error('加载失败')
   } finally {
@@ -139,7 +137,7 @@ const handleSubmit = async () => {
         remark: formData.value.remark
       })
     } else {
-      await request.post('/api/admin/email-suffixes', formData.value)
+      await request.post({ url: '/api/admin/email-suffixes', params: formData.value })
     }
     ElMessage.success(isEdit.value ? '更新成功' : '添加成功')
     dialogVisible.value = false
@@ -164,7 +162,7 @@ const handleToggleActive = async (row: EmailSuffix) => {
 
 const handleDelete = async (id: number) => {
   try {
-    await request.delete(`/api/admin/email-suffixes/${id}`)
+    await request.del({ url: `/api/admin/email-suffixes/${id}` })
     ElMessage.success('删除成功')
     loadData()
   } catch (e) {
@@ -175,7 +173,7 @@ const handleDelete = async (id: number) => {
 const handleImportDefaults = async () => {
   importing.value = true
   try {
-    await request.post('/api/admin/email-suffixes/import-defaults')
+    await request.post({ url: '/api/admin/email-suffixes/import-defaults' })
     ElMessage.success('默认后缀导入完成')
     loadData()
   } catch (e) {

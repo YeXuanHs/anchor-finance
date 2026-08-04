@@ -264,7 +264,7 @@ const handleRefreshAll = async () => {
 
 const handleDelete = async (row: any) => {
   try {
-    await request.delete({ url: `/api/admin/dcim-cloud/servers/${row.id}` })
+    await request.del({ url: `/api/admin/dcim-cloud/servers/${row.id}` })
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {

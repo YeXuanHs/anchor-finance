@@ -164,7 +164,7 @@ const handleSaveExpress = async () => {
 const handleDeleteExpress = async (row: any) => {
   try {
     await ElMessageBox.confirm(`确定删除快递 "${row.name}" 吗？`, '提示')
-    await request.delete({ url: `/api/admin/config/invoice/express/${row.id}`, showSuccessMessage: true })
+    await request.del({ url: `/api/admin/config/invoice/express/${row.id}`, showSuccessMessage: true })
     fetchExpressList()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('删除失败')

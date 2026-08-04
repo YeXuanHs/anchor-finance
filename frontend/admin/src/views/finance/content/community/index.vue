@@ -169,8 +169,8 @@ const fetchData = async () => {
     if (searchForm.keyword) params.keyword = searchForm.keyword
     if (searchForm.category) params.category = searchForm.category
     if (searchForm.status !== undefined) params.status = searchForm.status
-    const { data } = await request.get('/api/admin/community/posts', { params })
-    tableData.value = data?.data || []
+    const res = await request.get({ url: '/api/admin/community/posts', params })
+    tableData.value = res || []
   } catch (error) {
     console.error(error)
   } finally {
@@ -228,8 +228,8 @@ const handleComments = async (row: any) => {
   commentsDialogVisible.value = true
   commentsLoading.value = true
   try {
-    const { data } = await request.get(`/api/admin/community/posts/${row.id}/comments`)
-    commentsList.value = data?.data || []
+    const res = await request.get({ url: `/api/admin/community/posts/${row.id}/comments` })
+    commentsList.value = res || []
   } catch (error) {
     ElMessage.error('获取评论失败')
   } finally {
@@ -240,7 +240,7 @@ const handleComments = async (row: any) => {
 const handleDeleteComment = async (row: any) => {
   await ElMessageBox.confirm('确定删除该评论？', '提示', { type: 'warning' })
   try {
-    await request.delete(`/api/admin/community/comments/${row.id}`)
+    await request.del({ url: `/api/admin/community/comments/${row.id}` })
     ElMessage.success('删除成功')
     handleComments({ id: currentPostId.value })
   } catch (error) {
@@ -251,7 +251,7 @@ const handleDeleteComment = async (row: any) => {
 const handleDelete = async (row: any) => {
   await ElMessageBox.confirm('确定删除该帖子？', '提示', { type: 'warning' })
   try {
-    await request.delete(`/api/admin/community/posts/${row.id}`)
+    await request.del({ url: `/api/admin/community/posts/${row.id}` })
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {
