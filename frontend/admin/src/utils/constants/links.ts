@@ -3,33 +3,20 @@
  * 集中管理便于维护和更新链接地址
  *
  * @module utils/constants/links
- * @author Art Design Pro Team
  */
 export const WEB_LINKS = {
-  // Github 主页
-  GITHUB_HOME: 'https://github.com/Daymychen/art-design-pro',
+  // 开发者 GitHub
+  GITHUB: 'https://github.com/YeXuanHs',
 
-  // 项目 Github 主页
-  GITHUB: 'https://github.com/Daymychen/art-design-pro',
+  // QQ交流群
+  QQ_GROUP: '1009624286',
 
-  // 个人博客
-  BLOG: 'https://www.artd.pro',
+  // 开发者QQ
+  DEV_QQ: '2338795574',
 
-  // 项目文档
-  DOCS: 'https://www.artd.pro/docs/zh/',
+  // 开发者Telegram
+  DEV_TG: 'https://t.me/soranb666',
 
-  // 精简版本
-  LiteVersion: 'https://www.artd.pro/docs/zh/guide/lite-version.html',
-
-  // v2.6.1版本
-  OldVersion: 'https://www.artd.pro/v2/',
-
-  // 项目社区
-  COMMUNITY: 'https://www.artd.pro/docs/zh/community/communicate.html',
-
-  // 个人 Bilibili 主页
-  BILIBILI: 'https://space.bilibili.com/425500936?spm_id_from=333.1007.0.0',
-
-  // 项目介绍
-  INTRODUCE: 'https://www.artd.pro/docs/zh/guide/introduce.html'
+  // 开发者信息
+  DEV_INFO: '本系统由锚点云计算团队成员@Sora一人开发'
 }

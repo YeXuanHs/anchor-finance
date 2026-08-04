@@ -3,7 +3,7 @@
     <!-- 基础文字水印 -->
     <ElCard class="mb-7.5">
       <template #header>基础文字水印</template>
-      <ElWatermark content="Art Design Pro" :font="{ color: 'rgba(128, 128, 128, 0.2)' }">
+      <ElWatermark content="锚点财务" :font="{ color: 'rgba(128, 128, 128, 0.2)' }">
         <div style="height: 200px"></div>
       </ElWatermark>
     </ElCard>
@@ -12,7 +12,7 @@
     <ElCard class="mb-7.5">
       <template #header>多行文字水印</template>
       <ElWatermark
-        :content="['Art Design Pro', '专注用户体验，视觉设计']"
+        :content="['锚点财务', '高效、安全的财务管理解决方案']"
         :font="{ fontSize: 16, color: 'rgba(128, 128, 128, 0.2)' }"
       >
         <div style="height: 200px"></div>
@@ -31,7 +31,7 @@
     <ElCard class="mb-7.5">
       <template #header>自定义样式水印</template>
       <ElWatermark
-        content="Art Design Pro"
+        content="锚点财务"
         :font="{
           fontSize: 20,
           fontFamily: 'Arial',

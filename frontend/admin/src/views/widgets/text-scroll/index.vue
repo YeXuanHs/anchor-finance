@@ -2,7 +2,7 @@
   <div class="page-content space-y-5">
     <!-- 基础用法 -->
     <ArtTextScroll
-      text="Art Design Pro 是一款兼具设计美学与高效开发的后台系统 <a target='_blank' href='https://www.artd.pro/docs/'>点击我 </a>访问官方文档"
+      text="欢迎使用锚点财务管理系统"
       showClose
     />
 
