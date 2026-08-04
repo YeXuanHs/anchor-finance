@@ -140,11 +140,11 @@ interface OrderInfo {
 }
 
 const orderInfo = ref<OrderInfo>({
-  orderNo: (route.query.orderNo as string) || 'AF20251215143025001',
-  productName: (route.query.product as string) || '香港云服务器 - 基础型',
-  amount: Number(route.query.amount) || 49.00,
-  paymentMethod: (route.query.method as string) || '支付宝',
-  payTime: (route.query.time as string) || '2025-12-15 14:30:25'
+  orderNo: (route.query.orderNo as string) || '',
+  productName: (route.query.product as string) || '',
+  amount: Number(route.query.amount) || 0,
+  paymentMethod: (route.query.method as string) || '',
+  payTime: (route.query.time as string) || ''
 })
 
 const resultTitle = computed(() => {

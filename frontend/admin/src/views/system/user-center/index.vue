@@ -147,8 +147,10 @@
 </template>
 
 <script setup lang="ts">
+  import { ref, reactive, computed, onMounted } from 'vue'
   import { useUserStore } from '@/store/modules/user'
   import type { FormInstance, FormRules } from 'element-plus'
+  import request from '@/utils/http'
 
   defineOptions({ name: 'UserCenter' })
 
@@ -164,22 +166,48 @@
    * 用户信息表单
    */
   const form = reactive({
-    realName: 'John Snow',
-    nikeName: '皮卡丘',
-    email: '59301283@mall.com',
-    mobile: '18888888888',
-    address: '广东省深圳市宝安区西乡街道101栋201',
+    realName: '',
+    nikeName: '',
+    email: '',
+    mobile: '',
+    address: '',
     sex: '2',
-    des: 'Art Design Pro 是一款兼具设计美学与高效开发的后台系统.'
+    des: ''
   })
 
   /**
    * 密码修改表单
    */
   const pwdForm = reactive({
-    password: '123456',
-    newPassword: '123456',
-    confirmPassword: '123456'
+    password: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+
+  /**
+   * 获取用户信息
+   */
+  const fetchUserInfo = async () => {
+    try {
+      const res = await request.get({ url: '/api/admin/user/profile' })
+      if (res) {
+        Object.assign(form, {
+          realName: res.real_name || '',
+          nikeName: res.nickname || '',
+          email: res.email || '',
+          mobile: res.phone || '',
+          address: res.address || '',
+          sex: res.gender || '2',
+          des: res.description || ''
+        })
+      }
+    } catch {
+      // Use empty defaults
+    }
+  }
+
+  onMounted(() => {
+    fetchUserInfo()
   })
 
   /**
