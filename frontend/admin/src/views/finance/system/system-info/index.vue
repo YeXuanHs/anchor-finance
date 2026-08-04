@@ -50,7 +50,8 @@
 
       <!-- 操作区 -->
       <div class="action-section">
-        <el-button type="primary" @click="handleCheckUpdate">检查更新</el-button>
+        <!-- TODO: 更新检测功能暂未实现，待后续版本启用 -->
+        <!-- <el-button type="primary" @click="handleCheckUpdate">检查更新</el-button> -->
         <el-button @click="handleDatabaseInfo">数据库信息</el-button>
         <el-button @click="handleOptimize">优化数据库</el-button>
         <el-button @click="handleBackup">备份数据库</el-button>
@@ -120,16 +121,17 @@ const fetchSystemInfo = async () => {
   }
 }
 
-const handleCheckUpdate = async () => {
-  try {
-    const res = await request.get({ url: '/api/admin/system/check-update' })
-    if (res?.last_version) {
-      ElMessage.info(`最新版本: ${res.last_version}`)
-    }
-  } catch (error) {
-    ElMessage.error('检查更新失败')
-  }
-}
+// TODO: 更新检测功能暂未实现，待后续版本启用
+// const handleCheckUpdate = async () => {
+//   try {
+//     const res = await request.get({ url: '/api/admin/system/check-update' })
+//     if (res?.last_version) {
+//       ElMessage.info(`最新版本: ${res.last_version}`)
+//     }
+//   } catch (error) {
+//     ElMessage.error('检查更新失败')
+//   }
+// }
 
 const handleDatabaseInfo = async () => {
   try {

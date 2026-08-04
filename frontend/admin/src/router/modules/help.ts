@@ -9,31 +9,19 @@ export const helpRoutes: AppRouteRecord[] = [
     meta: {
       title: 'menus.help.document',
       icon: 'ri:bill-line',
-      link: WEB_LINKS.DOCS,
+      link: WEB_LINKS.GITHUB + '/anchor-finance#readme',
       isIframe: false,
       keepAlive: false
     }
   },
   {
-    name: 'LiteVersion',
+    name: 'QQGroup',
     path: '',
     component: '',
     meta: {
-      title: 'menus.help.liteVersion',
-      icon: 'ri:bus-2-line',
-      link: WEB_LINKS.LiteVersion,
-      isIframe: false,
-      keepAlive: false
-    }
-  },
-  {
-    name: 'OldVersion',
-    path: '',
-    component: '',
-    meta: {
-      title: 'menus.help.oldVersion',
-      icon: 'ri:subway-line',
-      link: WEB_LINKS.OldVersion,
+      title: 'QQ交流群',
+      icon: 'ri:qq-line',
+      link: `https://qm.qq.com/q/${WEB_LINKS.QQ_GROUP}`,
       isIframe: false,
       keepAlive: false
     }

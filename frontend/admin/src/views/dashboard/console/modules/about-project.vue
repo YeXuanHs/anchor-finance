@@ -2,8 +2,8 @@
   <div class="art-card p-5 flex-b mb-5 max-sm:mb-4">
     <div>
       <h2 class="text-2xl font-medium">关于项目</h2>
-      <p class="text-g-700 mt-1">{{ systemName }} 是一款兼具设计美学与高效开发的后台系统</p>
-      <p class="text-g-700 mt-1">使用了 Vue3、TypeScript、Vite、Element Plus 等前沿技术</p>
+      <p class="text-g-700 mt-1">{{ devInfo }}</p>
+      <p class="text-g-700 mt-1">技术栈：Vue3、TypeScript、Vite、Element Plus、Go、Gin、GORM</p>
 
       <div class="flex flex-wrap gap-3.5 max-w-150 mt-9">
         <div
@@ -26,12 +26,13 @@
   import { WEB_LINKS } from '@/utils/constants'
 
   const systemName = AppConfig.systemInfo.name
+  const devInfo = WEB_LINKS.DEV_INFO
 
   const linkList = [
-    { label: '项目官网', url: WEB_LINKS.DOCS },
-    { label: '文档', url: WEB_LINKS.INTRODUCE },
-    { label: 'Github', url: WEB_LINKS.GITHUB_HOME },
-    { label: '哔哩哔哩', url: WEB_LINKS.BILIBILI }
+    { label: '开发者GitHub', url: WEB_LINKS.GITHUB },
+    { label: `QQ: ${WEB_LINKS.DEV_QQ}`, url: `https://qm.qq.com/q/${WEB_LINKS.QQ_GROUP}` },
+    { label: 'Telegram', url: WEB_LINKS.DEV_TG },
+    { label: `QQ交流群: ${WEB_LINKS.QQ_GROUP}`, url: `https://qm.qq.com/q/${WEB_LINKS.QQ_GROUP}` }
   ]
 
   /**
