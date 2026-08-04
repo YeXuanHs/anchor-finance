@@ -148,7 +148,10 @@ func (s *AgentEnhancedService) PostUpload(inspectionID uint, imageUrls []string)
 
 	var existing []string
 	if inspection.Images != nil {
-		_ = json.Unmarshal(inspection.Images, &existing)
+		if err := json.Unmarshal(inspection.Images, &existing); err != nil {
+			// If existing images are corrupted, start fresh with new images
+			existing = nil
+		}
 	}
 	existing = append(existing, imageUrls...)
 

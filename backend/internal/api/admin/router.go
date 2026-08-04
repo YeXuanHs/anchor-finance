@@ -2280,8 +2280,15 @@ func RegisterPublicRoutes(r *gin.RouterGroup, db *gorm.DB, log *logger.Logger) {
 			c.JSON(500, gin.H{"error": "会话创建失败"})
 			return
 		}
-		_ = csSvc.SendMessage(session.ID, "user", req.Content)
-		reply, _ := csSvc.AIReply(session.ID, req.Content)
+		if err := csSvc.SendMessage(session.ID, "user", req.Content); err != nil {
+			c.JSON(500, gin.H{"error": "消息发送失败"})
+			return
+		}
+		reply, err := csSvc.AIReply(session.ID, req.Content)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "AI回复失败"})
+			return
+		}
 		c.JSON(200, gin.H{"code": 0, "data": gin.H{"reply": reply, "session_id": session.ID}})
 	})
 	r.GET("/cs/history", func(c *gin.Context) {
@@ -2290,8 +2297,16 @@ func RegisterPublicRoutes(r *gin.RouterGroup, db *gorm.DB, log *logger.Logger) {
 			c.JSON(400, gin.H{"error": "缺少visitor_id"})
 			return
 		}
-		session, _ := csSvc.GetOrCreateSession(visitorID)
-		messages, _ := csSvc.GetSessionMessages(session.ID)
+		session, err := csSvc.GetOrCreateSession(visitorID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "会话创建失败"})
+			return
+		}
+		messages, err := csSvc.GetSessionMessages(session.ID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "获取消息失败"})
+			return
+		}
 		c.JSON(200, gin.H{"code": 0, "data": messages})
 	})
 

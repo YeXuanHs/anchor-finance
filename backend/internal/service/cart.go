@@ -168,7 +168,10 @@ func (s *CartService) Checkout(userID uint, couponCode string) ([]*Order, error)
 					pid := promo.ID
 					promoID = &pid
 					// Record promo code usage
-					_ = s.pSvc.Apply(promo.ID, userID, 0, discount) // orderID will be set after creation
+					if err := s.pSvc.Apply(promo.ID, userID, 0, discount); err != nil {
+						// Log but don't fail checkout - promo was already validated
+						fmt.Printf("warning: failed to record promo usage for promo %d user %d: %v\n", promo.ID, userID, err)
+					}
 				}
 			}
 
