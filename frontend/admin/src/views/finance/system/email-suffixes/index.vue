@@ -133,9 +133,7 @@ const handleSubmit = async () => {
   submitting.value = true
   try {
     if (isEdit.value) {
-      await request.put(`/api/admin/email-suffixes/${editId.value}`, {
-        remark: formData.value.remark
-      })
+      await request.put({ url: `/api/admin/email-suffixes/${editId.value}`, params: { remark: formData.value.remark } })
     } else {
       await request.post({ url: '/api/admin/email-suffixes', params: formData.value })
     }
@@ -151,9 +149,7 @@ const handleSubmit = async () => {
 
 const handleToggleActive = async (row: EmailSuffix) => {
   try {
-    await request.put(`/api/admin/email-suffixes/${row.id}`, {
-      is_active: row.is_active
-    })
+    await request.put({ url: `/api/admin/email-suffixes/${row.id}`, params: { is_active: row.is_active } })
   } catch (e) {
     row.is_active = !row.is_active
     ElMessage.error('更新失败')

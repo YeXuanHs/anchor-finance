@@ -278,6 +278,24 @@ export const financeRoutes: AppRouteRecord = {
             title: '流量包配置',
             icon: 'ep:connection'
           }
+        },
+        {
+          path: 'product-diverts',
+          name: 'ProductDiverts',
+          component: () => import('@/views/finance/products/product-diverts/index.vue'),
+          meta: {
+            title: '产品转移/分流',
+            icon: 'ep:sort'
+          }
+        },
+        {
+          path: 'product-transfers',
+          name: 'ProductTransfers',
+          component: () => import('@/views/finance/products/product-transfers/index.vue'),
+          meta: {
+            title: '产品转移配置',
+            icon: 'ep:switch'
+          }
         }
       ]
     },
@@ -381,6 +399,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '创建订单',
             icon: 'ep:plus',
             isHide: true
+          }
+        },
+        {
+          path: 'multi-renew',
+          name: 'MultiRenew',
+          component: () => import('@/views/finance/orders/multi-renew/index.vue'),
+          meta: {
+            title: '批量续费',
+            icon: 'ep:refresh'
           }
         }
       ]
@@ -1087,6 +1114,15 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '任务队列',
             icon: 'ep:list'
+          }
+        },
+        {
+          path: 'service-details',
+          name: 'ServiceDetails',
+          component: () => import('@/views/finance/system/service-details/index.vue'),
+          meta: {
+            title: '服务详情管理',
+            icon: 'ep:service'
           }
         }
       ]

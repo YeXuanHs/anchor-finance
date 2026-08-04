@@ -333,7 +333,7 @@ func (h *ProductHandler) EditStock(c *gin.Context) {
 
 // BatchUpdate updates multiple products at once.
 func (h *ProductHandler) BatchUpdate(c *gin.Context) {
-	var req service.BatchUpdateRequest
+	var req service.ProductBatchUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return

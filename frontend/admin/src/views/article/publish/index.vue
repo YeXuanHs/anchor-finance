@@ -77,7 +77,6 @@
 
 <script setup lang="ts">
   import { Plus } from '@element-plus/icons-vue'
-  import { ApiStatus } from '@/utils/http/status'
   import { useUserStore } from '@/store/modules/user'
   import EmojiText from '@/utils/ui/emojo'
   import { PageModeEnum } from '@/enums/formEnum'
@@ -159,13 +158,12 @@
   const getArticleDetail = async () => {
     try {
       const { id } = route.query
-      const { data } = await request.get(`/api/admin/news/${id}`)
+      const res = await request.get({ url: `/api/admin/news/${id}` })
 
-      if (data.code === ApiStatus.success) {
-        const { title, blog_class, html_content } = data.data
-        articleName.value = title
-        articleType.value = Number(blog_class)
-        editorHtml.value = html_content
+      if (res) {
+        articleName.value = res.title
+        articleType.value = Number(res.blog_class)
+        editorHtml.value = res.html_content
       }
     } catch (error) {
       console.error('获取文章详情失败:', error)
@@ -258,11 +256,9 @@
         visible: visible.value
       }
 
-      const { data } = await request.put(`/api/admin/news/${id}`, formData)
-      if (data.code === ApiStatus.success) {
-        ElMessage.success('文章保存成功')
-        router.push({ name: 'ArticleList' })
-      }
+      await request.put({ url: `/api/admin/news/${id}`, params: formData })
+      ElMessage.success('文章保存成功')
+      router.push({ name: 'ArticleList' })
     } catch (error) {
       console.error('保存文章失败:', error)
       ElMessage.error('保存文章失败')

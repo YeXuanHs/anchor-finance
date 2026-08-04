@@ -172,10 +172,7 @@ const editLanguage = (lang: Language) => {
 const saveLanguage = async () => {
   try {
     if (isEdit.value && editingId.value) {
-      await request.put(`/api/admin/languages/${editingId.value}`, {
-        name: langForm.value.name,
-        flag: langForm.value.flag
-      })
+      await request.put({ url: `/api/admin/languages/${editingId.value}`, params: { name: langForm.value.name, flag: langForm.value.flag } })
     } else {
       await request.post({ url: '/api/admin/languages', params: langForm.value })
     }
@@ -190,7 +187,7 @@ const saveLanguage = async () => {
 // 切换语言状态
 const toggleLanguage = async (id: number, status: number) => {
   try {
-    await request.put(`/api/admin/languages/${id}`, { status })
+    await request.put({ url: `/api/admin/languages/${id}`, params: { status } })
     ElMessage.success('操作成功')
   } catch (error) {
     ElMessage.error('操作失败')
@@ -202,7 +199,7 @@ const toggleLanguage = async (id: number, status: number) => {
 const setDefault = async (id: number) => {
   try {
     await ElMessageBox.confirm('确定将此语言设为默认吗？', '提示')
-    await request.post(`/api/admin/languages/${id}/default`)
+    await request.post({ url: `/api/admin/languages/${id}/default` })
     ElMessage.success('设置成功')
     loadLanguages()
   } catch (error) {
@@ -225,8 +222,8 @@ const loadTranslations = async () => {
   try {
     const params: any = {}
     if (currentModule.value) params.module = currentModule.value
-    const res = await request.get(`/api/admin/languages/${currentLang.value.code}/translations`, { params })
-    const data = res.data.data || {}
+    const res = await request.get({ url: `/api/admin/languages/${currentLang.value.code}/translations`, params })
+    const data = res || {}
     translationList.value = Object.entries(data).map(([key, value]) => ({
       key,
       value: value as string
@@ -246,7 +243,7 @@ const saveTranslations = async () => {
         data[item.key] = item.value
       }
     })
-    await request.post(`/api/admin/languages/${currentLang.value.code}/translations`, data)
+    await request.post({ url: `/api/admin/languages/${currentLang.value.code}/translations`, params: data })
     ElMessage.success('保存成功')
   } catch (error) {
     ElMessage.error('保存失败')

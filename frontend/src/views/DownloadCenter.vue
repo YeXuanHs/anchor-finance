@@ -158,6 +158,7 @@ interface FileItem {
   id: number
   name: string
   category: string
+  icon: string
   version: string
   size: string
   updateTime: string
@@ -179,6 +180,7 @@ async function fetchFiles() {
         id: item.id,
         name: item.name,
         category: item.category_name || '未分类',
+        icon: item.icon || item.icon_name || '',
         version: item.version || '-',
         size: item.size || '-',
         updateTime: item.updated_at?.split('T')[0] || '',
@@ -198,22 +200,37 @@ fetchFiles()
 
 const fileGroups = computed(() => {
   const categories = [...new Set(files.value.map(f => f.category))]
-  const iconMap: Record<string, any> = {
-    '面板程序': ServerOutline,
-    '部署脚本': CodeSlashOutline,
-    '安全工具': ExtensionPuzzleOutline,
-    '运维工具': DesktopOutline,
-    '开发文档': DocumentTextOutline,
-    '客户端工具': CloudDownloadOutline
+  // English-key icon component map
+  const iconComponentMap: Record<string, any> = {
+    panel: ServerOutline,
+    script: CodeSlashOutline,
+    security: ExtensionPuzzleOutline,
+    ops: DesktopOutline,
+    docs: DocumentTextOutline,
+    client: CloudDownloadOutline
+  }
+  // Chinese-to-English key mapping for backward compatibility
+  const categoryNameToKey: Record<string, string> = {
+    '面板程序': 'panel',
+    '部署脚本': 'script',
+    '安全工具': 'security',
+    '运维工具': 'ops',
+    '开发文档': 'docs',
+    '客户端工具': 'client'
   }
   return [
     { key: 'all', label: '全部文件', icon: FolderOpenOutline, count: files.value.length },
-    ...categories.map(cat => ({
-      key: cat,
-      label: cat,
-      icon: iconMap[cat] || DocumentTextOutline,
-      count: files.value.filter(f => f.category === cat).length
-    }))
+    ...categories.map(cat => {
+      // Try to resolve icon from API icon field first, then from category mapping
+      const sampleFile = files.value.find(f => f.category === cat)
+      const iconKey = sampleFile?.icon || categoryNameToKey[cat] || cat
+      return {
+        key: cat,
+        label: cat,
+        icon: iconComponentMap[iconKey] || DocumentTextOutline,
+        count: files.value.filter(f => f.category === cat).length
+      }
+    })
   ]
 })
 

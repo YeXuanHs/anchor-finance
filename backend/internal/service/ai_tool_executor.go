@@ -178,13 +178,6 @@ func (e *AIToolExecutor) Execute(toolName string, args map[string]interface{}) s
 	return result
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // ─── 通用工具 ───
 
 func (e *AIToolExecutor) listAvailableTools() string {

@@ -364,11 +364,11 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 }
 
 const handleUploadSuccess = (response: any, file: UploadFile) => {
-  if (response.code === 0) {
+  if (response?.data) {
     file.url = response.data.url
     ;(file as any).attachment_id = response.data.id
   } else {
-    ElMessage.error(response.msg || '上传失败')
+    ElMessage.error(response?.msg || '上传失败')
   }
 }
 

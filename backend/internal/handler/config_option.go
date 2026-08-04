@@ -131,7 +131,7 @@ func (h *ConfigOptionHandler) Delete(c *gin.Context) {
 
 // BatchUpdateSort batch-updates sort order for config options.
 func (h *ConfigOptionHandler) BatchUpdateSort(c *gin.Context) {
-	var req []service.SortItem
+	var req []service.ConfigSortItem
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return

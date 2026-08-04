@@ -576,14 +576,14 @@ const (
 	BatchDelete  BatchAction = "delete"
 )
 
-// BatchUpdateRequest is the payload for batch operations.
-type BatchUpdateRequest struct {
+// OrderBatchUpdateRequest is the payload for batch operations.
+type OrderBatchUpdateRequest struct {
 	OrderIDs []uint      `json:"order_ids" binding:"required,min=1"`
 	Action   BatchAction `json:"action" binding:"required,oneof=confirm cancel delete"`
 }
 
 // BatchUpdate performs batch operations on orders.
-func (s *OrderService) BatchUpdate(adminID uint, req BatchUpdateRequest) (int, error) {
+func (s *OrderService) BatchUpdate(adminID uint, req OrderBatchUpdateRequest) (int, error) {
 	var processed int
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {

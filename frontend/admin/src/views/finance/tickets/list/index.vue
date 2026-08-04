@@ -327,12 +327,12 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 
 // 上传成功
 const handleUploadSuccess = (response: any, file: UploadFile) => {
-  if (response.code === 0) {
+  if (response?.data) {
     // 将上传成功的信息保存到文件对象
     file.url = response.data.url
     file.attachment_id = response.data.id
   } else {
-    ElMessage.error(response.msg || '上传失败')
+    ElMessage.error(response?.msg || '上传失败')
   }
 }
 

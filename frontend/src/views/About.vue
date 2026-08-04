@@ -166,16 +166,22 @@ const fetchSiteSettings = async () => {
 
 onMounted(() => {
   fetchSiteSettings()
+  fetchHistory()
+  fetchTeam()
 })
 
-const history = ref([
-  { year: '2018', title: '公司成立', desc: '公司正式成立，开始研发财务管理核心系统' },
-  { year: '2019', title: '产品发布', desc: '首款产品正式上线，获得市场广泛认可' },
-  { year: '2020', title: '快速增长', desc: '服务企业突破1000家，完成A轮融资' },
-  { year: '2021', title: '技术突破', desc: '获得多项技术专利，产品全面升级' },
-  { year: '2022', title: '行业领先', desc: '成为行业领先的财务管理系统提供商' },
-  { year: '2023', title: '持续创新', desc: '推出AI智能财务分析功能，服务企业超5000家' }
-])
+const history = ref([])
+
+const fetchHistory = async () => {
+  try {
+    const res = await request.get('/api/v1/about/history')
+    if (res?.data?.length) {
+      history.value = res.data
+    }
+  } catch {
+    // Use empty array as fallback
+  }
+}
 
 const values = ref([
   { icon: 'Aim', title: '专业专注', desc: '深耕财务管理领域，提供最专业的解决方案' },
@@ -184,12 +190,18 @@ const values = ref([
   { icon: 'Headset', title: '客户至上', desc: '7x24小时技术支持，客户满意是我们的追求' }
 ])
 
-const team = ref([
-  { name: '张明', role: '首席执行官', desc: '10年财务管理行业经验，前知名财务软件公司高管' },
-  { name: '李华', role: '首席技术官', desc: '资深技术专家，主导多个大型系统架构设计' },
-  { name: '王芳', role: '产品总监', desc: '深入了解企业财务需求，打造用户喜爱的产品' },
-  { name: '赵强', role: '技术总监', desc: '全栈工程师，擅长高并发系统设计与优化' }
-])
+const team = ref([])
+
+const fetchTeam = async () => {
+  try {
+    const res = await request.get('/api/v1/about/team')
+    if (res?.data?.length) {
+      team.value = res.data
+    }
+  } catch {
+    // Use empty array as fallback
+  }
+}
 </script>
 
 <style scoped lang="scss">

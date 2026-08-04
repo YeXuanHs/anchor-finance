@@ -7,7 +7,7 @@
           <div class="logo-icon">
             <el-icon :size="22" color="#fff"><Monitor /></el-icon>
           </div>
-          <span class="logo-text">智简魔方</span>
+          <span class="logo-text">{{ siteName }}</span>
         </router-link>
         <nav class="nav-links">
           <router-link to="/" class="nav-link">首页</router-link>
@@ -119,6 +119,7 @@ import {
   List,
   HomeFilled
 } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
 const router = useRouter()
 const route = useRoute()
@@ -130,6 +131,19 @@ const paymentStatus = ref<'success' | 'fail' | 'processing'>(
 
 const countdownSeconds = ref(10)
 let countdownTimer: ReturnType<typeof setInterval> | null = null
+
+const siteName = ref('')
+
+const fetchSiteSettings = async () => {
+  try {
+    const res = await request.get('/api/v1/settings/public')
+    if (res?.data?.site_name) {
+      siteName.value = res.data.site_name
+    }
+  } catch {
+    // Use empty string as fallback
+  }
+}
 
 interface OrderInfo {
   orderNo: string
@@ -211,13 +225,23 @@ const statusTagType = computed(() => {
 })
 
 const paymentTagType = computed(() => {
+  // Style mapping uses English keys; display names come from API/i18n
   const methods: Record<string, 'info' | 'success' | 'warning' | 'primary'> = {
-    '支付宝': 'primary',
-    '微信支付': 'success',
-    'QQ钱包': 'primary',
-    '余额支付': 'warning'
+    alipay: 'primary',
+    wechat: 'success',
+    qqpay: 'primary',
+    balance: 'warning'
   }
-  return methods[orderInfo.value.paymentMethod] || 'info'
+  // Reverse lookup: Chinese name -> English key
+  const methodNameToKey: Record<string, string> = {
+    '支付宝': 'alipay',
+    '微信支付': 'wechat',
+    'QQ钱包': 'qqpay',
+    '余额支付': 'balance'
+  }
+  const raw = orderInfo.value.paymentMethod
+  const key = methodNameToKey[raw] || raw
+  return methods[key] || 'info'
 })
 
 const countdownTargetLabel = computed(() => {
@@ -247,6 +271,7 @@ function copyOrderNo() {
 }
 
 onMounted(() => {
+  fetchSiteSettings()
   countdownTimer = setInterval(() => {
     if (countdownSeconds.value > 0) {
       countdownSeconds.value--

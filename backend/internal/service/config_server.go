@@ -530,14 +530,14 @@ func (s *ConfigServerService) AdminGetModulesGroup(moduleType string) []map[stri
 		gid, _ := g["id"].(uint)
 		var count int64
 		s.db.Table("servers").Where("gid = ?", gid).Count(&count)
-		if contains(gids, gid) || count == 0 {
+		if containsUint(gids, gid) || count == 0 {
 			result = append(result, g)
 		}
 	}
 	return result
 }
 
-func contains(arr []uint, val uint) bool {
+func containsUint(arr []uint, val uint) bool {
 	for _, v := range arr {
 		if v == val {
 			return true

@@ -268,6 +268,45 @@
                 </div>
               </div>
             </el-tab-pane>
+
+            <!-- 云服务器高级管理 Tab（仅云服务器类型显示） -->
+            <template v-if="isCloudType">
+              <el-tab-pane label="快照" name="snapshot">
+                <div class="tab-content">
+                  <SnapshotManager />
+                </div>
+              </el-tab-pane>
+
+              <el-tab-pane label="备份" name="backup">
+                <div class="tab-content">
+                  <BackupManager />
+                </div>
+              </el-tab-pane>
+
+              <el-tab-pane label="磁盘" name="disk">
+                <div class="tab-content">
+                  <DiskManager />
+                </div>
+              </el-tab-pane>
+
+              <el-tab-pane label="VPC网络" name="vpc">
+                <div class="tab-content">
+                  <VpcManager />
+                </div>
+              </el-tab-pane>
+
+              <el-tab-pane label="NAT" name="nat">
+                <div class="tab-content">
+                  <NatManager />
+                </div>
+              </el-tab-pane>
+
+              <el-tab-pane label="SSH密钥" name="sshkey">
+                <div class="tab-content">
+                  <SshKeyManager />
+                </div>
+              </el-tab-pane>
+            </template>
           </el-tabs>
         </el-card>
       </div>
@@ -426,7 +465,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, shallowRef, watch } from 'vue'
+import { ref, reactive, computed, onMounted, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -442,6 +481,14 @@ import ServiceSSL from './service/ServiceSSL.vue'
 import ServiceCDN from './service/ServiceCDN.vue'
 import ServiceHosting from './service/ServiceHosting.vue'
 import ServiceNAT from './service/ServiceNAT.vue'
+
+// 云服务器高级管理组件
+import SnapshotManager from './components/SnapshotManager.vue'
+import BackupManager from './components/BackupManager.vue'
+import DiskManager from './components/DiskManager.vue'
+import VpcManager from './components/VpcManager.vue'
+import NatManager from './components/NatManager.vue'
+import SshKeyManager from './components/SshKeyManager.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -550,6 +597,12 @@ const isExpired = computed(() => {
 
 const filteredVersions = computed(() => {
   return osVersions.value[reinstallForm.os] || []
+})
+
+// 是否为云服务器类型（显示高级管理Tab）
+const isCloudType = computed(() => {
+  const type = serviceInfo.value.type?.toLowerCase() || ''
+  return ['cloud', 'server', 'dedicated'].includes(type)
 })
 
 // 方法

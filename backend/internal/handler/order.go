@@ -348,7 +348,7 @@ func (h *OrderHandler) CheckOrder(c *gin.Context) {
 // BatchUpdate performs batch operations on orders (confirm/cancel/delete).
 func (h *OrderHandler) BatchUpdate(c *gin.Context) {
 	adminID := c.GetUint("admin_id")
-	var req service.BatchUpdateRequest
+	var req service.OrderBatchUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return

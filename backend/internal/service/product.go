@@ -599,7 +599,7 @@ func (s *ProductService) EditStock(id uint, stock int) error {
 
 // ==================== Batch Operations ====================
 
-type BatchUpdateRequest struct {
+type ProductBatchUpdateRequest struct {
 	IDs    []uint                 `json:"ids" binding:"required,min=1"`
 	Fields map[string]interface{} `json:"fields" binding:"required"`
 }

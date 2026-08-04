@@ -110,8 +110,8 @@ type TicketNote struct {
 	Attachment  string `gorm:"type:text" json:"attachment"` // 逗号分隔的附件路径
 }
 
-// CustomField 自定义字段
-type CustomField struct {
+// TicketCustomField 工单自定义字段
+type TicketCustomField struct {
 	gorm.Model
 	Type        string `gorm:"type:varchar(32);not null;index" json:"type"`       // ticket/order/product
 	RelID       uint   `gorm:"index;not null" json:"rel_id"`                     // 关联ID
@@ -125,8 +125,8 @@ type CustomField struct {
 	SortOrder   int    `gorm:"default:0" json:"sort_order"`
 }
 
-// CustomFieldValue 自定义字段值
-type CustomFieldValue struct {
+// TicketCustomFieldValue 工单自定义字段值
+type TicketCustomFieldValue struct {
 	gorm.Model
 	FieldID uint   `gorm:"index;not null" json:"field_id"`
 	RelID   uint   `gorm:"index;not null" json:"rel_id"`

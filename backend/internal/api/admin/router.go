@@ -234,6 +234,18 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// 操作日志
 		admin.GET("/logs", adminHandler.GetLogs)
 
+		// ==================== 管理员管理 ====================
+		adminManageSvc := service.NewAdminManageService(deps.DB, deps.Log)
+		adminManageHandler := handler.NewAdminManageHandler(adminManageSvc, deps.Log)
+		admin.GET("/admins", adminManageHandler.List)
+		admin.GET("/admins/:id", adminManageHandler.Get)
+		admin.POST("/admins", adminManageHandler.Create)
+		admin.PUT("/admins/:id", adminManageHandler.Update)
+		admin.DELETE("/admins/:id", adminManageHandler.Delete)
+		admin.POST("/admins/:id/status", adminManageHandler.SetStatus)
+		admin.POST("/admins/:id/reset-password", adminManageHandler.ResetPassword)
+		admin.GET("/admins/operation-logs", adminManageHandler.GetOperationLogs)
+
 		// 轮播图管理
 		bannerSvc := service.NewBannerService(deps.DB, deps.Log)
 		bannerHandler := handler.NewBannerHandler(bannerSvc, deps.Log)

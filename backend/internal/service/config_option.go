@@ -256,12 +256,12 @@ func (s *ConfigOptionService) Delete(id uint) error {
 	return nil
 }
 
-type SortItem struct {
+type ConfigSortItem struct {
 	ID        uint `json:"id"`
 	SortOrder int  `json:"sort_order"`
 }
 
-func (s *ConfigOptionService) BatchUpdateSort(items []SortItem) error {
+func (s *ConfigOptionService) BatchUpdateSort(items []ConfigSortItem) error {
 	if len(items) == 0 {
 		return errors.New("items is empty")
 	}
