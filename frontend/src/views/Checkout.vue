@@ -347,7 +347,7 @@ const fetchOrderData = async () => {
       return
     }
     
-    const { data } = await request.post('/api/v1/orders/preview', {
+    const { data } = await request.post('/api/v2/orders/preview', {
       items: checkoutItems
     })
     

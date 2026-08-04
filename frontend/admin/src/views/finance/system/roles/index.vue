@@ -301,7 +301,7 @@ const handlePermission = async (row: Role) => {
   try {
     const [treeData, checkedData] = await Promise.all([
       request.get({ url: '/api/admin/rbac/permissions' }),
-      request.get({ url: `/api/admin/rbac/roles/${row.id}/permissions` })
+      request.get({ url: '/api/admin/rbac/permissions', params: { role_id: row.id } })
     ])
     permissionTree.value = treeData || []
     await nextTick()

@@ -168,7 +168,7 @@ function typeTagColor(type: string) {
 async function loadData() {
   loading.value = true
   try {
-    const res = await request.get('/api/v1/system-logs', {
+    const res = await request.get('/api/v2/system-logs', {
       params: { page: currentPage.value, page_size: pageSize.value, level: filters.type, module: filters.keyword, date_range: filters.dateRange }
     })
     logs.value = res.data?.data || []
@@ -192,7 +192,7 @@ function handleReset() {
 
 async function handleExport() {
   try {
-    const res = await request.get('/api/v1/system-logs/export', { params: { level: filters.type, module: filters.keyword }, responseType: 'blob' })
+    const res = await request.get('/api/v2/system-logs/export', { params: { level: filters.type, module: filters.keyword }, responseType: 'blob' })
     const url = window.URL.createObjectURL(new Blob([res.data]))
     const a = document.createElement('a'); a.href = url; a.download = 'system_logs.csv'; a.click()
     window.URL.revokeObjectURL(url)

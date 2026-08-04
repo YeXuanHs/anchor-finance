@@ -254,7 +254,7 @@ const removeSelected = async () => {
       .filter(item => item.selected)
       .map(item => item.id)
     
-    await request.post('/api/v1/cart/batch-delete', { ids: selectedIds })
+    await request.post('/api/v2/cart/batch-delete', { ids: selectedIds })
     cartItems.value = cartItems.value.filter(item => !item.selected)
     ElMessage.success('删除成功')
   } catch (error) {

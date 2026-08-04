@@ -168,7 +168,7 @@ const handleEdit = (row: any) => {
 
 const handleDelete = async (row: any) => {
   try {
-    await request.del({ url: `/api/admin/config-options/${row.id}` })
+    await request.del({ url: '/api/admin/config-options/options', params: { id: row.id } })
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {
@@ -183,7 +183,7 @@ const handleSubmit = async () => {
     submitLoading.value = true
     try {
       if (formData.id) {
-        await request.put({ url: `/api/admin/config-options/${formData.id}`, params: formData })
+        await request.post({ url: '/api/admin/config-options/edit-config', params: formData })
       } else {
         await request.post({ url: '/api/admin/config-options/add-options', params: formData })
       }

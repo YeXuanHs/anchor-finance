@@ -169,7 +169,7 @@ const scrollToProducts = () => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/v1/ssl/certificates')
+    const res = await request.get('/api/v2/ssl/certificates')
     if (res.data?.data?.length) {
       certTypes.value = res.data.data
     }

@@ -191,7 +191,7 @@ const currentPackage = ref<any>(null)
 
 const fetchTrafficData = async () => {
   try {
-    const { data } = await request.get('/api/v1/user/ddos/traffic', { params: { range: timeRange.value } })
+    const { data } = await request.get('/api/v2/user/ddos/traffic', { params: { range: timeRange.value } })
     if (data?.data) {
       trafficData.value = data.data
     }
@@ -203,7 +203,7 @@ const fetchTrafficData = async () => {
 const fetchOverview = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/user/ddos/overview')
+    const { data } = await request.get('/api/v2/user/ddos/overview')
     if (data?.data) {
       stats.value = data.data.stats || stats.value
       recentAttacks.value = data.data.recent_attacks || recentAttacks.value

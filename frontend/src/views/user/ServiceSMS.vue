@@ -36,8 +36,8 @@ const fetchData = async () => {
   loading.value = true
   try {
     const [svcRes, recRes] = await Promise.all([
-      request.get('/api/user/services/sms'),
-      request.get('/api/user/services/sms/records')
+      request.get('/api/v2/user/services/sms'),
+      request.get('/api/v2/user/services/sms/records')
     ])
     service.value = svcRes.data.data || {}
     records.value = recRes.data.data || []

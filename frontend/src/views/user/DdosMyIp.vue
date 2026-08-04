@@ -218,7 +218,7 @@ const submitAddIp = async () => {
     if (!valid) return
     submitting.value = true
     try {
-      await request.post('/api/v1/user/ddos/ips', addIpForm.value)
+      await request.post('/api/v2/user/ddos/ips', addIpForm.value)
       ElMessage.success('IP添加成功')
       addIpVisible.value = false
       loadIpList()
@@ -233,7 +233,7 @@ const submitAddIp = async () => {
 const viewRules = async (ip: any) => {
   currentIp.value = ip
   try {
-    const { data } = await request.get(`/api/v1/user/ddos/ips/${ip.id}/rules`)
+    const { data } = await request.get(`/api/v2/user/ddos/ips/${ip.id}/rules`)
     cleanRules.value = data?.data || []
   } catch {
     cleanRules.value = []
@@ -245,7 +245,7 @@ const toggleProtection = async (ip: any) => {
   const action = ip.status === 'active' ? '关闭' : '开启'
   try {
     await ElMessageBox.confirm(`确定要${action}该IP的防护吗？`, '确认操作', { type: 'warning' })
-    await request.post(`/api/v1/user/ddos/ips/${ip.id}/toggle`)
+    await request.post(`/api/v2/user/ddos/ips/${ip.id}/toggle`)
     ElMessage.success(`防护已${action}`)
     loadIpList()
   } catch (e: any) {
@@ -256,7 +256,7 @@ const toggleProtection = async (ip: any) => {
 const deleteIp = async (ip: any) => {
   try {
     await ElMessageBox.confirm('确定要删除该IP吗？删除后防护将立即停止。', '确认删除', { type: 'error' })
-    await request.delete(`/api/v1/user/ddos/ips/${ip.id}`)
+    await request.delete(`/api/v2/user/ddos/ips/${ip.id}`)
     ElMessage.success('IP已删除')
     loadIpList()
   } catch (e: any) {
@@ -277,7 +277,7 @@ const editRule = (rule: any) => {
 const deleteRule = async (rule: any) => {
   try {
     await ElMessageBox.confirm('确定要删除该规则吗？', '确认删除', { type: 'warning' })
-    await request.delete(`/api/v1/user/ddos/rules/${rule.id}`)
+    await request.delete(`/api/v2/user/ddos/rules/${rule.id}`)
     ElMessage.success('规则已删除')
     if (currentIp.value) viewRules(currentIp.value)
   } catch (e: any) {
@@ -287,7 +287,7 @@ const deleteRule = async (rule: any) => {
 
 const updateRuleStatus = async (rule: any) => {
   try {
-    await request.put(`/api/v1/user/ddos/rules/${rule.id}`, { status: rule.status })
+    await request.put(`/api/v2/user/ddos/rules/${rule.id}`, { status: rule.status })
     ElMessage.success('规则状态已更新')
   } catch (e: any) {
     ElMessage.error(e?.message || '更新失败')
@@ -298,7 +298,7 @@ const updateRuleStatus = async (rule: any) => {
 const loadIpList = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/user/ddos/ips')
+    const { data } = await request.get('/api/v2/user/ddos/ips')
     ipList.value = data?.data?.list || data?.data?.items || data?.data || []
     // 更新统计
     stats.value = {

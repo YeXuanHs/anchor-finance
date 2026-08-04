@@ -167,7 +167,7 @@ const handleReset = () => { searchForm.date_range = []; handleSearch() }
 
 const handleExport = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/statistics/sales', params: { page: 1, page_size: 9999 } })
+    const data = await request.get({ url: '/api/admin/sales/statistics', params: { page: 1, page_size: 9999 } })
     const list = data.list || data || []
     exportToCSV(list, [
       { key: 'client_name', title: '客户' },

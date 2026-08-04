@@ -81,15 +81,15 @@ const getStatusType = (s: string) => ({ pending: 'warning', accepted: 'success',
 const getStatusText = (s: string) => ({ pending: t('transfer.pending'), accepted: t('transfer.accepted'), rejected: t('transfer.rejected'), cancelled: t('helpCommon.cancelled') }[s] || s)
 const fetchData = async () => {
   const [s, r] = await Promise.all([
-    request.get('/api/v1/product-diverts'),
-    request.get('/api/v1/product-diverts/received')
+    request.get('/api/v2/product-diverts'),
+    request.get('/api/v2/product-diverts/received')
   ])
   sentList.value = s.data || []
   receivedList.value = r.data || []
 }
-const handleCancel = async (row: any) => { await request.post(`/api/v1/product-diverts/${row.id}/cancel`); fetchData() }
-const handleAccept = async (row: any) => { await request.post(`/api/v1/product-diverts/${row.id}/accept`); fetchData() }
-const handleReject = async (row: any) => { await request.post(`/api/v1/product-diverts/${row.id}/reject`); fetchData() }
-const handleSubmit = async () => { await request.post('/api/v1/product-diverts', form.value); showDialog.value = false; fetchData() }
+const handleCancel = async (row: any) => { await request.post(`/api/v2/product-diverts/${row.id}/cancel`); fetchData() }
+const handleAccept = async (row: any) => { await request.post(`/api/v2/product-diverts/${row.id}/accept`); fetchData() }
+const handleReject = async (row: any) => { await request.post(`/api/v2/product-diverts/${row.id}/reject`); fetchData() }
+const handleSubmit = async () => { await request.post('/api/v2/product-diverts', form.value); showDialog.value = false; fetchData() }
 fetchData()
 </script>

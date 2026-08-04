@@ -37,7 +37,7 @@ const handleLogin = async () => {
   if (!form.value.token) { ElMessage.warning('请输入Token'); return }
   loading.value = true
   try {
-    const { data } = await request.post('/api/auth/access-token', { token: form.value.token })
+    const { data } = await request.post('/api/v2/auth/access-token', { token: form.value.token })
     localStorage.setItem('token', data.data.token)
     ElMessage.success('登录成功')
     router.push('/user')

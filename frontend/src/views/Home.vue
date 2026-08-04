@@ -298,7 +298,7 @@ const bottomNavs = ref([])
 
 // 从API获取的数据（默认数据作为后备，优先从 API 加载）
 const banners = ref([
-  // TODO: 以下为硬编码营销文案，应从 /api/v1/banners 或数据库动态获取
+  // TODO: 以下为硬编码营销文案，应从 /api/v2/banners 或数据库动态获取
   { id: 1, title: t('landing.highPerfCloud'), description: t('landing.highPerfDesc'), badge: t('landing.hotRecommend'), video: '/carousel/2.webm', btn_text: t('landing.buyNow'), link: '/products' },
   { id: 2, title: t('landing.globalNodes'), description: t('landing.globalNodesDesc'), badge: t('landing.globalLayout'), video: '/carousel/3.webm', btn_text: t('landing.buyNow'), link: '/products' },
   { id: 3, title: t('landing.proTechSupport'), description: t('landing.proTechSupportDesc'), badge: t('landing.proService'), video: '/carousel/4.webm', btn_text: t('landing.contactUs'), link: '/tickets/create' }
@@ -385,7 +385,7 @@ const fetchData = async () => {
     
     // 获取轮播图（从站点设置中获取 banners，或使用独立 API）
     try {
-      const bannerRes = await request.get('/api/v1/banners')
+      const bannerRes = await request.get('/api/v2/banners')
       if (bannerRes.data?.data?.length) {
         banners.value = bannerRes.data.data
       }
@@ -394,7 +394,7 @@ const fetchData = async () => {
     }
     
     // 获取产品分组
-    const groupRes = await request.get('/api/v1/product-groups')
+    const groupRes = await request.get('/api/v2/product-groups')
     if (groupRes.data?.data) {
       productGroups.value = groupRes.data.data
     }

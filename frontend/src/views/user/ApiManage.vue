@@ -219,7 +219,7 @@ const apiKeys = ref<ApiKey[]>([])
 const fetchApiKeys = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/api-keys')
+    const { data } = await request.get('/api/v2/api-keys')
     if (data?.data) {
       apiKeys.value = (data.data.list || data.data || []).map((k: any) => ({ ...k, visible: false }))
     }

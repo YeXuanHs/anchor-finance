@@ -213,7 +213,7 @@ const handleRenew = async (row: any) => {
   try {
     await ElMessageBox.confirm(`确定续费订单 ${row.order_no} 吗？金额: ¥${formatAmount(row.amount)}`, '续费确认')
     await request.post({
-      url: `/api/admin/orders/${row.id}/renew`
+      url: `/api/admin/multi-renew/${row.id}/execute`
     })
     ElMessage.success('续费成功')
     fetchData()
@@ -227,7 +227,7 @@ const handleRenew = async (row: any) => {
 const handleCancel = async (row: any) => {
   try {
     await request.post({
-      url: `/api/admin/orders/${row.id}/cancel-renewal`
+      url: `/api/admin/multi-renew/${row.id}/cancel`
     })
     ElMessage.success('已取消')
     fetchData()

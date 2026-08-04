@@ -72,7 +72,7 @@ const handleUpload = (res: any) => { form.value.business_license = res.data?.url
 const handleSubmit = async () => {
   submitting.value = true
   try {
-    await request.post('/api/user/certification/enterprise', form.value)
+    await request.post('/api/v2/user/certification/enterprise', form.value)
     ElMessage.success('提交成功')
     status.value = 'pending'
   } catch { ElMessage.error('提交失败') } finally { submitting.value = false }
@@ -80,7 +80,7 @@ const handleSubmit = async () => {
 
 const fetchStatus = async () => {
   try {
-    const { data } = await request.get('/api/user/certification/enterprise')
+    const { data } = await request.get('/api/v2/user/certification/enterprise')
     if (data.data) { status.value = data.data.status; certInfo.value = data.data }
   } catch {}
 }

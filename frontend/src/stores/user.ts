@@ -19,7 +19,7 @@ export const useUserStore = defineStore('user', () => {
   const username = computed(() => user.value?.username || '')
 
   async function login(username: string, password: string, captcha: string) {
-    const { data } = await api.post('/api/auth/login', {
+    const { data } = await api.post('/api/v2/auth/login', {
       username,
       password,
       captcha
@@ -39,7 +39,7 @@ export const useUserStore = defineStore('user', () => {
     password: string
     captcha: string
   }) {
-    const { data } = await api.post('/api/auth/register', form)
+    const { data } = await api.post('/api/v2/auth/register', form)
     if (data.code === 0) {
       return true
     }
@@ -49,7 +49,7 @@ export const useUserStore = defineStore('user', () => {
   async function fetchProfile() {
     if (!token.value) return
     try {
-      const { data } = await api.get('/api/user/profile')
+      const { data } = await api.get('/api/v2/user/profile')
       if (data.code === 0) {
         user.value = data.data
       }

@@ -314,7 +314,7 @@ async function handleBindEmail() {
 async function handleSendPhoneCode() {
   if (!phoneForm.phone) { ElMessage.warning('请输入手机号'); return }
   try {
-    await request.post('/api/v1/sms/send', { phone: phoneForm.phone, type: 'bind_phone' })
+    await request.post('/api/v2/sms/send', { phone: phoneForm.phone, type: 'bind_phone' })
     phoneCooldown.value = 60
     const timer = setInterval(() => { phoneCooldown.value--; if (phoneCooldown.value <= 0) clearInterval(timer) }, 1000)
     ElMessage.success('验证码已发送')
@@ -324,7 +324,7 @@ async function handleSendPhoneCode() {
 async function handleSendEmailCode() {
   if (!emailForm.email) { ElMessage.warning('请输入邮箱'); return }
   try {
-    await request.post('/api/v1/email/send', { email: emailForm.email, type: 'bind_email' })
+    await request.post('/api/v2/email/send', { email: emailForm.email, type: 'bind_email' })
     emailCooldown.value = 60
     const timer = setInterval(() => { emailCooldown.value--; if (emailCooldown.value <= 0) clearInterval(timer) }, 1000)
     ElMessage.success('验证码已发送')
@@ -333,7 +333,7 @@ async function handleSendEmailCode() {
 
 async function handleToggle2FA(val: boolean) {
   try {
-    await request.post('/api/v1/user/2fa', { enabled: val })
+    await request.post('/api/v2/user/2fa', { enabled: val })
     ElMessage.success(val ? '已开启两步验证' : '已关闭两步验证')
   } catch {
     twoFAEnabled.value = !val
