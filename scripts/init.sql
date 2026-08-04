@@ -85,3 +85,26 @@ INSERT INTO `languages` (`code`, `name`, `flag`, `is_default`, `status`) VALUES
 ('zh-CN', '中文简体', 'CN', 1, 1),
 ('en-US', 'English', 'US', 0, 1),
 ('zh-TW', '中文繁體', 'TW', 0, 1);
+
+-- ============================================
+-- 站点配置 (system_configs)
+-- ============================================
+INSERT INTO `system_configs` (`key`, `value`, `group`, `description`) VALUES
+('site_name', '锚点财务', 'general', '站点名称'),
+('site_url', '', 'general', '站点URL'),
+('site_logo', '/logo.png', 'general', '站点Logo'),
+('site_description', '高效、安全的财务管理系统', 'general', '站点描述'),
+('site_keywords', '锚点财务,财务管理,云服务器', 'general', '站点关键词'),
+('site_icp', '', 'general', 'ICP备案号'),
+('site_copyright', '', 'general', '版权信息'),
+('default_language', 'zh-CN', 'general', '默认语言'),
+('default_timezone', 'Asia/Shanghai', 'general', '默认时区'),
+('date_format', 'Y-m-d H:i:s', 'general', '日期格式'),
+('contact_phone', '400-000-0000', 'general', '联系电话'),
+('contact_email', 'support@example.com', 'general', '联系邮箱'),
+('contact_address', '', 'general', '公司地址'),
+('contact_qq', '', 'general', 'QQ号码'),
+('sales_phone', '400-000-0000', 'general', '销售咨询电话'),
+('support_phone', '400-000-0000', 'general', '技术支持电话'),
+('sales_email', 'sales@example.com', 'general', '销售咨询邮箱'),
+('work_time', '周一至周五 9:00-18:00', 'general', '工作时间');

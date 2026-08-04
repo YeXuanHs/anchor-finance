@@ -8,6 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"anchorfinance/internal/handler"
 	"anchorfinance/internal/api/middleware"
+	"anchorfinance/internal/model"
 	"anchorfinance/internal/service"
 	"anchorfinance/pkg/auth"
 	"anchorfinance/pkg/logger"
@@ -99,12 +100,32 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 	// 公开系统设置
 	r.GET("/settings/public", func(c *gin.Context) {
+		keys := []string{
+			"site_name", "site_url", "site_description", "allow_register",
+			"contact_phone", "contact_email", "contact_address",
+			"sales_phone", "support_phone", "sales_email", "work_time",
+		}
+		m := make(map[string]string)
+		for _, k := range keys {
+			var cfg model.SystemConfig
+			if err := deps.DB.Where("`key` = ?", k).First(&cfg).Error; err == nil {
+				m[k] = cfg.Value
+			}
+		}
 		c.JSON(200, gin.H{
 			"code": 0,
 			"data": gin.H{
-				"site_name":     "锚点财务",
-				"site_url":      "",
-				"allow_register": true,
+				"site_name":      m["site_name"],
+				"site_url":       m["site_url"],
+				"site_description": m["site_description"],
+				"allow_register": m["allow_register"] != "false",
+				"contact_phone":  m["contact_phone"],
+				"contact_email":  m["contact_email"],
+				"contact_address": m["contact_address"],
+				"sales_phone":    m["sales_phone"],
+				"support_phone":  m["support_phone"],
+				"sales_email":    m["sales_email"],
+				"work_time":      m["work_time"],
 			},
 		})
 	})

@@ -230,6 +230,8 @@ func (h *SettingHandler) GetSiteSettings(c *gin.Context) {
 		"site_name", "site_url", "site_logo", "site_description",
 		"site_keywords", "site_icp", "site_copyright", "site_footer",
 		"default_language", "default_timezone", "date_format",
+		"contact_phone", "contact_email", "contact_address", "contact_qq",
+		"sales_phone", "support_phone", "sales_email", "work_time",
 	}
 	m := h.loadConfigMap(keys)
 
@@ -245,6 +247,14 @@ func (h *SettingHandler) GetSiteSettings(c *gin.Context) {
 		"default_language": m["default_language"],
 		"default_timezone": m["default_timezone"],
 		"date_format":      m["date_format"],
+		"contact_phone":    m["contact_phone"],
+		"contact_email":    m["contact_email"],
+		"contact_address":  m["contact_address"],
+		"contact_qq":       m["contact_qq"],
+		"sales_phone":      m["sales_phone"],
+		"support_phone":    m["support_phone"],
+		"sales_email":      m["sales_email"],
+		"work_time":        m["work_time"],
 	}
 	response.Success(c, settings)
 }
@@ -263,6 +273,14 @@ func (h *SettingHandler) SaveSiteSettings(c *gin.Context) {
 		DefaultLanguage  string `json:"default_language"`
 		DefaultTimezone  string `json:"default_timezone"`
 		DateFormat       string `json:"date_format"`
+		ContactPhone    string `json:"contact_phone"`
+		ContactEmail    string `json:"contact_email"`
+		ContactAddress  string `json:"contact_address"`
+		ContactQQ       string `json:"contact_qq"`
+		SalesPhone      string `json:"sales_phone"`
+		SupportPhone    string `json:"support_phone"`
+		SalesEmail      string `json:"sales_email"`
+		WorkTime        string `json:"work_time"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
@@ -281,6 +299,14 @@ func (h *SettingHandler) SaveSiteSettings(c *gin.Context) {
 		"default_language": req.DefaultLanguage,
 		"default_timezone": req.DefaultTimezone,
 		"date_format":      req.DateFormat,
+		"contact_phone":    req.ContactPhone,
+		"contact_email":    req.ContactEmail,
+		"contact_address":  req.ContactAddress,
+		"contact_qq":       req.ContactQQ,
+		"sales_phone":      req.SalesPhone,
+		"support_phone":    req.SupportPhone,
+		"sales_email":      req.SalesEmail,
+		"work_time":        req.WorkTime,
 	}
 	if err := h.saveConfigMap(configs, "general"); err != nil {
 		response.ServerError(c, "保存失败")

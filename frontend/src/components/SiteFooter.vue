@@ -88,7 +88,7 @@ const siteSettings = ref({
 
 const fetchSiteSettings = async () => {
   try {
-    const res = await request.get('/api/v1/site/settings')
+    const res = await request.get('/api/v1/settings/public')
     if (res?.data) {
       siteSettings.value = { ...siteSettings.value, ...res.data }
     }
