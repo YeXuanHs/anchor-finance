@@ -31,7 +31,7 @@ const handleBind = async (item: any) => {
   if (data?.url) window.location.href = data.url
 }
 const handleUnbind = async (item: any) => {
-  await request.post('/api/v2/oauth/unbind', { provider: item.name })
+  await request.delete(`/api/v2/oauth/${item.name}/unbind`)
   fetchData()
 }
 fetchData()

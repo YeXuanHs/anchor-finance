@@ -406,7 +406,7 @@ const handleRejectFromDetail = async () => {
 // 导出
 const handleExport = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/affiliate/records', params: { page: 1, page_size: 9999 } })
+    const data = await request.get({ url: '/api/admin/affiliate/user-affi-record', params: { page: 1, page_size: 9999 } })
     const list = data.list || data || []
     exportToCSV(list, [
       { key: 'id', title: 'ID' },

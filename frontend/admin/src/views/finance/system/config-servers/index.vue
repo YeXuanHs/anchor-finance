@@ -145,7 +145,7 @@ const fetchData = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/config-servers',
+      url: '/api/admin/config/servers',
       params: { page: pagination.page, page_size: pagination.page_size, ...searchForm }
     })
     tableData.value = data.list || []
@@ -177,7 +177,7 @@ const handleEdit = (row: any) => {
 
 const handleTest = async (row: any) => {
   try {
-    await request.post({ url: `/api/admin/config-servers/${row.id}/test` })
+    await request.post({ url: `/api/admin/config/servers/${row.id}/test` })
     ElMessage.success('连接测试成功')
   } catch (error) {
     ElMessage.error('连接测试失败')
@@ -186,7 +186,7 @@ const handleTest = async (row: any) => {
 
 const handleDelete = async (row: any) => {
   try {
-    await request.del({ url: `/api/admin/config-servers/${row.id}` })
+    await request.del({ url: `/api/admin/config/servers/${row.id}` })
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {
@@ -201,9 +201,9 @@ const handleSubmit = async () => {
     submitLoading.value = true
     try {
       if (formData.id) {
-        await request.put({ url: `/api/admin/config-servers/${formData.id}`, params: formData })
+        await request.put({ url: `/api/admin/config/servers/${formData.id}`, params: formData })
       } else {
-        await request.post({ url: '/api/admin/config-servers', params: formData })
+        await request.post({ url: '/api/admin/config/servers', params: formData })
       }
       ElMessage.success(formData.id ? '更新成功' : '添加成功')
       dialogVisible.value = false

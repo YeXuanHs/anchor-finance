@@ -26,7 +26,7 @@
             <n-form-item path="username">
               <n-input
                 v-model:value="passwordForm.username"
-                placeholder="{{ $t('login.placeholderUsername') }}"
+                :placeholder="$t('login.placeholderUsername')"
                 size="large"
                 :input-props="{ autocomplete: 'username' }"
               >
@@ -41,7 +41,7 @@
                 v-model:value="passwordForm.password"
                 type="password"
                 show-password-on="click"
-                placeholder="{{ $t('login.placeholderPassword') }}"
+                :placeholder="$t('login.placeholderPassword')"
                 size="large"
                 :input-props="{ autocomplete: 'current-password' }"
               >
@@ -57,7 +57,7 @@
               <div v-if="captchaType === 'image'" class="captcha-row">
                 <n-input
                   v-model:value="passwordForm.captcha"
-                  placeholder="{{ $t('login.placeholderCaptcha') }}"
+                  :placeholder="$t('login.placeholderCaptcha')"
                   size="large"
                   @keyup.enter="handlePasswordLogin"
                 >
@@ -106,7 +106,7 @@
             <n-form-item path="phone">
               <n-input
                 v-model:value="smsForm.phone"
-                placeholder="{{ $t('login.placeholderPhone') }}"
+                :placeholder="$t('login.placeholderPhone')"
                 size="large"
               >
                 <template #prefix>
@@ -121,7 +121,7 @@
               <div v-if="captchaType === 'image'" class="captcha-row">
                 <n-input
                   v-model:value="smsForm.imageCaptcha"
-                  placeholder="{{ $t('login.placeholderImageCaptcha') }}"
+                  :placeholder="$t('login.placeholderImageCaptcha')"
                   size="large"
                 >
                   <template #prefix>
@@ -149,7 +149,7 @@
               <div class="captcha-row">
                 <n-input
                   v-model:value="smsForm.smsCode"
-                  placeholder="{{ $t('login.placeholderSmsCode') }}"
+                  :placeholder="$t('login.placeholderSmsCode')"
                   size="large"
                   @keyup.enter="handleSmsLogin"
                 >

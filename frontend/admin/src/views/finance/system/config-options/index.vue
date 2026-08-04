@@ -126,7 +126,7 @@ const formRules: FormRules = {
 
 const fetchGroups = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/config-options/groups' })
+    const data = await request.get({ url: '/api/admin/config-options/groups-list' })
     groups.value = data || []
   } catch (error) {
     console.error('获取分组列表失败:', error)
@@ -137,7 +137,7 @@ const fetchData = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/config-options',
+      url: '/api/admin/config-options/search-page',
       params: { page: pagination.page, page_size: pagination.page_size, ...searchForm }
     })
     tableData.value = data.list || []
@@ -185,7 +185,7 @@ const handleSubmit = async () => {
       if (formData.id) {
         await request.put({ url: `/api/admin/config-options/${formData.id}`, params: formData })
       } else {
-        await request.post({ url: '/api/admin/config-options', params: formData })
+        await request.post({ url: '/api/admin/config-options/add-options', params: formData })
       }
       ElMessage.success(formData.id ? '更新成功' : '添加成功')
       dialogVisible.value = false

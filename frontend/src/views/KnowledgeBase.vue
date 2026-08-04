@@ -39,7 +39,7 @@
         <p class="search-subtitle">{{ $t('knowledgeBase.searchHelp') }}</p>
         <n-input
           v-model:value="searchKeyword"
-          placeholder="{{ $t('knowledgeBase.searchPlaceholder') }}"
+          :placeholder="$t('knowledgeBase.searchPlaceholder')"
           size="large"
           round
           clearable

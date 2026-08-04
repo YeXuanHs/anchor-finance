@@ -169,7 +169,7 @@ const formRules: FormRules = {
 const fetchRules = async () => {
   loading.value = true
   try {
-    const data = await request.get({ url: '/api/admin/system/log-cleanup/rules' })
+    const data = await request.get({ url: '/api/admin/log-cleaner/rules' })
     rules.value = data || []
   } catch (error) {
     ElMessage.error('获取清理规则失败')
@@ -180,7 +180,7 @@ const fetchRules = async () => {
 
 const fetchStats = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/system/log-cleanup/stats' })
+    const data = await request.get({ url: '/api/admin/log-cleaner/stats' })
     if (data) {
       Object.assign(stats, data)
     }
@@ -208,7 +208,7 @@ const handleEditRule = (row: any) => {
 
 const handleDeleteRule = async (row: any) => {
   try {
-    await request.del({ url: `/api/admin/system/log-cleanup/rules/${row.id}` })
+    await request.del({ url: `/api/admin/log-cleaner/rules/${row.id}` })
     ElMessage.success('删除成功')
     fetchRules()
   } catch (error) {
@@ -219,7 +219,7 @@ const handleDeleteRule = async (row: any) => {
 const handleRunNow = async (row: any) => {
   try {
     await ElMessageBox.confirm(`确定立即执行清理规则 "${row.name}" 吗？`, '确认执行')
-    await request.post({ url: `/api/admin/system/log-cleanup/rules/${row.id}/run` })
+    await request.post({ url: `/api/admin/log-cleaner/rules/${row.id}/run` })
     ElMessage.success('清理任务已提交')
     fetchRules()
     fetchStats()
@@ -240,12 +240,12 @@ const handleSubmit = async () => {
     try {
       if (formData.id) {
         await request.put({
-          url: `/api/admin/system/log-cleanup/rules/${formData.id}`,
+          url: `/api/admin/log-cleaner/rules/${formData.id}`,
           params: { ...formData }
         })
       } else {
         await request.post({
-          url: '/api/admin/system/log-cleanup/rules',
+          url: '/api/admin/log-cleaner/rules',
           params: { ...formData }
         })
       }

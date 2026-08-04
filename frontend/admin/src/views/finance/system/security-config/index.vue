@@ -157,7 +157,7 @@ const handleSaveSettings = async () => {
   saveLoading.value = true
   try {
     await request.put({
-      url: '/api/admin/config/certifi/setting',
+      url: '/api/admin/config/certifi',
       data: { ...settingForm, certifi_select: settingForm.certifi_select.join(',') },
       showSuccessMessage: true
     })

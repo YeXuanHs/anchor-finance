@@ -203,7 +203,7 @@ const articleForm = ref({
 const loadCategories = async () => {
   loadingCategories.value = true
   try {
-    const data = await request.get({ url: '/api/admin/help/categories', params: { show_inactive: true } })
+    const data = await request.get({ url: '/api/admin/knowledge/categories', params: { show_inactive: true } })
     categories.value = data || []
   } catch (e) {
     ElMessage.error('加载分类失败')
@@ -218,7 +218,7 @@ const loadArticles = async () => {
     const params: any = { page: currentPage.value, page_size: 20 }
     if (filterCategory.value > 0) params.category_id = filterCategory.value
     if (searchKeyword.value) params.keyword = searchKeyword.value
-    const data = await request.get({ url: '/api/admin/help/articles', params })
+    const data = await request.get({ url: '/api/admin/knowledge/articles', params })
     articles.value = data.items || []
     articleTotal.value = data.total || 0
   } catch (e) {
@@ -247,9 +247,9 @@ const submitCategory = async () => {
   if (!catForm.value.name) { ElMessage.warning('请输入分类名称'); return }
   try {
     if (isEditCat.value) {
-      await request.put({ url: `/api/admin/help/categories/${editCatId.value}`, params: catForm.value })
+      await request.put({ url: `/api/admin/knowledge/categories/${editCatId.value}`, params: catForm.value })
     } else {
-      await request.post({ url: '/api/admin/help/categories', params: catForm.value })
+      await request.post({ url: '/api/admin/knowledge/categories', params: catForm.value })
     }
     ElMessage.success('操作成功')
     catDialogVisible.value = false
@@ -261,7 +261,7 @@ const submitCategory = async () => {
 
 const deleteCategory = async (id: number) => {
   try {
-    await request.del({ url: `/api/admin/help/categories/${id}` })
+    await request.del({ url: `/api/admin/knowledge/categories/${id}` })
     ElMessage.success('删除成功')
     loadCategories()
   } catch (e) {
@@ -286,9 +286,9 @@ const submitArticle = async () => {
   if (!articleForm.value.title || !articleForm.value.category_id) { ElMessage.warning('请填写标题和分类'); return }
   try {
     if (isEditArticle.value) {
-      await request.put({ url: `/api/admin/help/articles/${editArticleId.value}`, params: articleForm.value })
+      await request.put({ url: `/api/admin/knowledge/articles/${editArticleId.value}`, params: articleForm.value })
     } else {
-      await request.post({ url: '/api/admin/help/articles', params: articleForm.value })
+      await request.post({ url: '/api/admin/knowledge/articles', params: articleForm.value })
     }
     ElMessage.success('操作成功')
     articleDialogVisible.value = false
@@ -300,7 +300,7 @@ const submitArticle = async () => {
 
 const deleteArticle = async (id: number) => {
   try {
-    await request.del({ url: `/api/admin/help/articles/${id}` })
+    await request.del({ url: `/api/admin/knowledge/articles/${id}` })
     ElMessage.success('删除成功')
     loadArticles()
   } catch (e) {

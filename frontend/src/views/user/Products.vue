@@ -111,7 +111,7 @@ const products = ref<Product[]>([])
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/user/products')
+    const { data } = await request.get('/api/v2/user/products')
     const list = data.data?.list || data.list || data.data || []
     products.value = list.map((p: any) => ({ ...p, icon: iconMap[p.icon] || Monitor }))
   } catch (e) { console.error(e) } finally { loading.value = false }

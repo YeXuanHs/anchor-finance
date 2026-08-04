@@ -185,7 +185,7 @@ const handleClearLogs = async () => {
     type: 'warning'
   })
   try {
-    await request.post({ url: '/api/admin/log-records/cleanup' })
+    await request.post({ url: '/api/admin/log-records/export' })
     ElMessage.success('清理成功')
     fetchData()
   } catch (error) {

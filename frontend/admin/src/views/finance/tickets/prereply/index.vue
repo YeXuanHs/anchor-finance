@@ -173,7 +173,7 @@ const fetchPreReplies = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/ticket-prereplies',
+      url: '/api/admin/ticket-prereply',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -232,7 +232,7 @@ const handleEdit = (row: PreReply) => {
 const handleDelete = async (row: PreReply) => {
   try {
     await request.del({
-      url: `/api/admin/ticket-prereplies/${row.id}`
+      url: `/api/admin/ticket-prereply/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchPreReplies()
@@ -251,12 +251,12 @@ const handleSubmit = async () => {
     try {
       if (formData.id) {
         await request.put({
-          url: `/api/admin/ticket-prereplies/${formData.id}`,
+          url: `/api/admin/ticket-prereply/${formData.id}`,
           params: formData
         })
       } else {
         await request.post({
-          url: '/api/admin/ticket-prereplies',
+          url: '/api/admin/ticket-prereply',
           params: formData
         })
       }

@@ -4,7 +4,7 @@
     <header class="header" :class="{ 'header-scrolled': scrolled }">
       <div class="header-inner">
         <div class="logo" @click="$router.push('/')">
-          <img src="/logo.png" alt="{{ $t('landing.brandName') }}" class="logo-img" />
+          <img src="/logo.png" :alt="$t('landing.brandName')" class="logo-img" />
           <span class="logo-text">{{ $t('landing.brandName') }}</span>
         </div>
         <nav class="nav-links">

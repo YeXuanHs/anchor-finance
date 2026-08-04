@@ -154,7 +154,7 @@ const loading = ref(false)
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/affiliate/info')
+    const { data } = await request.get('/api/v2/affiliate/info')
     if (data?.data) {
       users.value = data.data.list || data.data || []
     }
