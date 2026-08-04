@@ -81,7 +81,8 @@
   import { useUserStore } from '@/store/modules/user'
   import EmojiText from '@/utils/ui/emojo'
   import { PageModeEnum } from '@/enums/formEnum'
-  import axios from 'axios'
+  import request from '@/utils/http'
+  import { router } from '@/router'
   import { useCommon } from '@/hooks/core/useCommon'
 
   defineOptions({ name: 'ArticlePublish' })
@@ -144,20 +145,14 @@
    */
   const getArticleTypes = async () => {
     try {
-      const { data } = await axios.get('https://www.qiniu.lingchen.kim/classify.json')
-      if (data.code === 200) {
+      const { data } = await request.get('/api/admin/news/categories')
+      if (data.code === ApiStatus.success) {
         articleTypes.value = data.data
       }
     } catch (error) {
       console.error('获取文章分类失败:', error)
       ElMessage.error('获取文章分类失败')
     }
-
-    // TODO: 替换为真实 API 调用
-    // const res = await ArticleService.getArticleTypes({})
-    // if (res.code === ApiStatus.success) {
-    //   articleTypes.value = res.data
-    // }
   }
 
   /**
@@ -165,9 +160,8 @@
    */
   const getArticleDetail = async () => {
     try {
-      const { data } = await axios.get<ArticleDetailResponse>(
-        'https://www.qiniu.lingchen.kim/blog_list.json'
-      )
+      const { id } = route.query
+      const { data } = await request.get(`/api/admin/news/${id}`)
 
       if (data.code === ApiStatus.success) {
         const { title, blog_class, html_content } = data.data
@@ -231,21 +225,19 @@
     try {
       const cleanedContent = cleanCodeContent(editorHtml.value)
 
-      // TODO: 替换为真实 API 调用
-      // const params = {
-      //   title: articleName.value,
-      //   type: articleType.value,
-      //   content: cleanedContent,
-      //   cover: cover.value,
-      //   visible: visible.value
-      // }
-      // const res = await ArticleService.addArticle(params)
-      // if (res.code === ApiStatus.success) {
-      //   ElMessage.success('文章发布成功')
-      //   router.push({ name: 'ArticleList' })
-      // }
+      const formData = {
+        title: articleName.value,
+        type: articleType.value,
+        content: cleanedContent,
+        cover: cover.value,
+        visible: visible.value
+      }
 
-      console.log('新增文章:', { cleanedContent })
+      const { data } = await request.post('/api/admin/news', formData)
+      if (data.code === ApiStatus.success) {
+        ElMessage.success('文章发布成功')
+        router.push({ name: 'ArticleList' })
+      }
     } catch (error) {
       console.error('发布文章失败:', error)
       ElMessage.error('发布文章失败')
@@ -261,22 +253,20 @@
     try {
       const cleanedContent = cleanCodeContent(editorHtml.value)
 
-      // TODO: 替换为真实 API 调用
-      // const params = {
-      //   id: route.query.id,
-      //   title: articleName.value,
-      //   type: articleType.value,
-      //   content: cleanedContent,
-      //   cover: cover.value,
-      //   visible: visible.value
-      // }
-      // const res = await ArticleService.editArticle(params)
-      // if (res.code === ApiStatus.success) {
-      //   ElMessage.success('文章保存成功')
-      //   router.push({ name: 'ArticleList' })
-      // }
+      const id = route.query.id
+      const formData = {
+        title: articleName.value,
+        type: articleType.value,
+        content: cleanedContent,
+        cover: cover.value,
+        visible: visible.value
+      }
 
-      console.log('编辑文章:', { cleanedContent })
+      const { data } = await request.put(`/api/admin/news/${id}`, formData)
+      if (data.code === ApiStatus.success) {
+        ElMessage.success('文章保存成功')
+        router.push({ name: 'ArticleList' })
+      }
     } catch (error) {
       console.error('保存文章失败:', error)
       ElMessage.error('保存文章失败')

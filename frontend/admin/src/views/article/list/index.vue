@@ -93,7 +93,7 @@
   import { router } from '@/router'
   import { useDateFormat } from '@vueuse/core'
   import EmojiText from '@/utils/ui/emojo'
-  import { ArticleList } from '@/mock/temp/articleList'
+  import request from '@/utils/http'
   import { useCommon } from '@/hooks/core/useCommon'
 
   defineOptions({ name: 'ArticleList' })
@@ -132,16 +132,18 @@
         yearVal.value = 'All'
       }
 
-      // TODO: 替换为真实 API 调用
-      // const params = {
-      //   page: currentPage.value,
-      //   size: pageSize.value,
-      //   searchVal: searchVal.value,
-      //   year: yearVal.value === 'All' ? '' : yearVal.value
-      // }
-      // const res = await ArticleService.getArticleList(params)
+      const params = {
+        page: currentPage.value,
+        pageSize: pageSize.value,
+        title: searchVal.value,
+        year: yearVal.value === 'All' ? '' : yearVal.value
+      }
 
-      articleList.value = ArticleList as Article[]
+      const { data } = await request.get('/api/admin/news', { params })
+      if (data.code === 200) {
+        articleList.value = data.data.list || []
+        total.value = data.data.total || 0
+      }
 
       if (backTop) {
         useCommon().scrollToTop()
