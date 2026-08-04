@@ -34,10 +34,30 @@
  * @module utils/sys/upgrade
  * @author Art Design Pro Team
  */
-import { upgradeLogList } from '@/mock/upgrade/changeLog'
+import { ref } from 'vue'
 import { ElNotification } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { StorageConfig } from '@/utils/storage/storage-config'
+import request from '@/utils/http'
+
+interface UpgradeLogItem {
+  version: string
+  title: string
+  date: string
+  requireReLogin?: boolean
+  changes?: string[]
+}
+
+const upgradeLogList = ref<UpgradeLogItem[]>([])
+
+const fetchUpgradeLog = async () => {
+  try {
+    const res = await request.get({ url: '/api/admin/system/changelog' })
+    upgradeLogList.value = Array.isArray(res) ? res : []
+  } catch {
+    upgradeLogList.value = []
+  }
+}
 
 /**
  * 版本管理器
@@ -260,7 +280,8 @@ class VersionManager {
     }
 
     // 延迟执行升级流程，确保应用已完全加载
-    setTimeout(() => {
+    setTimeout(async () => {
+      await fetchUpgradeLog()
       this.executeUpgrade(storedVersion!, legacyStorage)
     }, StorageConfig.UPGRADE_DELAY)
   }

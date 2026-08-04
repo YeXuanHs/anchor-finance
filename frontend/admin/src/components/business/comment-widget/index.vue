@@ -41,10 +41,29 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue'
+  import { ref, onMounted } from 'vue'
   import CommentItem from './widget/CommentItem.vue'
-  import { commentList, Comment } from '@/mock/temp/commentDetail'
-  const comments = commentList
+  import request from '@/utils/http'
+
+  interface Comment {
+    id: number
+    author: string
+    content: string
+    date: string
+    avatar?: string
+    replies?: Comment[]
+  }
+
+  const comments = ref<Comment[]>([])
+
+  const fetchComments = async () => {
+    try {
+      const res = await request.get({ url: '/api/admin/news/comments' })
+      comments.value = Array.isArray(res) ? res : []
+    } catch {
+      comments.value = []
+    }
+  }
 
   const newComment = ref<Partial<Comment>>({
     author: '',
@@ -108,4 +127,8 @@
     }
     return undefined
   }
+
+  onMounted(() => {
+    fetchComments()
+  })
 </script>

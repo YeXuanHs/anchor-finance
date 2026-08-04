@@ -47,7 +47,29 @@
 </template>
 
 <script setup lang="ts">
-  import { upgradeLogList } from '@/mock/upgrade/changeLog'
+  import { ref, onMounted } from 'vue'
+  import request from '@/utils/http'
 
   defineOptions({ name: 'ChangeLog' })
+
+  interface ChangeLogItem {
+    version: string
+    date: string
+    changes: string[]
+  }
+
+  const upgradeLogList = ref<ChangeLogItem[]>([])
+
+  const fetchChangeLog = async () => {
+    try {
+      const res = await request.get({ url: '/api/admin/system/changelog' })
+      upgradeLogList.value = Array.isArray(res) ? res : []
+    } catch {
+      upgradeLogList.value = []
+    }
+  }
+
+  onMounted(() => {
+    fetchChangeLog()
+  })
 </script>
