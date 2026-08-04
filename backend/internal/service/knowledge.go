@@ -208,6 +208,39 @@ func (s *KnowledgeService) AdminGetArticles(page, pageSize int, categoryID uint,
 	return articles, total, nil
 }
 
+// GetRelatedArticles returns articles in the same category excluding the given article, limited to n.
+func (s *KnowledgeService) GetRelatedArticles(articleID uint, limit int) ([]model.KnowledgeArticle, error) {
+	var article model.KnowledgeArticle
+	if err := s.db.First(&article, articleID).Error; err != nil {
+		return nil, err
+	}
+
+	var articles []model.KnowledgeArticle
+	if err := s.db.Where("category_id = ? AND id != ? AND is_published = ?", article.CategoryID, articleID, true).
+		Order("view_count DESC").
+		Limit(limit).
+		Find(&articles).Error; err != nil {
+		return nil, err
+	}
+	return articles, nil
+}
+
+// SubmitFeedback records user feedback for an article (helpful=true or helpful=false).
+func (s *KnowledgeService) SubmitFeedback(articleID uint, helpful bool) error {
+	return s.MarkHelpful(articleID, helpful)
+}
+
+// GetSubCategories returns active child categories of the given parent category.
+func (s *KnowledgeService) GetSubCategories(parentID uint) ([]model.KnowledgeCategory, error) {
+	var cats []model.KnowledgeCategory
+	if err := s.db.Where("parent_id = ? AND is_active = ?", parentID, true).
+		Order("sort_order ASC, id ASC").
+		Find(&cats).Error; err != nil {
+		return nil, err
+	}
+	return cats, nil
+}
+
 // AdminGetArticle returns a single article by ID (admin, includes unpublished).
 func (s *KnowledgeService) AdminGetArticle(id uint) (*model.KnowledgeArticle, error) {
 	var article model.KnowledgeArticle

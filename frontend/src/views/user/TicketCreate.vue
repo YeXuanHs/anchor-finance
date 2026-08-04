@@ -44,7 +44,7 @@
         
         <el-form-item label="附件">
           <el-upload
-            action="/api/v2/tickets/upload"
+            action="/api/v2/tickets/0/attachments"
             :on-success="handleUploadSuccess"
             :file-list="form.attachments"
           >

@@ -98,6 +98,66 @@ func (h *KnowledgeHandler) Search(c *gin.Context) {
 	response.SuccessPage(c, articles, total, page, pageSize)
 }
 
+// GetRelatedArticles returns related articles (same category, excluding self, limit 5).
+func (h *KnowledgeHandler) GetRelatedArticles(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid article id")
+		return
+	}
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "5"))
+	if limit < 1 || limit > 20 {
+		limit = 5
+	}
+
+	articles, err := h.knowledgeSvc.GetRelatedArticles(uint(id), limit)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, articles)
+}
+
+// SubmitFeedback records user feedback for an article (helpful or not helpful).
+func (h *KnowledgeHandler) SubmitFeedback(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid article id")
+		return
+	}
+
+	var req struct {
+		Helpful bool `json:"helpful"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.knowledgeSvc.SubmitFeedback(uint(id), req.Helpful); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "feedback submitted")
+}
+
+// GetSubCategories returns sub-categories of the given category.
+func (h *KnowledgeHandler) GetSubCategories(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid category id")
+		return
+	}
+
+	cats, err := h.knowledgeSvc.GetSubCategories(uint(id))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, cats)
+}
+
 // MarkHelpful marks an article as helpful or not helpful.
 func (h *KnowledgeHandler) MarkHelpful(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)

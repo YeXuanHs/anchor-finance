@@ -71,7 +71,7 @@
         <el-input v-model="replyContent" type="textarea" :rows="4" placeholder="请输入回复内容..." />
         <div class="reply-actions">
           <el-upload
-            action="/api/v2/tickets/upload"
+            :action="`/api/v2/tickets/${route.params.id}/attachments`"
             :on-success="handleUploadSuccess"
             :show-file-list="false"
           >
