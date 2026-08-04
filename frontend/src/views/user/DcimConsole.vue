@@ -256,6 +256,56 @@
             查看流量
           </el-button>
         </div>
+
+        <!-- 重装系统 -->
+        <div class="advanced-item">
+          <div class="item-header">
+            <el-icon :size="24" color="#e6a23c"><Setting /></el-icon>
+            <div>
+              <h4>重装系统</h4>
+              <p>重新安装操作系统（数据将丢失）</p>
+            </div>
+          </div>
+          <el-button type="warning" plain @click="openReinstallDialog" :disabled="powerStatus === 'on'">
+            重装系统
+          </el-button>
+        </div>
+
+        <!-- KVM/IPMI -->
+        <div class="advanced-item">
+          <div class="item-header">
+            <el-icon :size="24" color="#67c23a"><Connection /></el-icon>
+            <div>
+              <h4>KVM/IPMI</h4>
+              <p>通过KVM远程管理服务器硬件</p>
+            </div>
+          </div>
+          <div class="kvm-btn-group">
+            <el-button type="success" plain @click="openKvm" :loading="kvmLoading" :disabled="powerStatus === 'off'">
+              KVM
+            </el-button>
+            <el-button plain @click="openIkv" :loading="ikvmLoading" :disabled="powerStatus === 'off'">
+              iKVM
+            </el-button>
+          </div>
+        </div>
+
+        <!-- 任务队列 -->
+        <div class="advanced-item">
+          <div class="item-header">
+            <el-icon :size="24" color="#409eff"><Tickets /></el-icon>
+            <div>
+              <h4>任务队列</h4>
+              <p>查看和管理当前执行的任务</p>
+              <el-tag v-if="hasActiveTask" type="warning" size="small" effect="light" style="margin-top: 4px;">
+                有活跃任务
+              </el-tag>
+            </div>
+          </div>
+          <el-button type="primary" plain @click="openTaskDialog">
+            查看任务
+          </el-button>
+        </div>
       </div>
     </el-card>
 
@@ -400,20 +450,210 @@
         <el-button @click="showTrafficDialog = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- 重装系统对话框 -->
+    <el-dialog v-model="showReinstallDialog" title="重装系统" width="620px" :close-on-click-modal="false">
+      <!-- 重装次数/权限检查提示 -->
+      <el-alert
+        v-if="reinstallCheckData && reinstallCheckData.canReinstall === false"
+        type="warning"
+        :closable="false"
+        show-icon
+        title="重装次数受限"
+        style="margin-bottom: 16px;"
+      >
+        <template #default>
+          <p v-if="reinstallCheckData.price">
+            本周重装次数已达上限，可购买额外次数：<strong>¥{{ reinstallCheckData.price }}</strong>
+          </p>
+          <p v-else>本周重装次数已达最大限额，请下周重试或联系技术支持。</p>
+        </template>
+      </el-alert>
+
+      <el-alert type="error" :closable="false" show-icon title="危险操作" style="margin-bottom: 16px;">
+        <template #default>
+          <p><strong>重装系统将清除当前系统所有数据，此操作不可恢复！</strong></p>
+          <p>请确保您已备份所有重要数据。</p>
+        </template>
+      </el-alert>
+
+      <el-form :model="reinstallForm" label-width="100px">
+        <!-- 操作系统选择 -->
+        <el-form-item label="操作系统">
+          <div style="display: flex; gap: 12px; width: 100%;">
+            <el-select
+              v-model="reinstallForm.osGroupId"
+              placeholder="系统类型"
+              style="width: 40%;"
+              @change="onOsGroupChange"
+            >
+              <el-option
+                v-for="group in osGroups"
+                :key="group.id"
+                :label="group.name"
+                :value="group.id"
+              />
+            </el-select>
+            <el-select
+              v-model="reinstallForm.osId"
+              placeholder="系统版本"
+              style="width: 60%;"
+            >
+              <el-option
+                v-for="os in filteredOsList"
+                :key="os.id"
+                :label="os.name"
+                :value="os.id"
+              />
+            </el-select>
+          </div>
+        </el-form-item>
+
+        <!-- 密码 -->
+        <el-form-item label="密码">
+          <div style="display: flex; gap: 8px; width: 100%;">
+            <el-input
+              v-model="reinstallForm.password"
+              type="password"
+              placeholder="设置系统密码"
+              show-password
+              style="flex: 1;"
+            />
+            <el-button @click="generatePassword">
+              <el-icon><Refresh /></el-icon>
+              随机
+            </el-button>
+          </div>
+        </el-form-item>
+
+        <!-- SSH/RDP端口 -->
+        <el-form-item label="端口">
+          <el-input-number
+            v-model="reinstallForm.port"
+            :min="1"
+            :max="65535"
+            controls-position="right"
+            style="width: 200px;"
+          />
+          <span class="form-tip" style="margin-left: 8px; color: #909399; font-size: 12px;">
+            Linux默认22，Windows默认3389
+          </span>
+        </el-form-item>
+
+        <!-- 分区方案 -->
+        <el-form-item label="分区方案">
+          <el-radio-group v-model="reinstallForm.partType">
+            <el-radio :value="0">全盘格式化</el-radio>
+            <el-radio :value="1">仅格式化第一分区</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <!-- 确认备份 -->
+        <el-form-item>
+          <el-checkbox v-model="reinstallForm.confirmed">
+            我已完成数据备份，确认重装系统
+          </el-checkbox>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="showReinstallDialog = false">取消</el-button>
+        <el-button
+          type="danger"
+          :loading="reinstallLoading"
+          :disabled="!reinstallForm.confirmed || (reinstallCheckData && reinstallCheckData.canReinstall === false)"
+          @click="confirmReinstall"
+        >
+          确认重装
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 任务队列对话框 -->
+    <el-dialog
+      v-model="showTaskDialog"
+      title="任务队列"
+      width="700px"
+      @close="closeTaskDialog"
+    >
+      <div class="task-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <span style="color: #606266; font-size: 13px;">
+          任务列表每10秒自动刷新
+        </span>
+        <el-button link type="primary" size="small" @click="fetchTasks" :loading="taskLoading">
+          <el-icon><Refresh /></el-icon>
+          刷新
+        </el-button>
+      </div>
+
+      <el-table
+        :data="taskList"
+        stripe
+        style="width: 100%"
+        v-loading="taskLoading"
+        empty-text="暂无任务"
+      >
+        <el-table-column prop="id" label="任务ID" width="80" />
+        <el-table-column label="任务类型" width="120">
+          <template #default="{ row }">
+            <span>{{ getTaskTypeText(row.type || row.action) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getTaskStatusType(row.status)" size="small" effect="light">
+              {{ getTaskStatusText(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="进度" width="120">
+          <template #default="{ row }">
+            <el-progress
+              v-if="row.progress !== undefined"
+              :percentage="row.progress"
+              :stroke-width="6"
+              :status="row.status === 'failed' ? 'exception' : row.status === 'completed' ? 'success' : undefined"
+            />
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" label="创建时间" min-width="150" />
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.status === 'running' || row.status === 'pending' || row.status === 'processing'"
+              type="danger"
+              link
+              size="small"
+              @click="cancelSpecificTask(row.id)"
+            >
+              取消
+            </el-button>
+            <span v-else style="color: #c0c4cc; font-size: 12px;">-</span>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <template #footer>
+        <el-button @click="closeTaskDialog">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Refresh, RefreshRight, VideoPlay, VideoPause, CopyDocument,
   FirstAidKit, Key, Delete, Monitor, CircleClose, TrendCharts,
-  Top, Bottom
+  Top, Bottom, Setting, Connection, Tickets, Cpu, Warning
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -468,6 +708,36 @@ const trafficData = reactive({
 
 // 操作日志
 const logs = ref<any[]>([])
+
+// ==================== 重装系统 ====================
+const showReinstallDialog = ref(false)
+const reinstallLoading = ref(false)
+const reinstallForm = reactive({
+  osGroupId: null as number | null,
+  osId: null as number | null,
+  password: '',
+  port: 22,
+  partType: 0,
+  disk: 0,
+  confirmed: false
+})
+const osGroups = ref<any[]>([])
+const osList = ref<any[]>([])
+const filteredOsList = computed(() => {
+  if (!reinstallForm.osGroupId) return osList.value
+  return osList.value.filter((os: any) => os.group === reinstallForm.osGroupId)
+})
+const reinstallCheckData = ref<any>(null)
+
+// ==================== KVM/IPMI ====================
+const kvmLoading = ref(false)
+const ikvmLoading = ref(false)
+
+// ==================== 任务队列 ====================
+const showTaskDialog = ref(false)
+const taskLoading = ref(false)
+const taskList = ref<any[]>([])
+const taskTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
 // 获取服务器信息
 async function fetchServerInfo() {
@@ -681,6 +951,287 @@ function copyText(text: string) {
   })
 }
 
+// ==================== 重装系统功能 ====================
+
+// 打开重装系统对话框
+async function openReinstallDialog() {
+  const hostId = route.query.host_id || route.params.id
+  if (!hostId) return
+
+  reinstallForm.osGroupId = null
+  reinstallForm.osId = null
+  reinstallForm.password = ''
+  reinstallForm.port = 22
+  reinstallForm.partType = 0
+  reinstallForm.disk = 0
+  reinstallForm.confirmed = false
+  reinstallCheckData.value = null
+
+  showReinstallDialog.value = true
+  await Promise.all([fetchCheckReinstall(), fetchOsList()])
+}
+
+// 检查重装权限和次数
+async function fetchCheckReinstall() {
+  const hostId = route.query.host_id || route.params.id
+  if (!hostId) return
+
+  try {
+    const { data } = await request.get(`/api/v2/hosts/${hostId}/check-reinstall`)
+    reinstallCheckData.value = data?.data || null
+  } catch (e: any) {
+    if (e?.response?.data?.status === 400 && e.response.data.price) {
+      reinstallCheckData.value = { canReinstall: false, price: e.response.data.price }
+    }
+  }
+}
+
+// 获取可用操作系统列表
+async function fetchOsList() {
+  const hostId = route.query.host_id || route.params.id
+  if (!hostId) return
+
+  try {
+    const { data } = await request.get(`/api/v2/hosts/${hostId}/os-list`)
+    if (data?.data) {
+      osGroups.value = data.data.groups || []
+      osList.value = data.data.os || []
+      if (osGroups.value.length > 0 && !reinstallForm.osGroupId) {
+        reinstallForm.osGroupId = osGroups.value[0].id
+      }
+      if (filteredOsList.value.length > 0 && !reinstallForm.osId) {
+        reinstallForm.osId = filteredOsList.value[0].id
+      }
+    }
+  } catch (e) {
+    console.error('Failed to fetch OS list:', e)
+  }
+}
+
+// 生成随机密码
+function generatePassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+  const specials = '!@#$%&*'
+  let pass = ''
+  pass += chars.charAt(Math.floor(Math.random() * 26))
+  pass += specials.charAt(Math.floor(Math.random() * specials.length))
+  pass += chars.charAt(26 + Math.floor(Math.random() * 26))
+  for (let i = 0; i < 9; i++) {
+    pass += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  reinstallForm.password = pass.split('').sort(() => Math.random() - 0.5).join('')
+}
+
+// OS组变化时自动选择第一个OS
+function onOsGroupChange() {
+  const list = filteredOsList.value
+  reinstallForm.osId = list.length > 0 ? list[0].id : null
+  const group = osGroups.value.find((g: any) => g.id === reinstallForm.osGroupId)
+  reinstallForm.port = group?.name?.toLowerCase() === 'windows' ? 3389 : 22
+}
+
+// 确认重装系统
+async function confirmReinstall() {
+  const hostId = route.query.host_id || route.params.id
+  if (!hostId) return
+
+  if (!reinstallForm.osId) {
+    ElMessage.warning('请选择操作系统')
+    return
+  }
+  if (!reinstallForm.password) {
+    ElMessage.warning('请设置密码')
+    return
+  }
+  if (!reinstallForm.confirmed) {
+    ElMessage.warning('请确认已备份数据')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      '重装系统将清除当前系统所有数据，此操作不可恢复。确定继续吗？',
+      '确认重装系统',
+      {
+        confirmButtonText: '确定重装',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    reinstallLoading.value = true
+    await request.post(`/api/v2/hosts/${hostId}/reinstall`, {
+      os: reinstallForm.osId,
+      password: reinstallForm.password,
+      port: reinstallForm.port,
+      part_type: reinstallForm.partType,
+      disk: reinstallForm.disk,
+      action: 'reinstall'
+    })
+    showReinstallDialog.value = false
+    ElMessage.success('重装系统任务已提交，请等待完成')
+    fetchLogs()
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      ElMessage.error(e?.response?.data?.msg || e.message || '重装系统失败')
+    }
+  } finally {
+    reinstallLoading.value = false
+  }
+}
+
+// ==================== KVM/IPMI 功能 ====================
+
+// 获取KVM连接信息并打开
+async function openKvm() {
+  const hostId = route.query.host_id || route.params.id
+  if (!hostId) return
+
+  kvmLoading.value = true
+  try {
+    const { data } = await request.post(`/api/v2/hosts/${hostId}/kvm`)
+    if (data?.data?.url) {
+      window.open(data.data.url, '_blank', 'width=1280,height=800')
+    } else if (data?.data?.jnl) {
+      const link = document.createElement('a')
+      link.href = data.data.jnl
+      link.download = `kvm-${hostId}.jnlp`
+      link.click()
+    } else {
+      ElMessage.info('KVM连接信息已获取，请查看弹出窗口')
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.msg || e.message || '获取KVM连接失败')
+  } finally {
+    kvmLoading.value = false
+  }
+}
+
+// 获取iKVM连接信息
+async function openIkv() {
+  const hostId = route.query.host_id || route.params.id
+  if (!hostId) return
+
+  ikvmLoading.value = true
+  try {
+    const { data } = await request.post(`/api/v2/hosts/${hostId}/ikvm`)
+    if (data?.data?.url) {
+      window.open(data.data.url, '_blank', 'width=1280,height=800')
+    } else {
+      ElMessage.info('iKVM连接信息已获取')
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.msg || e.message || '获取iKVM连接失败')
+  } finally {
+    ikvmLoading.value = false
+  }
+}
+
+// ==================== 任务队列功能 ====================
+
+// 打开任务队列对话框
+async function openTaskDialog() {
+  showTaskDialog.value = true
+  await fetchTasks()
+  taskTimer.value = setInterval(fetchTasks, 10000)
+}
+
+// 关闭任务队列对话框
+function closeTaskDialog() {
+  showTaskDialog.value = false
+  if (taskTimer.value) {
+    clearInterval(taskTimer.value)
+    taskTimer.value = null
+  }
+}
+
+// 获取任务列表
+async function fetchTasks() {
+  const hostId = route.query.host_id || route.params.id
+  if (!hostId) return
+
+  taskLoading.value = true
+  try {
+    const { data } = await request.get(`/api/v2/hosts/${hostId}/tasks`)
+    if (data?.data) {
+      taskList.value = data.data.list || data.data || []
+      hasActiveTask.value = taskList.value.some((t: any) =>
+        t.status === 'running' || t.status === 'pending' || t.status === 'processing'
+      )
+    }
+  } catch (e) {
+    console.error('Failed to fetch tasks:', e)
+  } finally {
+    taskLoading.value = false
+  }
+}
+
+// 取消指定任务
+async function cancelSpecificTask(taskId: string | number) {
+  const hostId = route.query.host_id || route.params.id
+  if (!hostId) return
+
+  try {
+    await ElMessageBox.confirm('确定取消该任务吗？', '取消任务', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await request.post(`/api/v2/hosts/${hostId}/tasks/${taskId}/cancel`)
+    ElMessage.success('任务已取消')
+    fetchTasks()
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      ElMessage.error(e?.response?.data?.msg || e.message || '取消任务失败')
+    }
+  }
+}
+
+// 获取任务状态标签类型
+function getTaskStatusType(status: string) {
+  const map: Record<string, 'success' | 'warning' | 'info' | 'danger'> = {
+    'completed': 'success',
+    'success': 'success',
+    'running': 'warning',
+    'processing': 'warning',
+    'pending': 'info',
+    'failed': 'danger',
+    'cancelled': 'info',
+    'canceled': 'info'
+  }
+  return map[status] || 'info'
+}
+
+// 获取任务状态中文
+function getTaskStatusText(status: string) {
+  const map: Record<string, string> = {
+    'completed': '已完成',
+    'success': '已完成',
+    'running': '执行中',
+    'processing': '处理中',
+    'pending': '等待中',
+    'failed': '失败',
+    'cancelled': '已取消',
+    'canceled': '已取消'
+  }
+  return map[status] || status
+}
+
+// 获取任务类型中文
+function getTaskTypeText(type: string) {
+  const map: Record<string, string> = {
+    'reinstall': '重装系统',
+    'rescue': '救援模式',
+    'power_on': '开机',
+    'power_off': '关机',
+    'reboot': '重启',
+    'reset_password': '密码重置',
+    'format': '磁盘格式化',
+    'bmc_reset': 'BMC重置'
+  }
+  return map[type] || type
+}
+
 // 日志标签类型
 function getLogTagType(action: string) {
   const map: Record<string, 'success' | 'warning' | 'info' | 'danger'> = {
@@ -693,6 +1244,15 @@ function getLogTagType(action: string) {
 onMounted(() => {
   fetchServerInfo()
   fetchLogs()
+  // 初始获取任务状态
+  fetchTasks()
+})
+
+onBeforeUnmount(() => {
+  if (taskTimer.value) {
+    clearInterval(taskTimer.value)
+    taskTimer.value = null
+  }
 })
 </script>
 
@@ -877,6 +1437,11 @@ onMounted(() => {
       margin: 0;
     }
   }
+}
+
+.kvm-btn-group {
+  display: flex;
+  gap: 8px;
 }
 
 .mono-text {
