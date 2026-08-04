@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"anchorfinance/internal/model"
@@ -587,4 +588,354 @@ func (s *AgentEnhancedService) GetBaseInfo(agentID uint) (map[string]interface{}
 		"downline_count": downlineCount,
 		"order_count":    orderCount,
 	}, nil
+}
+
+// ==================== Resource Pool ====================
+
+// ResourcePool 资源池
+type ResourcePool struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	Name        string    `gorm:"size:128;not null" json:"name"`
+	Description string    `gorm:"type:text" json:"description"`
+	Type        string    `gorm:"size:32;default:shared;comment:shared/exclusive" json:"type"`
+	TotalCPU    int       `json:"total_cpu"`
+	TotalMemory int       `json:"total_memory"` // MB
+	TotalDisk   int       `json:"total_disk"`   // GB
+	UsedCPU     int       `json:"used_cpu"`
+	UsedMemory  int       `json:"used_memory"`
+	UsedDisk    int       `json:"used_disk"`
+	AgentIDs    string    `gorm:"type:text" json:"agent_ids"` // JSON array of agent IDs
+	Status      string    `gorm:"size:32;default:active;comment:active/disabled" json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// GetResourcePools returns paginated resource pools.
+func (s *AgentEnhancedService) GetResourcePools(page, pageSize int) ([]ResourcePool, int64, error) {
+	var items []ResourcePool
+	var total int64
+
+	query := s.db.Model(&ResourcePool{})
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&items).Error; err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
+}
+
+// CreateResourcePool creates a new resource pool.
+func (s *AgentEnhancedService) CreateResourcePool(pool *ResourcePool) error {
+	return s.db.Create(pool).Error
+}
+
+// UpdateResourcePool updates a resource pool.
+func (s *AgentEnhancedService) UpdateResourcePool(id uint, updates map[string]interface{}) error {
+	return s.db.Model(&ResourcePool{}).Where("id = ?", id).Updates(updates).Error
+}
+
+// DeleteResourcePool deletes a resource pool.
+func (s *AgentEnhancedService) DeleteResourcePool(id uint) error {
+	return s.db.Delete(&ResourcePool{}, id).Error
+}
+
+// ==================== Agent Level ====================
+
+// AgentLevel 代理商等级
+type AgentLevel struct {
+	ID             uint      `gorm:"primaryKey" json:"id"`
+	Name           string    `gorm:"size:64;not null" json:"name"`
+	Level          int       `gorm:"uniqueIndex;not null" json:"level"`
+	CommissionRate float64   `gorm:"type:decimal(5,2);default:0" json:"commission_rate"`
+	MinSales       float64   `gorm:"type:decimal(12,2);default:0" json:"min_sales"`
+	MaxSubAgents   int       `gorm:"default:0" json:"max_sub_agents"`
+	Description    string    `gorm:"type:text" json:"description"`
+	Discount       float64   `gorm:"type:decimal(5,2);default:100" json:"discount"`
+	Status         string    `gorm:"size:32;default:active;comment:active/disabled" json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+// GetAgentLevels returns all agent levels.
+func (s *AgentEnhancedService) GetAgentLevels() ([]AgentLevel, error) {
+	var items []AgentLevel
+	if err := s.db.Order("level ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+// CreateAgentLevel creates a new agent level.
+func (s *AgentEnhancedService) CreateAgentLevel(level *AgentLevel) error {
+	return s.db.Create(level).Error
+}
+
+// UpdateAgentLevel updates an agent level.
+func (s *AgentEnhancedService) UpdateAgentLevel(id uint, updates map[string]interface{}) error {
+	return s.db.Model(&AgentLevel{}).Where("id = ?", id).Updates(updates).Error
+}
+
+// DeleteAgentLevel deletes an agent level.
+func (s *AgentEnhancedService) DeleteAgentLevel(id uint) error {
+	return s.db.Delete(&AgentLevel{}, id).Error
+}
+
+// ==================== Performance Report ====================
+
+// GetPerformanceReport returns performance statistics for agents.
+func (s *AgentEnhancedService) GetPerformanceReport(page, pageSize int, period string) ([]map[string]interface{}, int64, error) {
+	var agents []model.Agent
+	var total int64
+
+	query := s.db.Model(&model.Agent{})
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("total_earned DESC").Find(&agents).Error; err != nil {
+		return nil, 0, err
+	}
+
+	now := time.Now()
+	var startTime time.Time
+	switch period {
+	case "week":
+		startTime = now.AddDate(0, 0, -7)
+	case "month":
+		startTime = now.AddDate(0, -1, 0)
+	case "year":
+		startTime = now.AddDate(-1, 0, 0)
+	default:
+		startTime = now.AddDate(0, -1, 0)
+	}
+
+	var results []map[string]interface{}
+	for _, agent := range agents {
+		var periodSales float64
+		s.db.Model(&model.Order{}).
+			Where("user_id = ? AND paid_at >= ?", agent.UserID, startTime).
+			Select("COALESCE(SUM(amount), 0)").
+			Scan(&periodSales)
+
+		var periodCommission float64
+		s.db.Model(&model.AgentCommission{}).
+			Where("agent_id = ? AND status = 2 AND created_at >= ?", agent.ID, startTime).
+			Select("COALESCE(SUM(amount), 0)").
+			Scan(&periodCommission)
+
+		var orderCount int64
+		s.db.Model(&model.Order{}).
+			Where("user_id = ? AND paid_at >= ?", agent.UserID, startTime).
+			Count(&orderCount)
+
+		results = append(results, map[string]interface{}{
+			"agent_id":          agent.ID,
+			"level":             agent.Level,
+			"total_earned":      agent.TotalEarned,
+			"period_sales":      periodSales,
+			"period_commission": periodCommission,
+			"period_orders":     orderCount,
+		})
+	}
+
+	return results, total, nil
+}
+
+// GetPerformanceChart returns chart data for agent performance.
+func (s *AgentEnhancedService) GetPerformanceChart(period string) (map[string]interface{}, error) {
+	now := time.Now()
+	var startTime time.Time
+	var format string
+
+	switch period {
+	case "week":
+		startTime = now.AddDate(0, 0, -7)
+		format = "2006-01-02"
+	case "month":
+		startTime = now.AddDate(0, -1, 0)
+		format = "2006-01-02"
+	case "year":
+		startTime = now.AddDate(-1, 0, 0)
+		format = "2006-01"
+	default:
+		startTime = now.AddDate(0, -1, 0)
+		format = "2006-01-02"
+	}
+
+	type dailyData struct {
+		Date     string  `json:"date"`
+		Sales    float64 `json:"sales"`
+		Orders   int64   `json:"orders"`
+		NewAgents int64  `json:"new_agents"`
+	}
+
+	var results []dailyData
+
+	// Aggregate orders by date
+	rows, err := s.db.Model(&model.Order{}).
+		Where("paid_at >= ?", startTime).
+		Select("DATE_FORMAT(paid_at, ? as date, COALESCE(SUM(amount), 0) as sales, COUNT(*) as orders", format).
+		Group("date").
+		Order("date ASC").
+		Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	dateMap := make(map[string]*dailyData)
+	for rows.Next() {
+		var d dailyData
+		if err := rows.Scan(&d.Date, &d.Sales, &d.Orders); err != nil {
+			continue
+		}
+		dateMap[d.Date] = &d
+		results = append(results, d)
+	}
+
+	// Aggregate new agents by date
+	agentRows, err := s.db.Model(&model.Agent{}).
+		Where("created_at >= ?", startTime).
+		Select("DATE_FORMAT(created_at, ? as date, COUNT(*) as cnt", format).
+		Group("date").
+		Order("date ASC").
+		Rows()
+	if err == nil {
+		defer agentRows.Close()
+		for agentRows.Next() {
+			var date string
+			var cnt int64
+			if err := agentRows.Scan(&date, &cnt); err != nil {
+				continue
+			}
+			if existing, ok := dateMap[date]; ok {
+				existing.NewAgents = cnt
+			}
+		}
+	}
+
+	return map[string]interface{}{
+		"period": period,
+		"data":   results,
+	}, nil
+}
+
+// ==================== Commission Settlement ====================
+
+// CommissionSettlement 佣金结算记录
+type CommissionSettlement struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	AgentID   uint      `gorm:"index;not null" json:"agent_id"`
+	Amount    float64   `gorm:"type:decimal(12,2);not null" json:"amount"`
+	Status    string    `gorm:"size:32;default:pending;comment:pending/paid/rejected" json:"status"`
+	Period    string    `gorm:"size:32" json:"period"` // e.g. "2024-01"
+	Remark    string    `gorm:"type:text" json:"remark"`
+	PaidAt    *time.Time `json:"paid_at"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+// CommissionRule 佣金规则
+type CommissionRule struct {
+	ID             uint      `gorm:"primaryKey" json:"id"`
+	Name           string    `gorm:"size:128;not null" json:"name"`
+	Type           string    `gorm:"size:32;default:percentage;comment:percentage/fixed" json:"type"`
+	Rate           float64   `gorm:"type:decimal(8,2)" json:"rate"`
+	MinAmount      float64   `gorm:"type:decimal(12,2);default:0" json:"min_amount"`
+	MaxAmount      float64   `gorm:"type:decimal(12,2);default:0" json:"max_amount"`
+	ProductIDs     string    `gorm:"type:text" json:"product_ids"` // JSON array, empty = all
+	LevelIDs       string    `gorm:"type:text" json:"level_ids"`   // JSON array, empty = all levels
+	Status         string    `gorm:"size:32;default:active" json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+// GetCommissionSettlements returns paginated commission settlements.
+func (s *AgentEnhancedService) GetCommissionSettlements(page, pageSize int) ([]CommissionSettlement, int64, error) {
+	var items []CommissionSettlement
+	var total int64
+
+	query := s.db.Model(&CommissionSettlement{})
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&items).Error; err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
+}
+
+// SettleCommission settles pending commissions for an agent.
+func (s *AgentEnhancedService) SettleCommission(agentID uint, period string) (*CommissionSettlement, error) {
+	var agent model.Agent
+	if err := s.db.First(&agent, agentID).Error; err != nil {
+		return nil, err
+	}
+
+	// Calculate total pending commissions
+	var totalAmount float64
+	query := s.db.Model(&model.AgentCommission{}).
+		Where("agent_id = ? AND status = 1", agentID)
+	if period != "" {
+		query = query.Where("DATE_FORMAT(created_at, '%Y-%m') = ?", period)
+	}
+	query.Select("COALESCE(SUM(amount), 0)").Scan(&totalAmount)
+
+	if totalAmount <= 0 {
+		return nil, fmt.Errorf("no pending commissions to settle")
+	}
+
+	settlement := &CommissionSettlement{
+		AgentID: agentID,
+		Amount:  totalAmount,
+		Status:  "paid",
+		Period:  period,
+		Remark:  fmt.Sprintf("佣金结算 - %s", period),
+	}
+	now := time.Now()
+	settlement.PaidAt = &now
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(settlement).Error; err != nil {
+			return err
+		}
+		// Mark commissions as confirmed
+		updateQuery := tx.Model(&model.AgentCommission{}).
+			Where("agent_id = ? AND status = 1", agentID)
+		if period != "" {
+			updateQuery = updateQuery.Where("DATE_FORMAT(created_at, '%Y-%m') = ?", period)
+		}
+		return updateQuery.Update("status", 2).Error
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	s.log.Infof("commission settled for agent %d: %.2f (period=%s)", agentID, totalAmount, period)
+	return settlement, nil
+}
+
+// GetCommissionRules returns all commission rules.
+func (s *AgentEnhancedService) GetCommissionRules() ([]CommissionRule, error) {
+	var items []CommissionRule
+	if err := s.db.Order("id ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+// UpdateCommissionRules updates commission rules (batch replace).
+func (s *AgentEnhancedService) UpdateCommissionRules(rules []CommissionRule) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// Clear existing rules
+		if err := tx.Where("1 = 1").Delete(&CommissionRule{}).Error; err != nil {
+			return err
+		}
+		// Insert new rules
+		if len(rules) > 0 {
+			return tx.CreateInBatches(rules, 100).Error
+		}
+		return nil
+	})
 }

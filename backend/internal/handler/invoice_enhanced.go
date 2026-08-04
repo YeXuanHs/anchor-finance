@@ -13,13 +13,14 @@ import (
 
 // InvoiceEnhancedHandler 账单增强处理器
 type InvoiceEnhancedHandler struct {
-	svc *service.InvoiceEnhancedService
-	log *logger.Logger
+	svc     *service.InvoiceEnhancedService
+	emailSvc *service.EmailEnhancedService
+	log     *logger.Logger
 }
 
 // NewInvoiceEnhancedHandler creates a new InvoiceEnhancedHandler.
-func NewInvoiceEnhancedHandler(svc *service.InvoiceEnhancedService, log *logger.Logger) *InvoiceEnhancedHandler {
-	return &InvoiceEnhancedHandler{svc: svc, log: log}
+func NewInvoiceEnhancedHandler(svc *service.InvoiceEnhancedService, emailSvc *service.EmailEnhancedService, log *logger.Logger) *InvoiceEnhancedHandler {
+	return &InvoiceEnhancedHandler{svc: svc, emailSvc: emailSvc, log: log}
 }
 
 // ==================== Status Filters ====================
@@ -143,7 +144,23 @@ func (h *InvoiceEnhancedHandler) AddPayInvoice(c *gin.Context) {
 	ip := c.ClientIP()
 	h.svc.LogAction(uint(id), c.GetUint("user_id"), "payment_added", fmt.Sprintf("手动入账 %.2f via %s", req.Amount, gw), ip)
 
-	// TODO: 如果 email=true，发送付款确认邮件
+	if req.Email && h.emailSvc != nil {
+		go func() {
+			userEmail, err := h.svc.GetUserEmailByInvoiceID(uint(id))
+			if err != nil {
+				h.log.Errorf("failed to get user email for invoice %s: %v", invoice.InvoiceNo, err)
+				return
+			}
+			params := map[string]string{
+				"invoice_no": invoice.InvoiceNo,
+				"amount":     fmt.Sprintf("%.2f", req.Amount),
+				"gateway":    gw,
+			}
+			if err := h.emailSvc.SendEmailWithTemplate(userEmail, "payment_confirmation", params); err != nil {
+				h.log.Errorf("payment confirmation email failed for invoice %s: %v", invoice.InvoiceNo, err)
+			}
+		}()
+	}
 
 	response.Success(c, invoice)
 }

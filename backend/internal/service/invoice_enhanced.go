@@ -933,6 +933,19 @@ func (s *InvoiceEnhancedService) getInvoiceByID(id uint) (*Invoice, error) {
 	return &inv, nil
 }
 
+// GetUserEmailByInvoiceID returns the user email for an invoice.
+func (s *InvoiceEnhancedService) GetUserEmailByInvoiceID(invoiceID uint) (string, error) {
+	inv, err := s.getInvoiceByID(invoiceID)
+	if err != nil {
+		return "", err
+	}
+	var user struct{ Email string }
+	if err := s.db.Model(&User{}).Where("id = ?", inv.UserID).Select("email").First(&user).Error; err != nil {
+		return "", err
+	}
+	return user.Email, nil
+}
+
 // calculateCycleAmount 根据周期计算金额
 func calculateCycleAmount(basePrice float64, cycle string) float64 {
 	switch cycle {

@@ -4,6 +4,10 @@
       <template #header>
         <div class="card-header">
           <span>客户短信日志</span>
+          <el-button type="success" @click="handleExport">
+            <el-icon><Download /></el-icon>
+            导出
+          </el-button>
         </div>
       </template>
 
@@ -17,6 +21,14 @@
             <el-option label="发送成功" value="success" />
             <el-option label="发送失败" value="failed" />
             <el-option label="待发送" value="pending" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="模板">
+          <el-select v-model="searchForm.template" placeholder="全部" clearable>
+            <el-option label="验证码" value="verify" />
+            <el-option label="通知" value="notify" />
+            <el-option label="营销" value="marketing" />
+            <el-option label="订单提醒" value="order" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -50,6 +62,11 @@
         </el-table-column>
         <el-table-column prop="sent_at" label="发送时间" width="180" />
         <el-table-column prop="error_msg" label="错误信息" width="200" show-overflow-tooltip />
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link @click="handleResend(row)" :disabled="row.status === 'success'">重发</el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <!-- 分页 -->
@@ -68,15 +85,10 @@
   </div>
 </template>
 
-<!-- TODO: 完善短信日志页面功能
-  1. 添加重发短信功能
-  2. 添加导出功能
-  3. 添加短信模板筛选
-  4. 添加客户关联查询
--->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
 import request from '@/utils/http'
 
 const statusTypeMap: Record<string, string> = {
@@ -95,6 +107,7 @@ const loading = ref(false)
 const searchForm = reactive({
   phone: '',
   status: '',
+  template: '',
   date_range: [] as string[]
 })
 const pagination = reactive({ page: 1, page_size: 20, total: 0 })
@@ -107,7 +120,8 @@ const fetchData = async () => {
       page: pagination.page,
       page_size: pagination.page_size,
       phone: searchForm.phone || undefined,
-      status: searchForm.status || undefined
+      status: searchForm.status || undefined,
+      template: searchForm.template || undefined
     }
     if (searchForm.date_range?.length === 2) {
       params.start_date = searchForm.date_range[0]
@@ -127,8 +141,37 @@ const handleSearch = () => { pagination.page = 1; fetchData() }
 const handleReset = () => {
   searchForm.phone = ''
   searchForm.status = ''
+  searchForm.template = ''
   searchForm.date_range = []
   handleSearch()
+}
+
+const handleResend = async (row: any) => {
+  await ElMessageBox.confirm(`确定重发短信到 ${row.phone}？`, '提示', { type: 'warning' })
+  try {
+    await request.post({ url: `/api/admin/sms-logs/${row.id}/resend` })
+    ElMessage.success('重发成功')
+    fetchData()
+  } catch (error) {
+    ElMessage.error('重发失败')
+  }
+}
+
+const handleExport = async () => {
+  try {
+    const params: any = { ...searchForm }
+    const res = await request.get({ url: '/api/admin/sms-logs/export', params, responseType: 'blob' as any })
+    const blob = new Blob([res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `短信日志_${new Date().toISOString().slice(0, 10)}.xlsx`
+    link.click()
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error('导出失败')
+  }
 }
 const handleSizeChange = () => { pagination.page = 1; fetchData() }
 const handlePageChange = () => { fetchData() }

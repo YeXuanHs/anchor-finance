@@ -4,6 +4,15 @@
       <template #header>
         <div class="card-header">
           <span>发票审核</span>
+          <div>
+            <el-button type="warning" @click="handleBatchAudit" :disabled="selectedIds.length === 0">
+              批量审核 ({{ selectedIds.length }})
+            </el-button>
+            <el-button type="success" @click="handleExport">
+              <el-icon><Download /></el-icon>
+              导出
+            </el-button>
+          </div>
         </div>
       </template>
 
@@ -27,7 +36,8 @@
       </el-form>
 
       <!-- 数据表格 -->
-      <el-table :data="tableData" v-loading="loading" style="width: 100%" border>
+      <el-table :data="tableData" v-loading="loading" style="width: 100%" border @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" :selectable="(row: any) => row.status === 0" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="invoice_no" label="发票号" width="180" />
         <el-table-column prop="client_name" label="客户" width="120" />
@@ -95,15 +105,10 @@
   </div>
 </template>
 
-<!-- TODO: 完善发票审核页面功能
-  1. 添加审核备注输入
-  2. 添加批量审核功能
-  3. 添加发票信息导出
-  4. 添加关联订单查看
--->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
 import request from '@/utils/http'
 
 const statusTypeMap: Record<number, string> = {
@@ -123,6 +128,7 @@ const statusLabelMap: Record<number, string> = {
 const loading = ref(false)
 const detailVisible = ref(false)
 const detailData = ref<any>(null)
+const selectedIds = ref<number[]>([])
 
 const searchForm = reactive({
   invoice_no: '',
@@ -180,6 +186,40 @@ const handleMarkIssued = async (row: any) => {
 
 const handleSizeChange = () => { pagination.page = 1; fetchData() }
 const handlePageChange = () => { fetchData() }
+
+const handleSelectionChange = (rows: any[]) => {
+  selectedIds.value = rows.map((r: any) => r.id)
+}
+
+const handleBatchAudit = async () => {
+  if (selectedIds.value.length === 0) return
+  try {
+    await ElMessageBox.confirm(`确定批量审核通过选中的 ${selectedIds.value.length} 条发票？`, '批量审核确认')
+    await request.post({ url: '/api/admin/invoices/batch-audit', params: { ids: selectedIds.value, status: 1 } })
+    ElMessage.success('批量审核成功')
+    selectedIds.value = []
+    fetchData()
+  } catch (error: any) {
+    if (error !== 'cancel') ElMessage.error('批量审核失败')
+  }
+}
+
+const handleExport = async () => {
+  try {
+    const params: any = { ...searchForm }
+    const res = await request.get({ url: '/api/admin/invoices/export', params, responseType: 'blob' as any })
+    const blob = new Blob([res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `发票数据_${new Date().toISOString().slice(0, 10)}.xlsx`
+    link.click()
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error('导出失败')
+  }
+}
 
 onMounted(() => { fetchData() })
 </script>

@@ -642,3 +642,251 @@ func (h *AgentEnhancedHandler) GetBaseInfo(c *gin.Context) {
 	}
 	response.Success(c, info)
 }
+
+// ==================== Resource Pool ====================
+
+// GetResourcePools returns paginated resource pools.
+// GET /agent/resource-pools
+func (h *AgentEnhancedHandler) GetResourcePools(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	items, total, err := h.svc.GetResourcePools(page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, items, total, page, pageSize)
+}
+
+// CreateResourcePool creates a new resource pool.
+// POST /agent/resource-pools
+func (h *AgentEnhancedHandler) CreateResourcePool(c *gin.Context) {
+	var pool service.ResourcePool
+	if err := c.ShouldBindJSON(&pool); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.CreateResourcePool(&pool); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, pool)
+}
+
+// UpdateResourcePool updates a resource pool.
+// PUT /agent/resource-pools/:id
+func (h *AgentEnhancedHandler) UpdateResourcePool(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.UpdateResourcePool(uint(id), updates); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "updated")
+}
+
+// DeleteResourcePool deletes a resource pool.
+// DELETE /agent/resource-pools/:id
+func (h *AgentEnhancedHandler) DeleteResourcePool(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	if err := h.svc.DeleteResourcePool(uint(id)); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "deleted")
+}
+
+// ==================== Agent Level ====================
+
+// GetAgentLevels returns all agent levels.
+// GET /agent/levels
+func (h *AgentEnhancedHandler) GetAgentLevels(c *gin.Context) {
+	items, err := h.svc.GetAgentLevels()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, items)
+}
+
+// CreateAgentLevel creates a new agent level.
+// POST /agent/levels
+func (h *AgentEnhancedHandler) CreateAgentLevel(c *gin.Context) {
+	var level service.AgentLevel
+	if err := c.ShouldBindJSON(&level); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.CreateAgentLevel(&level); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, level)
+}
+
+// UpdateAgentLevel updates an agent level.
+// PUT /agent/levels/:id
+func (h *AgentEnhancedHandler) UpdateAgentLevel(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.UpdateAgentLevel(uint(id), updates); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "updated")
+}
+
+// DeleteAgentLevel deletes an agent level.
+// DELETE /agent/levels/:id
+func (h *AgentEnhancedHandler) DeleteAgentLevel(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	if err := h.svc.DeleteAgentLevel(uint(id)); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "deleted")
+}
+
+// ==================== Performance Report ====================
+
+// GetPerformanceReport returns agent performance report.
+// GET /agent/performance
+func (h *AgentEnhancedHandler) GetPerformanceReport(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	period := c.DefaultQuery("period", "month")
+
+	items, total, err := h.svc.GetPerformanceReport(page, pageSize, period)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, items, total, page, pageSize)
+}
+
+// GetPerformanceChart returns performance chart data.
+// GET /agent/performance/chart
+func (h *AgentEnhancedHandler) GetPerformanceChart(c *gin.Context) {
+	period := c.DefaultQuery("period", "month")
+
+	data, err := h.svc.GetPerformanceChart(period)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, data)
+}
+
+// ==================== Commission Settlement ====================
+
+// GetCommissionSettlements returns paginated commission settlements.
+// GET /agent/commission/settlements
+func (h *AgentEnhancedHandler) GetCommissionSettlements(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	items, total, err := h.svc.GetCommissionSettlements(page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, items, total, page, pageSize)
+}
+
+// SettleCommission settles pending commissions.
+// POST /agent/commission/settle
+func (h *AgentEnhancedHandler) SettleCommission(c *gin.Context) {
+	var req struct {
+		AgentID uint   `json:"agent_id" binding:"required"`
+		Period  string `json:"period"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	settlement, err := h.svc.SettleCommission(req.AgentID, req.Period)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, settlement)
+}
+
+// GetCommissionRules returns all commission rules.
+// GET /agent/commission/rules
+func (h *AgentEnhancedHandler) GetCommissionRules(c *gin.Context) {
+	items, err := h.svc.GetCommissionRules()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, items)
+}
+
+// UpdateCommissionRules updates commission rules (batch).
+// PUT /agent/commission/rules
+func (h *AgentEnhancedHandler) UpdateCommissionRules(c *gin.Context) {
+	var rules []service.CommissionRule
+	if err := c.ShouldBindJSON(&rules); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.svc.UpdateCommissionRules(rules); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "updated")
+}

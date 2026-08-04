@@ -148,7 +148,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// 账单增强功能
 		invoiceEnhancedSvc := service.NewInvoiceEnhancedService(deps.DB, deps.Log)
-		invoiceEnhancedHandler := handler.NewInvoiceEnhancedHandler(invoiceEnhancedSvc, deps.Log)
+		emailEnhancedSvc := service.NewEmailEnhancedService(deps.DB)
+		invoiceEnhancedHandler := handler.NewInvoiceEnhancedHandler(invoiceEnhancedSvc, emailEnhancedSvc, deps.Log)
 
 		// 静态路由（必须在 /invoices/:id 之前）
 		admin.GET("/invoices/paid", invoiceEnhancedHandler.GetPaidInvoices)
@@ -1298,17 +1299,45 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// 基本信息
 		admin.GET("/agent/base-info", agentEnhancedHandler.GetBaseInfo)
 
-		// TODO: [P2] 资源池代理商相关功能
-		// - 资源池分配与管理
-		// - 代理商等级体系
-		// - 代理商业绩报表
-		// - 代理商佣金结算增强
+		// 资源池分配与管理
+		admin.GET("/agent/resource-pools", agentEnhancedHandler.GetResourcePools)
+		admin.POST("/agent/resource-pools", agentEnhancedHandler.CreateResourcePool)
+		admin.PUT("/agent/resource-pools/:id", agentEnhancedHandler.UpdateResourcePool)
+		admin.DELETE("/agent/resource-pools/:id", agentEnhancedHandler.DeleteResourcePool)
 
-		// TODO: [P2] 开发者管理
-		// - 开发者注册与审核
-		// - API密钥管理
-		// - 开发者文档
-		// - 开发者计费
+		// 代理商等级体系
+		admin.GET("/agent/levels", agentEnhancedHandler.GetAgentLevels)
+		admin.POST("/agent/levels", agentEnhancedHandler.CreateAgentLevel)
+		admin.PUT("/agent/levels/:id", agentEnhancedHandler.UpdateAgentLevel)
+		admin.DELETE("/agent/levels/:id", agentEnhancedHandler.DeleteAgentLevel)
+
+		// 代理商业绩报表
+		admin.GET("/agent/performance", agentEnhancedHandler.GetPerformanceReport)
+		admin.GET("/agent/performance/chart", agentEnhancedHandler.GetPerformanceChart)
+
+		// 代理商佣金结算增强
+		admin.GET("/agent/commission/settlements", agentEnhancedHandler.GetCommissionSettlements)
+		admin.POST("/agent/commission/settle", agentEnhancedHandler.SettleCommission)
+		admin.GET("/agent/commission/rules", agentEnhancedHandler.GetCommissionRules)
+		admin.PUT("/agent/commission/rules", agentEnhancedHandler.UpdateCommissionRules)
+
+		// 开发者管理
+		developerSvc := service.NewDeveloperService(deps.DB, deps.Log)
+		developerHandler := handler.NewDeveloperHandler(developerSvc, deps.Log)
+		admin.GET("/developers", developerHandler.List)
+		admin.GET("/developers/:id", developerHandler.GetDetail)
+		admin.POST("/developers", developerHandler.Create)
+		admin.PUT("/developers/:id", developerHandler.Update)
+		admin.DELETE("/developers/:id", developerHandler.Delete)
+		admin.POST("/developers/:id/approve", developerHandler.Approve)
+		admin.POST("/developers/:id/reject", developerHandler.Reject)
+		admin.GET("/developers/:id/api-keys", developerHandler.GetAPIKeys)
+		admin.POST("/developers/:id/api-keys", developerHandler.GenerateAPIKey)
+		admin.DELETE("/developers/:id/api-keys/:key_id", developerHandler.RevokeAPIKey)
+		admin.GET("/developers/docs", developerHandler.GetDocs)
+		admin.PUT("/developers/docs", developerHandler.UpdateDocs)
+		admin.GET("/developers/billing", developerHandler.GetBilling)
+		admin.POST("/developers/billing/settle", developerHandler.SettleBilling)
 
 		// ==================== 聚合登录 ====================
 		if deps.JWTMgr != nil {
