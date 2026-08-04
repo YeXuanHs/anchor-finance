@@ -686,7 +686,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		upstreamSvc := service.NewUpstreamService(deps.DB, deps.Log)
 		hostSvc := service.NewHostService(deps.DB, deps.Log, upstreamSvc)
 		hostHandler := handler.NewHostHandler(hostSvc, deps.Log)
-		admin.GET("/hosts", hostHandler.List)
+		admin.GET("/hosts", hostHandler.GetList)
 		admin.GET("/hosts/:id", hostHandler.GetDetail)
 		admin.POST("/hosts/:id/boot", hostHandler.Boot)
 		admin.POST("/hosts/:id/shutdown", hostHandler.Shutdown)
