@@ -150,18 +150,7 @@ export default {
     customPasswordBox: '自定义密码框',
     charts: '图表',
     finance: '财务',
-    consumptionThisMonth: '本月消费',
-    highPerfCloudServer: '高性能云服务器',
-    highPerfDesc: '企业级云服务器，99.9% SLA 保障',
-    globalNodes: '全球节点覆盖',
-    globalNodesDesc: '遍布全球 30+ 数据中心节点',
-    proSupport: '专业技术支持',
-    proSupportDesc: '7×24小时专业技术团队',
-    securityGuarantee: '安全可靠保障',
-    securityGuaranteeDesc: '多层安全防护，数据安全无忧',
-    buyNow: '立即选购',
-    learnMore: '了解更多',
-    contactUs: '联系我们'
+    consumptionThisMonth: '本月消费'
   },
   service: {
     product: '产品',

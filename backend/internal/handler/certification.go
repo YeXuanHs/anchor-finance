@@ -63,6 +63,42 @@ func (h *CertificationHandler) AdminGetList(c *gin.Context) {
 	response.SuccessPage(c, certs, total, page, pageSize)
 }
 
+// SubmitEnterprise creates or updates an enterprise certification request.
+// POST /certification/enterprise
+func (h *CertificationHandler) SubmitEnterprise(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	var req struct {
+		EnterpriseName  string `json:"enterprise_name" binding:"required"`
+		RealName        string `json:"real_name" binding:"required"`
+		IDCard          string `json:"id_card"`
+		BusinessLicense string `json:"business_license"`
+		FrontImage      string `json:"front_image"`
+		BackImage       string `json:"back_image"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	certReq := service.SubmitCertificationRequest{
+		Type:            "enterprise",
+		RealName:        req.RealName,
+		IDCard:          req.IDCard,
+		EnterpriseName:  req.EnterpriseName,
+		BusinessLicense: req.BusinessLicense,
+		FrontImage:      req.FrontImage,
+		BackImage:       req.BackImage,
+	}
+
+	cert, err := h.certSvc.Submit(userID, certReq)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, cert)
+}
+
 // AdminReview approves or rejects a certification.
 func (h *CertificationHandler) AdminReview(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)

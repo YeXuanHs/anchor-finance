@@ -192,6 +192,33 @@ func (h *CartHandler) Checkout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": order})
 }
 
+// BatchDelete removes multiple items from the cart.
+// POST /cart/batch-delete
+func (h *CartHandler) BatchDelete(c *gin.Context) {
+	userID := getUserID(c)
+	if userID == 0 {
+		return
+	}
+
+	var req struct {
+		IDs []string `json:"ids" binding:"required,min=1"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	for _, idStr := range req.IDs {
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			continue
+		}
+		h.cartService.RemoveItemByUUID(id, userID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "批量删除成功"})
+}
+
 // getUserID extracts the authenticated user ID from the gin context.
 // This assumes auth middleware sets "user_id" in the context.
 func getUserID(c *gin.Context) uint {

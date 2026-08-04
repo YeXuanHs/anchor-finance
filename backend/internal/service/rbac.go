@@ -271,6 +271,32 @@ func (s *RbacService) HasPermission(userID uint, permCode string) bool {
 	return false
 }
 
+// UpdatePermissions batch-updates permissions for multiple roles.
+// Each entry maps a role_id to a list of permission_ids.
+func (s *RbacService) UpdatePermissions(permissionsMap map[uint][]uint) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		for roleID, permIDs := range permissionsMap {
+			var role Role
+			if err := tx.First(&role, roleID).Error; err != nil {
+				return fmt.Errorf("role %d not found", roleID)
+			}
+			if role.IsSystem {
+				return fmt.Errorf("system role %d cannot be modified", roleID)
+			}
+			var perms []Permission
+			if len(permIDs) > 0 {
+				if err := tx.Where("id IN ?", permIDs).Find(&perms).Error; err != nil {
+					return err
+				}
+			}
+			if err := tx.Model(&role).Association("Permissions").Replace(perms); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // GetUserPermissions returns all unique permissions for a user across all roles.
 func (s *RbacService) GetUserPermissions(userID uint) ([]Permission, error) {
 	roles, err := s.GetUserRoles(userID)

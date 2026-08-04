@@ -37,7 +37,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	authHandler := handler.NewAuthHandler(deps.UserSvc, log, deps.JWTMgr)
 	userHandler := handler.NewUserHandler(deps.UserSvc, log)
 	productHandler := handler.NewProductHandler(deps.ProdSvc, log)
-	orderHandler := handler.NewOrderHandler(deps.OrdSvc, log)
+	orderHandler := handler.NewOrderHandlerWithDB(deps.OrdSvc, deps.DB, log)
 	invoiceHandler := handler.NewInvoiceHandler(deps.InvSvc, log)
 	ticketHandler := handler.NewTicketHandler(deps.TicSvc, log)
 	cartHandler := handler.NewCartHandler(deps.CartSvc)
@@ -45,10 +45,11 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	balanceSvc := service.NewBalanceLogService(deps.DB)
 	balanceHandler := handler.NewBalanceHandler(balanceSvc, deps.DB)
 
-	creditSvc := service.NewCreditService(deps.DB)
+	creditSvc := service.NewCreditService(deps.DB, log)
 	creditHandler := handler.NewCreditHandler(deps.DB, creditSvc)
 
-	hostSvc := service.NewHostService(deps.DB, log)
+	upstreamSvc := service.NewUpstreamService(deps.DB, log)
+	hostSvc := service.NewHostService(deps.DB, log, upstreamSvc)
 	hostHandler := handler.NewHostHandler(hostSvc, log)
 
 	contactsSvc := service.NewClientContactService(deps.DB)
@@ -65,33 +66,34 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	knowledgeSvc := service.NewKnowledgeService(deps.DB, log)
 	knowledgeHandler := handler.NewKnowledgeHandler(knowledgeSvc, log)
 
-	systemMsgSvc := service.NewSystemMessageService(deps.DB)
+	systemMsgSvc := service.NewSystemMessageService(deps.DB, log)
 	systemMsgHandler := handler.NewSystemMessageHandler(systemMsgSvc, log)
 
-	certSvc := service.NewCertificationService(deps.DB)
+	certSvc := service.NewCertificationService(deps.DB, log)
 	certHandler := handler.NewCertificationHandler(certSvc, log)
 
 	oauthHandler := handler.NewOAuthHandler(deps.OAuthSvc, log, deps.JWTMgr)
 
-	upgradeSvc := service.NewUpgradeService(deps.DB)
+	upgradeSvc := service.NewUpgradeService(deps.DB, log)
 	upgradeHandler := handler.NewUpgradeHandler(upgradeSvc, log)
 
 	contractHandler := handler.NewContractHandler(deps.DB, log)
 
-	affiliateSvc := service.NewAffiliateService(deps.DB)
+	affiliateSvc := service.NewAffiliateService(deps.DB, log)
 	affiliateHandler := handler.NewAffiliateHandler(affiliateSvc, log)
 
 	voucherSvc := service.NewVoucherService(deps.DB, log)
 	voucherHandler := handler.NewVoucherHandler(voucherSvc, log)
 
-	multiRenewSvc := service.NewMultiRenewService(deps.DB)
+	balSvc := service.NewBalanceService(deps.DB, log)
+	multiRenewSvc := service.NewMultiRenewService(deps.DB, log, deps.InvSvc, balSvc)
 	multiRenewHandler := handler.NewMultiRenewHandler(multiRenewSvc, log)
 
-	loginLogSvc := service.NewLoginLogService(deps.DB)
+	loginLogSvc := service.NewLoginLogService(deps.DB, log)
 	loginLogHandler := handler.NewLoginLogHandler(loginLogSvc, log)
 
-	apiLogSvc := service.NewAPILogService(deps.DB)
-	apiLogHandler := handler.NewApiLogHandler(apiLogSvc, log)
+	apiLogSvc := service.NewApiLogService(deps.DB, log)
+	apiLogHandler := handler.NewAPILogHandler(apiLogSvc, log)
 
 	// ==================== 公开接口 ====================
 
@@ -102,6 +104,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		auth.POST("/register", authHandler.Register)
 		auth.POST("/refresh", middleware.AuthRequired(), authHandler.RefreshToken)
 		auth.POST("/logout", middleware.AuthRequired(), authHandler.Logout)
+		auth.POST("/access-token", authHandler.AccessTokenLogin)
 	}
 
 	// 产品
@@ -151,6 +154,34 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		c.JSON(200, gin.H{"data": groups})
 	})
 
+	// 轮播图（公开接口）
+	bannerSvc := service.NewBannerService(deps.DB, deps.Log)
+	bannerHandler := handler.NewBannerHandler(bannerSvc, deps.Log)
+	r.GET("/banners", bannerHandler.GetActive)
+
+	// 维护公告
+	r.GET("/maintenance/notices", func(c *gin.Context) {
+		var notices []struct {
+			ID      uint   `json:"id"`
+			Title   string `json:"title"`
+			Content string `json:"content"`
+		}
+		deps.DB.Table("announcements").Where("status = 1 AND type = ?", "maintenance").
+			Order("id DESC").Limit(10).Find(&notices)
+		c.JSON(200, gin.H{"data": notices})
+	})
+
+	// 域名后缀列表
+	r.GET("/domain/suffixes", func(c *gin.Context) {
+		var suffixes []struct {
+			ID     uint   `json:"id"`
+			Suffix string `json:"suffix"`
+			Price  string `json:"price"`
+		}
+		deps.DB.Table("domain_suffixes").Where("status = 1").Order("sort_order").Find(&suffixes)
+		c.JSON(200, gin.H{"data": suffixes})
+	})
+
 	// ==================== 需要登录 ====================
 	user := r.Group("")
 	user.Use(middleware.AuthRequired())
@@ -161,6 +192,18 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.POST("/user/change-password", userHandler.ChangePassword)
 		user.POST("/user/bind-phone", userHandler.BindPhone)
 		user.POST("/user/bind-email", userHandler.BindEmail)
+
+		// 二步验证 (2FA)
+		user.GET("/user/2fa", userHandler.Get2FAStatus)
+		user.POST("/user/2fa/enable", userHandler.Enable2FA)
+		user.POST("/user/2fa/verify", userHandler.Verify2FA)
+		user.POST("/user/2fa/disable", userHandler.Disable2FA)
+
+		// API密钥管理
+		user.GET("/user/api-keys", userHandler.GetAPIKeys)
+		user.POST("/user/api-keys", userHandler.CreateAPIKey)
+		user.PUT("/user/api-keys/:id/toggle", userHandler.ToggleAPIKey)
+		user.DELETE("/user/api-keys/:id", userHandler.DeleteAPIKey)
 
 		// OAuth绑定
 		user.GET("/oauth/providers", oauthHandler.GetProviders)
@@ -183,6 +226,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.DELETE("/cart/:id", cartHandler.RemoveFromCart)
 		user.DELETE("/cart", cartHandler.ClearCart)
 		user.POST("/cart/checkout", cartHandler.Checkout)
+		user.POST("/cart/batch-delete", cartHandler.BatchDelete)
 
 		// 订单
 		user.POST("/orders", orderHandler.Create)
@@ -190,11 +234,14 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/orders/:id", orderHandler.GetDetail)
 		user.POST("/orders/:id/pay", orderHandler.Pay)
 		user.POST("/orders/:id/cancel", orderHandler.Cancel)
+		user.POST("/orders/preview", orderHandler.Preview)
 
 		// 账单/发票
 		user.GET("/invoices", invoiceHandler.GetUserInvoices)
 		user.GET("/invoices/:id", invoiceHandler.GetDetail)
 		user.POST("/invoices/:id/pay", invoiceHandler.Pay)
+		user.POST("/invoices/combine", invoiceHandler.CombineInvoices)
+		user.GET("/invoices/combine", invoiceHandler.GetCombineInvoices)
 
 		// 工单
 		user.POST("/tickets", ticketHandler.Create)
@@ -218,6 +265,11 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.POST("/credit/apply", creditHandler.Apply)
 		user.POST("/credit/repay", creditHandler.Repay)
 		user.POST("/credit/prepayment", creditHandler.Prepayment)
+		user.GET("/credit/bills", creditHandler.GetBills)
+		user.GET("/credit/bills/:id", creditHandler.GetBillDetail)
+		user.POST("/credit/bills/:id/pay", creditHandler.PayBill)
+		user.GET("/credit/config", creditHandler.GetCreditConfig)
+		user.PUT("/credit/config", creditHandler.UpdateCreditConfig)
 
 		// 联系人
 		user.GET("/contacts", contactsHandler.GetList)
@@ -284,6 +336,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// 实名认证
 		user.GET("/certification/status", certHandler.GetStatus)
 		user.POST("/certification/submit", certHandler.Submit)
+		user.POST("/certification/enterprise", certHandler.SubmitEnterprise)
 
 		// 升级
 		user.GET("/upgrades/available/:host_id", upgradeHandler.GetAvailableUpgrades)
@@ -296,6 +349,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/contracts", contractHandler.GetUserContracts)
 		user.GET("/contracts/:id", contractHandler.GetDetail)
 		user.POST("/contracts/:id/sign", contractHandler.SignContract)
+		user.POST("/contracts/:id/bind-hosts", contractHandler.BindHosts)
+		user.POST("/contracts/:id/unbind-host", contractHandler.UnbindHost)
 
 		// 代理/推荐
 		user.GET("/affiliate/info", affiliateHandler.GetInfo)
@@ -343,5 +398,43 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 			deps.DB.Table("product_groups").Order("sort_order").Find(&groups)
 			c.JSON(200, gin.H{"data": groups})
 		})
+
+		// 产品转移（用户端）
+		productDivertSvc := service.NewProductDivertService(deps.DB, deps.Log)
+		productDivertHandler := handler.NewProductDivertHandler(productDivertSvc, deps.Log)
+		user.GET("/product-diverts", productDivertHandler.GetSent)
+		user.GET("/product-diverts/received", productDivertHandler.GetReceived)
+		user.GET("/product-diverts/:id", productDivertHandler.GetDetail)
+		user.POST("/product-diverts", productDivertHandler.Create)
+		user.POST("/product-diverts/:id/accept", productDivertHandler.Accept)
+		user.POST("/product-diverts/:id/reject", productDivertHandler.Reject)
+		user.POST("/product-diverts/:id/cancel", productDivertHandler.Cancel)
+		user.GET("/product-diverts/:id/code", productDivertHandler.GetTransferCode)
+		user.POST("/product-diverts/:id/regenerate-code", productDivertHandler.RegenerateCode)
+		user.POST("/product-diverts/accept-by-code", productDivertHandler.AcceptByCode)
+
+		// 用户操作日志
+		systemLogSvc := service.NewSystemLogService(deps.DB, deps.Log)
+		systemLogHandler := handler.NewSystemLogHandler(systemLogSvc, deps.Log)
+		user.GET("/system-logs", systemLogHandler.List)
+		user.GET("/system-logs/export", systemLogHandler.Export)
+
+		// 发送验证码
+		if deps.Redis != nil {
+			captchaSvc := service.NewCaptchaService(deps.Redis, deps.DB)
+			captchaHandler := handler.NewCaptchaHandler(captchaSvc, deps.DB)
+			user.POST("/sms/send", captchaHandler.SendSMS)
+			user.POST("/email/send", captchaHandler.SendEmail)
+		}
+
+		// SSL证书（用户端）
+		sslCertSvc := service.NewSSLCertificateService(deps.DB, deps.Log)
+		sslCertHandler := handler.NewSSLCertificateHandler(sslCertSvc, deps.Log)
+		user.GET("/ssl/certificates", sslCertHandler.GetList)
+		user.GET("/ssl/certificates/:id", sslCertHandler.GetDetail)
+		user.POST("/ssl/certificates/order", sslCertHandler.Order)
+		user.POST("/ssl/certificates/:id/install", sslCertHandler.Install)
+		user.POST("/ssl/certificates/:id/renew", sslCertHandler.Renew)
+		user.GET("/ssl/certificate-types", sslCertHandler.GetCertificateTypes)
 	}
 }

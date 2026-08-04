@@ -26,6 +26,18 @@ type Contract struct {
 	User       *User          `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
+// ContractHost 合同-主机绑定关系
+type ContractHost struct {
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	ContractID uint      `gorm:"index;not null" json:"contract_id"`
+	HostID     uint      `gorm:"index;not null" json:"host_id"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+func (ContractHost) TableName() string {
+	return "contract_hosts"
+}
+
 // ContractTemplate 合同模板
 type ContractTemplate struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`

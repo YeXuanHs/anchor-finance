@@ -356,6 +356,24 @@ func (s *AffiliateService) GetList(page, pageSize int) ([]model.Affiliate, int64
 	return affiliates, total, nil
 }
 
+// AdminGetByID returns a single affiliate by ID with user info (admin).
+func (s *AffiliateService) AdminGetByID(id uint) (*model.Affiliate, error) {
+	var aff model.Affiliate
+	if err := s.db.Preload("User").First(&aff, id).Error; err != nil {
+		return nil, err
+	}
+	return &aff, nil
+}
+
+// AdminUpdate updates affiliate fields (admin).
+func (s *AffiliateService) AdminUpdate(id uint, updates map[string]interface{}) error {
+	result := s.db.Model(&model.Affiliate{}).Where("id = ?", id).Updates(updates)
+	if result.RowsAffected == 0 {
+		return errors.New("affiliate not found")
+	}
+	return result.Error
+}
+
 // ProcessWithdraw approves or rejects a withdrawal (admin).
 func (s *AffiliateService) ProcessWithdraw(withdrawID uint, approve bool, adminNote string) error {
 	now := time.Now()

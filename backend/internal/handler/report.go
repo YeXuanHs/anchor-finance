@@ -433,6 +433,125 @@ func (h *ReportHandler) GetNewClientStatistics(c *gin.Context) {
 	})
 }
 
+// GetProductIncomeTrend 产品收入趋势
+// GET /admin/reports/product-income/trend
+func (h *ReportHandler) GetProductIncomeTrend(c *gin.Context) {
+	period := c.DefaultQuery("period", "month")
+	productID := c.Query("product_id")
+
+	type TrendPoint struct {
+		Date   string  `json:"date"`
+		Income float64 `json:"income"`
+	}
+
+	var points []TrendPoint
+	query := h.db.Raw(`
+		SELECT DATE_FORMAT(FROM_UNIXTIME(pay_time), '%Y-%m') as date,
+		       COALESCE(SUM(amount_in), 0) as income
+		FROM accounts
+		WHERE delete_time = 0 AND refund = 0
+	`)
+	if productID != "" {
+		// If product-specific, join with orders
+		query = h.db.Raw(`
+			SELECT DATE_FORMAT(FROM_UNIXTIME(a.pay_time), '%Y-%m') as date,
+			       COALESCE(SUM(a.amount_in), 0) as income
+			FROM accounts a
+			JOIN orders o ON o.invoice_id = a.invoice_id
+			WHERE a.delete_time = 0 AND a.refund = 0 AND o.product_id = ?
+			GROUP BY date ORDER BY date ASC
+		`, productID)
+	} else {
+		query = h.db.Raw(`
+			SELECT DATE_FORMAT(FROM_UNIXTIME(pay_time), '%Y-%m') as date,
+			       COALESCE(SUM(amount_in), 0) as income
+			FROM accounts
+			WHERE delete_time = 0 AND refund = 0
+			GROUP BY date ORDER BY date ASC
+		`)
+	}
+
+	if period == "year" {
+		query = h.db.Raw(`
+			SELECT DATE_FORMAT(FROM_UNIXTIME(pay_time), '%Y') as date,
+			       COALESCE(SUM(amount_in), 0) as income
+			FROM accounts
+			WHERE delete_time = 0 AND refund = 0
+			GROUP BY date ORDER BY date ASC
+		`)
+	}
+	query.Scan(&points)
+	response.Success(c, points)
+}
+
+// GetProductIncomeComparison 产品收入对比
+// GET /admin/reports/product-income/comparison
+func (h *ReportHandler) GetProductIncomeComparison(c *gin.Context) {
+	type ProductIncome struct {
+		ProductName string  `json:"product_name"`
+		Income      float64 `json:"income"`
+		OrderCount  int64   `json:"order_count"`
+	}
+
+	var items []ProductIncome
+	h.db.Raw(`
+		SELECT p.name as product_name,
+		       COALESCE(SUM(a.amount_in), 0) as income,
+		       COUNT(DISTINCT o.id) as order_count
+		FROM products p
+		LEFT JOIN orders o ON o.product_id = p.id
+		LEFT JOIN invoices inv ON inv.id = o.invoice_id
+		LEFT JOIN accounts a ON a.invoice_id = inv.id AND a.delete_time = 0
+		GROUP BY p.id, p.name
+		HAVING income > 0
+		ORDER BY income DESC
+		LIMIT 20
+	`).Scan(&items)
+
+	response.Success(c, items)
+}
+
+// GetRevenueRankingComparison 收入排名对比
+// GET /admin/reports/revenue-ranking/comparison
+func (h *ReportHandler) GetRevenueRankingComparison(c *gin.Context) {
+	type ClientRanking struct {
+		ID          uint    `json:"id"`
+		Username    string  `json:"username"`
+		IncomeSum   float64 `json:"income_sum"`
+		ExpenseSum  float64 `json:"expense_sum"`
+		Balance     float64 `json:"balance"`
+		PrevBalance float64 `json:"prev_balance"`
+	}
+
+	var rankings []ClientRanking
+	h.db.Raw(`
+		SELECT u.id, u.username,
+		       COALESCE(SUM(a.amount_in), 0) as income_sum,
+		       COALESCE(SUM(a.amount_out), 0) as expense_sum,
+		       COALESCE(SUM(a.amount_in - a.amount_out), 0) as balance,
+		       0 as prev_balance
+		FROM users u
+		JOIN accounts a ON a.uid = u.id
+		WHERE u.status = 1 AND a.delete_time = 0
+		GROUP BY u.id, u.username
+		HAVING balance > 0
+		ORDER BY balance DESC
+		LIMIT 10
+	`).Scan(&rankings)
+
+	// Get previous period balances
+	for i := range rankings {
+		h.db.Raw(`
+			SELECT COALESCE(SUM(amount_in - amount_out), 0)
+			FROM accounts
+			WHERE uid = ? AND delete_time = 0
+			  AND pay_time < UNIX_TIMESTAMP(DATE_FORMAT(NOW(), '%Y-%m-01'))
+		`, rankings[i].ID).Scan(&rankings[i].PrevBalance)
+	}
+
+	response.Success(c, rankings)
+}
+
 // GetRevenueRanking 客户收入排名（前10名客户，按收入减支出排序）
 // GET /admin/reports/revenue-ranking
 func (h *ReportHandler) GetRevenueRanking(c *gin.Context) {

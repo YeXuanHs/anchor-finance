@@ -148,6 +148,18 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		auth.PUT("/user/profile", userHandler.UpdateProfile)
 		auth.POST("/user/change-password", authHandler.ChangePassword)
 
+		// 二步验证 (2FA)
+		auth.GET("/user/2fa", userHandler.Get2FAStatus)
+		auth.POST("/user/2fa/enable", userHandler.Enable2FA)
+		auth.POST("/user/2fa/verify", userHandler.Verify2FA)
+		auth.POST("/user/2fa/disable", userHandler.Disable2FA)
+
+		// API密钥管理
+		auth.GET("/user/api-keys", userHandler.GetAPIKeys)
+		auth.POST("/user/api-keys", userHandler.CreateAPIKey)
+		auth.PUT("/user/api-keys/:id/toggle", userHandler.ToggleAPIKey)
+		auth.DELETE("/user/api-keys/:id", userHandler.DeleteAPIKey)
+
 		// 用户登录日志（脱敏IP）
 		auth.GET("/user/login-logs", frontendUserHandler.GetMyLoginLogs)
 

@@ -57,12 +57,7 @@ export default {
     productsLaunched: '已開通產品', announcement: '公告通知',
     viewMore: '查看更多', currentBalance: '當前餘額',
     customPasswordBox: '自訂密碼框', charts: '圖表', finance: '財務',
-    consumptionThisMonth: '本月消費',
-    highPerfCloudServer: '高效能雲伺服器', highPerfDesc: '企業級雲伺服器，99.9% SLA 保障',
-    globalNodes: '全球節點覆蓋', globalNodesDesc: '遍佈全球 30+ 資料中心節點',
-    proSupport: '專業技術支援', proSupportDesc: '7×24小時專業技術團隊',
-    securityGuarantee: '安全可靠保障', securityGuaranteeDesc: '多層安全防護，資料安全無憂',
-    buyNow: '立即選購', learnMore: '瞭解更多', contactUs: '聯絡我們'
+    consumptionThisMonth: '本月消費'
   },
   service: {
     product: '產品', dueDate: '到期時間', cost: '費用', system: '系統',

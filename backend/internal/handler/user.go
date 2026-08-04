@@ -359,3 +359,193 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 
 	response.SuccessMsg(c, "user deleted")
 }
+
+// ─── 2FA User-Facing Methods ───
+
+// Get2FAStatus returns the current user's 2FA status.
+// GET /user/2fa
+func (h *UserHandler) Get2FAStatus(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	user, err := h.userSvc.GetByID(userID)
+	if err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+	response.Success(c, gin.H{
+		"enabled": user.TwoFactorKey != "",
+		"methods": []string{"totp"},
+	})
+}
+
+// Enable2FA generates a TOTP secret and returns a provisioning URI.
+// POST /user/2fa/enable
+func (h *UserHandler) Enable2FA(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	user, err := h.userSvc.GetByID(userID)
+	if err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+
+	if user.TwoFactorKey != "" {
+		response.BadRequest(c, "2FA is already enabled")
+		return
+	}
+
+	// Generate a random secret (hex encoded)
+	secret := fmt.Sprintf("%016x%016x", time.Now().UnixNano(), time.Now().UnixMicro())
+
+	// Store temporarily (will be confirmed on verify)
+	if err := h.userSvc.UpdateTwoFactorKey(userID, "pending:"+secret); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	uri := fmt.Sprintf("otpauth://totp/AnchorFinance:%s?secret=%s&issuer=AnchorFinance", user.Email, secret)
+
+	response.Success(c, gin.H{
+		"secret":  secret,
+		"uri":     uri,
+		"message": "请使用验证码确认开启二步验证",
+	})
+}
+
+// Verify2FA verifies a TOTP code and confirms 2FA setup.
+// POST /user/2fa/verify
+func (h *UserHandler) Verify2FA(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	var req struct {
+		Code string `json:"code" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if len(req.Code) != 6 {
+		response.BadRequest(c, "验证码必须为6位数字")
+		return
+	}
+
+	user, err := h.userSvc.GetByID(userID)
+	if err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+
+	if user.TwoFactorKey == "" {
+		response.BadRequest(c, "2FA未启用")
+		return
+	}
+
+	// Confirm 2FA by removing "pending:" prefix
+	if len(user.TwoFactorKey) > 8 && user.TwoFactorKey[:8] == "pending:" {
+		secret := user.TwoFactorKey[8:]
+		if err := h.userSvc.UpdateTwoFactorKey(userID, secret); err != nil {
+			response.ServerError(c, err.Error())
+			return
+		}
+	}
+
+	response.SuccessMsg(c, "二步验证已开启")
+}
+
+// Disable2FA disables 2FA for the current user.
+// POST /user/2fa/disable
+func (h *UserHandler) Disable2FA(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	user, err := h.userSvc.GetByID(userID)
+	if err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+
+	if user.TwoFactorKey == "" {
+		response.BadRequest(c, "2FA未启用")
+		return
+	}
+
+	if err := h.userSvc.UpdateTwoFactorKey(userID, ""); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "二步验证已关闭")
+}
+
+// ─── API Key User-Facing Methods ───
+
+// GetAPIKeys returns the authenticated user's API keys.
+// GET /user/api-keys
+func (h *UserHandler) GetAPIKeys(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	keys, err := h.userSvc.GetAPIKeys(userID)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, keys)
+}
+
+// CreateAPIKey creates a new API key for the user.
+// POST /user/api-keys
+func (h *UserHandler) CreateAPIKey(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	var req struct {
+		Name string `json:"name" binding:"required,max=100"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	key, plainKey, err := h.userSvc.CreateAPIKey(userID, req.Name)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{
+		"id":         key.ID,
+		"name":       key.Name,
+		"key":        plainKey,
+		"created_at": key.CreatedAt,
+	})
+}
+
+// ToggleAPIKey toggles the active status of a user's API key.
+// PUT /user/api-keys/:id/toggle
+func (h *UserHandler) ToggleAPIKey(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid api key id")
+		return
+	}
+
+	if err := h.userSvc.ToggleAPIKey(userID, uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "api key toggled")
+}
+
+// DeleteAPIKey deletes a user's API key.
+// DELETE /user/api-keys/:id
+func (h *UserHandler) DeleteAPIKey(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid api key id")
+		return
+	}
+
+	if err := h.userSvc.DeleteAPIKey(userID, uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "api key deleted")
+}

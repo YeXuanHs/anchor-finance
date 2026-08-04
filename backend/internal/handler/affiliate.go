@@ -239,6 +239,73 @@ func (h *AffiliateHandler) UserAffiBuyRecord(c *gin.Context) {
 
 // ==================== 新增缺失方法 ====================
 
+// AdminGetByID returns a single affiliate by ID (admin).
+// GET /admin/affiliate/:id
+func (h *AffiliateHandler) AdminGetByID(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid affiliate id")
+		return
+	}
+
+	aff, err := h.affSvc.AdminGetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "affiliate not found")
+		return
+	}
+	response.Success(c, aff)
+}
+
+// AdminUpdate updates affiliate fields (admin).
+// PUT /admin/affiliate/:id
+func (h *AffiliateHandler) AdminUpdate(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid affiliate id")
+		return
+	}
+
+	var req struct {
+		CommissionRate *float64 `json:"commission_rate"`
+		WithdrawMin    *float64 `json:"withdraw_min"`
+		IsActive       *bool    `json:"is_active"`
+		Balance        *float64 `json:"balance"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.CommissionRate != nil {
+		if *req.CommissionRate < 0 || *req.CommissionRate > 100 {
+			response.BadRequest(c, "commission_rate must be between 0 and 100")
+			return
+		}
+		updates["commission_rate"] = *req.CommissionRate
+	}
+	if req.WithdrawMin != nil {
+		updates["withdraw_min"] = *req.WithdrawMin
+	}
+	if req.IsActive != nil {
+		updates["is_active"] = *req.IsActive
+	}
+	if req.Balance != nil {
+		updates["balance"] = *req.Balance
+	}
+
+	if len(updates) == 0 {
+		response.BadRequest(c, "no fields to update")
+		return
+	}
+
+	if err := h.affSvc.AdminUpdate(uint(id), updates); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "affiliate updated")
+}
+
 // UserAffiPage returns affiliate settings page data for a user.
 // GET /admin/affiliate/user-affi-page
 func (h *AffiliateHandler) UserAffiPage(c *gin.Context) {

@@ -59,12 +59,7 @@ export default {
     productsLaunched: 'Active Products', announcement: 'Announcements',
     viewMore: 'View More', currentBalance: 'Current Balance',
     customPasswordBox: 'Custom Password Box', charts: 'Charts', finance: 'Finance',
-    consumptionThisMonth: 'Monthly Consumption',
-    highPerfCloudServer: 'High Performance Cloud', highPerfDesc: 'Enterprise cloud with 99.9% SLA',
-    globalNodes: 'Global Coverage', globalNodesDesc: '30+ data centers worldwide',
-    proSupport: 'Pro Support', proSupportDesc: '24/7 professional team',
-    securityGuarantee: 'Security', securityGuaranteeDesc: 'Multi-layer security protection',
-    buyNow: 'Buy Now', learnMore: 'Learn More', contactUs: 'Contact Us'
+    consumptionThisMonth: 'Monthly Consumption'
   },
   service: {
     product: 'Product', dueDate: 'Due Date', cost: 'Cost', system: 'System',

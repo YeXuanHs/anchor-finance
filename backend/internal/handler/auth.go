@@ -358,6 +358,38 @@ func (h *AuthHandler) LoginRateLimitStatus(c *gin.Context) {
 	}
 }
 
+// AccessTokenLogin handles login via access_token (from zjmf loginAccessToken).
+// POST /auth/access-token
+func (h *AuthHandler) AccessTokenLogin(c *gin.Context) {
+	var req struct {
+		AccessToken string `json:"access_token" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Validate the access token and get user
+	user, err := h.userSvc.GetUserByAccessToken(req.AccessToken)
+	if err != nil {
+		response.Unauthorized(c, "access_token无效或已过期")
+		return
+	}
+
+	isAdmin := user.Role == "admin"
+	accessToken, refreshToken, err := h.generateTokens(user.ID, isAdmin, c.ClientIP())
+	if err != nil {
+		response.ServerError(c, "failed to generate tokens")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"user":          user,
+	})
+}
+
 // cleanup cleans up expired rate limit entries periodically.
 func (h *AuthHandler) cleanup() {
 	ticker := time.NewTicker(10 * time.Minute)

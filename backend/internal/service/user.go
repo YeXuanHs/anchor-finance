@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"anchorfinance/internal/model"
 	"anchorfinance/pkg/logger"
 
 	"golang.org/x/crypto/bcrypt"
@@ -142,6 +143,25 @@ func (s *UserService) GetByEmail(email string) (*User, error) {
 	return &user, nil
 }
 
+// GetUserByAccessToken finds a user by their access token (from zjmf loginAccessToken).
+func (s *UserService) GetUserByAccessToken(accessToken string) (*User, error) {
+	// Look up the token in user_access_tokens table
+	var token struct {
+		UserID    uint   `gorm:"column:user_id"`
+		ExpiresAt int64  `gorm:"column:expires_at"`
+	}
+	if err := s.db.Table("user_access_tokens").Where("token = ? AND status = 1", accessToken).First(&token).Error; err != nil {
+		return nil, errors.New("access_token not found")
+	}
+
+	// Check if token is expired
+	if token.ExpiresAt > 0 && token.ExpiresAt < time.Now().Unix() {
+		return nil, errors.New("access_token expired")
+	}
+
+	return s.GetByID(token.UserID)
+}
+
 // ResetPassword resets a user's password by account (phone or email).
 func (s *UserService) ResetPassword(account, newPassword string) error {
 	var user User
@@ -201,6 +221,53 @@ func (s *UserService) ChangePassword(userID uint, req ChangePasswordRequest) err
 	}
 
 	return s.db.Model(user).Update("password", string(hashed)).Error
+}
+
+// UpdateTwoFactorKey updates the two_factor_key field for a user.
+func (s *UserService) UpdateTwoFactorKey(userID uint, key string) error {
+	return s.db.Model(&User{}).Where("id = ?", userID).Update("two_factor_key", key).Error
+}
+
+// GetAPIKeys returns all API keys for a user.
+func (s *UserService) GetAPIKeys(userID uint) ([]model.UserAPIKey, error) {
+	var keys []model.UserAPIKey
+	if err := s.db.Where("user_id = ?", userID).Order("id DESC").Find(&keys).Error; err != nil {
+		return nil, err
+	}
+	return keys, nil
+}
+
+// CreateAPIKey creates a new API key for a user. Returns the key record and the plaintext key.
+func (s *UserService) CreateAPIKey(userID uint, name string) (*model.UserAPIKey, string, error) {
+	plainKey := model.GenerateAPIKey()
+	key := model.UserAPIKey{
+		UserID:   userID,
+		Name:     name,
+		Key:      plainKey,
+		IsActive: true,
+	}
+	if err := s.db.Create(&key).Error; err != nil {
+		return nil, "", err
+	}
+	return &key, plainKey, nil
+}
+
+// ToggleAPIKey toggles the active status of an API key.
+func (s *UserService) ToggleAPIKey(userID uint, keyID uint) error {
+	var key model.UserAPIKey
+	if err := s.db.Where("id = ? AND user_id = ?", keyID, userID).First(&key).Error; err != nil {
+		return errors.New("api key not found")
+	}
+	return s.db.Model(&key).Update("is_active", !key.IsActive).Error
+}
+
+// DeleteAPIKey deletes an API key.
+func (s *UserService) DeleteAPIKey(userID uint, keyID uint) error {
+	result := s.db.Where("id = ? AND user_id = ?", keyID, userID).Delete(&model.UserAPIKey{})
+	if result.RowsAffected == 0 {
+		return errors.New("api key not found")
+	}
+	return result.Error
 }
 
 // BindPhone binds a phone number to the user account.

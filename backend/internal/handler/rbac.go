@@ -236,6 +236,32 @@ func (h *RbacHandler) Delete(c *gin.Context) {
 	response.SuccessMsg(c, "删除成功")
 }
 
+// UpdatePermissions batch-updates permissions for roles.
+// PUT /admin/rbac/permissions
+func (h *RbacHandler) UpdatePermissions(c *gin.Context) {
+	var req struct {
+		Permissions []struct {
+			RoleID        uint   `json:"role_id" binding:"required"`
+			PermissionIDs []uint `json:"permission_ids"`
+		} `json:"permissions" binding:"required,min=1"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	permissionsMap := make(map[uint][]uint)
+	for _, p := range req.Permissions {
+		permissionsMap[p.RoleID] = p.PermissionIDs
+	}
+
+	if err := h.rbacSvc.UpdatePermissions(permissionsMap); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "permissions updated")
+}
+
 // CopyRole duplicates a role.
 func (h *RbacHandler) CopyRole(c *gin.Context) {
 	var req struct {

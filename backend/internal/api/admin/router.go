@@ -206,6 +206,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/tickets/:id/attachments", ticketHandler.UploadAttachment)
 		admin.GET("/tickets/:id/attachments", ticketHandler.GetAttachments)
 		admin.DELETE("/tickets/attachments/:id", ticketHandler.DeleteAttachment)
+		admin.GET("/tickets/statistics", ticketHandler.TicketStatistics)
 
 		// 公告管理
 		announceSvc := service.NewAnnounceService(deps.DB, deps.Log)
@@ -1231,6 +1232,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		affiliateSvc := service.NewAffiliateService(deps.DB, deps.Log)
 		affiliateHandler := handler.NewAffiliateHandler(affiliateSvc, deps.Log)
 		admin.GET("/affiliate", affiliateHandler.AdminGetList)
+		admin.GET("/affiliate/:id", affiliateHandler.AdminGetByID)
+		admin.PUT("/affiliate/:id", affiliateHandler.AdminUpdate)
 		admin.POST("/affiliate/records/:id/confirm", affiliateHandler.AdminConfirmRecord)
 		admin.POST("/affiliate/withdraws/:id/process", affiliateHandler.AdminProcessWithdraw)
 
@@ -1335,6 +1338,50 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 			admin.GET("/captcha/image", captchaHandler.GetImage)
 			admin.POST("/captcha/sms", captchaHandler.SendSMS)
 			admin.POST("/captcha/email", captchaHandler.SendEmail)
+			admin.POST("/system/captcha/test", func(c *gin.Context) {
+				var req struct {
+					Type  string `json:"type" binding:"required"` // sms, email, image
+					Phone string `json:"phone"`
+					Email string `json:"email"`
+				}
+				if err := c.ShouldBindJSON(&req); err != nil {
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+				switch req.Type {
+				case "sms":
+					if req.Phone == "" {
+						c.JSON(400, gin.H{"error": "phone is required"})
+						return
+					}
+					code, err := captchaSvc.GenerateSMS(req.Phone)
+					if err != nil {
+						c.JSON(500, gin.H{"error": err.Error()})
+						return
+					}
+					c.JSON(200, gin.H{"message": "验证码已生成", "code": code})
+				case "email":
+					if req.Email == "" {
+						c.JSON(400, gin.H{"error": "email is required"})
+						return
+					}
+					code, err := captchaSvc.GenerateEmail(req.Email)
+					if err != nil {
+						c.JSON(500, gin.H{"error": err.Error()})
+						return
+					}
+					c.JSON(200, gin.H{"message": "验证码已生成", "code": code})
+				case "image":
+					captchaID, imgBytes, err := captchaSvc.GenerateImage("test")
+					if err != nil {
+						c.JSON(500, gin.H{"error": err.Error()})
+						return
+					}
+					c.JSON(200, gin.H{"captcha_id": captchaID, "image_size": len(imgBytes)})
+				default:
+					c.JSON(400, gin.H{"error": "invalid type"})
+				}
+			})
 		}
 
 		// ==================== 购物车 ====================
@@ -1569,6 +1616,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/notifications/logs", notificationHandler.AdminGetLogs)
 		admin.POST("/notifications/batch", notificationHandler.AdminSendBatch)
 
+		// 客户通知（admin 查看指定客户的通知）
+		admin.GET("/clients/:id/notifications", notificationHandler.AdminGetClientNotifications)
+
 		// ==================== OAuth登录 ====================
 		oauthSvc := service.NewOAuthService(deps.DB, deps.Log, deps.UserSvc, deps.FrontendURL)
 		oauthHandler := handler.NewOAuthHandler(oauthSvc, deps.Log, deps.JWTKey)
@@ -1626,6 +1676,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/rbac/roles/:id", rbacHandler.UpdateRole)
 		admin.DELETE("/rbac/roles/:id", rbacHandler.DeleteRole)
 		admin.GET("/rbac/permissions", rbacHandler.GetPermissions)
+		admin.PUT("/rbac/permissions", rbacHandler.UpdatePermissions)
 		admin.POST("/rbac/users/:id/roles", rbacHandler.AssignRole)
 		admin.GET("/rbac/users/:id/roles", rbacHandler.GetUserRoles)
 
@@ -1657,6 +1708,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/reports/year-income-statistics-chart", reportHandler.GetYearIncomeStatisticsForChart)
 		admin.GET("/reports/new-client-statistics", reportHandler.GetNewClientStatistics)
 		admin.GET("/reports/revenue-ranking", reportHandler.GetRevenueRanking)
+		admin.GET("/reports/product-income/trend", reportHandler.GetProductIncomeTrend)
+		admin.GET("/reports/product-income/comparison", reportHandler.GetProductIncomeComparison)
+		admin.GET("/reports/revenue-ranking/comparison", reportHandler.GetRevenueRankingComparison)
 
 		// ==================== 黑名单管理 ====================
 		blacklistSvc := service.NewBlacklistService(deps.DB, deps.Log)

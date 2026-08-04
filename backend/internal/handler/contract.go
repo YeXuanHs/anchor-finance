@@ -489,6 +489,84 @@ func (h *ContractHandler) ContractPage(c *gin.Context) {
 	response.SuccessPage(c, enriched, total, page, pageSize)
 }
 
+// BindHosts binds hosts to a contract (from zjmf ContractController::host).
+// POST /contracts/:id/bind-hosts
+func (h *ContractHandler) BindHosts(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid contract id")
+		return
+	}
+
+	var req struct {
+		HostIDs []uint `json:"host_ids" binding:"required,min=1"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Verify contract belongs to user
+	var contract model.Contract
+	if err := h.db.Where("id = ? AND user_id = ?", id, userID).First(&contract).Error; err != nil {
+		response.NotFound(c, "contract not found")
+		return
+	}
+
+	// Verify all hosts belong to user
+	var count int64
+	h.db.Table("hosts").Where("id IN ? AND user_id = ?", req.HostIDs, userID).Count(&count)
+	if int(count) != len(req.HostIDs) {
+		response.BadRequest(c, "some hosts not found or not owned by user")
+		return
+	}
+
+	// Create bindings
+	for _, hostID := range req.HostIDs {
+		binding := model.ContractHost{
+			ContractID: uint(id),
+			HostID:     hostID,
+		}
+		h.db.Where("contract_id = ? AND host_id = ?", id, hostID).FirstOrCreate(&binding)
+	}
+
+	response.SuccessMsg(c, "hosts bound to contract")
+}
+
+// UnbindHost unbinds a host from a contract.
+// POST /contracts/:id/unbind-host
+func (h *ContractHandler) UnbindHost(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid contract id")
+		return
+	}
+
+	var req struct {
+		HostID uint `json:"host_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Verify contract belongs to user
+	var contract model.Contract
+	if err := h.db.Where("id = ? AND user_id = ?", id, userID).First(&contract).Error; err != nil {
+		response.NotFound(c, "contract not found")
+		return
+	}
+
+	if err := h.db.Where("contract_id = ? AND host_id = ?", id, req.HostID).Delete(&model.ContractHost{}).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "host unbound from contract")
+}
+
 // ContractPagePost creates or updates a contract via POST (admin).
 // POST /admin/contracts/page
 func (h *ContractHandler) ContractPagePost(c *gin.Context) {

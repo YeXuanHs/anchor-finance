@@ -155,6 +155,27 @@ func (h *NotificationHandler) AdminGetLogs(c *gin.Context) {
 	response.SuccessPage(c, logs, total, page, pageSize)
 }
 
+// AdminGetClientNotifications returns notifications for a specific client (admin).
+// GET /admin/clients/:id/notifications
+func (h *NotificationHandler) AdminGetClientNotifications(c *gin.Context) {
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	onlyUnread := c.Query("unread") == "1"
+
+	logs, total, err := h.notifSvc.GetUserNotifications(uint(userID), page, pageSize, onlyUnread)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, logs, total, page, pageSize)
+}
+
 // AdminSendBatch sends a batch notification.
 // POST /admin/notifications/batch
 func (h *NotificationHandler) AdminSendBatch(c *gin.Context) {
