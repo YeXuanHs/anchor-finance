@@ -59,7 +59,9 @@
   /**
    * 处理横幅点击事件
    */
+  const router = useRouter()
+
   const handleBannerClick = (): void => {
-    // TODO: 添加横幅点击处理逻辑
+    router.push('/dashboard')
   }
 </script>

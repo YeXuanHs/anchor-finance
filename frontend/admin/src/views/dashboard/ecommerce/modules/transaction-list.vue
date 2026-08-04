@@ -64,7 +64,9 @@
   /**
    * 处理查看更多按钮点击事件
    */
+  const router = useRouter()
+
   const handleMore = (): void => {
-    // TODO: 添加查看更多逻辑
+    router.push('/finance/orders/list')
   }
 </script>

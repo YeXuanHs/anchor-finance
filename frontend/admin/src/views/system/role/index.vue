@@ -60,6 +60,7 @@
   import RoleEditDialog from './modules/role-edit-dialog.vue'
   import RolePermissionDialog from './modules/role-permission-dialog.vue'
   import { ElTag, ElMessageBox } from 'element-plus'
+  import request from '@/utils/http'
 
   defineOptions({ name: 'Role' })
 
@@ -228,8 +229,8 @@
       cancelButtonText: '取消',
       type: 'warning'
     })
-      .then(() => {
-        // TODO: 调用删除接口
+      .then(async () => {
+        await request.delete({ url: `/api/admin/rbac/roles/${row.roleId}` })
         ElMessage.success('删除成功')
         refreshData()
       })

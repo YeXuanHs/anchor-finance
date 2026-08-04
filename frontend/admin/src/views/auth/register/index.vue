@@ -88,6 +88,8 @@
 <script setup lang="ts">
   import { useI18n } from 'vue-i18n'
   import type { FormInstance, FormRules } from 'element-plus'
+  import request from '@/utils/http'
+  import { ApiStatus } from '@/utils/http/status'
 
   defineOptions({ name: 'Register' })
 
@@ -202,23 +204,15 @@
       await formRef.value.validate()
       loading.value = true
 
-      // TODO: 替换为真实 API 调用
-      // const params = {
-      //   username: formData.username,
-      //   password: formData.password
-      // }
-      // const res = await AuthService.register(params)
-      // if (res.code === ApiStatus.success) {
-      //   ElMessage.success('注册成功')
-      //   toLogin()
-      // }
-
-      // 模拟注册请求
-      setTimeout(() => {
-        loading.value = false
+      const params = {
+        username: formData.username,
+        password: formData.password
+      }
+      const res = await request.post({ url: '/api/auth/register', data: params })
+      if (res.code === ApiStatus.success) {
         ElMessage.success('注册成功')
         toLogin()
-      }, REDIRECT_DELAY)
+      }
     } catch (error) {
       console.error('表单验证失败:', error)
       loading.value = false

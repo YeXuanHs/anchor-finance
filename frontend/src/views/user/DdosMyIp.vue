@@ -141,6 +141,39 @@
         </el-table-column>
       </el-table>
     </el-dialog>
+
+    <!-- 规则添加/编辑对话框 -->
+    <el-dialog v-model="ruleDialogVisible" :title="ruleDialogMode === 'add' ? '添加规则' : '编辑规则'" width="500px">
+      <el-form ref="ruleFormRef" :model="ruleForm" :rules="ruleFormRules" label-width="100px">
+        <el-form-item label="规则名称" prop="name">
+          <el-input v-model="ruleForm.name" placeholder="请输入规则名称" />
+        </el-form-item>
+        <el-form-item label="规则类型" prop="type">
+          <el-select v-model="ruleForm.type" placeholder="请选择规则类型">
+            <el-option label="TCP" value="tcp" />
+            <el-option label="UDP" value="udp" />
+            <el-option label="HTTP" value="http" />
+            <el-option label="HTTPS" value="https" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="动作" prop="action">
+          <el-select v-model="ruleForm.action" placeholder="请选择动作">
+            <el-option label="拦截" value="block" />
+            <el-option label="限速" value="limit" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="阈值" prop="threshold">
+          <el-input-number v-model="ruleForm.threshold" :min="1" :max="100000" placeholder="请求阈值" />
+        </el-form-item>
+        <el-form-item label="持续时间(秒)" prop="duration">
+          <el-input-number v-model="ruleForm.duration" :min="1" :max="86400" placeholder="持续时间" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="ruleDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitRule" :loading="ruleSubmitting">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -264,14 +297,69 @@ const deleteIp = async (ip: any) => {
   }
 }
 
+const ruleDialogVisible = ref(false)
+const ruleDialogMode = ref<'add' | 'edit'>('add')
+const ruleFormRef = ref<FormInstance>()
+const ruleSubmitting = ref(false)
+const editingRuleId = ref<number | null>(null)
+
+const ruleForm = ref({
+  name: '',
+  type: 'tcp',
+  action: 'block',
+  threshold: 100,
+  duration: 60
+})
+
+const ruleFormRules = {
+  name: [{ required: true, message: '请输入规则名称', trigger: 'blur' }],
+  type: [{ required: true, message: '请选择规则类型', trigger: 'change' }],
+  action: [{ required: true, message: '请选择动作', trigger: 'change' }],
+  threshold: [{ required: true, message: '请输入阈值', trigger: 'blur' }],
+  duration: [{ required: true, message: '请输入持续时间', trigger: 'blur' }]
+}
+
 const addRule = () => {
-  // TODO: 添加规则逻辑
-  ElMessage.info('添加规则功能开发中')
+  ruleDialogMode.value = 'add'
+  editingRuleId.value = null
+  ruleForm.value = { name: '', type: 'tcp', action: 'block', threshold: 100, duration: 60 }
+  ruleDialogVisible.value = true
 }
 
 const editRule = (rule: any) => {
-  // TODO: 编辑规则逻辑
-  ElMessage.info('编辑规则功能开发中')
+  ruleDialogMode.value = 'edit'
+  editingRuleId.value = rule.id
+  ruleForm.value = {
+    name: rule.name || '',
+    type: rule.type || 'tcp',
+    action: rule.action || 'block',
+    threshold: rule.threshold || 100,
+    duration: rule.duration || 60
+  }
+  ruleDialogVisible.value = true
+}
+
+const submitRule = async () => {
+  if (!ruleFormRef.value) return
+  await ruleFormRef.value.validate(async (valid) => {
+    if (!valid) return
+    ruleSubmitting.value = true
+    try {
+      if (ruleDialogMode.value === 'add') {
+        await request.post(`/api/v2/user/ddos/ips/${currentIp.value?.id}/rules`, ruleForm.value)
+        ElMessage.success('规则添加成功')
+      } else {
+        await request.put(`/api/v2/user/ddos/ips/${currentIp.value?.id}/rules/${editingRuleId.value}`, ruleForm.value)
+        ElMessage.success('规则更新成功')
+      }
+      ruleDialogVisible.value = false
+      if (currentIp.value) viewRules(currentIp.value)
+    } catch (e: any) {
+      ElMessage.error(e?.message || '操作失败')
+    } finally {
+      ruleSubmitting.value = false
+    }
+  })
 }
 
 const deleteRule = async (rule: any) => {

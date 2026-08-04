@@ -43,6 +43,7 @@
 <script setup lang="ts">
   import { useMenuStore } from '@/store/modules/menu'
   import { formatMenuTitle } from '@/utils/router'
+  import request from '@/utils/http'
 
   type RoleListItem = Api.SystemManage.RoleListItem
 
@@ -141,10 +142,20 @@
    */
   watch(
     () => props.modelValue,
-    (newVal) => {
+    async (newVal) => {
       if (newVal && props.roleData) {
-        // TODO: 根据角色加载对应的权限数据
-        console.log('设置权限:', props.roleData)
+        try {
+          const { data } = await request.get({
+            url: '/api/admin/rbac/permissions',
+            params: { role_id: props.roleData.roleId }
+          })
+          const checkedKeys = data?.permissions || []
+          nextTick(() => {
+            treeRef.value?.setCheckedKeys(checkedKeys)
+          })
+        } catch {
+          treeRef.value?.setCheckedKeys([])
+        }
       }
     }
   )
@@ -160,11 +171,20 @@
   /**
    * 保存权限配置
    */
-  const savePermission = () => {
-    // TODO: 调用保存权限接口
-    ElMessage.success('权限保存成功')
-    emit('success')
-    handleClose()
+  const savePermission = async () => {
+    const checkedKeys = treeRef.value?.getCheckedKeys() || []
+    const halfCheckedKeys = treeRef.value?.getHalfCheckedKeys() || []
+    try {
+      await request.put({
+        url: `/api/admin/rbac/roles/${props.roleData?.roleId}/permissions`,
+        data: { permissions: [...checkedKeys, ...halfCheckedKeys] }
+      })
+      ElMessage.success('权限保存成功')
+      emit('success')
+      handleClose()
+    } catch {
+      ElMessage.error('权限保存失败')
+    }
   }
 
   /**

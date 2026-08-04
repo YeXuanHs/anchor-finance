@@ -57,6 +57,7 @@
   import MenuDialog from './modules/menu-dialog.vue'
   import { fetchGetMenuList } from '@/api/system-manage'
   import { ElTag, ElMessageBox } from 'element-plus'
+  import request from '@/utils/http'
 
   defineOptions({ name: 'Menus' })
 
@@ -413,10 +414,18 @@
    * 提交表单数据
    * @param formData 表单数据
    */
-  const handleSubmit = (formData: MenuFormData): void => {
-    console.log('提交数据:', formData)
-    // TODO: 调用API保存数据
-    getMenuList()
+  const handleSubmit = async (formData: MenuFormData): Promise<void> => {
+    try {
+      if (formData.id) {
+        await request.put({ url: `/api/admin/menus/${formData.id}`, data: formData })
+      } else {
+        await request.post({ url: '/api/admin/menus', data: formData })
+      }
+      ElMessage.success('保存成功')
+      getMenuList()
+    } catch {
+      ElMessage.error('保存失败')
+    }
   }
 
   /**
