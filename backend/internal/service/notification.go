@@ -277,6 +277,9 @@ func (s *NotificationService) sendToUser(userID uint, channel string, tpl model.
 		logEntry.SentAt = &now
 	}
 
-	_ = s.db.Create(&logEntry).Error
+	if logErr := s.db.Create(&logEntry).Error; logErr != nil {
+		// Log the error but don't override the original send error
+		fmt.Printf("failed to create notification log: %v\n", logErr)
+	}
 	return err
 }

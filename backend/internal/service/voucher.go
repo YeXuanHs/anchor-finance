@@ -322,7 +322,9 @@ func (s *VoucherService) CreateUserVoucher(userID uint, req CreateVoucherRequest
 			InvoiceID: req.InvoiceID,
 			CreatedAt: time.Now(),
 		}
-		_ = s.db.Create(vi).Error
+		if err := s.db.Create(vi).Error; err != nil {
+			return nil, fmt.Errorf("link voucher to invoice: %w", err)
+		}
 	}
 
 	return voucher, nil
