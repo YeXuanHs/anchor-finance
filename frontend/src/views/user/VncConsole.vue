@@ -149,7 +149,7 @@ async function connectVnc() {
 
   try {
     // 获取 VNC 连接信息
-    const { data } = await request.get(`/api/v2/hosts/${hostId}/vnc`)
+    const { data } = await request.post(`/api/v2/hosts/${hostId}/vnc`)
     const vncInfo = data?.data
 
     if (!vncInfo?.url) {

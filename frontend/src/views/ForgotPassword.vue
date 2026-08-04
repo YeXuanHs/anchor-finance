@@ -309,7 +309,7 @@ const strengthLabel = computed(() => {
 })
 
 function refreshCaptcha() {
-  captchaUrl.value = `/api/v1/captcha/image?t=${Date.now()}`
+  captchaUrl.value = `/api/v1/captcha/generate?t=${Date.now()}`
 }
 
 function startCooldown() {

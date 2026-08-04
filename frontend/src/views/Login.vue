@@ -394,7 +394,7 @@ async function refreshCaptcha() {
     }
   } catch (error) {
     console.error('Failed to load captcha:', error)
-    captchaUrl.value = `/api/v1/captcha/image?key=${captchaKey.value}&t=${Date.now()}`
+    captchaUrl.value = `/api/v1/captcha/generate?key=${captchaKey.value}&t=${Date.now()}`
   }
 }
 

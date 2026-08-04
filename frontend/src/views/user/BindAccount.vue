@@ -179,7 +179,7 @@ const sendPhoneCode = async () => {
     return
   }
   try {
-    await request.post('/api/v1/captcha/sms', { phone: phoneForm.value.phone })
+    await request.post('/api/v2/sms/send', { phone: phoneForm.value.phone })
     startCooldown('phone')
     ElMessage.success('验证码已发送')
   } catch (e: any) {
@@ -193,7 +193,7 @@ const sendEmailCode = async () => {
     return
   }
   try {
-    await request.post('/api/v1/captcha/email', { email: emailForm.value.email })
+    await request.post('/api/v2/email/send', { email: emailForm.value.email })
     startCooldown('email')
     ElMessage.success('验证码已发送')
   } catch (e: any) {

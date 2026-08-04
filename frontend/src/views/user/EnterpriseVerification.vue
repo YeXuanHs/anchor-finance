@@ -34,7 +34,7 @@
           <el-input v-model="form.legal_id_card" placeholder="请输入法人身份证号" />
         </el-form-item>
         <el-form-item label="营业执照" prop="business_license">
-          <el-upload action="/api/upload" :on-success="handleUpload" accept="image/*" :limit="1">
+          <el-upload action="/api/v1/upload" :on-success="handleUpload" accept="image/*" :limit="1">
             <el-button>上传营业执照</el-button>
           </el-upload>
         </el-form-item>
