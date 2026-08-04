@@ -529,7 +529,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// 邮件模板
 		emailTplSvc := service.NewEmailTemplateService(deps.DB, deps.Log)
-		emailTplHandler := handler.NewEmailTemplateHandler(emailTplSvc, deps.Log)
+		emailTplHandler := handler.NewEmailTemplateHandler(emailTplSvc, deps.Log, deps.DB)
 		admin.GET("/email-templates", emailTplHandler.List)
 		admin.GET("/email-templates/:id", emailTplHandler.GetDetail)
 		admin.POST("/email-templates", emailTplHandler.Create)
@@ -811,7 +811,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.DELETE("/config/nav-groups/:id", configGeneralHandler.DeleteNavGroup)
 
 		configCertifiSvc := service.NewConfigCertifiService(deps.DB, deps.Log)
-		configCertifiHandler := handler.NewConfigCertifiHandler(configCertifiSvc, deps.Log)
+		configCertifiHandler := handler.NewConfigCertifiHandler(configCertifiSvc, deps.Log, deps.DB)
 		admin.GET("/config/certifi", configCertifiHandler.Get)
 		admin.PUT("/config/certifi", configCertifiHandler.Update)
 
@@ -884,8 +884,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.DELETE("/link-causes/:id", linkCauseHandler.DeleteCause)
 
 		// 关联知识
-		linkKnowledgeSvc := service.NewLinkKnowledgeService(deps.DB, deps.Log)
-		linkKnowledgeHandler := handler.NewLinkKnowledgeHandler(linkKnowledgeSvc, deps.Log)
+		linkKnowledgeHandler := handler.NewLinkKnowledgeHandler(deps.DB, deps.Log)
 		admin.GET("/link-knowledge", linkKnowledgeHandler.GetKnowledges)
 		admin.GET("/link-knowledge/:id", linkKnowledgeHandler.GetKnowledge)
 		admin.POST("/link-knowledge", linkKnowledgeHandler.CreateKnowledge)
@@ -937,7 +936,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// 批量发送消息
 		sendMsgBatchSvc := service.NewSendMessageBatchService(deps.DB, deps.Log)
-		sendMsgBatchHandler := handler.NewSendMessageBatchHandler(sendMsgBatchSvc, deps.Log)
+		sendMsgBatchHandler := handler.NewSendMessageBatchHandler(sendMsgBatchSvc, deps.Log, deps.DB)
 		admin.GET("/messages/batch/search-params", sendMsgBatchHandler.GetSearchParams)
 		admin.GET("/messages/batch/list", sendMsgBatchHandler.GetBatches)
 		admin.POST("/messages/batch/send", sendMsgBatchHandler.SendBatch)
@@ -1621,7 +1620,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// ==================== OAuth登录 ====================
 		oauthSvc := service.NewOAuthService(deps.DB, deps.Log, deps.UserSvc, deps.FrontendURL)
-		oauthHandler := handler.NewOAuthHandler(oauthSvc, deps.Log, deps.JWTKey)
+		oauthHandler := handler.NewOAuthHandler(oauthSvc, deps.Log, deps.JWTMgr)
 		admin.GET("/oauth/providers", oauthHandler.GetProviders)
 		admin.GET("/oauth/:provider", oauthHandler.Login)
 		admin.GET("/oauth/:provider/callback", oauthHandler.Callback)
