@@ -95,6 +95,12 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	apiLogSvc := service.NewApiLogService(deps.DB, log)
 	apiLogHandler := handler.NewAPILogHandler(apiLogSvc, log)
 
+	aiShoppingSvc := service.NewAIShoppingCoreService(deps.DB, log)
+	aiShoppingHandler := handler.NewAIShoppingCoreHandler(aiShoppingSvc, log)
+
+	marketplaceSvc := service.NewMarketplaceService(deps.DB, log)
+	marketplaceHandler := handler.NewMarketplaceHandler(marketplaceSvc, log)
+
 	// ==================== 公开接口 ====================
 
 	// 认证
@@ -128,6 +134,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.GET("/help/articles/hot", knowledgeHandler.GetHot)
 	r.GET("/help/articles/search", knowledgeHandler.Search)
 	r.GET("/help/articles/:id", knowledgeHandler.GetArticle)
+	r.GET("/help/articles/:id/related", knowledgeHandler.GetRelatedArticles)
+	r.POST("/help/articles/:id/feedback", knowledgeHandler.SubmitFeedback)
+	r.GET("/help/categories/:id/sub", knowledgeHandler.GetSubCategories)
 
 	// 系统设置（公开部分）
 	r.GET("/system/settings", func(c *gin.Context) {
@@ -451,6 +460,24 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/user/services/sms/records", userServicesHandler.GetSMSRecords)
 		user.GET("/user/services/software", userServicesHandler.GetSoftwareServices)
 		user.POST("/user/services/software/reset-key", userServicesHandler.PostSoftwareResetKey)
+
+		// AI Shopping 配置
+		user.GET("/ai-shopping/config", aiShoppingHandler.GetConfig)
+
+		// 用户仪表盘
+		user.GET("/user/dashboard", userHandler.GetDashboard)
+
+		// 工单上传（通用）
+		user.POST("/tickets/upload", ticketHandler.Upload)
+
+		// 市场交易/收益/日志
+		user.GET("/marketplace/transactions", marketplaceHandler.GetTransactions)
+		user.GET("/marketplace/transactions/summary", marketplaceHandler.GetTransactionSummary)
+		user.GET("/marketplace/earnings", marketplaceHandler.GetEarnings)
+		user.GET("/marketplace/withdrawals", marketplaceHandler.GetWithdrawals)
+		user.POST("/marketplace/withdrawals", marketplaceHandler.CreateWithdrawal)
+		user.GET("/marketplace/logs", marketplaceHandler.GetLogs)
+		user.POST("/marketplace/orders/:id/pay", marketplaceHandler.PayOrder)
 
 		// DDoS管理
 		ddosHandler := handler.NewDDoSHandler(deps.DB)

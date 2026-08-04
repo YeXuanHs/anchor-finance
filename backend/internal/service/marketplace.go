@@ -582,3 +582,111 @@ func (s *MarketplaceService) GetUnreadCount(userID uint) int64 {
 		Count(&count)
 	return count
 }
+
+// ─── 交易记录/收益/提现/日志 ───
+
+// GetTransactions returns paginated marketplace orders for the user (buyer or seller).
+func (s *MarketplaceService) GetTransactions(userID uint, page, pageSize int) ([]model.MarketplaceOrder, int64, error) {
+	var orders []model.MarketplaceOrder
+	var total int64
+
+	query := s.db.Model(&model.MarketplaceOrder{}).
+		Where("buyer_id = ? OR seller_id = ?", userID, userID)
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").
+		Preload("Listing").Preload("Buyer").Preload("Seller").Find(&orders).Error; err != nil {
+		return nil, 0, err
+	}
+	return orders, total, nil
+}
+
+// GetTransactionSummary returns summary stats for a user's marketplace transactions.
+func (s *MarketplaceService) GetTransactionSummary(userID uint) (map[string]interface{}, error) {
+	var totalOrders int64
+	var totalAmount float64
+	var totalFee float64
+
+	s.db.Model(&model.MarketplaceOrder{}).
+		Where("(buyer_id = ? OR seller_id = ?) AND status IN (1,2,3)", userID, userID).
+		Count(&totalOrders)
+	s.db.Model(&model.MarketplaceOrder{}).
+		Where("seller_id = ? AND status IN (1,2,3)", userID).
+		Select("COALESCE(SUM(amount), 0)").Scan(&totalAmount)
+	s.db.Model(&model.MarketplaceOrder{}).
+		Where("(buyer_id = ? OR seller_id = ?) AND status IN (1,2,3)", userID, userID).
+		Select("COALESCE(SUM(fee), 0)").Scan(&totalFee)
+
+	return map[string]interface{}{
+		"total_orders": totalOrders,
+		"total_amount": totalAmount,
+		"total_fee":    totalFee,
+	}, nil
+}
+
+// GetEarnings returns earnings data for a seller (completed orders).
+func (s *MarketplaceService) GetEarnings(userID uint, page, pageSize int) ([]model.MarketplaceOrder, int64, error) {
+	var orders []model.MarketplaceOrder
+	var total int64
+
+	query := s.db.Model(&model.MarketplaceOrder{}).
+		Where("seller_id = ? AND status IN (2,3)", userID)
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").
+		Preload("Listing").Preload("Buyer").Find(&orders).Error; err != nil {
+		return nil, 0, err
+	}
+	return orders, total, nil
+}
+
+// GetWithdrawals returns withdrawal records for a user. Uses balance_logs as backing data.
+func (s *MarketplaceService) GetWithdrawals(userID uint, page, pageSize int) ([]map[string]interface{}, int64, error) {
+	var total int64
+	s.db.Table("balance_logs").Where("user_id = ? AND type = ?", userID, "withdraw").Count(&total)
+
+	var logs []struct {
+		ID        uint    `json:"id"`
+		Amount    float64 `json:"amount"`
+		Status    string  `json:"status"`
+		CreatedAt string  `json:"created_at"`
+	}
+	offset := (page - 1) * pageSize
+	s.db.Table("balance_logs").
+		Where("user_id = ? AND type = ?", userID, "withdraw").
+		Select("id, amount, status, created_at").
+		Order("id DESC").Offset(offset).Limit(pageSize).Scan(&logs)
+
+	result := make([]map[string]interface{}, len(logs))
+	for i, l := range logs {
+		result[i] = map[string]interface{}{
+			"id":         l.ID,
+			"amount":     l.Amount,
+			"status":     l.Status,
+			"created_at": l.CreatedAt,
+		}
+	}
+	return result, total, nil
+}
+
+// CreateWithdrawal creates a withdrawal request (simplified: deducts from user balance).
+func (s *MarketplaceService) CreateWithdrawal(userID uint, amount float64) error {
+	if amount <= 0 {
+		return fmt.Errorf("amount must be positive")
+	}
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&model.User{}).Where("id = ? AND balance >= ?", userID, amount).
+			Update("balance", gorm.Expr("balance - ?", amount))
+		if result.RowsAffected == 0 {
+			return errors.New("余额不足")
+		}
+		return nil
+	})
+}
+
+// GetLogs returns marketplace operation logs for a user (based on orders).
+func (s *MarketplaceService) GetLogs(userID uint, page, pageSize int) ([]model.MarketplaceOrder, int64, error) {
+	return s.GetTransactions(userID, page, pageSize)
+}

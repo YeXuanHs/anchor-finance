@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"anchorfinance/internal/service"
 	"anchorfinance/internal/validator"
@@ -537,6 +538,76 @@ func (h *TicketHandler) TicketStatistics(c *gin.Context) {
 }
 
 // ==================== P1-8: DownloadAttachment ====================
+
+// Upload handles a generic file upload (not tied to a specific ticket).
+func (h *TicketHandler) Upload(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		response.BadRequest(c, "file is required")
+		return
+	}
+
+	if file.Size > 20*1024*1024 {
+		response.BadRequest(c, "file size exceeds 20MB limit")
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	allowedExts := map[string]bool{
+		".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
+		".pdf": true, ".doc": true, ".docx": true, ".xls": true, ".xlsx": true,
+		".txt": true, ".csv": true, ".zip": true, ".rar": true, ".7z": true,
+		".mp4": true, ".mp3": true, ".wav": true,
+	}
+	dangerousExts := map[string]bool{
+		".exe": true, ".bat": true, ".cmd": true, ".sh": true, ".ps1": true,
+		".php": true, ".asp": true, ".aspx": true, ".jsp": true, ".py": true,
+		".rb": true, ".pl": true, ".cgi": true, ".htaccess": true,
+		".js": true, ".vbs": true, ".wsf": true, ".scr": true, ".com": true,
+		".pif": true, ".msi": true, ".dll": true, ".so": true, ".dylib": true,
+	}
+	if dangerousExts[ext] {
+		response.BadRequest(c, "该文件类型不允许上传")
+		return
+	}
+	if !allowedExts[ext] {
+		response.BadRequest(c, "不支持的文件类型: "+ext)
+		return
+	}
+
+	destDir := filepath.Join(h.uploadDir, "general")
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		response.ServerError(c, "failed to create upload directory")
+		return
+	}
+
+	savedName := fmt.Sprintf("%d_%d%s", userID, time.Now().UnixNano(), ext)
+	savedPath := filepath.Join(destDir, savedName)
+
+	if err := c.SaveUploadedFile(file, savedPath); err != nil {
+		response.ServerError(c, "failed to save file")
+		return
+	}
+
+	var hash string
+	f, err := os.Open(savedPath)
+	if err == nil {
+		h2 := sha256.New()
+		io.Copy(h2, f)
+		f.Close()
+		hash = hex.EncodeToString(h2.Sum(nil))
+	}
+
+	response.Success(c, gin.H{
+		"filename":  file.Filename,
+		"saved_name": savedName,
+		"saved_path": savedPath,
+		"size":      file.Size,
+		"hash":      hash,
+	})
+}
 
 // DownloadAttachment 下载工单附件
 func (h *TicketHandler) DownloadAttachment(c *gin.Context) {

@@ -240,6 +240,20 @@ func (h *UserHandler) SendVerifyCode(c *gin.Context) {
 	response.SuccessMsg(c, "verification code sent")
 }
 
+// GetDashboard returns an overview dashboard for the authenticated user.
+func (h *UserHandler) GetDashboard(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	user, err := h.userSvc.GetByID(userID)
+	if err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+	response.Success(c, gin.H{
+		"user":    user,
+		"balance": user.Balance,
+	})
+}
+
 // GetUserList returns a list of users (admin only).
 func (h *UserHandler) GetUserList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

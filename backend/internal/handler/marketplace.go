@@ -391,3 +391,126 @@ func (h *MarketplaceHandler) AdminGetAllOrders(c *gin.Context) {
 		"page":  page,
 	})
 }
+
+// ─── 交易记录/收益/提现/日志 ───
+
+// GetTransactions returns the current user's marketplace transactions.
+func (h *MarketplaceHandler) GetTransactions(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	orders, total, err := h.svc.GetTransactions(userID, page, pageSize)
+	if err != nil {
+		response.ServerError(c, "获取失败")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"list":  orders,
+		"total": total,
+		"page":  page,
+	})
+}
+
+// GetTransactionSummary returns summary stats for the user's transactions.
+func (h *MarketplaceHandler) GetTransactionSummary(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	summary, err := h.svc.GetTransactionSummary(userID)
+	if err != nil {
+		response.ServerError(c, "获取失败")
+		return
+	}
+
+	response.Success(c, summary)
+}
+
+// GetEarnings returns earnings data for the current user (as seller).
+func (h *MarketplaceHandler) GetEarnings(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	orders, total, err := h.svc.GetEarnings(userID, page, pageSize)
+	if err != nil {
+		response.ServerError(c, "获取失败")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"list":  orders,
+		"total": total,
+		"page":  page,
+	})
+}
+
+// GetWithdrawals returns withdrawal records for the current user.
+func (h *MarketplaceHandler) GetWithdrawals(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	logs, total, err := h.svc.GetWithdrawals(userID, page, pageSize)
+	if err != nil {
+		response.ServerError(c, "获取失败")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"list":  logs,
+		"total": total,
+		"page":  page,
+	})
+}
+
+// CreateWithdrawal creates a withdrawal request.
+func (h *MarketplaceHandler) CreateWithdrawal(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	var req struct {
+		Amount float64 `json:"amount" binding:"required,gt=0"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+
+	if err := h.svc.CreateWithdrawal(userID, req.Amount); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "提现申请已提交")
+}
+
+// GetLogs returns marketplace operation logs for the current user.
+func (h *MarketplaceHandler) GetLogs(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	orders, total, err := h.svc.GetLogs(userID, page, pageSize)
+	if err != nil {
+		response.ServerError(c, "获取失败")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"list":  orders,
+		"total": total,
+		"page":  page,
+	})
+}
+
+// PayOrder pays a marketplace order.
+func (h *MarketplaceHandler) PayOrder(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+
+	if err := h.svc.PayOrder(userID, uint(id)); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "支付成功")
+}
