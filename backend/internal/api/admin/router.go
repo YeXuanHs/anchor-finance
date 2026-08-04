@@ -538,6 +538,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		userRemarkHandler := handler.NewUserRemarkHandler(userRemarkSvc, deps.Log)
 		admin.GET("/user-remarks", userRemarkHandler.List)
 		admin.POST("/user-remarks", userRemarkHandler.Add)
+		admin.PUT("/user-remarks/:id", userRemarkHandler.Update)
 		admin.DELETE("/user-remarks/:id", userRemarkHandler.AdminDelete)
 
 		// 邮件模板

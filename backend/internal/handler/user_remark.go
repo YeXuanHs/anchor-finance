@@ -83,6 +83,30 @@ func (h *UserRemarkHandler) Delete(c *gin.Context) {
 	response.SuccessMsg(c, "remark deleted")
 }
 
+// Update updates a remark created by the current admin.
+// PUT /user-remarks/:id
+func (h *UserRemarkHandler) Update(c *gin.Context) {
+	adminID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid remark id")
+		return
+	}
+
+	var req service.UpdateRemarkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	remark, err := h.svc.Update(uint(id), adminID, req)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, remark)
+}
+
 // AdminDelete removes any remark (super-admin).
 // DELETE /admin/user-remarks/:id
 func (h *UserRemarkHandler) AdminDelete(c *gin.Context) {
