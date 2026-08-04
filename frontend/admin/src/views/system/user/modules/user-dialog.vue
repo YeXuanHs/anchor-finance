@@ -39,8 +39,9 @@
 </template>
 
 <script setup lang="ts">
-  import { ROLE_LIST_DATA } from '@/mock/temp/formData'
+  import { ref, computed, onMounted } from 'vue'
   import type { FormInstance, FormRules } from 'element-plus'
+  import request from '@/utils/http'
 
   interface Props {
     visible: boolean
@@ -57,7 +58,16 @@
   const emit = defineEmits<Emits>()
 
   // 角色列表数据
-  const roleList = ref(ROLE_LIST_DATA)
+  const roleList = ref<Array<{ id: number; name: string }>>([])
+
+  const fetchRoles = async () => {
+    try {
+      const res = await request.get({ url: '/api/admin/rbac/roles' })
+      roleList.value = Array.isArray(res) ? res : []
+    } catch {
+      roleList.value = []
+    }
+  }
 
   // 对话框显示控制
   const dialogVisible = computed({
@@ -140,4 +150,8 @@
       }
     })
   }
+
+  onMounted(() => {
+    fetchRoles()
+  })
 </script>

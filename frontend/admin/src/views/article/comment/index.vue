@@ -73,7 +73,8 @@
 </template>
 
 <script setup lang="ts">
-  import { commentList } from '@/mock/temp/commentList'
+  import { ref, computed, onMounted } from 'vue'
+  import request from '@/utils/http'
 
   defineOptions({ name: 'ArticleComment' })
 
@@ -100,13 +101,24 @@
     color: COLOR_LIST[0]
   })
 
+  const commentList = ref<CommentItem[]>([])
+
+  const fetchComments = async () => {
+    try {
+      const res = await request.get({ url: '/api/admin/news/comments' })
+      commentList.value = Array.isArray(res) ? res : []
+    } catch {
+      commentList.value = []
+    }
+  }
+
   /**
    * 为评论列表分配随机颜色
    */
   const commentsWithColors = computed(() => {
     let lastColorIndex = -1
 
-    return commentList.map((item) => {
+    return commentList.value.map((item) => {
       let newIndex: number
 
       do {
@@ -129,4 +141,8 @@
     showDrawer.value = true
     clickItem.value = item
   }
+
+  onMounted(() => {
+    fetchComments()
+  })
 </script>
