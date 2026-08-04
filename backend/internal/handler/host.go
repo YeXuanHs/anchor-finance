@@ -212,7 +212,7 @@ func (h *HostHandler) GetBilling(c *gin.Context) {
 		response.NotFound(c, "host not found")
 		return
 	}
-	if host.UserID != userID {
+	if host.OwnerID == nil || *host.OwnerID != userID {
 		response.Forbidden(c, "access denied")
 		return
 	}
@@ -243,7 +243,7 @@ func (h *HostHandler) GetLog(c *gin.Context) {
 		response.NotFound(c, "host not found")
 		return
 	}
-	if host.UserID != userID {
+	if host.OwnerID == nil || *host.OwnerID != userID {
 		response.Forbidden(c, "access denied")
 		return
 	}
@@ -275,7 +275,7 @@ func (h *HostHandler) GetDownload(c *gin.Context) {
 		response.NotFound(c, "host not found")
 		return
 	}
-	if host.UserID != userID {
+	if host.OwnerID == nil || *host.OwnerID != userID {
 		response.Forbidden(c, "access denied")
 		return
 	}
@@ -306,7 +306,7 @@ func (h *HostHandler) PostRemark(c *gin.Context) {
 		response.NotFound(c, "host not found")
 		return
 	}
-	if host.UserID != userID {
+	if host.OwnerID == nil || *host.OwnerID != userID {
 		response.Forbidden(c, "access denied")
 		return
 	}
