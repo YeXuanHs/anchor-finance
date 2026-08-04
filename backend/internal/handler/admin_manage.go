@@ -22,6 +22,13 @@ func NewAdminManageHandler(svc *service.AdminManageService, log *logger.Logger) 
 	return &AdminManageHandler{svc: svc, log: log}
 }
 
+// logOperation logs an admin operation with error handling.
+func (h *AdminManageHandler) logOperation(log *model.AdminLog) {
+	if err := h.svc.CreateOperationLog(log); err != nil {
+		h.log.Errorf("failed to create operation log: %v", err)
+	}
+}
+
 // ==================== Admin CRUD ====================
 
 // List returns a paginated list of admins.
@@ -73,7 +80,7 @@ func (h *AdminManageHandler) Create(c *gin.Context) {
 
 	// Log the operation
 	adminID := c.GetUint("user_id")
-	h.svc.CreateOperationLog(&model.AdminLog{
+	h.logOperation(&model.AdminLog{
 		AdminID:    adminID,
 		Action:     "create",
 		Module:     "admin",
@@ -109,7 +116,7 @@ func (h *AdminManageHandler) Update(c *gin.Context) {
 
 	// Log the operation
 	adminID := c.GetUint("user_id")
-	h.svc.CreateOperationLog(&model.AdminLog{
+	h.logOperation(&model.AdminLog{
 		AdminID:    adminID,
 		Action:     "update",
 		Module:     "admin",
@@ -145,7 +152,7 @@ func (h *AdminManageHandler) Delete(c *gin.Context) {
 	}
 
 	// Log the operation
-	h.svc.CreateOperationLog(&model.AdminLog{
+	h.logOperation(&model.AdminLog{
 		AdminID:    currentAdminID,
 		Action:     "delete",
 		Module:     "admin",
@@ -195,7 +202,7 @@ func (h *AdminManageHandler) SetStatus(c *gin.Context) {
 	if req.Status == 0 {
 		action = "disable"
 	}
-	h.svc.CreateOperationLog(&model.AdminLog{
+	h.logOperation(&model.AdminLog{
 		AdminID:    currentAdminID,
 		Action:     action,
 		Module:     "admin",
@@ -235,7 +242,7 @@ func (h *AdminManageHandler) ResetPassword(c *gin.Context) {
 
 	// Log the operation
 	adminID := c.GetUint("user_id")
-	h.svc.CreateOperationLog(&model.AdminLog{
+	h.logOperation(&model.AdminLog{
 		AdminID:    adminID,
 		Action:     "reset_password",
 		Module:     "admin",
