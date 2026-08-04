@@ -55,7 +55,7 @@ interface PublicConfig {
 }
 
 const defaultConfig: PublicConfig = {
-  company_name: '锚点财务',
+  company_name: '',
   company_email: '',
   company_phone: '',
   company_address: '',

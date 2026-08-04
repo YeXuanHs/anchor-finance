@@ -2,8 +2,8 @@
   <header class="site-header" :class="{ 'header-scrolled': scrolled }">
     <div class="header-inner">
       <div class="logo" @click="$router.push('/')">
-        <img src="/logo.png" alt="锚点财务" class="logo-img" />
-        <span class="logo-text">锚点财务</span>
+        <img src="/logo.png" :alt="siteName" class="logo-img" />
+        <span class="logo-text">{{ siteName }}</span>
       </div>
       
       <nav class="nav-links">
@@ -104,6 +104,18 @@ const userStore = useUserStore()
 
 const scrolled = ref(false)
 const productGroups = ref<any[]>([])
+const siteName = ref('')
+
+const fetchSiteName = async () => {
+  try {
+    const res = await request.get('/api/v1/settings/public')
+    if (res?.data?.site_name) {
+      siteName.value = res.data.site_name
+    }
+  } catch {
+    // Use empty
+  }
+}
 
 const userInitial = computed(() => {
   const username = userStore.username || 'U'
@@ -137,6 +149,7 @@ const handleUserCommand = (command: string) => {
 onMounted(() => {
   window.addEventListener('scroll', handleScroll)
   fetchProductGroups()
+  fetchSiteName()
 })
 
 onUnmounted(() => {

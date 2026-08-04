@@ -7,7 +7,7 @@
           <div class="logo-icon">
             <n-icon size="24" color="#fff"><AnchorOutline /></n-icon>
           </div>
-          <span class="logo-text">锚点财务</span>
+          <span class="logo-text">{{ siteName }}</span>
         </router-link>
         <nav class="nav-links">
           <router-link to="/" class="nav-link">首页</router-link>
@@ -115,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted } from 'vue'
 import {
   AnchorOutline,
   SearchOutline,
@@ -130,6 +130,24 @@ import {
 } from '@vicons/ionicons5'
 import { NButton, NIcon, NTag } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
+import request from '@/utils/request'
+
+const siteName = ref('')
+
+const fetchSiteName = async () => {
+  try {
+    const res = await request.get('/api/v1/settings/public')
+    if (res?.data?.site_name) {
+      siteName.value = res.data.site_name
+    }
+  } catch {
+    // Use empty
+  }
+}
+
+onMounted(() => {
+  fetchSiteName()
+})
 
 const searchKeyword = ref('')
 const selectedGroup = ref('all')

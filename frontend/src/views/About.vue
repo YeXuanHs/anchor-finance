@@ -5,7 +5,7 @@
     <!-- Hero Section -->
     <section class="hero-section">
       <div class="container">
-        <h1 class="hero-title">关于锚点财务</h1>
+        <h1 class="hero-title">关于{{ siteSettings.site_name || '我们' }}</h1>
         <p class="hero-desc">专业、可靠、创新的财务管理系统解决方案</p>
       </div>
     </section>
@@ -19,7 +19,7 @@
         </div>
         <div class="intro-content">
           <div class="intro-text">
-            <p>锚点财务是一家专注于财务管理系统研发的科技公司，致力于为企业提供专业、高效、安全的财务管理解决方案。</p>
+            <p>{{ siteSettings.site_name || '我们' }}是一家专注于财务管理系统研发的科技公司，致力于为企业提供专业、高效、安全的财务管理解决方案。</p>
             <p>我们的团队由资深的财务专家和技术工程师组成，拥有丰富的行业经验和深厚的技术积累。通过不断的技术创新和产品优化，我们已经为数千家企业提供了优质的财务管理系统服务。</p>
             <p>我们的使命是通过技术创新，帮助企业实现财务管理的数字化转型，提升管理效率，降低运营成本，助力企业快速发展。</p>
           </div>
@@ -169,7 +169,7 @@ onMounted(() => {
 })
 
 const history = ref([
-  { year: '2018', title: '公司成立', desc: '锚点财务正式成立，开始研发财务管理核心系统' },
+  { year: '2018', title: '公司成立', desc: '公司正式成立，开始研发财务管理核心系统' },
   { year: '2019', title: '产品发布', desc: '首款产品正式上线，获得市场广泛认可' },
   { year: '2020', title: '快速增长', desc: '服务企业突破1000家，完成A轮融资' },
   { year: '2021', title: '技术突破', desc: '获得多项技术专利，产品全面升级' },

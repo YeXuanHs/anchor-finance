@@ -315,7 +315,7 @@ const smsForm = ref({
 
 // 从配置获取登录方式
 const loginMethods = computed(() => configStore.getLoginMethods())
-const companyName = computed(() => configStore.config.company_name || '锚点财务')
+const companyName = computed(() => configStore.config.company_name || '')
 
 // 是否显示密码登录（邮箱或用户名登录）
 const showPasswordLogin = computed(() => {

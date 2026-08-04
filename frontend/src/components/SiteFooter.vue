@@ -4,10 +4,10 @@
       <div class="footer-grid">
         <div class="footer-col footer-brand">
           <div class="footer-logo">
-            <img src="/logo.png" alt="锚点财务" />
-            <span>锚点财务</span>
+            <img src="/logo.png" :alt="siteSettings.site_name" />
+            <span>{{ siteSettings.site_name }}</span>
           </div>
-          <p class="footer-desc">高效、安全的财务管理系统，助力企业数字化转型</p>
+          <p class="footer-desc">{{ siteSettings.site_description || '高效、安全的财务管理系统' }}</p>
           <div class="footer-contact">
             <p><el-icon><Phone /></el-icon> {{ siteSettings.contact_phone }}</p>
             <p><el-icon><Message /></el-icon> {{ siteSettings.contact_email }}</p>
@@ -59,7 +59,7 @@
       
       <div class="footer-bottom">
         <div class="footer-bottom-left">
-          <p>&copy; {{ currentYear }} 锚点财务 All Rights Reserved</p>
+          <p>&copy; {{ currentYear }} {{ siteSettings.site_name }} All Rights Reserved</p>
         </div>
         <div class="footer-bottom-right">
           <router-link to="/privacy">隐私政策</router-link>

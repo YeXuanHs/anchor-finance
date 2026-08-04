@@ -4,8 +4,8 @@
     <header class="page-header">
       <div class="header-inner">
         <router-link to="/" class="logo">
-          <img src="/logo.png" alt="锚点财务" class="logo-img" />
-          <span class="logo-text">锚点财务</span>
+          <img src="/logo.png" :alt="siteName" class="logo-img" />
+          <span class="logo-text">{{ siteName }}</span>
         </router-link>
         <nav class="nav-links">
           <router-link to="/" class="nav-link">首页</router-link>
@@ -129,7 +129,7 @@
     <!-- Footer -->
     <footer class="page-footer">
       <div class="footer-inner">
-        <p>&copy; {{ new Date().getFullYear() }} 锚点财务 All Rights Reserved</p>
+        <p>&copy; {{ new Date().getFullYear() }} {{ siteName }} All Rights Reserved</p>
       </div>
     </footer>
   </div>
@@ -146,6 +146,18 @@ const loading = ref(false)
 
 const productGroups = ref([])
 const products = ref([])
+const siteName = ref('')
+
+const fetchSiteName = async () => {
+  try {
+    const res = await request.get('/api/v1/settings/public')
+    if (res?.data?.site_name) {
+      siteName.value = res.data.site_name
+    }
+  } catch {
+    // Use empty
+  }
+}
 
 const selectedGroup = ref(route.query.group as string || '')
 const priceRange = ref('')
@@ -230,6 +242,7 @@ const resetFilters = () => {
 
 onMounted(() => {
   fetchData()
+  fetchSiteName()
 })
 </script>
 

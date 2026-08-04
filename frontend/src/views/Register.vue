@@ -14,7 +14,7 @@
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#1890ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h1 class="logo-text">锚点财务</h1>
+          <h1 class="logo-text">{{ siteName }}</h1>
         </div>
         <p class="register-subtitle">{{ $t('auth.registerTitle') }}</p>
       </div>
@@ -160,10 +160,23 @@ import {
 } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/user'
 import LanguageSwitch from '@/components/LanguageSwitch.vue'
+import request from '@/utils/request'
 
 const router = useRouter()
 const message = useMessage()
 const userStore = useUserStore()
+const siteName = ref('')
+
+const fetchSiteName = async () => {
+  try {
+    const res = await request.get('/api/v1/settings/public')
+    if (res?.data?.site_name) {
+      siteName.value = res.data.site_name
+    }
+  } catch {
+    // Use empty
+  }
+}
 
 const formRef = ref<FormInst | null>(null)
 const loading = ref(false)
@@ -242,6 +255,7 @@ function refreshCaptcha() {
 
 onMounted(() => {
   refreshCaptcha()
+  fetchSiteName()
 })
 
 async function handleRegister() {
