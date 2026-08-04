@@ -269,4 +269,31 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	// 公开接口（不需要登录）
 	r.GET("/marketplace/listings", marketplaceHandler.GetListings)
 	r.GET("/marketplace/listings/:id", marketplaceHandler.GetListing)
+
+	// 解决方案
+	publicSvc := service.NewPublicService(deps.DB, deps.Log)
+	publicHandler := handler.NewPublicHandler(publicSvc, deps.Log)
+	r.GET("/solutions", publicHandler.GetSolutions)
+	r.GET("/solutions/:slug", publicHandler.GetSolutionDetail)
+
+	// 托管服务
+	r.GET("/colocation/advantages", publicHandler.GetColocationAdvantages)
+	r.GET("/colocation/datacenters", publicHandler.GetColocationDatacenters)
+
+	// 联系我们
+	r.POST("/contact", func(c *gin.Context) {
+		var req struct {
+			Name    string `json:"name" binding:"required"`
+			Email   string `json:"email" binding:"required"`
+			Phone   string `json:"phone"`
+			Subject string `json:"subject" binding:"required"`
+			Content string `json:"content" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		// 保存到数据库或发送邮件通知
+		c.JSON(200, gin.H{"message": "提交成功，我们会尽快与您联系"})
+	})
 }

@@ -479,6 +479,24 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/marketplace/logs", marketplaceHandler.GetLogs)
 		user.POST("/marketplace/orders/:id/pay", marketplaceHandler.PayOrder)
 
+		// 挂售管理
+		user.POST("/marketplace/listings", marketplaceHandler.CreateListing)
+		user.PUT("/marketplace/listings/:id", marketplaceHandler.UpdateListing)
+		user.DELETE("/marketplace/listings/:id", marketplaceHandler.RemoveListing)
+		user.GET("/marketplace/listings/mine", marketplaceHandler.GetUserListings)
+
+		// 订单管理
+		user.GET("/marketplace/orders/buyer", marketplaceHandler.GetBuyerOrders)
+		user.GET("/marketplace/orders/seller", marketplaceHandler.GetSellerOrders)
+		user.POST("/marketplace/orders/:id/complete", marketplaceHandler.CompleteOrder)
+		user.POST("/marketplace/orders/:id/cancel", marketplaceHandler.CancelOrder)
+
+		// 私聊功能
+		user.POST("/marketplace/messages", marketplaceHandler.SendMessage)
+		user.GET("/marketplace/messages/:listing_id/:user_id", marketplaceHandler.GetChatMessages)
+		user.GET("/marketplace/chat-sessions", marketplaceHandler.GetChatSessions)
+		user.GET("/marketplace/unread-count", marketplaceHandler.GetUnreadCount)
+
 		// DDoS管理
 		ddosHandler := handler.NewDDoSHandler(deps.DB)
 		user.GET("/user/ddos/ips", ddosHandler.GetIPs)
@@ -496,4 +514,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	publicSvc := service.NewPublicService(deps.DB, deps.Log)
 	publicHandler := handler.NewPublicHandler(publicSvc, deps.Log)
 	r.GET("/solutions", publicHandler.GetSolutions)
+	r.GET("/solutions/:slug", publicHandler.GetSolutionDetail)
+
+	// 托管服务
+	r.GET("/colocation/advantages", publicHandler.GetColocationAdvantages)
+	r.GET("/colocation/datacenters", publicHandler.GetColocationDatacenters)
 }

@@ -27,7 +27,7 @@ const fetchData = async () => {
   providers.value = data || []
 }
 const handleBind = async (item: any) => {
-  const { data } = await request.get(`/api/admin/oauth/${item.name}`)
+  const { data } = await request.get(`/api/v1/oauth/${item.name}`)
   if (data?.data?.url) window.location.href = data.data.url
 }
 const handleUnbind = async (item: any) => {
