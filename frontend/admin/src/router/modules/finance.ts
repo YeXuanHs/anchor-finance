@@ -205,6 +205,15 @@ export const financeRoutes: AppRouteRecord = {
           }
         },
         {
+          path: 'binds',
+          name: 'ClientBinds',
+          component: () => import('@/views/finance/clients/binds/index.vue'),
+          meta: {
+            title: '账号绑定',
+            icon: 'ep:connection'
+          }
+        },
+        {
           path: 'detail/:id',
           name: 'ClientDetail',
           component: () => import('@/views/finance/clients/detail/index.vue'),
@@ -549,6 +558,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '提现管理',
             icon: 'ep:download'
           }
+        },
+        {
+          path: 'accounts',
+          name: 'Accounts',
+          component: () => import('@/views/finance/finance-core/accounts/index.vue'),
+          meta: {
+            title: '交易流水',
+            icon: 'ep:money'
+          }
         }
       ]
     },
@@ -698,6 +716,15 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '关联知识库',
             icon: 'ep:collection'
+          }
+        },
+        {
+          path: 'friendly-links',
+          name: 'FriendlyLinks',
+          component: () => import('@/views/finance/content/friendly-links/index.vue'),
+          meta: {
+            title: '友情链接',
+            icon: 'ep:link'
           }
         }
       ]
@@ -1123,6 +1150,51 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '服务详情管理',
             icon: 'ep:service'
+          }
+        },
+        {
+          path: 'login-logs',
+          name: 'LoginLogs',
+          component: () => import('@/views/finance/system/login-logs/index.vue'),
+          meta: {
+            title: '登录日志',
+            icon: 'ep:document'
+          }
+        },
+        {
+          path: 'notification-templates',
+          name: 'NotificationTemplates',
+          component: () => import('@/views/finance/system/notification-templates/index.vue'),
+          meta: {
+            title: '通知模板',
+            icon: 'ep:bell'
+          }
+        },
+        {
+          path: 'system-messages',
+          name: 'SystemMessages',
+          component: () => import('@/views/finance/system/system-messages/index.vue'),
+          meta: {
+            title: '系统消息',
+            icon: 'ep:message'
+          }
+        },
+        {
+          path: 'rbac-pages',
+          name: 'RbacPages',
+          component: () => import('@/views/finance/system/rbac-pages/index.vue'),
+          meta: {
+            title: '页面权限',
+            icon: 'ep:lock'
+          }
+        },
+        {
+          path: 'nav-groups',
+          name: 'NavGroups',
+          component: () => import('@/views/finance/system/nav-groups/index.vue'),
+          meta: {
+            title: '导航分组',
+            icon: 'ep:menu'
           }
         }
       ]
