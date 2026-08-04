@@ -339,13 +339,13 @@ func (s *EmailEnhancedService) sendViaSMTP(config *smtpConfig, to, subject, body
 }
 
 type smtpConfig struct {
-	Enabled  bool
-	Host     string
-	Port     int
-	Username string
-	Password string
-	FromName string
-	FromAddr string
+	Enabled  bool   `json:"enabled"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	FromName string `json:"from_name"`
+	FromAddr string `json:"from_addr"`
 }
 
 // GetEmailLogs 获取邮件日志

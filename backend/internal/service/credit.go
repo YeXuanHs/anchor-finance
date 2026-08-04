@@ -22,6 +22,13 @@ func NewCreditService(db *gorm.DB, log *logger.Logger) *CreditService {
 	return &CreditService{db: db, log: log}
 }
 
+func boolToIntStr(b bool) string {
+	if b {
+		return "1"
+	}
+	return "0"
+}
+
 func (s *CreditService) GetByUserID(userID uint) (*model.CreditLimit, error) {
 	var credit model.CreditLimit
 	if err := s.db.Where("user_id = ?", userID).First(&credit).Error; err != nil {
