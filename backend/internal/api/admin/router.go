@@ -885,18 +885,18 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// 关联知识
 		linkKnowledgeHandler := handler.NewLinkKnowledgeHandler(deps.DB, deps.Log)
-		admin.GET("/link-knowledge", linkKnowledgeHandler.GetKnowledges)
-		admin.GET("/link-knowledge/:id", linkKnowledgeHandler.GetKnowledge)
-		admin.POST("/link-knowledge", linkKnowledgeHandler.CreateKnowledge)
-		admin.PUT("/link-knowledge/:id", linkKnowledgeHandler.UpdateKnowledge)
-		admin.DELETE("/link-knowledge/:id", linkKnowledgeHandler.DeleteKnowledge)
+		admin.GET("/link-knowledge", linkKnowledgeHandler.Index)
+		admin.GET("/link-knowledge/:id", linkKnowledgeHandler.Edit)
+		admin.POST("/link-knowledge", linkKnowledgeHandler.Create)
+		admin.PUT("/link-knowledge/:id", linkKnowledgeHandler.Save)
+		admin.DELETE("/link-knowledge/:id", linkKnowledgeHandler.Delete)
 		admin.GET("/link-knowledge/index", linkKnowledgeHandler.Index)
 		admin.GET("/link-knowledge/:id/edit", linkKnowledgeHandler.Edit)
 		admin.POST("/link-knowledge/save", linkKnowledgeHandler.Save)
 		admin.POST("/link-knowledge/add", linkKnowledgeHandler.Add)
 
 		// 交易流水管理
-		accountHandler := handler.NewAccountHandler(deps.DB)
+		accountHandler := handler.NewAccountHandler(deps.DB, deps.Log)
 		admin.GET("/accounts", accountHandler.Index)
 		admin.GET("/accounts/create", accountHandler.Create)
 		admin.POST("/accounts", accountHandler.Save)
