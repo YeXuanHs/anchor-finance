@@ -204,7 +204,7 @@ onMounted(() => {
 
 async function fetchMyHosts() {
   try {
-    const res = await request.get('/api/v1/user/hosts')
+    const res = await request.get('/api/v2/hosts')
     myHosts.value = res.data?.list || res.data || []
   } catch (e) {
     console.error(e)

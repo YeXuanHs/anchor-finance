@@ -208,10 +208,7 @@ const confirmPhone = async () => {
   }
   submitting.value = true
   try {
-    await request.post('/api/v1/user/bind-phone', {
-      phone: phoneForm.value.phone,
-      code: phoneForm.value.code
-    })
+    await request.post('/api/v2/user/bind-phone', {
     phone.value = phoneForm.value.phone
     phoneDialogVisible.value = false
     ElMessage.success('手机绑定成功')
@@ -229,10 +226,7 @@ const confirmEmail = async () => {
   }
   submitting.value = true
   try {
-    await request.post('/api/v1/user/bind-email', {
-      email: emailForm.value.email,
-      code: emailForm.value.code
-    })
+    await request.post('/api/v2/user/bind-email', {
     email.value = emailForm.value.email
     emailDialogVisible.value = false
     ElMessage.success('邮箱绑定成功')
@@ -261,7 +255,7 @@ const unbindProvider = async (provider: any) => {
     await ElMessageBox.confirm(`确定要解绑${provider.label}吗？`, '确认解绑', {
       type: 'warning'
     })
-    await request.post('/api/v1/oauth/unbind', { provider: provider.name })
+    await request.post('/api/v2/oauth/unbind', { provider: provider.name })
     provider.bound = false
     provider.account = ''
     ElMessage.success('解绑成功')
@@ -287,7 +281,7 @@ onMounted(async () => {
     }
   } catch {}
   try {
-    const { data } = await request.get('/api/v1/user/profile')
+    const { data } = await request.get('/api/v2/user/profile')
     if (data?.data) {
       phone.value = data.data.phone || ''
       email.value = data.data.email || ''

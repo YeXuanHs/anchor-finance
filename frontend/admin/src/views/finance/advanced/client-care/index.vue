@@ -386,8 +386,9 @@ const fetchRecords = async () => {
   recordLoading.value = true
   try {
     const data = await request.get({
-      url: `/api/admin/client-care/${currentRuleId.value}/records`,
+      url: '/api/admin/client-care/logs',
       params: {
+        rule_id: currentRuleId.value,
         page: recordPagination.page,
         page_size: recordPagination.page_size
       }

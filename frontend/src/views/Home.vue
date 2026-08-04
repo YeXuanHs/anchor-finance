@@ -406,7 +406,7 @@ const fetchData = async () => {
     }
     
     // 获取新闻公告
-    const newsRes = await request.get('/api/v1/news', { params: { limit: 3 } })
+    const newsRes = await request.get('/api/v2/news', { params: { limit: 3 } })
     if (newsRes.data?.data) {
       announcements.value = newsRes.data.data
     }
@@ -418,7 +418,7 @@ const fetchData = async () => {
     // }
     
     // 获取站点设置
-    const settingRes = await request.get('/api/v1/settings/public')
+    const settingRes = await request.get('/api/v2/system/settings')
     if (settingRes.data?.data) {
       siteSettings.value = settingRes.data.data
     }

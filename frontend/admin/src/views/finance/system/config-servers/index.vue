@@ -177,7 +177,7 @@ const handleEdit = (row: any) => {
 
 const handleTest = async (row: any) => {
   try {
-    await request.post({ url: `/api/admin/config-servers/test-link/${row.id}` })
+    await request.get({ url: `/api/admin/config-servers/test-link/${row.id}` })
     ElMessage.success('连接测试成功')
   } catch (error) {
     ElMessage.error('连接测试失败')

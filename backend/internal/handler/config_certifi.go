@@ -68,15 +68,15 @@ func (h *ConfigCertifiHandler) GetCertSetting(c *gin.Context) {
 	}
 
 	type ConfigItem struct {
-		Setting string `json:"setting"`
-		Value   string `json:"value"`
+		Key   string `json:"setting"`
+		Value string `json:"value"`
 	}
 	var items []ConfigItem
-	h.db.Table("system_configs").Select("setting, value").Where("setting IN ?", configKeys).Find(&items)
+	h.db.Table("system_configs").Select("`key`, value").Where("`key` IN ?", configKeys).Find(&items)
 
 	data := make(map[string]interface{})
 	for _, item := range items {
-		data[item.Setting] = item.Value
+		data[item.Key] = item.Value
 	}
 
 	// 默认值处理
@@ -124,13 +124,13 @@ func (h *ConfigCertifiHandler) SaveCertSetting(c *gin.Context) {
 	for key, value := range req {
 		// 查找是否已存在
 		var count int64
-		h.db.Table("system_configs").Where("setting = ?", key).Count(&count)
+		h.db.Table("system_configs").Where("`key` = ?", key).Count(&count)
 		if count > 0 {
-			h.db.Table("system_configs").Where("setting = ?", key).Update("value", fmt.Sprintf("%v", value))
+			h.db.Table("system_configs").Where("`key` = ?", key).Update("value", fmt.Sprintf("%v", value))
 		} else {
 			h.db.Table("system_configs").Create(&map[string]interface{}{
-				"setting": key,
-				"value":   fmt.Sprintf("%v", value),
+				"key":   key,
+				"value": fmt.Sprintf("%v", value),
 			})
 		}
 	}
@@ -162,7 +162,7 @@ func (h *ConfigCertifiHandler) GetCertTypes(c *gin.Context) {
 // GET /admin/config-certifi/author-down
 func (h *ConfigCertifiHandler) DownloadAuthor(c *gin.Context) {
 	var configValue string
-	h.db.Table("system_configs").Select("value").Where("setting = ?", "certifi_business_author_path").Scan(&configValue)
+	h.db.Table("system_configs").Select("value").Where("`key` = ?", "certifi_business_author_path").Scan(&configValue)
 
 	if configValue == "" {
 		response.BadRequest(c, "文件资源不存在")
@@ -184,7 +184,7 @@ func (h *ConfigCertifiHandler) DownloadAuthor(c *gin.Context) {
 // DELETE /admin/config-certifi/author-del
 func (h *ConfigCertifiHandler) DeleteAuthor(c *gin.Context) {
 	var configValue string
-	h.db.Table("system_configs").Select("value").Where("setting = ?", "certifi_business_author_path").Scan(&configValue)
+	h.db.Table("system_configs").Select("value").Where("`key` = ?", "certifi_business_author_path").Scan(&configValue)
 
 	if configValue == "" {
 		response.BadRequest(c, "文件资源不存在")
@@ -198,7 +198,7 @@ func (h *ConfigCertifiHandler) DeleteAuthor(c *gin.Context) {
 		os.Remove(filePath)
 	}
 
-	h.db.Table("system_configs").Where("setting = ?", "certifi_business_author_path").Update("value", "")
+	h.db.Table("system_configs").Where("`key` = ?", "certifi_business_author_path").Update("value", "")
 	response.SuccessMsg(c, "删除成功")
 }
 
@@ -206,15 +206,15 @@ func (h *ConfigCertifiHandler) DeleteAuthor(c *gin.Context) {
 // GET /admin/config-certifi/detail
 func (h *ConfigCertifiHandler) GetCertDetail(c *gin.Context) {
 	type ConfigItem struct {
-		Setting string `json:"setting"`
-		Value   string `json:"value"`
+		Key   string `json:"setting"`
+		Value string `json:"value"`
 	}
 	var items []ConfigItem
-	h.db.Table("system_configs").Where("setting LIKE ?", "certifi%").Find(&items)
+	h.db.Table("system_configs").Where("`key` LIKE ?", "certifi%").Find(&items)
 
 	data := make(map[string]interface{})
 	for _, item := range items {
-		data[item.Setting] = item.Value
+		data[item.Key] = item.Value
 	}
 
 	if _, ok := data["certifi_select"]; !ok || data["certifi_select"] == "" {

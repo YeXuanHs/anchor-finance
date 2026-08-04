@@ -261,7 +261,7 @@ const totalPrice = computed(() => basePrice.value + configPrice.value)
 const fetchProduct = async () => {
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v1/products/${route.params.id}`)
+    const { data } = await request.get(`/api/v2/products/${route.params.id}`)
     if (data?.data) {
       product.value = data.data
       regions.value = data.data.regions || []
@@ -298,9 +298,7 @@ const applyCoupon = async () => {
   if (!couponCode.value) return
   
   try {
-    const { data } = await request.get('/api/v1/promo-codes/validate', {
-      params: { code: couponCode.value, product_id: product.value.id }
-    })
+    const { data } = await request.get('/api/v2/promo-codes/validate', {
     if (data?.ok) {
       ElMessage.success('优惠码已应用')
     } else {

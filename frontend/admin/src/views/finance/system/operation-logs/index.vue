@@ -146,7 +146,7 @@ const handleClearLogs = async () => {
     type: 'warning'
   })
   try {
-    await request.post({ url: '/api/admin/system-logs/clear-by-level' })
+    await request.del({ url: '/api/admin/system-logs/clear-level' })
     ElMessage.success('清理成功')
     fetchData()
   } catch (error) {

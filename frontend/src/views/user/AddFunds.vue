@@ -167,7 +167,7 @@ const getStatusText = (status: string) => {
 const loadPaymentMethods = async () => {
   loadingGateways.value = true
   try {
-    const { data } = await request.get('/api/v1/payment-methods')
+    const { data } = await request.get('/api/v2/payment-gateways')
     paymentMethods.value = data?.data || []
     if (paymentMethods.value.length > 0 && !paymentMethod.value) {
       paymentMethod.value = paymentMethods.value[0].name

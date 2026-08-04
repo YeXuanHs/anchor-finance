@@ -183,7 +183,7 @@ const scrollToProducts = () => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/v1/products', { params: { group: 'nat' } })
+    const res = await request.get('/api/v2/products', { params: { group: 'nat' } })
     if (res.data?.data?.length) {
       plans.value = res.data.data
     }

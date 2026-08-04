@@ -54,7 +54,7 @@ const currentMessage = ref<any>(null)
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/messages')
+    const { data } = await request.get('/api/v2/messages')
     messages.value = data.data?.list || data.list || data.data || []
   } catch (e) { console.error(e) } finally { loading.value = false }
 })

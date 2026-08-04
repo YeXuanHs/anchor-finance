@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"net/smtp"
 	"strings"
 	"time"
 
@@ -339,12 +340,9 @@ func (s *EmailEnhancedService) sendViaSMTP(config *smtpConfig, to, subject, body
 	msg.WriteString(body)
 
 	// 实际发送
-	// auth := smtp.PlainAuth("", config.Username, config.Password, config.Host)
-	// addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
-	// return smtp.SendMail(addr, auth, config.FromAddr, []string{to}, msg.Bytes())
-
-	_ = msg.String()
-	return nil
+	auth := smtp.PlainAuth("", config.Username, config.Password, config.Host)
+	addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
+	return smtp.SendMail(addr, auth, config.FromAddr, []string{to}, msg.Bytes())
 }
 
 type smtpConfig struct {

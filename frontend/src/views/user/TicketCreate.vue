@@ -114,7 +114,7 @@ const submitTicket = async () => {
     await formRef.value.validate()
     submitting.value = true
     
-    await request.post('/api/v1/tickets', form.value)
+    await request.post('/api/v2/tickets', form.value)
     ElMessage.success('工单已提交')
     router.push('/user/tickets')
   } catch (error) {

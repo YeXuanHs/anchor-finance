@@ -119,7 +119,7 @@ const availableOrders = ref<OrderOption[]>([])
 onMounted(async () => {
   loadingOrders.value = true
   try {
-    const { data } = await request.get('/api/v1/orders')
+    const { data } = await request.get('/api/v2/orders')
     availableOrders.value = data.data?.list || data.list || data.data || []
   } catch (e) { console.error(e) } finally { loadingOrders.value = false }
 })

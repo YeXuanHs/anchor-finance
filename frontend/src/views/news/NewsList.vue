@@ -193,7 +193,7 @@ const fetchNews = async () => {
     if (activeCategory.value !== 'all') {
       params.category_id = activeCategory.value
     }
-    const { data } = await request.get('/api/v1/news', { params })
+    const { data } = await request.get('/api/v2/news', { params })
     if (data?.data) {
       newsList.value = data.data.list || []
       total.value = data.data.total || 0
@@ -208,8 +208,8 @@ const fetchNews = async () => {
 const fetchSidebar = async () => {
   try {
     const [hotRes, catRes] = await Promise.allSettled([
-      request.get('/api/v1/news', { params: { limit: 8, sort: 'views' } }),
-      request.get('/api/v1/news/categories')
+      request.get('/api/v2/news', { params: { limit: 8, sort: 'views' } }),
+      request.get('/api/v2/news/categories')
     ])
     if (hotRes.status === 'fulfilled' && hotRes.value.data?.data) {
       hotNews.value = hotRes.value.data.data.list || hotRes.value.data.data

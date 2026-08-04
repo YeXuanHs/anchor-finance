@@ -214,7 +214,7 @@ const handleUserAction = (command: string) => {
 // 获取未读消息数
 const fetchUnreadCount = async () => {
   try {
-    const { data } = await request.get('/api/v1/user/messages/unread-count')
+    const { data } = await request.get('/api/v2/messages/unread-count')
     if (data?.data) {
       unreadCount.value = data.data.count || 0
     }

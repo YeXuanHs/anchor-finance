@@ -871,8 +871,8 @@ func (s *ConfigGeneralService) GetSecurityConfig() (*SecurityConfig, error) {
 	return &SecurityConfig{
 		RequiredPasswordStrength: m["required_pwstrength"],
 		InvalidLoginsBanLength:   parseInt(m["invalid_logins_banlength"]),
-		IPCheckFrontend:          m["home_ip_check"] == "1",
-		IPCheckAdmin:             m["admin_ip_check"] == "1",
+		IPCheckFrontend:          m["home_ip_check"] == "true",
+		IPCheckAdmin:             m["admin_ip_check"] == "true",
 		LoginErrorMaxNum:         parseInt(m["login_error_max_num"]),
 	}, nil
 }
@@ -881,18 +881,11 @@ func (s *ConfigGeneralService) UpdateSecurityConfig(req SecurityConfig) error {
 	configs := map[string]string{
 		"required_pwstrength":   req.RequiredPasswordStrength,
 		"invalid_logins_banlength": intStr(req.InvalidLoginsBanLength),
-		"home_ip_check":         boolToIntStr(req.IPCheckFrontend),
-		"admin_ip_check":        boolToIntStr(req.IPCheckAdmin),
+		"home_ip_check":         BoolStr(req.IPCheckFrontend),
+		"admin_ip_check":        BoolStr(req.IPCheckAdmin),
 		"login_error_max_num":   intStr(req.LoginErrorMaxNum),
 	}
 	return s.saveConfigMap(configs, "security")
-}
-
-func boolToIntStr(b bool) string {
-	if b {
-		return "1"
-	}
-	return "0"
 }
 
 // ==================== Local Config ====================
@@ -985,21 +978,21 @@ func (s *ConfigGeneralService) GetAffiliateConfig() (*AffiliateConfig, error) {
 		m[c.Key] = c.Value
 	}
 	return &AffiliateConfig{
-		Enabled:         m["affiliate_enabled"] == "1",
+		Enabled:         m["affiliate_enabled"] == "true",
 		BonusDeposit:    parseFloat(m["affiliate_bonusde_posit"]),
 		Rate:            parseFloat(m["affiliate_bates"]),
 		Type:            parseInt(m["affiliate_type"]),
 		CookieDays:      parseInt(m["affiliate_cookie"]),
 		MinWithdraw:     parseFloat(m["affiliate_withdraw"]),
-		RequireAuth:     m["affiliate_is_authentication"] == "1",
+		RequireAuth:     m["affiliate_is_authentication"] == "true",
 		DelayCommission: parseInt(m["affiliate_delay_commission"]),
-		IsReorder:       m["affiliate_is_reorder"] == "1",
+		IsReorder:       m["affiliate_is_reorder"] == "true",
 		ReorderRate:     parseFloat(m["affiliate_reorder"]),
 		ReorderType:     parseInt(m["affiliate_reorder_type"]),
-		IsRenew:         m["affiliate_is_renew"] == "1",
+		IsRenew:         m["affiliate_is_renew"] == "true",
 		RenewRate:       parseFloat(m["affiliate_renew"]),
 		RenewType:       parseInt(m["affiliate_renew_type"]),
-		Invited:         m["affiliate_invited"] == "1",
+		Invited:         m["affiliate_invited"] == "true",
 		InvitedMoney:    parseFloat(m["affiliate_invited_money"]),
 		InvitedType:     parseInt(m["affiliate_invited_type"]),
 	}, nil
@@ -1007,32 +1000,25 @@ func (s *ConfigGeneralService) GetAffiliateConfig() (*AffiliateConfig, error) {
 
 func (s *ConfigGeneralService) UpdateAffiliateConfig(req AffiliateConfig) error {
 	configs := map[string]string{
-		"affiliate_enabled":           boolOneStr(req.Enabled),
+		"affiliate_enabled":           BoolStr(req.Enabled),
 		"affiliate_bonusde_posit":     fmt.Sprintf("%.2f", req.BonusDeposit),
 		"affiliate_bates":             fmt.Sprintf("%.2f", req.Rate),
 		"affiliate_type":              intStr(req.Type),
 		"affiliate_cookie":            intStr(req.CookieDays),
 		"affiliate_withdraw":          fmt.Sprintf("%.2f", req.MinWithdraw),
-		"affiliate_is_authentication": boolOneStr(req.RequireAuth),
+		"affiliate_is_authentication": BoolStr(req.RequireAuth),
 		"affiliate_delay_commission":  intStr(req.DelayCommission),
-		"affiliate_is_reorder":        boolOneStr(req.IsReorder),
+		"affiliate_is_reorder":        BoolStr(req.IsReorder),
 		"affiliate_reorder":           fmt.Sprintf("%.2f", req.ReorderRate),
 		"affiliate_reorder_type":      intStr(req.ReorderType),
-		"affiliate_is_renew":          boolOneStr(req.IsRenew),
+		"affiliate_is_renew":          BoolStr(req.IsRenew),
 		"affiliate_renew":             fmt.Sprintf("%.2f", req.RenewRate),
 		"affiliate_renew_type":        intStr(req.RenewType),
-		"affiliate_invited":           boolOneStr(req.Invited),
+		"affiliate_invited":           BoolStr(req.Invited),
 		"affiliate_invited_money":     fmt.Sprintf("%.2f", req.InvitedMoney),
 		"affiliate_invited_type":      intStr(req.InvitedType),
 	}
 	return s.saveConfigMap(configs, "affiliate")
-}
-
-func boolOneStr(b bool) string {
-	if b {
-		return "1"
-	}
-	return "0"
 }
 
 // ==================== Captcha Config ====================
@@ -1068,31 +1054,31 @@ func (s *ConfigGeneralService) GetCaptchaConfig() (*CaptchaConfigData, error) {
 		m[c.Key] = c.Value
 	}
 	return &CaptchaConfigData{
-		Enabled:              m["is_captcha"] != "0",
+		Enabled:              m["is_captcha"] == "true",
 		Length:               parseInt(m["captcha_length"]),
 		Combination:          parseInt(m["captcha_combination"]),
-		RegisterEmailCaptcha: m["allow_register_email_captcha"] != "0",
-		RegisterPhoneCaptcha: m["allow_register_phone_captcha"] != "0",
-		LoginPhoneCaptcha:    m["allow_login_phone_captcha"] != "0",
-		LoginEmailCaptcha:    m["allow_login_email_captcha"] != "0",
-		LoginCodeCaptcha:     m["allow_login_code_captcha"] != "0",
-		LoginIDCaptcha:       m["allow_login_id_captcha"] != "0",
-		LoginAdminCaptcha:    m["allow_login_admin_captcha"] != "0",
+		RegisterEmailCaptcha: m["allow_register_email_captcha"] == "true",
+		RegisterPhoneCaptcha: m["allow_register_phone_captcha"] == "true",
+		LoginPhoneCaptcha:    m["allow_login_phone_captcha"] == "true",
+		LoginEmailCaptcha:    m["allow_login_email_captcha"] == "true",
+		LoginCodeCaptcha:     m["allow_login_code_captcha"] == "true",
+		LoginIDCaptcha:       m["allow_login_id_captcha"] == "true",
+		LoginAdminCaptcha:    m["allow_login_admin_captcha"] == "true",
 	}, nil
 }
 
 func (s *ConfigGeneralService) UpdateCaptchaConfig(req CaptchaConfigData) error {
 	configs := map[string]string{
-		"is_captcha":                  boolOneStr(req.Enabled),
+		"is_captcha":                  BoolStr(req.Enabled),
 		"captcha_length":              intStr(req.Length),
 		"captcha_combination":         intStr(req.Combination),
-		"allow_register_email_captcha": boolOneStr(req.RegisterEmailCaptcha),
-		"allow_register_phone_captcha": boolOneStr(req.RegisterPhoneCaptcha),
-		"allow_login_phone_captcha":   boolOneStr(req.LoginPhoneCaptcha),
-		"allow_login_email_captcha":   boolOneStr(req.LoginEmailCaptcha),
-		"allow_login_code_captcha":    boolOneStr(req.LoginCodeCaptcha),
-		"allow_login_id_captcha":      boolOneStr(req.LoginIDCaptcha),
-		"allow_login_admin_captcha":   boolOneStr(req.LoginAdminCaptcha),
+		"allow_register_email_captcha": BoolStr(req.RegisterEmailCaptcha),
+		"allow_register_phone_captcha": BoolStr(req.RegisterPhoneCaptcha),
+		"allow_login_phone_captcha":   BoolStr(req.LoginPhoneCaptcha),
+		"allow_login_email_captcha":   BoolStr(req.LoginEmailCaptcha),
+		"allow_login_code_captcha":    BoolStr(req.LoginCodeCaptcha),
+		"allow_login_id_captcha":      BoolStr(req.LoginIDCaptcha),
+		"allow_login_admin_captcha":   BoolStr(req.LoginAdminCaptcha),
 	}
 	return s.saveConfigMap(configs, "captcha")
 }
@@ -1119,16 +1105,16 @@ func (s *ConfigGeneralService) GetBuyProductConfig() (*BuyProductConfig, error) 
 		m[c.Key] = c.Value
 	}
 	return &BuyProductConfig{
-		MustBindPhone:   m["buy_product_must_bind_phone"] == "1",
-		RequireRealName: m["certifi_isrealname"] == "1",
+		MustBindPhone:   m["buy_product_must_bind_phone"] == "true",
+		RequireRealName: m["certifi_isrealname"] == "true",
 		OrderPageStyle:  m["order_page_style"],
 	}, nil
 }
 
 func (s *ConfigGeneralService) UpdateBuyProductConfig(req BuyProductConfig) error {
 	configs := map[string]string{
-		"buy_product_must_bind_phone": boolOneStr(req.MustBindPhone),
-		"certifi_isrealname":         boolOneStr(req.RequireRealName),
+		"buy_product_must_bind_phone": BoolStr(req.MustBindPhone),
+		"certifi_isrealname":         BoolStr(req.RequireRealName),
 		"order_page_style":           req.OrderPageStyle,
 	}
 	return s.saveConfigMap(configs, "buy_product")
@@ -1164,20 +1150,20 @@ func (s *ConfigGeneralService) GetSecondVerifyConfig() (*SecondVerifyConfig, err
 	adminActions := splitCSV(m["second_verify_action_admin"])
 
 	return &SecondVerifyConfig{
-		HomeEnabled:     m["second_verify_home"] != "0",
+		HomeEnabled:     m["second_verify_home"] == "true",
 		HomeActions:     homeActions,
 		HomeActionTypes: homeActionTypes,
-		AdminEnabled:    m["second_verify_admin"] != "0",
+		AdminEnabled:    m["second_verify_admin"] == "true",
 		AdminActions:    adminActions,
 	}, nil
 }
 
 func (s *ConfigGeneralService) UpdateSecondVerifyConfig(req SecondVerifyConfig) error {
 	configs := map[string]string{
-		"second_verify_home":            boolOneStr(req.HomeEnabled),
+		"second_verify_home":            BoolStr(req.HomeEnabled),
 		"second_verify_action_home":     joinCSV(req.HomeActions),
 		"second_verify_action_home_type": joinCSV(req.HomeActionTypes),
-		"second_verify_admin":           boolOneStr(req.AdminEnabled),
+		"second_verify_admin":           BoolStr(req.AdminEnabled),
 		"second_verify_action_admin":    joinCSV(req.AdminActions),
 	}
 	return s.saveConfigMap(configs, "second_verify")

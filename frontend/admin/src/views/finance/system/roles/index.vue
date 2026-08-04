@@ -379,9 +379,10 @@ const handleSavePermission = async () => {
     const halfCheckedKeys = treeRef.value.getHalfCheckedKeys() as number[]
     const permissionIds = [...checkedKeys, ...halfCheckedKeys]
 
+    // NOTE: 后端仅有 GET /rbac/permissions，需后端支持 PUT /rbac/permissions 来更新角色权限
     await request.put({
-      url: `/api/admin/rbac/roles/${currentRole.id}/permissions`,
-      params: { permission_ids: permissionIds },
+      url: '/api/admin/rbac/permissions',
+      params: { role_id: currentRole.id, permission_ids: permissionIds },
       showSuccessMessage: true
     })
     ElMessage.success('权限保存成功')

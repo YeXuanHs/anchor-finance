@@ -197,13 +197,13 @@ func (h *EmailTemplateHandler) SwitchOperator(c *gin.Context) {
 	}
 
 	var count int64
-	h.db.Table("system_configs").Where("setting = ?", "email_operator").Count(&count)
+	h.db.Table("system_configs").Where("`key` = ?", "email_operator").Count(&count)
 	if count > 0 {
-		h.db.Table("system_configs").Where("setting = ?", "email_operator").Update("value", operator)
+		h.db.Table("system_configs").Where("`key` = ?", "email_operator").Update("value", operator)
 	} else {
 		h.db.Table("system_configs").Create(&map[string]interface{}{
-			"setting": "email_operator",
-			"value":   operator,
+			"key":   "email_operator",
+			"value": operator,
 		})
 	}
 

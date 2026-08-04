@@ -50,7 +50,7 @@ const plans = ref([])
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/products', { params: { group: 'dedicated' } })
+    const { data } = await request.get('/api/v2/products', { params: { group: 'dedicated' } })
     if (data?.data) {
       plans.value = data.data.list || data.data || plans.value
     }

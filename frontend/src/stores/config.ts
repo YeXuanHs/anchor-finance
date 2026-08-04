@@ -98,7 +98,7 @@ export const useConfigStore = defineStore('config', () => {
   // 获取公开配置
   async function fetchPublicConfig() {
     try {
-      const res = await request.get('/api/v1/settings/public')
+      const res = await request.get('/api/v2/system/settings')
       if (res.data?.data) {
         config.value = { ...defaultConfig, ...res.data.data }
         loaded.value = true

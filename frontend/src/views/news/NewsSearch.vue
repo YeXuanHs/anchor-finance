@@ -188,7 +188,7 @@ const goToDetail = (id: number) => {
 onMounted(async () => {
   // Fetch hot news keywords
   try {
-    const { data } = await request.get('/api/v1/news', { params: { limit: 5, sort: 'views' } })
+    const { data } = await request.get('/api/v2/news', { params: { limit: 5, sort: 'views' } })
     if (data?.data?.list?.length) {
       hotKeywords.value = data.data.list.map((n: any) => n.title)
     }

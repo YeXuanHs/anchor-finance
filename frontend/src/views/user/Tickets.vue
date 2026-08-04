@@ -108,7 +108,7 @@ const newTicket = reactive({ title: '', department: '', priority: 'medium', desc
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/tickets')
+    const { data } = await request.get('/api/v2/tickets')
     tickets.value = data.data?.list || data.list || data.data || []
   } catch (e) { console.error(e) } finally { loading.value = false }
 })
@@ -137,19 +137,14 @@ function handleView(ticket: Ticket) { ElMessage.info(`查看工单：#${ticket.i
 async function handleCreateTicket() {
   if (!newTicket.title || !newTicket.description) { ElMessage.warning('请填写完整信息'); return }
   try {
-    await request.post('/api/v1/tickets', {
-      title: newTicket.title,
-      department: newTicket.department,
-      priority: newTicket.priority,
-      description: newTicket.description
-    })
+    await request.post('/api/v2/tickets', {
     showCreateDialog.value = false
     ElMessage.success('工单已提交')
     newTicket.title = ''
     newTicket.department = ''
     newTicket.priority = 'medium'
     newTicket.description = ''
-    const { data } = await request.get('/api/v1/tickets')
+    const { data } = await request.get('/api/v2/tickets')
     tickets.value = data.data?.list || data.list || data.data || []
   } catch (e: any) { ElMessage.error(e?.message || '提交失败，请重试') }
 }

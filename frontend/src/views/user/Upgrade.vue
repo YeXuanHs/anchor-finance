@@ -94,12 +94,12 @@ const showUpgradeDialog = (product: any) => {
   currentProduct.value = product
   selectedPlan.value = ''
   showDialog.value = true
-  const res = await request.get(`/api/v1/host/${product.id}/upgrade`)
+  const res = await request.get(`/api/v2/upgrades/available/${product.id}`)
   availablePlans.value = res.data.data.plans
 }
 
 const submitUpgrade = async () => {
-  await request.post(`/api/v1/host/${currentProduct.value.id}/upgrade`, { target_plan_id: selectedPlan.value })
+  await request.post('/api/v2/upgrades', { host_id: currentProduct.value.id, target_plan_id: selectedPlan.value })
   ElMessage.success('升降级请求已提交')
   showDialog.value = false
 }

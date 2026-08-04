@@ -203,7 +203,7 @@ const email = ref('')
 
 async function fetchUserProfile() {
   try {
-    const res = await request.get('/api/v1/user/profile')
+    const res = await request.get('/api/v2/user/profile')
     const profile = res.data?.data || res.data || {}
     phone.value = profile.phone || ''
     email.value = profile.email || ''
@@ -213,7 +213,7 @@ async function fetchUserProfile() {
 
 async function fetchLoginLogs() {
   try {
-    const res = await request.get('/api/v1/login-logs')
+    const res = await request.get('/api/v2/login-logs')
     loginLogs.value = res.data?.data || res.data || []
   } catch { /* ignore */ }
 }
@@ -275,7 +275,7 @@ async function handleChangePassword() {
   if (!passwordFormRef.value) return
   try {
     await passwordFormRef.value.validate()
-    await request.post('/api/v1/user/change-password', {
+    await request.post('/api/v2/user/change-password', {
       oldPassword: passwordForm.oldPassword,
       newPassword: passwordForm.newPassword
     })
@@ -290,7 +290,7 @@ async function handleChangePassword() {
 async function handleBindPhone() {
   if (!phoneForm.phone || !phoneForm.code) { ElMessage.warning('请填写手机号和验证码'); return }
   try {
-    await request.post('/api/v1/user/bind-phone', { phone: phoneForm.phone, code: phoneForm.code })
+    await request.post('/api/v2/user/bind-phone', { phone: phoneForm.phone, code: phoneForm.code })
     phone.value = phoneForm.phone
     showPhoneDialog.value = false
     phoneForm.phone = ''
@@ -302,7 +302,7 @@ async function handleBindPhone() {
 async function handleBindEmail() {
   if (!emailForm.email || !emailForm.code) { ElMessage.warning('请填写邮箱和验证码'); return }
   try {
-    await request.post('/api/v1/user/bind-email', { email: emailForm.email, code: emailForm.code })
+    await request.post('/api/v2/user/bind-email', { email: emailForm.email, code: emailForm.code })
     email.value = emailForm.email
     showEmailDialog.value = false
     emailForm.email = ''

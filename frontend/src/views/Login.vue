@@ -373,7 +373,7 @@ async function fetchCaptchaStatus() {
 // 获取验证码类型配置
 async function fetchCaptchaType() {
   try {
-    const res = await request.get('/api/v1/settings/public')
+    const res = await request.get('/api/v2/system/settings')
     if (res.data?.data?.captcha_type) {
       captchaType.value = res.data.data.captcha_type
     }
