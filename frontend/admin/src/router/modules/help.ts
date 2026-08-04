@@ -21,7 +21,7 @@ export const helpRoutes: AppRouteRecord[] = [
     meta: {
       title: 'QQ交流群',
       icon: 'ri:qq-line',
-      link: `https://qm.qq.com/q/${WEB_LINKS.QQ_GROUP}`,
+      link: WEB_LINKS.QQ_GROUP_LINK,
       isIframe: false,
       keepAlive: false
     }

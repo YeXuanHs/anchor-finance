@@ -15,6 +15,12 @@
           <span class="text-g-700">{{ link.label }}</span>
           <ArtSvgIcon icon="ri:arrow-right-s-line" class="text-lg text-g-600" />
         </div>
+        <!-- 开发者QQ（纯文本，不可点击） -->
+        <div
+          class="w-60 flex-cb h-12.5 px-3.5 border border-g-300 rounded-lg text-sm bg-g-100 max-sm:w-full"
+        >
+          <span class="text-g-700">开发者QQ：{{ devQQ }}</span>
+        </div>
       </div>
     </div>
     <img class="w-75 max-md:!hidden" src="@imgs/draw/draw1.png" alt="draw1" />
@@ -27,12 +33,12 @@
 
   const systemName = AppConfig.systemInfo.name
   const devInfo = WEB_LINKS.DEV_INFO
+  const devQQ = WEB_LINKS.DEV_QQ
 
   const linkList = [
     { label: '开发者GitHub', url: WEB_LINKS.GITHUB },
-    { label: `QQ: ${WEB_LINKS.DEV_QQ}`, url: `https://qm.qq.com/q/${WEB_LINKS.QQ_GROUP}` },
     { label: 'Telegram', url: WEB_LINKS.DEV_TG },
-    { label: `QQ交流群: ${WEB_LINKS.QQ_GROUP}`, url: `https://qm.qq.com/q/${WEB_LINKS.QQ_GROUP}` }
+    { label: 'QQ交流群', url: WEB_LINKS.QQ_GROUP_LINK }
   ]
 
   /**

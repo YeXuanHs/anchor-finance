@@ -8,10 +8,13 @@ export const WEB_LINKS = {
   // 开发者 GitHub
   GITHUB: 'https://github.com/YeXuanHs',
 
-  // QQ交流群
+  // QQ交流群链接
+  QQ_GROUP_LINK: 'https://qm.qq.com/q/m3i0A7bwga',
+
+  // QQ交流群号
   QQ_GROUP: '1009624286',
 
-  // 开发者QQ
+  // 开发者QQ（纯文本）
   DEV_QQ: '2338795574',
 
   // 开发者Telegram

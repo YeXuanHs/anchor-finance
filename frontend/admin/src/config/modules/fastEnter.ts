@@ -53,7 +53,7 @@ const fastEnterConfig: FastEnterConfig = {
       iconColor: '#12B7F5',
       enabled: true,
       order: 5,
-      link: `https://qm.qq.com/q/${WEB_LINKS.QQ_GROUP}`
+      link: WEB_LINKS.QQ_GROUP_LINK
     }
   ],
   // 快速链接
