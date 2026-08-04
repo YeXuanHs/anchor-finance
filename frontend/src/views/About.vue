@@ -147,10 +147,10 @@ import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'
 
 const siteSettings = ref({
-  contact_address: '中国·北京·海淀区中关村科技园',
-  contact_phone: '400-000-0000',
-  contact_email: 'support@anchorfinance.com',
-  work_time: '周一至周五 9:00-18:00'
+  contact_address: '',
+  contact_phone: '',
+  contact_email: '',
+  work_time: ''
 })
 
 const fetchSiteSettings = async () => {

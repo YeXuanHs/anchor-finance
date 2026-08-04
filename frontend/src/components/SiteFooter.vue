@@ -81,8 +81,8 @@ import request from '@/utils/request'
 const currentYear = computed(() => new Date().getFullYear())
 
 const siteSettings = ref({
-  contact_phone: '400-000-0000',
-  contact_email: 'support@anchorfinance.com',
+  contact_phone: '',
+  contact_email: '',
   site_name: '锚点财务'
 })
 
