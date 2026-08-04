@@ -394,7 +394,7 @@ async function acceptByCode() {
   if (!acceptCode.value) return
   acceptLoading.value = true
   try {
-    await request.post('/api/v2/product-diverts/accept', {
+    await request.post('/api/v2/product-diverts/accept-by-code', {
       code: acceptCode.value
     })
     ElMessage.success('已接受产品转移')

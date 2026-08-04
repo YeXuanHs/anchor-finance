@@ -195,3 +195,134 @@ func (h *HostHandler) GetTimetype(c *gin.Context) {
 	}
 	response.Success(c, gin.H{"data": timeTypes})
 }
+
+// GetBilling returns billing information for a host.
+// GET /hosts/:id/billing
+func (h *HostHandler) GetBilling(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid host id")
+		return
+	}
+
+	// Verify host belongs to user
+	host, err := h.hostSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "host not found")
+		return
+	}
+	if host.UserID != userID {
+		response.Forbidden(c, "access denied")
+		return
+	}
+
+	// Get billing info from service
+	billing, err := h.hostSvc.GetBillingInfo(uint(id))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, billing)
+}
+
+// GetLog returns operation logs for a host.
+// GET /hosts/:id/log
+func (h *HostHandler) GetLog(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid host id")
+		return
+	}
+
+	// Verify host belongs to user
+	host, err := h.hostSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "host not found")
+		return
+	}
+	if host.UserID != userID {
+		response.Forbidden(c, "access denied")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	logs, total, err := h.hostSvc.GetHostOperations(uint(id), page, pageSize)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, logs, total, page, pageSize)
+}
+
+// GetDownload returns download files for a host.
+// GET /hosts/:id/download
+func (h *HostHandler) GetDownload(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid host id")
+		return
+	}
+
+	// Verify host belongs to user
+	host, err := h.hostSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "host not found")
+		return
+	}
+	if host.UserID != userID {
+		response.Forbidden(c, "access denied")
+		return
+	}
+
+	// Get download files
+	downloads, err := h.hostSvc.GetDownloadFiles(uint(id))
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, downloads)
+}
+
+// PostRemark adds or updates a remark for a host.
+// POST /hosts/:id/remark
+func (h *HostHandler) PostRemark(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid host id")
+		return
+	}
+
+	// Verify host belongs to user
+	host, err := h.hostSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "host not found")
+		return
+	}
+	if host.UserID != userID {
+		response.Forbidden(c, "access denied")
+		return
+	}
+
+	var req struct {
+		Remark string `json:"remark"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.hostSvc.UpdateRemark(uint(id), req.Remark); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "remark updated")
+}

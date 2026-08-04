@@ -1100,8 +1100,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/log-cleaner/clean-all", logCleanerHandler.CleanAll)
 
 		// 通知管理（去重）
-		notifySvc := service.NewNotificationService(deps.DB, deps.Log)
-		notifyManageHandler := handler.NewNotificationHandler(notifySvc, deps.Log)
+		notifySvc := service.NewNotificationService(deps.DB, deps.Log, nil)
+		notifyManageHandler := handler.NewNotificationManageHandler(notifySvc, deps.Log)
 		admin.GET("/notifications/stats", notifyManageHandler.GetStats)
 		admin.POST("/notifications/reset-event", notifyManageHandler.ResetEvent)
 		admin.POST("/notifications/clean-all", notifyManageHandler.CleanAll)

@@ -145,7 +145,7 @@ const fetchResults = async () => {
   searchedQuery.value = searchQuery.value.trim()
 
   try {
-    const { data } = await request.get('/api/v1/news/search', {
+    const { data } = await request.get('/api/v1/news', {
       params: {
         q: searchedQuery.value,
         sort: sortBy.value,

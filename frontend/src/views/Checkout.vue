@@ -370,8 +370,9 @@ const applyCoupon = async () => {
   
   couponLoading.value = true
   try {
-    const { data } = await request.get('/api/v2/promo-codes/validate', {
-    
+    const { data } = await request.post('/api/v2/promo-codes/validate', {
+      code: couponCode.value
+    })
     if (data?.data) {
       couponDiscount.value = data.data.discount || 0
       couponApplied.value = true

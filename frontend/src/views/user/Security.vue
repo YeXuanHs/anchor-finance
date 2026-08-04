@@ -333,7 +333,8 @@ async function handleSendEmailCode() {
 
 async function handleToggle2FA(val: boolean) {
   try {
-    await request.post('/api/v2/user/2fa', { enabled: val })
+    const endpoint = val ? '/api/v2/user/2fa/enable' : '/api/v2/user/2fa/disable'
+    await request.post(endpoint)
     ElMessage.success(val ? '已开启两步验证' : '已关闭两步验证')
   } catch {
     twoFAEnabled.value = !val

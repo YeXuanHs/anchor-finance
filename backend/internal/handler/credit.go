@@ -1034,6 +1034,127 @@ func (h *CreditHandler) GetSearch(c *gin.Context) {
 	response.SuccessPage(c, invoices, total, page, pageSize)
 }
 
+// GetUsedDetail returns the user's credit usage details.
+// GET /credit/used-detail
+func (h *CreditHandler) GetUsedDetail(c *gin.Context) {
+	userID := getUserID(c)
+	if userID == 0 {
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	// Get credit usage details from invoices
+	var items []struct {
+		ID        uint    `json:"id"`
+		InvoiceID uint    `json:"invoice_id"`
+		Amount    float64 `json:"amount"`
+		Type      string  `json:"type"`
+		Remark    string  `json:"remark"`
+		CreatedAt string  `json:"created_at"`
+	}
+	var total int64
+
+	query := h.db.Table("invoices").
+		Select("invoices.id, invoices.id as invoice_id, invoices.total as amount, invoices.type, '' as remark, invoices.created_at").
+		Where("invoices.user_id = ? AND invoices.use_credit_limit = ?", userID, 1)
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("invoices.id DESC").Find(&items)
+
+	// Format dates
+	result := make([]map[string]interface{}, 0, len(items))
+	for _, item := range items {
+		result = append(result, map[string]interface{}{
+			"id":         item.ID,
+			"invoice_id": item.InvoiceID,
+			"amount":     item.Amount,
+			"type":       item.Type,
+			"remark":     item.Remark,
+			"created_at": item.CreatedAt,
+		})
+	}
+
+	response.SuccessPage(c, result, total, page, pageSize)
+}
+
+// GetUsedSummary returns the user's credit usage summary.
+// GET /credit/used-summary
+func (h *CreditHandler) GetUsedSummary(c *gin.Context) {
+	userID := getUserID(c)
+	if userID == 0 {
+		return
+	}
+
+	// Get credit limit info
+	var credit model.CreditLimit
+	if err := h.db.Where("user_id = ?", userID).First(&credit).Error; err != nil {
+		response.Success(c, gin.H{
+			"limit":     0,
+			"used":      0,
+			"available": 0,
+		})
+		return
+	}
+
+	// Get usage summary from service
+	summary, err := h.creditSvc.GetUsageSummary(userID)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"limit":           credit.Limit,
+		"used":            credit.Used,
+		"available":       credit.Available,
+		"usage_summary":   summary,
+	})
+}
+
+// GetBillRepayments returns repayment records for a specific bill.
+// GET /credit/bills/:id/repayments
+func (h *CreditHandler) GetBillRepayments(c *gin.Context) {
+	userID := getUserID(c)
+	if userID == 0 {
+		return
+	}
+
+	billID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid bill id")
+		return
+	}
+
+	// Verify bill belongs to user
+	bill, err := h.creditSvc.GetBillByID(uint(billID))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+	if bill.UserID != userID {
+		response.Forbidden(c, "access denied")
+		return
+	}
+
+	// Get repayment records
+	var repayments []struct {
+		ID            uint    `json:"id"`
+		Amount        float64 `json:"amount"`
+		PaymentMethod string  `json:"payment_method"`
+		CreatedAt     string  `json:"created_at"`
+	}
+	h.db.Table("credit_bill_payments").
+		Select("id, amount, payment_method, created_at").
+		Where("bill_id = ?", billID).
+		Order("id DESC").
+		Find(&repayments)
+
+	response.Success(c, repayments)
+}
+
 // Prepayment allows a user to repay credit limit bills before due date.
 // POST /credit/prepayment
 func (h *CreditHandler) Prepayment(c *gin.Context) {

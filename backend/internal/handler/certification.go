@@ -99,6 +99,26 @@ func (h *CertificationHandler) SubmitEnterprise(c *gin.Context) {
 	response.Success(c, cert)
 }
 
+// GetEnterpriseCert returns the user's enterprise certification info.
+// GET /certification/enterprise
+func (h *CertificationHandler) GetEnterpriseCert(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	cert, err := h.certSvc.GetByUserID(userID)
+	if err != nil {
+		response.NotFound(c, "no certification found")
+		return
+	}
+
+	// Only return if it's enterprise type
+	if cert.Type != "enterprise" {
+		response.NotFound(c, "no enterprise certification found")
+		return
+	}
+
+	response.Success(c, cert)
+}
+
 // AdminReview approves or rejects a certification.
 func (h *CertificationHandler) AdminReview(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)

@@ -298,7 +298,9 @@ const applyCoupon = async () => {
   if (!couponCode.value) return
   
   try {
-    const { data } = await request.get('/api/v2/promo-codes/validate', {
+    const { data } = await request.post('/api/v2/promo-codes/validate', {
+      code: couponCode.value
+    })
     if (data?.ok) {
       ElMessage.success('优惠码已应用')
     } else {

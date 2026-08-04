@@ -536,7 +536,7 @@ async function handleSmsLogin() {
 
 function handleThirdParty(platform: string) {
   const redirect = (route.query.redirect as string) || '/user/dashboard'
-  window.location.href = `/api/v1/admin/oauth/${platform}?redirect=${encodeURIComponent(redirect)}`
+  window.location.href = `/api/admin/oauth/${platform}?redirect=${encodeURIComponent(redirect)}`
 }
 </script>
 

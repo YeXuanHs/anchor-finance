@@ -756,7 +756,7 @@ async function fetchUpgradePlans() {
 
   upgradeLoading.value = true
   try {
-    const { data } = await request.get(`/api/v2/hosts/${id}/upgrade`)
+    const { data } = await request.get(`/api/v2/upgrades/available/${id}`)
     if (data?.data) {
       upgradePlans.value = data.data.list || []
     }
@@ -778,7 +778,8 @@ async function confirmUpgrade() {
       '确认升级',
       { type: 'warning' }
     )
-    const { data } = await request.post(`/api/v2/hosts/${id}/upgrade`, {
+    const { data } = await request.post('/api/v2/upgrades', {
+      host_id: id,
       plan_id: selectedUpgradePlan.value.id
     })
     ElMessage.success('升级成功')
@@ -879,7 +880,7 @@ async function openConsole() {
   if (!id) return
 
   try {
-    const { data } = await request.get(`/api/v2/hosts/${id}/console`)
+    const { data } = await request.get(`/api/v2/hosts/${id}/operations`)
     if (data?.data?.url) {
       window.open(data.data.url, '_blank')
     } else {

@@ -8,25 +8,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NotificationHandler 通知管理处理器
-type NotificationHandler struct {
+// NotificationManageHandler 通知去重管理处理器
+type NotificationManageHandler struct {
 	svc *service.NotificationService
 	log *logger.Logger
 }
 
-// NewNotificationHandler 创建通知处理器
-func NewNotificationHandler(svc *service.NotificationService, log *logger.Logger) *NotificationHandler {
-	return &NotificationHandler{svc: svc, log: log}
+// NewNotificationManageHandler 创建通知去重管理处理器
+func NewNotificationManageHandler(svc *service.NotificationService, log *logger.Logger) *NotificationManageHandler {
+	return &NotificationManageHandler{svc: svc, log: log}
 }
 
 // GetStats 获取通知统计
-func (h *NotificationHandler) GetStats(c *gin.Context) {
+func (h *NotificationManageHandler) GetStats(c *gin.Context) {
 	stats := h.svc.GetDeduplicator().GetStats()
 	response.Success(c, stats)
 }
 
 // ResetEvent 重置事件（允许重新通知）
-func (h *NotificationHandler) ResetEvent(c *gin.Context) {
+func (h *NotificationManageHandler) ResetEvent(c *gin.Context) {
 	var req struct {
 		EventType string `json:"event_type" binding:"required"`
 		TargetID  string `json:"target_id" binding:"required"`
@@ -46,7 +46,7 @@ func (h *NotificationHandler) ResetEvent(c *gin.Context) {
 }
 
 // CleanAll 清空所有通知记录
-func (h *NotificationHandler) CleanAll(c *gin.Context) {
+func (h *NotificationManageHandler) CleanAll(c *gin.Context) {
 	if err := h.svc.GetDeduplicator().CleanAll(); err != nil {
 		response.ServerError(c, err.Error())
 		return
