@@ -315,7 +315,7 @@ func (s *EmailEnhancedService) getSMTPConfig() (*smtpConfig, error) {
 func (s *EmailEnhancedService) sendViaSMTP(config *smtpConfig, to, subject, body string) error {
 	// 使用Go标准库的net/smtp发送邮件
 	// 这里简化实现，实际应该使用完整的SMTP客户端
-	logger.Infof("Sending email via SMTP to=%s subject=%s", to, subject)
+	s.log.Infof("Sending email via SMTP to=%s subject=%s", to, subject)
 
 	// 构建邮件头
 	headers := map[string]string{
@@ -406,13 +406,24 @@ func (s *EmailEnhancedService) GetSupportConfig() (*EmailSupport, error) {
 
 // UpdateSupportConfig 更新支持邮箱配置
 func (s *EmailEnhancedService) UpdateSupportConfig(config *EmailSupport) error {
-	jsonVal := fmt.Sprintf(`{"support_email":"%s","sales_email":"%s","abuse_email":"%s","billing_email":"%s","no_reply_email":"%s","no_reply_name":"%s"}`,
-		config.SupportEmail, config.SalesEmail, config.AbuseEmail, config.BillingEmail, config.NoReplyEmail, config.NoReplyName)
-	
+	data := map[string]string{
+		"support_email":  config.SupportEmail,
+		"sales_email":    config.SalesEmail,
+		"abuse_email":    config.AbuseEmail,
+		"billing_email":  config.BillingEmail,
+		"no_reply_email": config.NoReplyEmail,
+		"no_reply_name":  config.NoReplyName,
+	}
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	jsonVal := string(jsonBytes)
+
 	var existing model.SystemConfig
 	result := s.db.Where("`key` = ?", "email_support").First(&existing)
 	if result.Error == gorm.ErrRecordNotFound {
-		return s.db.Create(&model.SystemConfig{Key: "email_support", Value: jsonVal}).Error
+		return s.db.Create(&model.SystemConfig{Key: "email_support", Value: jsonVal, Group: "email"}).Error
 	}
 	return s.db.Model(&existing).Update("value", jsonVal).Error
 }
