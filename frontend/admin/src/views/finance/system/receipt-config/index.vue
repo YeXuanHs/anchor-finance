@@ -93,7 +93,7 @@ const expressRules: FormRules = {
 const fetchConfig = async () => {
   loading.value = true
   try {
-    const res = await request.get({ url: '/api/admin/config/receipt' })
+    const res = await request.get({ url: '/api/admin/config/invoice' })
     if (res?.data) Object.assign(rateForm, res.data)
   } catch (error) {
     console.error(error)
@@ -105,7 +105,7 @@ const fetchConfig = async () => {
 const fetchExpressList = async () => {
   expressLoading.value = true
   try {
-    const res = await request.get({ url: '/api/admin/config/receipt/express' })
+    const res = await request.get({ url: '/api/admin/config/invoice/express' })
     expressList.value = res?.data || []
   } catch (error) {
     console.error(error)
@@ -117,7 +117,7 @@ const fetchExpressList = async () => {
 const handleSaveRate = async () => {
   saveLoading.value = true
   try {
-    await request.put({ url: '/api/admin/config/receipt', data: rateForm, showSuccessMessage: true })
+    await request.put({ url: '/api/admin/config/invoice', data: rateForm, showSuccessMessage: true })
   } catch (error) {
     ElMessage.error('保存失败')
   } finally {
@@ -147,9 +147,9 @@ const handleSaveExpress = async () => {
     saveLoading.value = true
     try {
       if (isEditExpress.value && editingExpressId.value) {
-        await request.put({ url: `/api/admin/config/receipt/express/${editingExpressId.value}`, data: expressForm, showSuccessMessage: true })
+        await request.put({ url: `/api/admin/config/invoice/express/${editingExpressId.value}`, data: expressForm, showSuccessMessage: true })
       } else {
-        await request.post({ url: '/api/admin/config/receipt/express', data: expressForm, showSuccessMessage: true })
+        await request.post({ url: '/api/admin/config/invoice/express', data: expressForm, showSuccessMessage: true })
       }
       expressDialogVisible.value = false
       fetchExpressList()
@@ -164,7 +164,7 @@ const handleSaveExpress = async () => {
 const handleDeleteExpress = async (row: any) => {
   try {
     await ElMessageBox.confirm(`确定删除快递 "${row.name}" 吗？`, '提示')
-    await request.delete({ url: `/api/admin/config/receipt/express/${row.id}`, showSuccessMessage: true })
+    await request.delete({ url: `/api/admin/config/invoice/express/${row.id}`, showSuccessMessage: true })
     fetchExpressList()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('删除失败')

@@ -160,7 +160,7 @@ const fetchTrend = async () => {
       params.end_date = dateRange.value[1]
     }
     const data = await request.get({
-      url: '/api/admin/statistics/product-revenue/trend',
+      url: '/api/admin/reports/product-income/trend',
       params
     })
     productTrend.value = data || []
@@ -175,7 +175,7 @@ const fetchComparison = async () => {
   comparisonLoading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/statistics/product-revenue/comparison',
+      url: '/api/admin/reports/product-income/comparison',
       params: { year: new Date().getFullYear() }
     })
     monthlyComparison.value = data || []

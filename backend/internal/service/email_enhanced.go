@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/smtp"
@@ -296,24 +297,16 @@ func (s *EmailEnhancedService) getSMTPConfig() (*smtpConfig, error) {
 	}
 	err := s.db.Table("system_configs").Where("key = ?", "email_config").Select("value").First(&setting).Error
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query email_config: %w", err)
 	}
 
 	// 解析JSON配置
-	config := &smtpConfig{
-		Enabled:  true,
-		Host:     "smtp.example.com",
-		Port:     465,
-		Username: "",
-		Password: "",
-		FromName: "锚点财务",
-		FromAddr: "noreply@example.com",
+	var config smtpConfig
+	if err := json.Unmarshal([]byte(setting.Value), &config); err != nil {
+		return nil, fmt.Errorf("failed to parse email_config JSON: %w", err)
 	}
 
-	// 实际应该从setting.Value解析JSON
-	_ = setting.Value
-
-	return config, nil
+	return &config, nil
 }
 
 // sendViaSMTP 通过SMTP发送邮件
@@ -401,11 +394,12 @@ func (s *EmailEnhancedService) GetSupportConfig() (*EmailSupport, error) {
 		}, nil
 	}
 
-	config := &EmailSupport{}
-	// 实际应该从setting.Value解析JSON
-	_ = setting.Value
+	var config EmailSupport
+	if err := json.Unmarshal([]byte(setting.Value), &config); err != nil {
+		return nil, fmt.Errorf("failed to parse email_support JSON: %w", err)
+	}
 
-	return config, nil
+	return &config, nil
 }
 
 // UpdateSupportConfig 更新支持邮箱配置

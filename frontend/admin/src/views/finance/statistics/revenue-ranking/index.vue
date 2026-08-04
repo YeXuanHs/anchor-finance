@@ -176,7 +176,7 @@ const fetchComparison = async () => {
   comparisonLoading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/statistics/revenue-ranking/comparison',
+      url: '/api/admin/reports/revenue-ranking/comparison',
       params: { period: selectedPeriod.value }
     })
     comparisonData.value = data.items || []
