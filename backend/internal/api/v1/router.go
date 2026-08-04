@@ -45,6 +45,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	ticketHandler := handler.NewTicketHandler(deps.TicSvc, deps.Log)
 	cartHandler := handler.NewCartHandler(deps.CartSvc)
 
+	// ─── 文件上传 ───
+	uploadSvc := service.NewUploadService(deps.DB, deps.Log, "", "")
+	uploadHandler := handler.NewUploadHandler(uploadSvc, deps.Log)
+
 	// ─── V10云 ───
 	promoCodeSvcForV10Cloud := service.NewPromoCodeService(deps.DB, deps.Log)
 	v10CloudSvc := service.NewV10CloudService(deps.DB, deps.Log, deps.OrdSvc, promoCodeSvcForV10Cloud)
@@ -257,6 +261,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		auth.GET("/marketplace/messages/:listing_id/:user_id", marketplaceHandler.GetChatMessages)
 		auth.GET("/marketplace/chat-sessions", marketplaceHandler.GetChatSessions)
 		auth.GET("/marketplace/unread-count", marketplaceHandler.GetUnreadCount)
+
+		// 文件上传
+		auth.POST("/upload", uploadHandler.Upload)
 	}
 
 	// 公开接口（不需要登录）

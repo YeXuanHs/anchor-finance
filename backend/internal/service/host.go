@@ -580,3 +580,54 @@ func md5Sum(s string) string {
 	h.Write([]byte(s))
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
+
+// GetBillingInfo returns billing information for a host.
+func (s *HostService) GetBillingInfo(hostID uint) (map[string]interface{}, error) {
+	var host Host
+	if err := s.db.First(&host, hostID).Error; err != nil {
+		return nil, err
+	}
+
+	result := map[string]interface{}{
+		"host_id":     host.ID,
+		"hostname":    host.Hostname,
+		"ip":          host.IP,
+		"expired_at":  host.ExpiredAt,
+		"status":      host.Status,
+	}
+
+	// Get related invoice if exists
+	if host.OrderID != nil {
+		var invoice struct {
+			ID     uint    `json:"id"`
+			Total  float64 `json:"total"`
+			Status int     `json:"status"`
+		}
+		s.db.Table("invoices").
+			Select("id, total, status").
+			Where("order_id = ?", *host.OrderID).
+			Order("id DESC").
+			Limit(1).
+			Find(&invoice)
+		result["latest_invoice"] = invoice
+	}
+
+	return result, nil
+}
+
+// GetDownloadFiles returns download files for a host.
+func (s *HostService) GetDownloadFiles(hostID uint) ([]map[string]interface{}, error) {
+	var downloads []map[string]interface{}
+
+	// Get downloads from the downloads table
+	s.db.Table("downloads").
+		Where("host_id = ? OR product_id = (SELECT product_id FROM hosts WHERE id = ?)", hostID, hostID).
+		Find(&downloads)
+
+	return downloads, nil
+}
+
+// UpdateRemark updates the remark for a host.
+func (s *HostService) UpdateRemark(hostID uint, remark string) error {
+	return s.db.Model(&Host{}).Where("id = ?", hostID).Update("remark", remark).Error
+}

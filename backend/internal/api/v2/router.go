@@ -52,7 +52,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	hostSvc := service.NewHostService(deps.DB, log, upstreamSvc)
 	hostHandler := handler.NewHostHandler(hostSvc, log)
 
-	contactsSvc := service.NewClientContactService(deps.DB)
+	contactsSvc := service.NewContactService(deps.DB, log)
 	contactsHandler := handler.NewContactsHandler(contactsSvc, log)
 
 	promoCodeSvc := service.NewPromoCodeService(deps.DB, deps.Log)
@@ -217,6 +217,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/hosts", hostHandler.GetUserHosts)
 		user.GET("/hosts/:id", hostHandler.GetDetail)
 		user.GET("/hosts/:id/operations", hostHandler.GetOperations)
+		user.GET("/hosts/:id/billing", hostHandler.GetBilling)
+		user.GET("/hosts/:id/log", hostHandler.GetLog)
+		user.GET("/hosts/:id/download", hostHandler.GetDownload)
+		user.POST("/hosts/:id/remark", hostHandler.PostRemark)
 		user.POST("/hosts/:id/:action", hostHandler.PerformAction)
 
 		// 购物车
@@ -267,9 +271,12 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.POST("/credit/prepayment", creditHandler.Prepayment)
 		user.GET("/credit/bills", creditHandler.GetBills)
 		user.GET("/credit/bills/:id", creditHandler.GetBillDetail)
+		user.GET("/credit/bills/:id/repayments", creditHandler.GetBillRepayments)
 		user.POST("/credit/bills/:id/pay", creditHandler.PayBill)
 		user.GET("/credit/config", creditHandler.GetCreditConfig)
 		user.PUT("/credit/config", creditHandler.UpdateCreditConfig)
+		user.GET("/credit/used-detail", creditHandler.GetUsedDetail)
+		user.GET("/credit/used-summary", creditHandler.GetUsedSummary)
 
 		// 联系人
 		user.GET("/contacts", contactsHandler.GetList)
@@ -335,6 +342,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// 实名认证
 		user.GET("/certification/status", certHandler.GetStatus)
+		user.GET("/certification/enterprise", certHandler.GetEnterpriseCert)
 		user.POST("/certification/submit", certHandler.Submit)
 		user.POST("/certification/enterprise", certHandler.SubmitEnterprise)
 
@@ -436,5 +444,29 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.POST("/ssl/certificates/:id/install", sslCertHandler.Install)
 		user.POST("/ssl/certificates/:id/renew", sslCertHandler.Renew)
 		user.GET("/ssl/certificate-types", sslCertHandler.GetCertificateTypes)
+
+		// 用户服务管理（SMS、软件等）
+		userServicesHandler := handler.NewUserServicesHandler(deps.DB)
+		user.GET("/user/services/sms", userServicesHandler.GetSMSServices)
+		user.GET("/user/services/sms/records", userServicesHandler.GetSMSRecords)
+		user.GET("/user/services/software", userServicesHandler.GetSoftwareServices)
+		user.POST("/user/services/software/reset-key", userServicesHandler.PostSoftwareResetKey)
+
+		// DDoS管理
+		ddosHandler := handler.NewDDoSHandler(deps.DB)
+		user.GET("/user/ddos/ips", ddosHandler.GetIPs)
+		user.POST("/user/ddos/ips", ddosHandler.PostIP)
+		user.DELETE("/user/ddos/ips/:id", ddosHandler.DeleteIP)
+		user.GET("/user/ddos/ips/:id/rules", ddosHandler.GetIPRules)
+		user.POST("/user/ddos/ips/:id/toggle", ddosHandler.PostIPToggle)
+		user.DELETE("/user/ddos/rules/:id", ddosHandler.DeleteRule)
+		user.PUT("/user/ddos/rules/:id", ddosHandler.PutRule)
+		user.GET("/user/ddos/traffic", ddosHandler.GetTraffic)
+		user.GET("/user/ddos/overview", ddosHandler.GetOverview)
 	}
+
+	// 解决方案（公开）
+	publicSvc := service.NewPublicService(deps.DB, deps.Log)
+	publicHandler := handler.NewPublicHandler(publicSvc, deps.Log)
+	r.GET("/solutions", publicHandler.GetSolutions)
 }
