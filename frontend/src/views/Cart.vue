@@ -180,7 +180,7 @@ const getProductIcon = (type: string) => {
 const fetchCart = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/cart')
+    const { data } = await request.get('/api/v2/cart')
     if (data?.data) {
       cartItems.value = data.data.map((item: any) => ({
         ...item,
@@ -200,7 +200,7 @@ const fetchCart = async () => {
 // 更新购物车项
 const updateCartItem = async (item: CartItem) => {
   try {
-    await request.put(`/api/v1/cart/${item.id}`, {
+    await request.put(`/api/v2/cart/${item.id}`, {
       quantity: item.quantity,
       cycle: item.cycle
     })
@@ -226,7 +226,7 @@ const removeItem = async (index: number) => {
     })
     
     const item = cartItems.value[index]
-    await request.delete(`/api/v1/cart/${item.id}`)
+    await request.delete(`/api/v2/cart/${item.id}`)
     cartItems.value.splice(index, 1)
     ElMessage.success('删除成功')
   } catch (error) {

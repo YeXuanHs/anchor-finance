@@ -360,9 +360,9 @@ const handleAudit = async (row: any, targetStatus: number) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.put({
-      url: `/api/admin/invoices/${row.id}/status`,
-      params: { status: targetStatus }
+    await request.post({
+      url: `/api/admin/invoices/status/${targetStatus}`,
+      params: { id: row.id }
     })
     ElMessage.success(`发票${action}成功`)
     fetchInvoices()
@@ -378,10 +378,10 @@ const handleAuditFromDetail = async (targetStatus: number) => {
   const action = targetStatus === 1 ? '通过' : '驳回'
   auditLoading.value = true
   try {
-    await request.put({
-      url: `/api/admin/invoices/${detailData.value.id}/status`,
+    await request.post({
+      url: `/api/admin/invoices/status/${targetStatus}`,
       params: {
-        status: targetStatus,
+        id: detailData.value.id,
         remark: auditRemark.value || undefined
       }
     })
@@ -403,9 +403,9 @@ const handleIssue = async (row: any) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.put({
-      url: `/api/admin/invoices/${row.id}/status`,
-      params: { status: 2 }
+    await request.post({
+      url: '/api/admin/invoices/status/2',
+      params: { id: row.id }
     })
     ElMessage.success('开票成功')
     fetchInvoices()
@@ -424,10 +424,10 @@ const handleIssueFromDetail = async () => {
   }
   auditLoading.value = true
   try {
-    await request.put({
-      url: `/api/admin/invoices/${detailData.value.id}/status`,
+    await request.post({
+      url: '/api/admin/invoices/status/2',
       params: {
-        status: 2,
+        id: detailData.value.id,
         invoice_number: issueForm.invoice_number,
         issue_date: issueForm.issue_date || undefined
       }
@@ -445,9 +445,9 @@ const handleIssueFromDetail = async () => {
 // 作废发票
 const handleVoid = async (row: any) => {
   try {
-    await request.put({
-      url: `/api/admin/invoices/${row.id}/status`,
-      params: { status: 4 }
+    await request.post({
+      url: '/api/admin/invoices/status/4',
+      params: { id: row.id }
     })
     ElMessage.success('发票已作废')
     fetchInvoices()

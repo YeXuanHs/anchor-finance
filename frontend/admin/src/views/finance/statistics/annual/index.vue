@@ -206,7 +206,7 @@ const fetchStatistics = async () => {
   tableLoading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/statistics/annual',
+      url: '/api/admin/reports/year-income-statistics',
       params: {
         year: selectedYear.value,
         currency: selectedCurrency.value

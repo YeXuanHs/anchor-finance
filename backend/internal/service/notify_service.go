@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"anchorfinance/internal/model"
-	"anchorfinance/internal/plugin/mail"
+	"anchorfinance/pkg/email"
 	"anchorfinance/pkg/logger"
 
 	"gorm.io/gorm"
@@ -283,17 +283,8 @@ func (s *NotifyService) logNotification(ticketID uint, tid, channel, content str
 
 // sendEmail 发送邮件通知
 func (s *NotifyService) sendEmail(cfg NotifyConfig, subject, content string) bool {
-	smtpCfg := mail.SmtpConfig{
-		Host:        cfg.SMTPHost,
-		Port:        cfg.SMTPPort,
-		Username:    cfg.SMTPUser,
-		Password:    cfg.SMTPPass,
-		FromName:    "",
-		SystemEmail: cfg.SMTPFrom,
-		SmtpSecure:  "ssl",
-	}
-	sender := mail.NewSmtpSender(smtpCfg)
-	if err := sender.Send(cfg.NotifyEmail, subject, content, nil); err != nil {
+	sender := email.NewSender(s.db)
+	if err := sender.Send(cfg.NotifyEmail, subject, content); err != nil {
 		s.log.Errorf("邮件发送失败: %v", err)
 		return false
 	}

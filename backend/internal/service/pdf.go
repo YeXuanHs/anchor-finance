@@ -92,7 +92,7 @@ func (s *PDFService) GenerateContractPDF(contractID uint) ([]byte, error) {
 	}
 
 	systemName := "锚点财务"
-	s.db.Table("system_settings").Where("key = ?", "company_name").Select("value").Scan(&systemName)
+	s.db.Table("system_configs").Where("key = ?", "company_name").Select("value").Scan(&systemName)
 
 	pdfData := &ContractPDF{
 		ContractNo: contract.ContractNo,

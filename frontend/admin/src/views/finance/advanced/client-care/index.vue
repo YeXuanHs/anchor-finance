@@ -317,7 +317,7 @@ const fetchRules = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/client-care',
+      url: '/api/admin/client-care/rules',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -406,7 +406,7 @@ const fetchRecords = async () => {
 const handleDelete = async (row: any) => {
   try {
     await request.del({
-      url: `/api/admin/client-care/${row.id}`
+      url: `/api/admin/client-care/rules/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchRules()
@@ -424,7 +424,7 @@ const handleSubmit = async () => {
 
     submitLoading.value = true
     try {
-      const url = formData.id ? `/api/admin/client-care/${formData.id}` : '/api/admin/client-care'
+      const url = formData.id ? `/api/admin/client-care/rules/${formData.id}` : '/api/admin/client-care/rules'
 
       if (formData.id) {
         await request.put({ url, params: formData })

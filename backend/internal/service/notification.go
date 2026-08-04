@@ -96,7 +96,7 @@ func (s *NotificationService) getNotifyEmails() string {
 	var setting struct {
 		Value string
 	}
-	s.db.Table("system_settings").
+	s.db.Table("system_configs").
 		Where("`key` = ?", "notify_emails").
 		First(&setting)
 

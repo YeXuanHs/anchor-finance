@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"anchorfinance/internal/model"
+	"anchorfinance/internal/service"
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/response"
 
@@ -161,7 +162,7 @@ func (h *SettingHandler) SetMaintenanceMode(c *gin.Context) {
 
 	allowedIPsJSON, _ := json.Marshal(req.AllowedIPs)
 	configs := map[string]string{
-		"main_tenance_mode":            boolStr(req.Enabled),
+		"main_tenance_mode":            service.BoolStr(req.Enabled),
 		"main_tenance_mode_message":    req.Message,
 		"main_tenance_mode_allowed_ips": string(allowedIPsJSON),
 		"main_tenance_mode_start_time": req.StartTime,
@@ -549,11 +550,4 @@ func (h *SettingHandler) BackupDatabaseEmail(c *gin.Context) {
 func (h *SettingHandler) DeactivateEmail(c *gin.Context) {
 	h.db.Table("system_configs").Where("`key` = ?", "daily_email_backup_status").Update("value", "0")
 	response.SuccessMsg(c, "邮件备份已停用")
-}
-
-func boolStr(b bool) string {
-	if b {
-		return "true"
-	}
-	return "false"
 }

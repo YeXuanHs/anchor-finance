@@ -160,7 +160,7 @@ const fetchClientRanking = async () => {
   clientLoading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/statistics/revenue-ranking/clients',
+      url: '/api/admin/reports/revenue-ranking',
       params: { period: selectedPeriod.value }
     })
     clientRanking.value = data || []

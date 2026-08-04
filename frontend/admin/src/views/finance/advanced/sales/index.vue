@@ -332,7 +332,7 @@ const fetchRecords = async () => {
 const fetchSalesUsers = async () => {
   try {
     const data = await request.get({
-      url: '/api/admin/sales/users',
+      url: '/api/admin/sales/admin-list',
       params: { page: 1, page_size: 9999 }
     })
     salesUsers.value = data.list || []
@@ -346,7 +346,7 @@ const fetchSalesUserTable = async () => {
   salesUserLoading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/sales/users',
+      url: '/api/admin/sales',
       params: {
         page: salesUserPagination.page,
         page_size: salesUserPagination.page_size
@@ -421,7 +421,7 @@ const handleEditSalesUser = (row: any) => {
 const handleDeleteSalesUser = async (row: any) => {
   try {
     await request.del({
-      url: `/api/admin/sales/users/${row.id}`
+      url: `/api/admin/sales/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchSalesUserTable()
@@ -441,7 +441,7 @@ const handleSubmit = async () => {
 
     submitLoading.value = true
     try {
-      const url = formData.id ? `/api/admin/sales/users/${formData.id}` : '/api/admin/sales/users'
+      const url = formData.id ? `/api/admin/sales/${formData.id}` : '/api/admin/sales'
 
       if (formData.id) {
         await request.put({ url, params: formData })

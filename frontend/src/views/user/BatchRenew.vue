@@ -124,7 +124,7 @@ const handleBatchRenew = async () => {
     )
 
     submitting.value = true
-    await request.post('/api/v1/multi-renew', { host_ids: selectedProducts.value.map(p => p.id), cycle: renewCycle.value })
+    await request.post('/api/v2/multi-renew', { host_ids: selectedProducts.value.map(p => p.id), cycle: renewCycle.value })
     ElMessage.success('续费订单已创建')
   } catch {
     // 用户取消
@@ -134,7 +134,7 @@ const handleBatchRenew = async () => {
 }
 
 const loadProducts = async () => {
-  const res = await request.get('/api/v1/user/products', { params: { status: 'active' } })
+  const res = await request.get('/api/v2/user/products', { params: { status: 'active' } })
   products.value = res.data.data.list.map((p: any) => ({ ...p, renewCycle: 1 }))
 }
 

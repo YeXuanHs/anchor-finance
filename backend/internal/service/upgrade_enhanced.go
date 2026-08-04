@@ -258,7 +258,7 @@ func (s *UpgradeEnhancedService) UpgradeConfigCommon() (map[string]interface{}, 
 		Key   string
 		Value string
 	}
-	s.db.Table("system_settings").Where("key IN ?", []string{
+	s.db.Table("system_configs").Where("key IN ?", []string{
 		"upgrade_allow_downgrade",
 		"upgrade_prorate_credit",
 		"upgrade_cycle",

@@ -137,7 +137,7 @@ const loading = ref(false)
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v1/contacts')
+    const { data } = await request.get('/api/v2/contacts')
     if (data?.data) {
       addresses.value = data.data.list || data.data || []
     }

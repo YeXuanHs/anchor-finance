@@ -84,15 +84,15 @@ const editContact = (contact: any) => {
 
 const deleteContact = async (contact: any) => {
   await ElMessageBox.confirm('确定删除该联系人？', '提示', { type: 'warning' })
-  await request.delete(`/api/v1/contacts/${contact.id}`)
+    await request.delete(`/api/v2/contacts/${contact.id}`)
   ElMessage.success('删除成功')
 }
 
 const submitForm = async () => {
   if (editingContact.value) {
-    await request.put(`/api/v1/contacts/${form.value.id}`, form.value)
+    await request.put(`/api/v2/contacts/${form.value.id}`, form.value)
   } else {
-    await request.post('/api/v1/contacts', form.value)
+    await request.post('/api/v2/contacts', form.value)
   }
   ElMessage.success('保存成功')
   showAddDialog.value = false

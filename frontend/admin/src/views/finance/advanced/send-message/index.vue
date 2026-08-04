@@ -368,7 +368,7 @@ const fetchRecords = async () => {
   recordsLoading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/messages/records',
+      url: '/api/admin/messages/batch/records',
       params: {
         page: recordPagination.page,
         page_size: recordPagination.page_size,

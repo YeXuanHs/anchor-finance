@@ -144,7 +144,7 @@ const fetchStatistics = async () => {
       params.end_date = dateRange.value[1]
     }
     const data = await request.get({
-      url: '/api/admin/statistics/new-customers',
+      url: '/api/admin/reports/new-client-statistics',
       params
     })
     stats.new_clients = data.new_clients || 0

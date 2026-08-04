@@ -134,7 +134,7 @@ func (lc *LogCleaner) CleanExpired() (int64, error) {
 	var setting struct {
 		Value string
 	}
-	lc.db.Table("system_settings").
+	lc.db.Table("system_configs").
 		Where("`key` = ?", "audit_log_retention_days").
 		First(&setting)
 

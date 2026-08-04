@@ -212,7 +212,7 @@ const confirmBindHost = async () => {
   }
   submitting.value = true
   try {
-    await request.post(`/api/v1/contracts/${currentContract.value?.id}/bind-hosts`, {
+    await request.post(`/api/v2/contracts/${currentContract.value?.id}/bind-hosts`, {
       host_ids: selectedHosts.value
     })
     ElMessage.success('主机关联成功')
@@ -232,7 +232,7 @@ const unbindHost = async (contract: Contract, host: Host) => {
       '确认解绑',
       { type: 'warning' }
     )
-    await request.post(`/api/v1/contracts/${contract.id}/unbind-host`, {
+    await request.post(`/api/v2/contracts/${contract.id}/unbind-host`, {
       host_id: host.id
     })
     contract.hosts = contract.hosts.filter(h => h.id !== host.id)
@@ -246,7 +246,7 @@ const unbindHost = async (contract: Contract, host: Host) => {
 
 const loadContracts = async () => {
   try {
-    const { data } = await request.get('/api/v1/contracts')
+    const { data } = await request.get('/api/v2/contracts')
     contracts.value = data?.data?.list || data?.data?.items || data?.data || []
   } catch {
     contracts.value = []
@@ -255,7 +255,7 @@ const loadContracts = async () => {
 
 const loadAvailableHosts = async () => {
   try {
-    const { data } = await request.get('/api/v1/user/products')
+    const { data } = await request.get('/api/v2/user/products')
     availableHosts.value = data?.data?.list || data?.data?.items || data?.data || []
   } catch {
     availableHosts.value = []

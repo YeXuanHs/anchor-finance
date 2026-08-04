@@ -168,7 +168,7 @@ const fetchNews = async () => {
 
 const fetchCategories = async () => {
   try {
-    const { data } = await request.get('/api/v1/news/categories')
+    const { data } = await request.get('/api/v2/news/categories')
     if (data?.data) {
       categories.value = data.data
     }

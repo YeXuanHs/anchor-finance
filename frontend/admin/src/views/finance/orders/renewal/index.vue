@@ -176,7 +176,7 @@ const fetchData = async () => {
       params.end_date = searchForm.date_range[1]
     }
     const data = await request.get({
-      url: '/api/admin/renewal/list',
+      url: '/api/admin/multi-renew',
       params
     })
     tableData.value = data.list || []
@@ -245,7 +245,7 @@ const handleBatchRenewal = async () => {
     await ElMessageBox.confirm(`确定批量续费 ${selectedRows.value.length} 个订单吗？`, '批量续费确认')
     const ids = selectedRows.value.map(r => r.id)
     await request.post({
-      url: '/api/admin/renewal/multi-renew',
+      url: '/api/admin/multi-renew',
       params: { ids }
     })
     ElMessage.success('批量续费成功')

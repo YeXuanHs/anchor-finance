@@ -167,7 +167,7 @@ async function handleSubmit() {
     if (valid) {
       submitting.value = true
       try {
-        await request.post('/api/v1/invoices/apply', {
+        await request.post('/api/v2/vouchers', {
           invoiceType: form.invoiceType,
           orderIds: form.orderIds,
           title: form.title,

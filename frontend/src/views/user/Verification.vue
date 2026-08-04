@@ -165,7 +165,7 @@ async function handleSubmit() {
     formData.append('idNumber', form.idNumber)
     if (form.idFront) formData.append('idFront', form.idFront)
     if (form.idBack) formData.append('idBack', form.idBack)
-    await request.post('/api/v1/certification/submit', formData)
+    await request.post('/api/v2/certification/submit', formData)
     ElMessage.success('认证信息已提交，请等待审核')
   } catch (e: any) { ElMessage.error(e?.message || '提交失败，请重试') } finally { submitting.value = false }
 }

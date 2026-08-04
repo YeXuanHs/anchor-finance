@@ -100,7 +100,7 @@ const handleUploadSuccess = (response: any) => {
 
 const fetchProducts = async () => {
   try {
-    const { data } = await request.get('/api/v1/user/products')
+    const { data } = await request.get('/api/v2/user/products')
     if (data?.data) {
       products.value = data.data
     }

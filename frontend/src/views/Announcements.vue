@@ -141,7 +141,7 @@ const announcements = ref<Announcement[]>([])
 async function fetchAnnouncements() {
   loading.value = true
   try {
-    const res = await request.get('/api/v1/announcements')
+    const res = await request.get('/api/v2/announcements')
     announcements.value = res.data?.data || res.data || []
   } catch { /* ignore */ }
   loading.value = false

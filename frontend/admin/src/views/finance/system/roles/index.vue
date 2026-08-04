@@ -188,7 +188,7 @@ const fetchRoles = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/roles',
+      url: '/api/admin/rbac/roles',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -241,7 +241,7 @@ const handleEdit = (row: Role) => {
 const handleDelete = async (row: Role) => {
   try {
     await request.del({
-      url: `/api/admin/roles/${row.id}`
+      url: `/api/admin/rbac/roles/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchRoles()
@@ -261,7 +261,7 @@ const handleSubmit = async () => {
     try {
       if (formData.id) {
         await request.put({
-          url: `/api/admin/roles/${formData.id}`,
+          url: `/api/admin/rbac/roles/${formData.id}`,
           params: {
             name: formData.name,
             description: formData.description,
@@ -271,7 +271,7 @@ const handleSubmit = async () => {
         })
       } else {
         await request.post({
-          url: '/api/admin/roles',
+          url: '/api/admin/rbac/roles',
           params: {
             name: formData.name,
             description: formData.description,
@@ -301,7 +301,7 @@ const handlePermission = async (row: Role) => {
   try {
     const [treeData, checkedData] = await Promise.all([
       request.get({ url: '/api/admin/rbac/permissions' }),
-      request.get({ url: `/api/admin/roles/${row.id}/permissions` })
+      request.get({ url: `/api/admin/rbac/roles/${row.id}/permissions` })
     ])
     permissionTree.value = treeData || []
     await nextTick()
@@ -380,7 +380,7 @@ const handleSavePermission = async () => {
     const permissionIds = [...checkedKeys, ...halfCheckedKeys]
 
     await request.put({
-      url: `/api/admin/roles/${currentRole.id}/permissions`,
+      url: `/api/admin/rbac/roles/${currentRole.id}/permissions`,
       params: { permission_ids: permissionIds },
       showSuccessMessage: true
     })

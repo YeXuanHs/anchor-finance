@@ -129,7 +129,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	// 系统设置（公开部分）
 	r.GET("/system/settings", func(c *gin.Context) {
 		var settings []struct{ Key, Value string }
-		deps.DB.Table("system_settings").Where("key IN ?", []string{
+		deps.DB.Table("system_configs").Where("key IN ?", []string{
 			"company_name", "company_email", "main_phone", "main_address",
 			"record_no", "logo_url", "favicon_url",
 		}).Find(&settings)

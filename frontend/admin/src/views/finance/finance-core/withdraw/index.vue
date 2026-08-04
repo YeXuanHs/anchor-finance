@@ -324,7 +324,7 @@ const fetchWithdraws = async () => {
     }
 
     const data = await request.get({
-      url: '/api/admin/withdraws',
+      url: '/api/admin/affiliate/withdraw-records',
       params
     })
     tableData.value = data.list || []
@@ -394,7 +394,7 @@ const handleSubmitReview = async () => {
     submitLoading.value = true
     try {
       await request.put({
-        url: `/api/admin/withdraws/${reviewForm.id}/review`,
+        url: `/api/admin/affiliate/withdraws/${reviewForm.id}/process`,
         params: {
           action: reviewForm.action,
           review_remark: reviewForm.review_remark
@@ -422,7 +422,7 @@ const handleSubmitPay = async () => {
   submitLoading.value = true
   try {
     await request.put({
-      url: `/api/admin/withdraws/${payForm.id}/review`,
+      url: `/api/admin/affiliate/withdraws/${payForm.id}/process`,
       params: {
         action: 'paid',
         payment凭证: payForm.payment凭证,

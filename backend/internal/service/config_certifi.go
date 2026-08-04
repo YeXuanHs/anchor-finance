@@ -69,17 +69,17 @@ func (s *ConfigCertifiService) GetConfig() (*CertificationConfig, error) {
 
 func (s *ConfigCertifiService) UpdateConfig(req CertificationConfig) error {
 	configs := map[string]string{
-		"certifi_force_certify":      boolStr(req.ForceCertify),
+		"certifi_force_certify":      BoolStr(req.ForceCertify),
 		"certifi_allow_type":         req.AllowType,
-		"certifi_enable_individual":  boolStr(req.EnableIndividual),
-		"certifi_enable_enterprise":  boolStr(req.EnableEnterprise),
-		"certifi_require_id_card":    boolStr(req.RequireIDCard),
-		"certifi_require_hand_image": boolStr(req.RequireHandImage),
+		"certifi_enable_individual":  BoolStr(req.EnableIndividual),
+		"certifi_enable_enterprise":  BoolStr(req.EnableEnterprise),
+		"certifi_require_id_card":    BoolStr(req.RequireIDCard),
+		"certifi_require_hand_image": BoolStr(req.RequireHandImage),
 		"certifi_max_review_days":    intStr(req.MaxReviewDays),
-		"certifi_auto_approve":       boolStr(req.AutoApprove),
+		"certifi_auto_approve":       BoolStr(req.AutoApprove),
 		"certifi_certify_notice":     req.CertifyNotice,
 		"certifi_review_template":    req.ReviewTemplate,
-		"certifi_allow_resubmit":     boolStr(req.AllowResubmit),
+		"certifi_allow_resubmit":     BoolStr(req.AllowResubmit),
 		"certifi_resubmit_limit":     intStr(req.ResubmitLimit),
 	}
 

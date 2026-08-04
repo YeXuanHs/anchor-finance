@@ -139,7 +139,7 @@ const fetchRanking = async () => {
       params.end_date = dateRange.value[1]
     }
     const data = await request.get({
-      url: '/api/admin/statistics/product-revenue/ranking',
+      url: '/api/admin/reports/product-income',
       params
     })
     productRanking.value = data || []

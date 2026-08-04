@@ -249,7 +249,7 @@ const fetchPricingList = async () => {
   loading.value = true
   try {
     const data = await request.get({
-      url: '/api/admin/pricing',
+      url: '/api/admin/products',
       params: {
         page: pagination.page,
         page_size: pagination.page_size,
@@ -318,7 +318,7 @@ const handleEdit = (row: any) => {
 const handleToggleStatus = async (row: any) => {
   try {
     await request.put({
-      url: `/api/admin/pricing/${row.id}`,
+      url: `/api/admin/products/${row.id}`,
       params: { status: row.status === 1 ? 0 : 1 }
     })
     ElMessage.success(row.status === 1 ? '已禁用' : '已启用')
@@ -332,7 +332,7 @@ const handleToggleStatus = async (row: any) => {
 const handleDelete = async (row: any) => {
   try {
     await request.del({
-      url: `/api/admin/pricing/${row.id}`
+      url: `/api/admin/products/${row.id}`
     })
     ElMessage.success('删除成功')
     fetchPricingList()
@@ -350,7 +350,7 @@ const handleSubmit = async () => {
 
     submitLoading.value = true
     try {
-      const url = formData.id ? `/api/admin/pricing/${formData.id}` : '/api/admin/pricing'
+      const url = formData.id ? `/api/admin/products/${formData.id}` : '/api/admin/products'
 
       if (formData.id) {
         await request.put({ url, params: formData })

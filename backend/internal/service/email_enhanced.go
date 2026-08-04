@@ -293,7 +293,7 @@ func (s *EmailEnhancedService) getSMTPConfig() (*smtpConfig, error) {
 	var setting struct {
 		Value string
 	}
-	err := s.db.Table("system_settings").Where("key = ?", "email_config").Select("value").First(&setting).Error
+	err := s.db.Table("system_configs").Where("key = ?", "email_config").Select("value").First(&setting).Error
 	if err != nil {
 		return nil, err
 	}
@@ -391,7 +391,7 @@ func (s *EmailEnhancedService) GetSupportConfig() (*EmailSupport, error) {
 	var setting struct {
 		Value string
 	}
-	err := s.db.Table("system_settings").Where("key = ?", "email_support").Select("value").First(&setting).Error
+	err := s.db.Table("system_configs").Where("key = ?", "email_support").Select("value").First(&setting).Error
 	if err != nil {
 		return &EmailSupport{
 			SupportEmail: "support@example.com",
@@ -412,7 +412,7 @@ func (s *EmailEnhancedService) GetSupportConfig() (*EmailSupport, error) {
 
 // UpdateSupportConfig 更新支持邮箱配置
 func (s *EmailEnhancedService) UpdateSupportConfig(config *EmailSupport) error {
-	return s.db.Table("system_settings").Where("key = ?", "email_support").
+	return s.db.Table("system_configs").Where("key = ?", "email_support").
 		Assign(map[string]interface{}{"value": fmt.Sprintf(`{"support_email":"%s","sales_email":"%s","abuse_email":"%s","billing_email":"%s","no_reply_email":"%s","no_reply_name":"%s"}`,
 			config.SupportEmail, config.SalesEmail, config.AbuseEmail, config.BillingEmail, config.NoReplyEmail, config.NoReplyName)}).
 		FirstOrCreate(&struct{ Key, Value string }{}).Error

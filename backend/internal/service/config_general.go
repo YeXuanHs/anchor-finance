@@ -118,8 +118,8 @@ func (s *ConfigGeneralService) UpdateConfig(req GeneralConfig) error {
 		"privacy_url":      req.PrivacyURL,
 		"homepage_title":   req.HomepageTitle,
 		"homepage_desc":    req.HomepageDesc,
-		"open_register":    boolStr(req.OpenRegister),
-		"verify_email":     boolStr(req.VerifyEmail),
+		"open_register":    BoolStr(req.OpenRegister),
+		"verify_email":     BoolStr(req.VerifyEmail),
 		"default_lang":     req.DefaultLang,
 		"default_theme":    req.DefaultTheme,
 		"custom_css":       req.CustomCSS,
@@ -146,7 +146,7 @@ func (s *ConfigGeneralService) UpdateConfig(req GeneralConfig) error {
 	})
 }
 
-func boolStr(b bool) string {
+func BoolStr(b bool) string {
 	if b {
 		return "true"
 	}
@@ -330,9 +330,9 @@ func (s *ConfigGeneralService) UpdateSafeConfig(req SafeConfig) error {
 		"safe_max_login_attempts": intStr(req.MaxLoginAttempts),
 		"safe_lock_minutes":       intStr(req.LockMinutes),
 		"safe_ip_whitelist":       string(wlJSON),
-		"safe_force_2fa":          boolStr(req.Force2FA),
-		"safe_captcha_login":      boolStr(req.CaptchaLogin),
-		"safe_captcha_register":   boolStr(req.CaptchaRegister),
+		"safe_force_2fa":          BoolStr(req.Force2FA),
+		"safe_captcha_login":      BoolStr(req.CaptchaLogin),
+		"safe_captcha_register":   BoolStr(req.CaptchaRegister),
 	}
 	return s.saveConfigMap(configs, "safe")
 }
@@ -381,7 +381,7 @@ func (s *ConfigGeneralService) UpdateRechargeConfig(req RechargeConfig) error {
 		"recharge_min_amount":    fmt.Sprintf("%.2f", req.MinAmount),
 		"recharge_max_amount":    fmt.Sprintf("%.2f", req.MaxAmount),
 		"recharge_fixed_amounts": string(fixedJSON),
-		"recharge_auto_approve":  boolStr(req.AutoApprove),
+		"recharge_auto_approve":  BoolStr(req.AutoApprove),
 	}
 	return s.saveConfigMap(configs, "recharge")
 }
@@ -422,9 +422,9 @@ func (s *ConfigGeneralService) GetInvoiceConfig() (*InvoiceConfig, error) {
 func (s *ConfigGeneralService) UpdateInvoiceConfig(req InvoiceConfig) error {
 	configs := map[string]string{
 		"invoice_prefix":         req.InvoicePrefix,
-		"invoice_auto_generate":  boolStr(req.AutoGenerate),
+		"invoice_auto_generate":  BoolStr(req.AutoGenerate),
 		"invoice_tax_rate":       fmt.Sprintf("%.2f", req.TaxRate),
-		"invoice_title_required": boolStr(req.TitleRequired),
+		"invoice_title_required": BoolStr(req.TitleRequired),
 	}
 	return s.saveConfigMap(configs, "invoice")
 }
@@ -473,10 +473,10 @@ func (s *ConfigGeneralService) GetRegisterConfig() (*RegisterConfig, error) {
 func (s *ConfigGeneralService) UpdateRegisterConfig(req RegisterConfig) error {
 	fieldsJSON, _ := json.Marshal(req.ShowFields)
 	configs := map[string]string{
-		"register_enable":       boolStr(req.EnableRegister),
-		"register_email_verify": boolStr(req.EmailVerify),
-		"register_phone_verify": boolStr(req.PhoneVerify),
-		"register_captcha":      boolStr(req.Captcha),
+		"register_enable":       BoolStr(req.EnableRegister),
+		"register_email_verify": BoolStr(req.EmailVerify),
+		"register_phone_verify": BoolStr(req.PhoneVerify),
+		"register_captcha":      BoolStr(req.Captcha),
 		"register_show_fields":  string(fieldsJSON),
 	}
 	return s.saveConfigMap(configs, "register")
@@ -521,8 +521,8 @@ func (s *ConfigGeneralService) UpdateLoginConfig(req LoginConfig) error {
 	methodsJSON, _ := json.Marshal(req.Methods)
 	configs := map[string]string{
 		"login_methods":     string(methodsJSON),
-		"login_captcha":     boolStr(req.Captcha),
-		"login_remember_me": boolStr(req.RememberMe),
+		"login_captcha":     BoolStr(req.Captcha),
+		"login_remember_me": BoolStr(req.RememberMe),
 	}
 	return s.saveConfigMap(configs, "login")
 }
@@ -565,7 +565,7 @@ func (s *ConfigGeneralService) GetAPIConfig() (*APIConfig, error) {
 func (s *ConfigGeneralService) UpdateAPIConfig(req APIConfig) error {
 	ipsJSON, _ := json.Marshal(req.AllowedIPs)
 	configs := map[string]string{
-		"api_enable":      boolStr(req.EnableAPI),
+		"api_enable":      BoolStr(req.EnableAPI),
 		"api_rate_limit":  intStr(req.RateLimit),
 		"api_allowed_ips": string(ipsJSON),
 	}
@@ -615,7 +615,7 @@ func (s *ConfigGeneralService) UpdateTwoFactorConfig(req TwoFactorConfig) error 
 	methodsJSON, _ := json.Marshal(req.Methods)
 	rolesJSON, _ := json.Marshal(req.ForcedRoles)
 	configs := map[string]string{
-		"twofactor_enable":       boolStr(req.Enable),
+		"twofactor_enable":       BoolStr(req.Enable),
 		"twofactor_methods":      string(methodsJSON),
 		"twofactor_forced_roles": string(rolesJSON),
 	}
@@ -636,7 +636,7 @@ func (s *ConfigGeneralService) GetDebugMode() (bool, error) {
 }
 
 func (s *ConfigGeneralService) SetDebugMode(enabled bool) error {
-	return s.saveSingleKey("debug_mode", boolStr(enabled), "system")
+	return s.saveSingleKey("debug_mode", BoolStr(enabled), "system")
 }
 
 // ==================== SMTP Test ====================
@@ -778,14 +778,14 @@ func (s *ConfigGeneralService) GetPaymentConfig() (*PaymentConfig, error) {
 
 func (s *ConfigGeneralService) UpdatePaymentConfig(req PaymentConfig) error {
 	configs := map[string]string{
-		"payment_alipay_enabled":     boolStr(req.AlipayEnabled),
-		"payment_wechat_enabled":     boolStr(req.WechatEnabled),
+		"payment_alipay_enabled":     BoolStr(req.AlipayEnabled),
+		"payment_wechat_enabled":     BoolStr(req.WechatEnabled),
 		"payment_alipay_app_id":      req.AlipayAppID,
 		"payment_alipay_private_key": req.AlipayPrivateKey,
 		"payment_wechat_app_id":      req.WechatAppID,
 		"payment_wechat_mch_id":      req.WechatMchID,
 		"payment_wechat_api_key":     req.WechatAPIKey,
-		"payment_auto_invoice":       boolStr(req.AutoInvoice),
+		"payment_auto_invoice":       BoolStr(req.AutoInvoice),
 	}
 	return s.saveConfigMap(configs, "payment")
 }
@@ -839,7 +839,7 @@ func (s *ConfigGeneralService) UpdateSmsConfig(req SmsConfig) error {
 		"sms_template_code":  req.TemplateCode,
 		"sms_daily_limit":    intStr(req.DailyLimit),
 		"sms_phone_limit":    intStr(req.PhoneLimit),
-		"sms_enabled":        boolStr(req.Enabled),
+		"sms_enabled":        BoolStr(req.Enabled),
 	}
 	return s.saveConfigMap(configs, "sms")
 }
@@ -939,8 +939,8 @@ func (s *ConfigGeneralService) UpdateLocalConfig(req LocalConfig) error {
 		"client_date_format": req.ClientDateFormat,
 		"default_country":    req.DefaultCountry,
 		"language":           req.Language,
-		"allow_user_language": boolStr(req.AllowUserLanguage),
-		"tel_cc_input":       boolStr(req.TelCCInput),
+		"allow_user_language": BoolStr(req.AllowUserLanguage),
+		"tel_cc_input":       BoolStr(req.TelCCInput),
 	}
 	return s.saveConfigMap(configs, "local")
 }

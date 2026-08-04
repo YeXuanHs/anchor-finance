@@ -81,7 +81,7 @@ type systemSetting struct {
 }
 
 func (systemSetting) TableName() string {
-	return "system_settings"
+	return "system_configs"
 }
 
 // GetSystemSetting reads a single setting value from the database.
