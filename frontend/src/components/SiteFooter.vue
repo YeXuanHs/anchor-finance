@@ -83,7 +83,7 @@ const currentYear = computed(() => new Date().getFullYear())
 const siteSettings = ref({
   contact_phone: '',
   contact_email: '',
-  site_name: '锚点财务'
+  site_name: ''
 })
 
 const fetchSiteSettings = async () => {

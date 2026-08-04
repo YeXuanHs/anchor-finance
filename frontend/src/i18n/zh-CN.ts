@@ -1077,7 +1077,7 @@ export default {
     pleaseEnterCorrectPhone: '请输入正确的手机号'
   },
   landing: {
-    brandName: '锚点财务',
+    brandName: '',
     announcement: '公告',
     login: '登录',
     freeRegister: '免费注册',
@@ -1226,7 +1226,7 @@ export default {
     productDetail: '产品详情'
   },
   userLayout: {
-    brandName: '锚点财务',
+    brandName: '',
     normalUser: '普通用户',
     userCenter: '用户中心'
   },
