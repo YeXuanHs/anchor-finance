@@ -31,12 +31,12 @@ type TransactionStore interface {
 
 // InvoiceStore defines the interface for accessing invoices.
 type InvoiceStore interface {
-	GetInvoice(invoiceID string) (*Invoice, error)
+	GetInvoice(invoiceID string) (*PaymentInvoice, error)
 	UpdateInvoiceStatus(invoiceID, status string) error
 }
 
-// Invoice represents an invoice record.
-type Invoice struct {
+// PaymentInvoice represents an invoice record for payment operations.
+type PaymentInvoice struct {
 	ID     string
 	UserID string
 	Amount float64

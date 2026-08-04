@@ -148,7 +148,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// 账单增强功能
 		invoiceEnhancedSvc := service.NewInvoiceEnhancedService(deps.DB, deps.Log)
-		emailEnhancedSvc := service.NewEmailEnhancedService(deps.DB)
+		emailEnhancedSvc := service.NewEmailEnhancedService(deps.DB, deps.Log)
 		invoiceEnhancedHandler := handler.NewInvoiceEnhancedHandler(invoiceEnhancedSvc, emailEnhancedSvc, deps.Log)
 
 		// 静态路由（必须在 /invoices/:id 之前）
@@ -1975,7 +1975,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/contracts/:id/pdf/seal", pdfHandler.GenerateContractWithSeal)
 
 		// ==================== 邮件增强 ====================
-		emailEnhancedSvc := service.NewEmailEnhancedService(deps.DB)
+		emailEnhancedSvc := service.NewEmailEnhancedService(deps.DB, deps.Log)
 		emailEnhancedHandler := handler.NewEmailEnhancedHandler(emailEnhancedSvc)
 		admin.POST("/email/test", emailEnhancedHandler.SendTestEmail)
 		admin.POST("/email/batch", emailEnhancedHandler.SendBatchEmail)

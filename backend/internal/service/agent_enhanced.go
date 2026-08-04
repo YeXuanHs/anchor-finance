@@ -750,16 +750,16 @@ func (s *AgentEnhancedService) GetPerformanceChart(period string) (map[string]in
 	switch period {
 	case "week":
 		startTime = now.AddDate(0, 0, -7)
-		format = "2006-01-02"
+		format = "%Y-%m-%d"
 	case "month":
 		startTime = now.AddDate(0, -1, 0)
-		format = "2006-01-02"
+		format = "%Y-%m-%d"
 	case "year":
 		startTime = now.AddDate(-1, 0, 0)
-		format = "2006-01"
+		format = "%Y-%m"
 	default:
 		startTime = now.AddDate(0, -1, 0)
-		format = "2006-01-02"
+		format = "%Y-%m-%d"
 	}
 
 	type dailyData struct {
@@ -774,7 +774,7 @@ func (s *AgentEnhancedService) GetPerformanceChart(period string) (map[string]in
 	// Aggregate orders by date
 	rows, err := s.db.Model(&model.Order{}).
 		Where("paid_at >= ?", startTime).
-		Select("DATE_FORMAT(paid_at, ? as date, COALESCE(SUM(amount), 0) as sales, COUNT(*) as orders", format).
+		Select("DATE_FORMAT(paid_at, ?) as date, COALESCE(SUM(amount), 0) as sales, COUNT(*) as orders", format).
 		Group("date").
 		Order("date ASC").
 		Rows()
@@ -796,7 +796,7 @@ func (s *AgentEnhancedService) GetPerformanceChart(period string) (map[string]in
 	// Aggregate new agents by date
 	agentRows, err := s.db.Model(&model.Agent{}).
 		Where("created_at >= ?", startTime).
-		Select("DATE_FORMAT(created_at, ? as date, COUNT(*) as cnt", format).
+		Select("DATE_FORMAT(created_at, ?) as date, COUNT(*) as cnt", format).
 		Group("date").
 		Order("date ASC").
 		Rows()

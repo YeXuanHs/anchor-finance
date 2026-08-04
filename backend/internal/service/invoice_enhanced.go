@@ -72,13 +72,14 @@ type InvoiceSearchFilters struct {
 
 // InvoiceEnhancedService 账单增强服务
 type InvoiceEnhancedService struct {
-	db  *gorm.DB
-	log *logger.Logger
+	db        *gorm.DB
+	log       *logger.Logger
+	emailSvc  *EmailEnhancedService
 }
 
 // NewInvoiceEnhancedService creates a new InvoiceEnhancedService.
 func NewInvoiceEnhancedService(db *gorm.DB, log *logger.Logger) *InvoiceEnhancedService {
-	return &InvoiceEnhancedService{db: db, log: log}
+	return &InvoiceEnhancedService{db: db, log: log, emailSvc: NewEmailEnhancedService(db, log)}
 }
 
 // ==================== Status Filters ====================
@@ -463,6 +464,17 @@ func (s *InvoiceEnhancedService) SendInvoiceEmail(invoiceID uint, email string) 
 			return errors.New("user email not found")
 		}
 		email = user.Email
+	}
+
+	// 发送账单邮件
+	templateData := map[string]interface{}{
+		"invoice_no": inv.InvoiceNo,
+		"amount":     fmt.Sprintf("%.2f", inv.Amount),
+		"status":     inv.Status,
+	}
+	if err := s.emailSvc.SendEmailWithTemplate(email, "invoice_notification", templateData); err != nil {
+		s.log.Errorf("failed to send invoice email: %v", err)
+		return err
 	}
 
 	// 记录邮件发送日志
