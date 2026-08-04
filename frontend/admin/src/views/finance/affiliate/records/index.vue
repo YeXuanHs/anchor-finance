@@ -327,7 +327,7 @@ const handleConfirm = async (row: any) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.put({
+    await request.post({
       url: `/api/admin/affiliate/records/${row.id}/confirm`,
       params: { status: 1 }
     })
@@ -348,7 +348,7 @@ const handleReject = async (row: any) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.put({
+    await request.post({
       url: `/api/admin/affiliate/records/${row.id}/confirm`,
       params: { status: 2 }
     })
@@ -365,7 +365,7 @@ const handleReject = async (row: any) => {
 const handleConfirmFromDetail = async () => {
   actionLoading.value = true
   try {
-    await request.put({
+    await request.post({
       url: `/api/admin/affiliate/records/${detailData.value.id}/confirm`,
       params: {
         status: 1,
@@ -386,7 +386,7 @@ const handleConfirmFromDetail = async () => {
 const handleRejectFromDetail = async () => {
   actionLoading.value = true
   try {
-    await request.put({
+    await request.post({
       url: `/api/admin/affiliate/records/${detailData.value.id}/confirm`,
       params: {
         status: 2,

@@ -46,7 +46,7 @@ const handleSelectionChange = (val: any[]) => { selected.value = val }
 const fetchInvoices = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v2/user/invoices', { params: { status: 'unpaid', page_size: 100 } })
+    const { data } = await request.get('/api/v2/invoices', { params: { status: 'unpaid', page_size: 100 } })
     unpaidInvoices.value = data.data || []
   } catch {} finally { loading.value = false }
 }
@@ -55,7 +55,7 @@ const handleCombine = async () => {
   submitting.value = true
   try {
     const ids = selected.value.map(i => i.id)
-    const { data } = await request.post('/api/v2/user/invoices/combine', { invoice_ids: ids })
+    const { data } = await request.post('/api/v2/invoices/combine', { invoice_ids: ids })
     ElMessage.success('合并成功')
     router.push(`/user/orders/${data.data.order_id}`)
   } catch { ElMessage.error('合并失败') } finally { submitting.value = false }

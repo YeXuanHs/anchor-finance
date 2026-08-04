@@ -360,7 +360,7 @@ const handleAudit = async (row: any, targetStatus: number) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.post({
+    await request.get({
       url: `/api/admin/invoices/status/${targetStatus}`,
       params: { id: row.id }
     })
@@ -378,7 +378,7 @@ const handleAuditFromDetail = async (targetStatus: number) => {
   const action = targetStatus === 1 ? '通过' : '驳回'
   auditLoading.value = true
   try {
-    await request.post({
+    await request.get({
       url: `/api/admin/invoices/status/${targetStatus}`,
       params: {
         id: detailData.value.id,
@@ -403,7 +403,7 @@ const handleIssue = async (row: any) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.post({
+    await request.get({
       url: '/api/admin/invoices/status/2',
       params: { id: row.id }
     })
@@ -424,7 +424,7 @@ const handleIssueFromDetail = async () => {
   }
   auditLoading.value = true
   try {
-    await request.post({
+    await request.get({
       url: '/api/admin/invoices/status/2',
       params: {
         id: detailData.value.id,
@@ -445,7 +445,7 @@ const handleIssueFromDetail = async () => {
 // 作废发票
 const handleVoid = async (row: any) => {
   try {
-    await request.post({
+    await request.get({
       url: '/api/admin/invoices/status/4',
       params: { id: row.id }
     })

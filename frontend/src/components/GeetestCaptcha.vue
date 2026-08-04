@@ -57,7 +57,7 @@ async function initGeetest() {
     await loadGeetestScript()
 
     // 获取配置
-    const res = await request.get('/api/v1/captcha/geetest/config')
+    const res = await request.get('/api/v1/geetest/register')
     const config: GeetestConfig = res.data
 
     if (!config.enabled || !config.captcha_id) {

@@ -393,7 +393,7 @@ const handleSubmitReview = async () => {
 
     submitLoading.value = true
     try {
-      await request.put({
+      await request.post({
         url: `/api/admin/affiliate/withdraws/${reviewForm.id}/process`,
         params: {
           action: reviewForm.action,
@@ -421,7 +421,7 @@ const handleSubmitPay = async () => {
 
   submitLoading.value = true
   try {
-    await request.put({
+    await request.post({
       url: `/api/admin/affiliate/withdraws/${payForm.id}/process`,
       params: {
         action: 'paid',

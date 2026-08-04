@@ -589,7 +589,7 @@ async function fetchServiceDetail() {
 
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v2/host/${id}`)
+    const { data } = await request.get(`/api/v2/hosts/${id}`)
     if (data?.data) {
       serviceInfo.value = data.data
       remarkValue.value = data.data.remark || ''
@@ -608,7 +608,7 @@ async function fetchBilling() {
 
   billingLoading.value = true
   try {
-    const { data } = await request.get(`/api/v2/host/${id}/billing`, {
+    const { data } = await request.get(`/api/v2/hosts/${id}/billing`, {
       params: {
         page: billingPage.value,
         limit: billingPageSize.value
@@ -632,7 +632,7 @@ async function fetchLog() {
 
   logLoading.value = true
   try {
-    const { data } = await request.get(`/api/v2/host/${id}/log`, {
+    const { data } = await request.get(`/api/v2/hosts/${id}/log`, {
       params: {
         page: logPage.value,
         limit: logPageSize.value
@@ -656,7 +656,7 @@ async function fetchDownload() {
 
   downloadLoading.value = true
   try {
-    const { data } = await request.get(`/api/v2/host/${id}/download`)
+    const { data } = await request.get(`/api/v2/hosts/${id}/download`)
     if (data?.data) {
       downloadList.value = data.data || []
     }
@@ -692,7 +692,7 @@ async function submitRemark() {
 
   remarkLoading.value = true
   try {
-    await request.post(`/api/v2/host/${id}/remark`, {
+    await request.post(`/api/v2/hosts/${id}/remark`, {
       remark: remarkValue.value
     })
     serviceInfo.value.remark = remarkValue.value
@@ -756,7 +756,7 @@ async function fetchUpgradePlans() {
 
   upgradeLoading.value = true
   try {
-    const { data } = await request.get(`/api/v2/host/${id}/upgrade`)
+    const { data } = await request.get(`/api/v2/hosts/${id}/upgrade`)
     if (data?.data) {
       upgradePlans.value = data.data.list || []
     }
@@ -778,7 +778,7 @@ async function confirmUpgrade() {
       '确认升级',
       { type: 'warning' }
     )
-    const { data } = await request.post(`/api/v2/host/${id}/upgrade`, {
+    const { data } = await request.post(`/api/v2/hosts/${id}/upgrade`, {
       plan_id: selectedUpgradePlan.value.id
     })
     ElMessage.success('升级成功')
@@ -807,7 +807,7 @@ async function confirmReinstall() {
       confirmButtonClass: 'el-button--danger'
     })
     reinstallLoading.value = true
-    await request.post(`/api/v2/host/${id}/reinstall`, {
+    await request.post(`/api/v2/hosts/${id}/reinstall`, {
       os: reinstallForm.version,
       password: reinstallForm.password
     })
@@ -830,7 +830,7 @@ async function confirmResetPassword() {
 
   resetPasswordLoading.value = true
   try {
-    const { data } = await request.post(`/api/v2/host/${id}/reset-password`)
+    const { data } = await request.post(`/api/v2/hosts/${id}/reset-password`)
     if (data?.data?.password) {
       newPassword.value = data.data.password
     }
@@ -860,7 +860,7 @@ async function confirmRescue() {
 
   rescueLoading.value = true
   try {
-    await request.post(`/api/v2/host/${id}/rescue`, {
+    await request.post(`/api/v2/hosts/${id}/rescue`, {
       password: rescueForm.password
     })
     showRescueDialog.value = false
@@ -879,7 +879,7 @@ async function openConsole() {
   if (!id) return
 
   try {
-    const { data } = await request.get(`/api/v2/host/${id}/console`)
+    const { data } = await request.get(`/api/v2/hosts/${id}/console`)
     if (data?.data?.url) {
       window.open(data.data.url, '_blank')
     } else {
