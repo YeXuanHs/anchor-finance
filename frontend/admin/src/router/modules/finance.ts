@@ -418,6 +418,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '批量续费',
             icon: 'ep:refresh'
           }
+        },
+        {
+          path: 'upgrades',
+          name: 'Upgrades',
+          component: () => import('@/views/finance/orders/upgrades/index.vue'),
+          meta: {
+            title: '升级管理',
+            icon: 'ep:top'
+          }
         }
       ]
     },
@@ -1205,6 +1214,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '规则中间件',
             icon: 'ep:operation'
           }
+        },
+        {
+          path: 'backup',
+          name: 'Backup',
+          component: () => import('@/views/finance/system/backup/index.vue'),
+          meta: {
+            title: '备份管理',
+            icon: 'ep:folder-checked'
+          }
         }
       ]
     },
@@ -1296,6 +1314,15 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '批量同步',
             icon: 'ep:refresh'
+          }
+        },
+        {
+          path: 'zjmf-api',
+          name: 'ZjmfApi',
+          component: () => import('@/views/finance/advanced/zjmf-api/index.vue'),
+          meta: {
+            title: '智简魔方API',
+            icon: 'ep:connection'
           }
         }
       ]
