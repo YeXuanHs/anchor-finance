@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"net/http"
+
 	"anchorfinance/internal/service"
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/response"
@@ -9,12 +11,13 @@ import (
 )
 
 type ConfigGeneralHandler struct {
-	svc *service.ConfigGeneralService
-	log *logger.Logger
+	svc            *service.ConfigGeneralService
+	log            *logger.Logger
+	captchaService *service.CaptchaService
 }
 
-func NewConfigGeneralHandler(svc *service.ConfigGeneralService, log *logger.Logger) *ConfigGeneralHandler {
-	return &ConfigGeneralHandler{svc: svc, log: log}
+func NewConfigGeneralHandler(svc *service.ConfigGeneralService, log *logger.Logger, captchaService *service.CaptchaService) *ConfigGeneralHandler {
+	return &ConfigGeneralHandler{svc: svc, log: log, captchaService: captchaService}
 }
 
 // Get is an alias for GetConfig.
@@ -667,4 +670,195 @@ func (h *ConfigGeneralHandler) UpdateNewLoginPageConfig(c *gin.Context) {
 		return
 	}
 	response.SuccessMsg(c, "new login page config updated")
+}
+
+// ==================== Captcha Config Management ====================
+
+// GetCaptchaConfigs 获取所有验证码配置（详细版）
+// GET /admin/captcha-config
+func (h *ConfigGeneralHandler) GetCaptchaConfigs(c *gin.Context) {
+	if h.captchaService == nil {
+		response.ServerError(c, "captcha service not available")
+		return
+	}
+	configService := h.captchaService.GetCaptchaConfigService()
+
+	configs, err := configService.GetAllConfigs()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取配置失败"})
+		return
+	}
+
+	basic := make(map[string]interface{})
+	scenes := make(map[string]bool)
+
+	for _, config := range configs {
+		switch config.Key {
+		case "is_captcha", "captcha_type", "captcha_length", "captcha_combination",
+			"geetest_captcha_id", "geetest_captcha_key":
+			basic[config.Key] = map[string]interface{}{
+				"value":  config.Value,
+				"status": config.Status,
+			}
+		default:
+			scenes[config.Key] = config.Status && config.Value == "1"
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"basic":  basic,
+			"scenes": scenes,
+		},
+	})
+}
+
+// GetCaptchaPublicConfig 获取公开的验证码配置（前端用）
+// GET /captcha/config
+func (h *ConfigGeneralHandler) GetCaptchaPublicConfig(c *gin.Context) {
+	if h.captchaService == nil {
+		c.JSON(http.StatusOK, gin.H{"data": gin.H{"enabled": false}})
+		return
+	}
+	configService := h.captchaService.GetCaptchaConfigService()
+	publicConfig := configService.GetPublicCaptchaConfig()
+	c.JSON(http.StatusOK, gin.H{"data": publicConfig})
+}
+
+// UpdateCaptchaBasicConfig 更新验证码基础配置
+// PUT /admin/captcha-config/basic
+func (h *ConfigGeneralHandler) UpdateCaptchaBasicConfig(c *gin.Context) {
+	if h.captchaService == nil {
+		response.ServerError(c, "captcha service not available")
+		return
+	}
+
+	var req struct {
+		IsCaptcha          *bool  `json:"is_captcha"`
+		CaptchaType        string `json:"captcha_type"`
+		CaptchaLength      *int   `json:"captcha_length"`
+		CaptchaCombination string `json:"captcha_combination"`
+		GeetestCaptchaID   string `json:"geetest_captcha_id"`
+		GeetestCaptchaKey  string `json:"geetest_captcha_key"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		return
+	}
+
+	configService := h.captchaService.GetCaptchaConfigService()
+
+	if req.IsCaptcha != nil {
+		value := "0"
+		if *req.IsCaptcha {
+			value = "1"
+		}
+		if err := configService.UpdateConfig("is_captcha", value, *req.IsCaptcha); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+			return
+		}
+	}
+
+	if req.CaptchaType != "" {
+		if err := configService.UpdateConfig("captcha_type", req.CaptchaType, true); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+			return
+		}
+	}
+
+	if req.CaptchaLength != nil {
+		value := "4"
+		switch *req.CaptchaLength {
+		case 4:
+			value = "4"
+		case 5:
+			value = "5"
+		case 6:
+			value = "6"
+		}
+		if err := configService.UpdateConfig("captcha_length", value, true); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+			return
+		}
+	}
+
+	if req.CaptchaCombination != "" {
+		if err := configService.UpdateConfig("captcha_combination", req.CaptchaCombination, true); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+			return
+		}
+	}
+
+	if req.GeetestCaptchaID != "" {
+		if err := configService.UpdateConfig("geetest_captcha_id", req.GeetestCaptchaID, true); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+			return
+		}
+	}
+
+	if req.GeetestCaptchaKey != "" {
+		if err := configService.UpdateConfig("geetest_captcha_key", req.GeetestCaptchaKey, true); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "更新成功"})
+}
+
+// UpdateCaptchaSceneConfig 更新验证码场景配置
+// PUT /admin/captcha-config/scenes
+func (h *ConfigGeneralHandler) UpdateCaptchaSceneConfig(c *gin.Context) {
+	if h.captchaService == nil {
+		response.ServerError(c, "captcha service not available")
+		return
+	}
+
+	var req map[string]bool
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		return
+	}
+
+	configService := h.captchaService.GetCaptchaConfigService()
+
+	for key, enabled := range req {
+		value := "0"
+		if enabled {
+			value = "1"
+		}
+		if err := configService.UpdateConfig(key, value, enabled); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "更新成功"})
+}
+
+// GetCaptchaSceneStatus 获取验证码场景状态（前端用）
+// GET /captcha/status
+func (h *ConfigGeneralHandler) GetCaptchaSceneStatus(c *gin.Context) {
+	if h.captchaService == nil {
+		c.JSON(http.StatusOK, gin.H{"data": gin.H{}})
+		return
+	}
+	sceneConfig := h.captchaService.GetSceneConfig()
+	c.JSON(http.StatusOK, gin.H{"data": sceneConfig})
+}
+
+// InitCaptchaDefaultConfigs 初始化默认验证码配置
+// POST /admin/captcha-config/init
+func (h *ConfigGeneralHandler) InitCaptchaDefaultConfigs(c *gin.Context) {
+	if h.captchaService == nil {
+		response.ServerError(c, "captcha service not available")
+		return
+	}
+	if err := h.captchaService.InitDefaultConfigs(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "初始化失败"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "初始化成功"})
 }

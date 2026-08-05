@@ -594,16 +594,6 @@ const router = createRouter({
           component: () => import('@/views/user/OtherServer.vue')
         },
         {
-          path: 'ddos/overview',
-          name: 'DdosOverview',
-          component: () => import('@/views/user/DdosOverview.vue')
-        },
-        {
-          path: 'ddos/my-ip',
-          name: 'DdosMyIp',
-          component: () => import('@/views/user/DdosMyIp.vue')
-        },
-        {
           path: 'dcim-console/:id',
           name: 'DcimConsole',
           component: () => import('@/views/user/DcimConsole.vue')

@@ -72,7 +72,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	certSvc := service.NewCertificationService(deps.DB, log)
 	certHandler := handler.NewCertificationHandler(certSvc, log)
 
-	oauthHandler := handler.NewOAuthHandler(deps.OAuthSvc, log, deps.JWTMgr)
+	oauthHandler := handler.NewOAuthHandler(deps.OAuthSvc, log, deps.JWTMgr, nil, nil)
 
 	upgradeSvc := service.NewUpgradeService(deps.DB, log)
 	upgradeHandler := handler.NewUpgradeHandler(upgradeSvc, log)
@@ -497,17 +497,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/marketplace/chat-sessions", marketplaceHandler.GetChatSessions)
 		user.GET("/marketplace/unread-count", marketplaceHandler.GetUnreadCount)
 
-		// DDoS管理
-		ddosHandler := handler.NewDDoSHandler(deps.DB)
-		user.GET("/user/ddos/ips", ddosHandler.GetIPs)
-		user.POST("/user/ddos/ips", ddosHandler.PostIP)
-		user.DELETE("/user/ddos/ips/:id", ddosHandler.DeleteIP)
-		user.GET("/user/ddos/ips/:id/rules", ddosHandler.GetIPRules)
-		user.POST("/user/ddos/ips/:id/toggle", ddosHandler.PostIPToggle)
-		user.DELETE("/user/ddos/rules/:id", ddosHandler.DeleteRule)
-		user.PUT("/user/ddos/rules/:id", ddosHandler.PutRule)
-		user.GET("/user/ddos/traffic", ddosHandler.GetTraffic)
-		user.GET("/user/ddos/overview", ddosHandler.GetOverview)
 	}
 
 	// 解决方案（公开）

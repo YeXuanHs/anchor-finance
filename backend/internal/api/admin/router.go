@@ -773,7 +773,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/config-servers/test-link/:id", configServerHandler.TestLink)
 
 		configGeneralSvc := service.NewConfigGeneralService(deps.DB, deps.Log)
-		configGeneralHandler := handler.NewConfigGeneralHandler(configGeneralSvc, deps.Log)
+		captchaSvcForConfig := service.NewCaptchaService(deps.Redis, deps.DB)
+		configGeneralHandler := handler.NewConfigGeneralHandler(configGeneralSvc, deps.Log, captchaSvcForConfig)
 		admin.GET("/config/general", configGeneralHandler.Get)
 		admin.PUT("/config/general", configGeneralHandler.Update)
 		admin.GET("/config/email", configGeneralHandler.GetEmailConfig)
@@ -1004,13 +1005,11 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/setting/payment", settingHandler.GetPaymentSettings)
 		admin.PUT("/setting/payment", settingHandler.SavePaymentSettings)
 
-		// 验证码配置管理
-		captchaSvc := service.NewCaptchaService(deps.Redis, deps.DB)
-		captchaConfigHandler := handler.NewCaptchaConfigHandler(captchaSvc)
-		admin.GET("/captcha-config", captchaConfigHandler.GetConfigs)
-		admin.PUT("/captcha-config/basic", captchaConfigHandler.UpdateBasicConfig)
-		admin.PUT("/captcha-config/scenes", captchaConfigHandler.UpdateSceneConfig)
-		admin.POST("/captcha-config/init", captchaConfigHandler.InitDefaultConfigs)
+		// 验证码配置管理（已合并到 configGeneralHandler）
+		admin.GET("/captcha-config", configGeneralHandler.GetCaptchaConfigs)
+		admin.PUT("/captcha-config/basic", configGeneralHandler.UpdateCaptchaBasicConfig)
+		admin.PUT("/captcha-config/scenes", configGeneralHandler.UpdateCaptchaSceneConfig)
+		admin.POST("/captcha-config/init", configGeneralHandler.InitCaptchaDefaultConfigs)
 
 		// 系统配置管理（统一配置）
 		configHandler := handler.NewConfigHandler(deps.DB)
@@ -1363,18 +1362,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/developers/billing", developerHandler.GetBilling)
 		admin.POST("/developers/billing/settle", developerHandler.SettleBilling)
 
-		// ==================== 聚合登录 ====================
-		if deps.JWTMgr != nil {
-			aggregateLoginSvc := service.NewAggregateLoginService(deps.DB, deps.Log, deps.UserSvc, deps.JWTMgr, deps.BaseURL)
-			oauthSvcForAgg := service.NewOAuthService(deps.DB, deps.Log, deps.UserSvc, deps.FrontendURL)
-			aggregateLoginHandler := handler.NewAggregateLoginHandler(aggregateLoginSvc, oauthSvcForAgg, deps.UserSvc, deps.Log, deps.JWTKey)
-			admin.GET("/aggregate-login/providers", aggregateLoginHandler.GetProviders)
-			admin.GET("/aggregate-login/:code", aggregateLoginHandler.Login)
-			admin.GET("/aggregate-login/:code/callback", aggregateLoginHandler.Callback)
-			admin.POST("/aggregate-login/bind", aggregateLoginHandler.BindAccount)
-			admin.GET("/aggregate-login/accounts", aggregateLoginHandler.GetBoundAccounts)
-			admin.POST("/aggregate-login/unbind", aggregateLoginHandler.UnbindAccount)
-		}
 
 		// ==================== 余额 ====================
 		balanceSvc := service.NewBalanceLogService(deps.DB)
@@ -1684,13 +1671,27 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// ==================== OAuth登录 ====================
 		oauthSvc := service.NewOAuthService(deps.DB, deps.Log, deps.UserSvc, deps.FrontendURL)
-		oauthHandler := handler.NewOAuthHandler(oauthSvc, deps.Log, deps.JWTMgr)
+		var aggregateLoginSvc *service.AggregateLoginService
+		if deps.JWTMgr != nil {
+			aggregateLoginSvc = service.NewAggregateLoginService(deps.DB, deps.Log, deps.UserSvc, deps.JWTMgr, deps.BaseURL)
+		}
+		oauthHandler := handler.NewOAuthHandler(oauthSvc, deps.Log, deps.JWTMgr, aggregateLoginSvc, deps.UserSvc)
 		admin.GET("/oauth/providers", oauthHandler.GetProviders)
 		admin.GET("/oauth/:provider", oauthHandler.Login)
 		admin.GET("/oauth/:provider/callback", oauthHandler.Callback)
 		admin.POST("/oauth/bind", oauthHandler.BindAccount)
 		admin.GET("/oauth/accounts", oauthHandler.GetBoundAccounts)
 		admin.POST("/oauth/unbind", oauthHandler.UnbindAccount)
+
+		// ==================== 聚合登录（合并到 OAuthHandler） ====================
+		if aggregateLoginSvc != nil {
+			admin.GET("/aggregate-login/providers", oauthHandler.GetAggregateProviders)
+			admin.GET("/aggregate-login/:code", oauthHandler.AggregateLogin)
+			admin.GET("/aggregate-login/:code/callback", oauthHandler.AggregateCallback)
+			admin.POST("/aggregate-login/bind", oauthHandler.BindAggregateAccount)
+			admin.GET("/aggregate-login/accounts", oauthHandler.GetBoundAggregateAccounts)
+			admin.POST("/aggregate-login/unbind", oauthHandler.UnbindAggregateAccount)
+		}
 
 		// ==================== OAuth绑定 ====================
 		oauthBindSvc := service.NewOAuthBindService(deps.DB, deps.Log, deps.UserSvc)

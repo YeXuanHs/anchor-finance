@@ -58,7 +58,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	// ─── 验证码 ───
 	captchaSvc := service.NewCaptchaService(deps.Redis, deps.DB)
 	captchaHandler := handler.NewCaptchaHandler(captchaSvc, deps.DB)
-	captchaConfigHandler := handler.NewCaptchaConfigHandler(captchaSvc)
 
 	// 极验服务（通过 CaptchaHandler 集成）
 	geetestSvc := service.NewGeetestService(deps.DB, deps.Log)
@@ -72,7 +71,11 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.POST("/password/reset", authHandler.ResetPassword)
 
 	// 验证码
-	r.GET("/captcha/config", captchaConfigHandler.GetConfig)
+	r.GET("/captcha/config", func(c *gin.Context) {
+		configService := captchaSvc.GetCaptchaConfigService()
+		publicConfig := configService.GetPublicCaptchaConfig()
+		c.JSON(200, gin.H{"data": publicConfig})
+	})
 	r.GET("/captcha/generate", captchaHandler.Generate)
 	r.POST("/captcha/verify", captchaHandler.Verify)
 	r.POST("/captcha/check", captchaHandler.Check)
@@ -193,7 +196,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		auth.PUT("/user/tastes", publicHandler.SaveUserTastes)
 
 	// OAuth
-	oauthHandler := handler.NewOAuthHandler(deps.OAuthSvc, deps.Log, deps.JWTManager)
+	oauthHandler := handler.NewOAuthHandler(deps.OAuthSvc, deps.Log, deps.JWTManager, nil, nil)
 	auth.GET("/oauth/:provider", oauthHandler.Redirect)
 	auth.GET("/oauth/:provider/callback", oauthHandler.Callback)
 	auth.POST("/oauth/unbind", oauthHandler.Unbind)
