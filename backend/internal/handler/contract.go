@@ -668,3 +668,119 @@ func (h *ContractHandler) ContractPagePost(c *gin.Context) {
 		response.Success(c, contract)
 	}
 }
+
+// ==================== 新增缺失方法 ====================
+
+// Cancel cancels/voids a contract (admin).
+// POST /admin/contracts/:id/cancel
+func (h *ContractHandler) Cancel(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid contract id")
+		return
+	}
+
+	var contract model.Contract
+	if err := h.db.First(&contract, id).Error; err != nil {
+		response.NotFound(c, "contract not found")
+		return
+	}
+
+	// Only draft(1), pending(2), signed(3) contracts can be cancelled
+	if contract.Status == 4 || contract.Status == 5 {
+		response.BadRequest(c, "contract is already expired or voided")
+		return
+	}
+
+	updates := map[string]interface{}{
+		"status": 5, // 已作废
+	}
+	if err := h.db.Model(&contract).Updates(updates).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	h.log.Infof("contract cancelled: id=%d admin=%d", id, c.GetUint("user_id"))
+	response.SuccessMsg(c, "contract cancelled")
+}
+
+// Download downloads a contract file (admin).
+// GET /admin/contracts/:id/download
+func (h *ContractHandler) Download(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid contract id")
+		return
+	}
+
+	var contract model.Contract
+	if err := h.db.First(&contract, id).Error; err != nil {
+		response.NotFound(c, "contract not found")
+		return
+	}
+
+	// Try to find a generated PDF file first
+	pdfPath := filepath.Join(h.uploadDir, fmt.Sprintf("contract_%d.pdf", id))
+	if _, err := os.Stat(pdfPath); err == nil {
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=contract_%s.pdf", contract.ContractNo))
+		c.Header("Content-Type", "application/pdf")
+		c.File(pdfPath)
+		return
+	}
+
+	// If no PDF, return contract content as downloadable text
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=contract_%s.txt", contract.ContractNo))
+	c.Header("Content-Type", "text/plain; charset=utf-8")
+	content := fmt.Sprintf("合同编号: %s\n标题: %s\n内容:\n%s", contract.ContractNo, contract.Title, contract.Content)
+	c.String(200, content)
+}
+
+// Check checks the validity and status of a contract (admin).
+// GET /admin/contracts/:id/check
+func (h *ContractHandler) Check(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid contract id")
+		return
+	}
+
+	var contract model.Contract
+	if err := h.db.First(&contract, id).Error; err != nil {
+		response.NotFound(c, "contract not found")
+		return
+	}
+
+	statusNames := map[int8]string{
+		1: "草稿",
+		2: "待签署",
+		3: "已签署",
+		4: "已过期",
+		5: "已作废",
+	}
+
+	result := gin.H{
+		"id":          contract.ID,
+		"contract_no": contract.ContractNo,
+		"status":      contract.Status,
+		"status_name": statusNames[contract.Status],
+		"is_valid":    contract.Status == 3,
+	}
+
+	// Check if contract has expired
+	if contract.EndDate != nil && contract.Status == 3 {
+		if time.Now().After(*contract.EndDate) {
+			result["is_valid"] = false
+			result["expired"] = true
+			// Auto-update status to expired
+			h.db.Model(&contract).Update("status", 4)
+			result["status"] = 4
+			result["status_name"] = "已过期"
+		}
+	}
+
+	// Check if both parties have signed
+	result["admin_signed"] = contract.SignedAt != nil
+	result["has_content"] = contract.Content != ""
+
+	response.Success(c, result)
+}

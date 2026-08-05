@@ -319,6 +319,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/dcim/flow-packets/:id/edit", dcimHandler.EditFlowPacketPage)
 		admin.POST("/dcim/servers/:id/unsuspend-reload", dcimHandler.UnsuspendReload)
 		admin.GET("/dcim/servers/:id/detail", dcimHandler.Detail)
+		admin.POST("/dcim/refresh-all", dcimHandler.RefreshAllStatus)
+		admin.POST("/dcim/servers/:id/ikvm", dcimHandler.IKVM)
+		admin.GET("/dcim/servers/:id/download", dcimHandler.Download)
 
 		// DCIM高级操作 - KVM/IPMI/BMC
 		admin.GET("/dcim/servers/:id/kvm", dcimAdvHandler.GetKVMURL)
@@ -1459,6 +1462,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/client-care/rules/:id", clientCareHandler.UpdateRule)
 		admin.DELETE("/client-care/rules/:id", clientCareHandler.DeleteRule)
 		admin.GET("/client-care/logs", clientCareHandler.GetLogs)
+		admin.GET("/client-care/search-condition", clientCareHandler.GetSearchCondition)
 
 		// ==================== 客户联系人 ====================
 		clientContactSvc := service.NewClientContactService(deps.DB)
@@ -1477,6 +1481,11 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/config/messages/:channel", configMessageHandler.Update)
 		admin.POST("/config/messages/:channel/test", configMessageHandler.TestSend)
 		admin.GET("/config/messages/enabled", configMessageHandler.GetEnabled)
+		admin.GET("/config/message/mobile", configMessageHandler.GetMobileConfig)
+		admin.PUT("/config/message/templates/:id/status", configMessageHandler.UpdateTemplateStatus)
+		admin.GET("/config/message/sms-template", configMessageHandler.SetSmsTemplate)
+		admin.POST("/config/message/sms-template", configMessageHandler.SetSmsTemplate)
+		admin.POST("/config/message/test", configMessageHandler.TestTemplate)
 
 		// ==================== 联系人 ====================
 		contactsSvc := service.NewContactService(deps.DB, deps.Log)
@@ -1497,6 +1506,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/contracts/:id", contractHandler.AdminUpdate)
 		admin.DELETE("/contracts/:id", contractHandler.AdminDelete)
 		admin.POST("/contracts/:id/sign", contractHandler.AdminSign)
+		admin.POST("/contracts/:id/cancel", contractHandler.Cancel)
+		admin.GET("/contracts/:id/download", contractHandler.Download)
+		admin.GET("/contracts/:id/check", contractHandler.Check)
 		admin.GET("/contracts/setting", contractHandler.Setting)
 		admin.POST("/contracts/setting", contractHandler.SettingPost)
 		admin.GET("/contracts/tpl", contractHandler.Tpl)
@@ -1599,7 +1611,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// ==================== 知识库 ====================
 		knowledgeSvc := service.NewKnowledgeService(deps.DB, deps.Log)
-		knowledgeHandler := handler.NewKnowledgeHandler(knowledgeSvc, deps.Log)
+		knowledgeHandler := handler.NewKnowledgeHandler(deps.DB, knowledgeSvc, deps.Log)
 		admin.GET("/knowledge/categories", knowledgeHandler.AdminGetCategories)
 		admin.POST("/knowledge/categories", knowledgeHandler.AdminCreateCategory)
 		admin.PUT("/knowledge/categories/:id", knowledgeHandler.AdminUpdateCategory)
@@ -1609,6 +1621,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.POST("/knowledge/articles", knowledgeHandler.AdminCreateArticle)
 		admin.PUT("/knowledge/articles/:id", knowledgeHandler.AdminUpdateArticle)
 		admin.DELETE("/knowledge/articles/:id", knowledgeHandler.AdminDeleteArticle)
+		admin.GET("/knowledge/tags", knowledgeHandler.TagsList)
+		admin.POST("/knowledge/upload", knowledgeHandler.UploadHandle)
 
 		// ==================== 菜单组 ====================
 		menusHandler := handler.NewMenusHandler(deps.DB, deps.Log)

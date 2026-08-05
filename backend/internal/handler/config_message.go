@@ -215,3 +215,108 @@ func (h *ConfigMessageHandler) BeforeSendMessageCheck(c *gin.Context) {
 	}
 	response.Success(c, result)
 }
+
+// ==================== 新增缺失方法 ====================
+
+// GetMobileConfig returns mobile/SMS specific configuration (admin).
+// GET /admin/config/message/mobile
+func (h *ConfigMessageHandler) GetMobileConfig(c *gin.Context) {
+	item, err := h.svc.GetByChannel("sms")
+	if err != nil {
+		// Return empty config if not found
+		response.Success(c, map[string]interface{}{
+			"channel":   "sms",
+			"enabled":   false,
+			"provider":  "",
+			"config":    map[string]interface{}{},
+			"signature": "",
+		})
+		return
+	}
+
+	response.Success(c, map[string]interface{}{
+		"channel":      item.Channel,
+		"enabled":      item.IsEnabled,
+		"provider":     item.Provider,
+		"config":       item.Config,
+		"signature":    item.Signature,
+		"rate_limit":   item.RateLimit,
+		"daily_limit":  item.DailyLimit,
+		"test_address": item.TestAddress,
+		"status":       item.Status,
+	})
+}
+
+// UpdateTemplateStatus updates the status of a message template (admin).
+// PUT /admin/config/message/templates/:id/status
+func (h *ConfigMessageHandler) UpdateTemplateStatus(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.BadRequest(c, "template id is required")
+		return
+	}
+
+	var req struct {
+		Status int `json:"status" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if req.Status != 0 && req.Status != 1 {
+		response.BadRequest(c, "status must be 0 (disabled) or 1 (enabled)")
+		return
+	}
+
+	if err := h.svc.UpdateTemplate(id, "", "", "", "", "", &req.Status); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "template status updated")
+}
+
+// TestTemplate tests a message template by sending a test message (admin).
+// POST /admin/config/message/test
+func (h *ConfigMessageHandler) TestTemplate(c *gin.Context) {
+	var req struct {
+		TemplateID string `json:"template_id" binding:"required"`
+		Channel    string `json:"channel"`
+		Recipient  string `json:"recipient"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Get template info
+	desc, err := h.svc.GetTemplateDesc(req.TemplateID)
+	if err != nil {
+		response.BadRequest(c, "template not found")
+		return
+	}
+
+	channel := req.Channel
+	if channel == "" {
+		if ch, ok := desc["channel"].(string); ok {
+			channel = ch
+		} else {
+			channel = "site"
+		}
+	}
+
+	// Use the test send functionality
+	if err := h.svc.TestSend(channel); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"template_id": req.TemplateID,
+		"channel":     channel,
+		"recipient":   req.Recipient,
+		"status":      "sent",
+		"content":     desc["content"],
+	})
+}

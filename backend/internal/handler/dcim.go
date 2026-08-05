@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
 
 	"anchorfinance/internal/model"
@@ -877,4 +878,112 @@ func (h *DcimHandler) Detail(c *gin.Context) {
 		return
 	}
 	response.Success(c, detail)
+}
+
+// ==================== P2 新增方法 ====================
+
+// RefreshAllStatus batch-refreshes all server statuses (admin).
+// POST /admin/dcim/refresh-all
+func (h *DcimHandler) RefreshAllStatus(c *gin.Context) {
+	var servers []model.DcimServer
+	if err := h.db.Find(&servers).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	var successCount, failCount int
+	for _, server := range servers {
+		if err := h.dcimSvc.RefreshServerStatus(server.ID); err != nil {
+			failCount++
+			h.log.Warnf("refresh server status failed: id=%d err=%v", server.ID, err)
+		} else {
+			successCount++
+		}
+	}
+
+	response.Success(c, gin.H{
+		"total":   len(servers),
+		"success": successCount,
+		"failed":  failCount,
+	})
+}
+
+// IKVM returns IKVM remote access info for a server (admin).
+// POST /admin/dcim/servers/:id/ikvm
+func (h *DcimHandler) IKVM(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid server id")
+		return
+	}
+
+	server, err := h.dcimSvc.GetServerByID(uint(id))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+
+	result, err := h.dcimSvc.GetKVMURL(server.ID)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Enrich with server info
+	result["server_ip"] = server.IP
+	result["server_name"] = server.Name
+	result["control_method"] = server.ControlMethod
+
+	response.Success(c, result)
+}
+
+// Download generates and serves a server info export file (admin).
+// GET /admin/dcim/servers/:id/download
+func (h *DcimHandler) Download(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid server id")
+		return
+	}
+
+	server, err := h.dcimSvc.GetServerByID(uint(id))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+
+	// Generate server info as downloadable content
+	content := fmt.Sprintf("服务器名称: %s\n主机名: %s\nIP地址: %s\nIPv6: %s\n机房ID: %d\nCPU: %s\n内存: %dMB\n磁盘: %dGB\n带宽: %dMbps\n流量: %dGB\n操作系统: %s\n状态: %d\n备注: %s",
+		server.Name, server.Hostname, server.IP, server.IPv6,
+		server.DatacenterID, server.CPU, server.MemoryMB, server.DiskSizeGB,
+		server.BandwidthMbps, server.TrafficGB, server.OS, server.Status, server.Remark)
+
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=server_%d_info.txt", id))
+	c.Header("Content-Type", "text/plain; charset=utf-8")
+	c.String(200, content)
+}
+
+// Traffic returns traffic usage data for a server (admin).
+// GET /admin/dcim/servers/:id/traffic
+func (h *DcimHandler) Traffic(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid server id")
+		return
+	}
+
+	result, err := h.dcimSvc.GetTrafficUsage(uint(id))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Also get traffic chart data
+	period := c.DefaultQuery("period", "30d")
+	chartData, _ := h.dcimSvc.GetTrafficChart(uint(id), period)
+
+	response.Success(c, gin.H{
+		"usage": result,
+		"chart": chartData,
+	})
 }
