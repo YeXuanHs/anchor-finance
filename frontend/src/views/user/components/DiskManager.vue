@@ -183,7 +183,7 @@ async function fetchList() {
 
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v2/hosts/${id}/disks`, {
+    const { data } = await request.get(`/api/v1/hosts/${id}/disks`, {
       params: { page: page.value, limit: pageSize.value }
     })
     if (data?.data) {
@@ -207,7 +207,7 @@ async function handleMount(row: any) {
       '确认挂载',
       { type: 'info' }
     )
-    await request.post(`/api/v2/hosts/${id}/disks/${row.id}/mount`)
+    await request.post(`/api/v1/hosts/${id}/disks/${row.id}/mount`)
     ElMessage.success('磁盘挂载任务已提交')
     fetchList()
   } catch (error: any) {
@@ -227,7 +227,7 @@ async function handleUnmount(row: any) {
       '确认卸载',
       { type: 'warning' }
     )
-    await request.post(`/api/v2/hosts/${id}/disks/${row.id}/unmount`)
+    await request.post(`/api/v1/hosts/${id}/disks/${row.id}/unmount`)
     ElMessage.success('磁盘卸载任务已提交')
     fetchList()
   } catch (error: any) {
@@ -254,7 +254,7 @@ async function confirmExpand() {
 
   expandLoading.value = true
   try {
-    await request.post(`/api/v2/hosts/${id}/disks/${expandTarget.value.id}/resize`, {
+    await request.post(`/api/v1/hosts/${id}/disks/${expandTarget.value.id}/resize`, {
       size: expandSize.value
     })
     ElMessage.success('磁盘扩容任务已提交')

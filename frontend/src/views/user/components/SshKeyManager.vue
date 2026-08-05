@@ -165,7 +165,7 @@ async function fetchList() {
 
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v2/hosts/${id}/ssh-keys`, {
+    const { data } = await request.get(`/api/v1/hosts/${id}/ssh-keys`, {
       params: { page: page.value, limit: pageSize.value }
     })
     if (data?.data) {
@@ -194,7 +194,7 @@ async function confirmCreate() {
 
   createLoading.value = true
   try {
-    const { data } = await request.post(`/api/v2/hosts/${id}/ssh-keys`, createForm.value)
+    const { data } = await request.post(`/api/v1/hosts/${id}/ssh-keys`, createForm.value)
     ElMessage.success('SSH密钥添加成功')
     showCreateDialog.value = false
 
@@ -256,7 +256,7 @@ async function handleDelete(row: any) {
       '确认删除',
       { type: 'warning', confirmButtonText: '删除', confirmButtonClass: 'el-button--danger' }
     )
-    await request.delete(`/api/v2/hosts/${id}/ssh-keys/${row.id}`)
+    await request.delete(`/api/v1/hosts/${id}/ssh-keys/${row.id}`)
     ElMessage.success('SSH密钥已删除')
     fetchList()
   } catch (error: any) {

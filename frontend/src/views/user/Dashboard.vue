@@ -136,7 +136,7 @@ const recentOrders = ref([])
 const fetchDashboard = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v2/user/dashboard')
+    const { data } = await request.get('/api/v1/user/dashboard')
     if (data?.data) {
       stats.value = data.data.stats || {}
       servers.value = data.data.servers || []

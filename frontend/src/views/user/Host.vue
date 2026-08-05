@@ -84,7 +84,7 @@ const upgradeHost = (host: any) => {
 const loadHosts = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v2/user/products')
+    const { data } = await request.get('/api/v1/user/products')
     hosts.value = data?.data?.list || data?.data?.items || data?.data || []
   } catch {
     hosts.value = []

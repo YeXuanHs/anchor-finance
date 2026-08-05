@@ -373,7 +373,7 @@ async function fetchCaptchaStatus() {
 // 获取验证码类型配置
 async function fetchCaptchaType() {
   try {
-    const res = await request.get('/api/v2/system/settings')
+    const res = await request.get('/api/v1/system/settings')
     if (res.data?.data?.captcha_type) {
       captchaType.value = res.data.data.captcha_type
     }
@@ -479,7 +479,7 @@ async function handleSendSms() {
   try {
     await smsFormRef.value?.validate(['phone', ...(captchaType.value === 'image' && showSmsCaptcha.value ? ['imageCaptcha'] : [])])
     sendingSms.value = true
-    await request.post('/api/v2/sms/send', { phone: smsForm.value.phone })
+    await request.post('/api/v1/sms/send', { phone: smsForm.value.phone })
     message.success(t('login.smsSent'))
     smsCooldown.value = 60
     cooldownTimer = setInterval(() => {

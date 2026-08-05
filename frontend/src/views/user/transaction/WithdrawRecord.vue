@@ -137,7 +137,7 @@ const statusTagType = (status: string) => {
 const handleSearch = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/v2/balance/logs', { params: { page: currentPage.value, page_size: pageSize.value, type: 'withdraw' } })
+    const res = await request.get('/api/v1/balance/logs', { params: { page: currentPage.value, page_size: pageSize.value, type: 'withdraw' } })
     tableData.value = res.data.data.list
     total.value = res.data.data.total
   } finally {

@@ -182,7 +182,7 @@ const logs = ref<ApiLog[]>([])
 async function loadData() {
   loading.value = true
   try {
-    const res = await request.get('/api/v2/api-logs', {
+    const res = await request.get('/api/v1/api-logs', {
       params: { page: currentPage.value, page_size: pageSize.value, method: filters.method, endpoint: filters.endpoint, status_code: filters.statusCode }
     })
     logs.value = res.data?.data || []

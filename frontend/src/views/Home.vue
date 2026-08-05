@@ -384,7 +384,7 @@ const fetchData = async () => {
     
     // 获取轮播图（从站点设置中获取 banners，或使用独立 API）
     try {
-      const bannerRes = await request.get('/api/v2/banners')
+      const bannerRes = await request.get('/api/v1/banners')
       if (bannerRes.data?.data?.length) {
         banners.value = bannerRes.data.data
       }
@@ -393,19 +393,19 @@ const fetchData = async () => {
     }
     
     // 获取产品分组
-    const groupRes = await request.get('/api/v2/product-groups')
+    const groupRes = await request.get('/api/v1/product-groups')
     if (groupRes.data?.data) {
       productGroups.value = groupRes.data.data
     }
     
     // 获取热门产品（销量前4）
-    const hotRes = await request.get('/api/v2/products/hot', { params: { limit: 4 } })
+    const hotRes = await request.get('/api/v1/products/hot', { params: { limit: 4 } })
     if (hotRes.data?.data) {
       hotProducts.value = hotRes.data.data
     }
     
     // 获取新闻公告
-    const newsRes = await request.get('/api/v2/news', { params: { limit: 3 } })
+    const newsRes = await request.get('/api/v1/news', { params: { limit: 3 } })
     if (newsRes.data?.data) {
       announcements.value = newsRes.data.data
     }
@@ -417,7 +417,7 @@ const fetchData = async () => {
     // }
     
     // 获取站点设置
-    const settingRes = await request.get('/api/v2/system/settings')
+    const settingRes = await request.get('/api/v1/system/settings')
     if (settingRes.data?.data) {
       siteSettings.value = settingRes.data.data
     }

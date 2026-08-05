@@ -155,7 +155,7 @@ async function fetchList() {
 
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v2/hosts/${id}/backups`, {
+    const { data } = await request.get(`/api/v1/hosts/${id}/backups`, {
       params: { page: page.value, limit: pageSize.value }
     })
     if (data?.data) {
@@ -184,7 +184,7 @@ async function confirmCreate() {
 
   createLoading.value = true
   try {
-    await request.post(`/api/v2/hosts/${id}/backups`, createForm.value)
+    await request.post(`/api/v1/hosts/${id}/backups`, createForm.value)
     ElMessage.success('备份创建任务已提交')
     showCreateDialog.value = false
     fetchList()
@@ -205,7 +205,7 @@ async function handleRestore(row: any) {
       '确认恢复',
       { type: 'warning' }
     )
-    await request.post(`/api/v2/hosts/${id}/backups/${row.id}/restore`)
+    await request.post(`/api/v1/hosts/${id}/backups/${row.id}/restore`)
     ElMessage.success('备份恢复任务已提交')
     fetchList()
   } catch (error: any) {
@@ -225,7 +225,7 @@ async function handleDelete(row: any) {
       '确认删除',
       { type: 'warning', confirmButtonText: '删除', confirmButtonClass: 'el-button--danger' }
     )
-    await request.delete(`/api/v2/hosts/${id}/backups/${row.id}`)
+    await request.delete(`/api/v1/hosts/${id}/backups/${row.id}`)
     ElMessage.success('备份已删除')
     fetchList()
   } catch (error: any) {

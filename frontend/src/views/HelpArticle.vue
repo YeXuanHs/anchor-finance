@@ -109,8 +109,8 @@ const fetchArticle = async () => {
   loading.value = true
   try {
     const [articleRes, relatedRes] = await Promise.allSettled([
-      request.get(`/api/v2/help/articles/${id}`),
-      request.get(`/api/v2/help/articles/${id}/related`)
+      request.get(`/api/v1/help/articles/${id}`),
+      request.get(`/api/v1/help/articles/${id}/related`)
     ])
 
     if (articleRes.status === 'fulfilled' && articleRes.value.data?.data) {
@@ -130,7 +130,7 @@ const submitFeedback = async (type: string) => {
   if (feedback.value) return
   feedback.value = type
   try {
-    await request.post(`/api/v2/help/articles/${article.value.id}/feedback`, { helpful: type === 'yes' })
+    await request.post(`/api/v1/help/articles/${article.value.id}/feedback`, { helpful: type === 'yes' })
     ElMessage.success(t('helpCenter.thankFeedback'))
   } catch (error) {
     console.error('提交反馈失败:', error)

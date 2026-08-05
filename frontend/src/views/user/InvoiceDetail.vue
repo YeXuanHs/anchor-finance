@@ -119,7 +119,7 @@ onMounted(async () => {
   if (!id) return
   loading.value = true
   try {
-    const res = await request.get(`/api/v2/invoices/${id}`)
+    const res = await request.get(`/api/v1/invoices/${id}`)
     const data = res?.data || res
     if (data) Object.assign(invoice.value, data)
   } catch (e) { console.error(e) } finally { loading.value = false }

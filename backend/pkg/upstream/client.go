@@ -23,6 +23,32 @@ type RemoteProduct struct {
 	Metadata      map[string]interface{} `json:"metadata,omitempty"`
 }
 
+// RemoteConfigOption represents a configurable option from upstream (e.g. OS list).
+type RemoteConfigOption struct {
+	RemoteID  string                     `json:"remote_id"`
+	Name      string                     `json:"name"`
+	Type      int                        `json:"type"` // 3=yes/no, 5=os, 6=quantity, 12=NOC, etc.
+	GroupName string                     `json:"group_name"`
+	GroupID   string                     `json:"group_id"`
+	Sub       []RemoteConfigOptionSub    `json:"sub,omitempty"`
+}
+
+// RemoteConfigOptionSub represents a sub-option of a configurable option.
+type RemoteConfigOptionSub struct {
+	RemoteID string  `json:"remote_id"`
+	Name     string  `json:"name"`
+	OS       string  `json:"os,omitempty"`      // for type 5 (OS)
+	Version  string  `json:"version,omitempty"` // for type 5 (OS)
+	Price    float64 `json:"price,omitempty"`
+}
+
+// RemoteConfigGroup represents a config option group from upstream.
+type RemoteConfigGroup struct {
+	RemoteID string               `json:"remote_id"`
+	Name     string               `json:"name"`
+	Options  []RemoteConfigOption `json:"options"`
+}
+
 // RemoteProductGroup represents a product group from upstream.
 type RemoteProductGroup struct {
 	GroupID      string `json:"group_id"`
@@ -51,6 +77,7 @@ type Client interface {
 	FetchProducts() ([]RemoteProduct, error)
 	FetchProductsWithGroups() (*UpstreamProductsResult, error)
 	FetchProductsByGroup(groupID string) ([]RemoteProduct, error)
+	FetchConfigOptions(productID string) ([]RemoteConfigOption, error)
 }
 
 func NewClient(provider *model.UpstreamProvider) (Client, error) {

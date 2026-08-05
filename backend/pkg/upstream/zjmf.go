@@ -352,3 +352,33 @@ func (c *zjmfClient) FetchProductsByGroup(groupID string) ([]RemoteProduct, erro
 	}
 	return filtered, nil
 }
+
+// FetchConfigOptions retrieves configurable options for a product from zjmf upstream.
+func (c *zjmfClient) FetchConfigOptions(productID string) ([]RemoteConfigOption, error) {
+	resp, err := c.doRequest("getproductconfigoptions", map[string]string{"pid": productID})
+	if err != nil {
+		return nil, err
+	}
+	if resp.Result != "success" {
+		return nil, fmt.Errorf("zjmf api error: %s", resp.Msg)
+	}
+
+	var raw []struct {
+		Name    string   `json:"name"`
+		Type    string   `json:"type"`
+		Options []string `json:"options"`
+	}
+	if err := json.Unmarshal(resp.Data, &raw); err != nil {
+		return nil, fmt.Errorf("parse config options: %w", err)
+	}
+
+	opts := make([]RemoteConfigOption, 0, len(raw))
+	for _, o := range raw {
+		opts = append(opts, RemoteConfigOption{
+			Name:    o.Name,
+			Type:    o.Type,
+			Options: o.Options,
+		})
+	}
+	return opts, nil
+}

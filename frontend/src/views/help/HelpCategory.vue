@@ -220,7 +220,7 @@ const fetchArticles = async () => {
     if (searchQuery.value.trim()) {
       params.q = searchQuery.value.trim()
     }
-    const { data } = await request.get('/api/v2/help/articles', { params })
+    const { data } = await request.get('/api/v1/help/articles', { params })
     if (data?.data) {
       articles.value = data.data.list || []
       total.value = data.data.total || 0
@@ -234,7 +234,7 @@ const fetchArticles = async () => {
 
 const fetchCategories = async () => {
   try {
-    const { data } = await request.get('/api/v2/help/categories')
+    const { data } = await request.get('/api/v1/help/categories')
     if (data?.data) {
       allCategories.value = data.data
     }
@@ -245,7 +245,7 @@ const fetchCategories = async () => {
 
 const fetchSubCategories = async () => {
   try {
-    const { data } = await request.get(`/api/v2/help/categories/${categoryId.value}/sub`)
+    const { data } = await request.get(`/api/v1/help/categories/${categoryId.value}/sub`)
     if (data?.data) {
       subCategories.value = data.data
     }

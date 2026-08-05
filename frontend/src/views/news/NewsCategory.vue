@@ -148,7 +148,7 @@ const categoryDesc = computed(() => currentCategory.value?.description || '')
 const fetchNews = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v2/news', {
+    const { data } = await request.get('/api/v1/news', {
         page_size: pageSize.value
       }
     })
@@ -165,7 +165,7 @@ const fetchNews = async () => {
 
 const fetchCategories = async () => {
   try {
-    const { data } = await request.get('/api/v2/news/categories')
+    const { data } = await request.get('/api/v1/news/categories')
     if (data?.data) {
       categories.value = data.data
     }

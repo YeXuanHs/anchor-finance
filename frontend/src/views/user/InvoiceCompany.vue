@@ -175,7 +175,7 @@ const loading = ref(false)
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v2/contacts/default')
+    const { data } = await request.get('/api/v1/contacts/default')
     if (data?.data) {
       companies.value = data.data.list || data.data || []
       total.value = companies.value.length

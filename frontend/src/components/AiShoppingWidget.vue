@@ -112,7 +112,7 @@ const pageContext = ref('')
 // 获取配置
 const fetchConfig = async () => {
   try {
-    const res = await request.get('/api/v2/ai-shopping/config')
+    const res = await request.get('/api/v1/ai-shopping/config')
     if (res.data) {
       enabled.value = res.data.ai_enabled === '1'
       title.value = res.data.widget_title || 'AI导购'

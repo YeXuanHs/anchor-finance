@@ -173,7 +173,7 @@ async function fetchList() {
 
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v2/hosts/${id}/vpcs`, {
+    const { data } = await request.get(`/api/v1/hosts/${id}/vpcs`, {
       params: { page: page.value, limit: pageSize.value }
     })
     if (data?.data) {
@@ -206,7 +206,7 @@ async function confirmCreate() {
 
   createLoading.value = true
   try {
-    await request.post(`/api/v2/hosts/${id}/vpcs`, createForm.value)
+    await request.post(`/api/v1/hosts/${id}/vpcs`, createForm.value)
     ElMessage.success('VPC创建成功')
     showCreateDialog.value = false
     fetchList()
@@ -227,7 +227,7 @@ async function handleSwitch(row: any) {
       '确认切换',
       { type: 'warning' }
     )
-    await request.post(`/api/v2/hosts/${id}/vpcs/${row.id}/switch`)
+    await request.post(`/api/v1/hosts/${id}/vpcs/${row.id}/switch`)
     ElMessage.success('VPC切换成功')
     fetchList()
   } catch (error: any) {
@@ -247,7 +247,7 @@ async function handleDelete(row: any) {
       '确认删除',
       { type: 'warning', confirmButtonText: '删除', confirmButtonClass: 'el-button--danger' }
     )
-    await request.delete(`/api/v2/hosts/${id}/vpcs/${row.id}`)
+    await request.delete(`/api/v1/hosts/${id}/vpcs/${row.id}`)
     ElMessage.success('VPC已删除')
     fetchList()
   } catch (error: any) {

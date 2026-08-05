@@ -239,7 +239,7 @@ const loading = ref(false)
 const fetchArticles = async () => {
   loading.value = true
   try {
-    const response = await fetch('/api/v2/help/articles')
+    const response = await fetch('/api/v1/help/articles')
     const result = await response.json()
     if (result.code === 0 && result.data?.items) {
       articles.value = result.data.items.map((item: any) => ({

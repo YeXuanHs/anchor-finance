@@ -250,3 +250,38 @@ func (c *anchorFinanceClient) FetchProductsByGroup(groupID string) ([]RemoteProd
 	}
 	return filtered, nil
 }
+
+// FetchConfigOptions retrieves configurable options for a product from another AnchorFinance upstream.
+func (c *anchorFinanceClient) FetchConfigOptions(productID string) ([]RemoteConfigOption, error) {
+	body, statusCode, err := c.doRequest("GET", fmt.Sprintf("/api/v1/products/%s/config-options", productID))
+	if err != nil {
+		return nil, err
+	}
+	if statusCode >= 400 {
+		return nil, fmt.Errorf("af api returned HTTP %d", statusCode)
+	}
+
+	apiResp, err := c.parseResponse(body)
+	if err != nil {
+		return nil, err
+	}
+
+	var raw []struct {
+		Name    string   `json:"name"`
+		Type    string   `json:"type"`
+		Options []string `json:"options"`
+	}
+	if err := json.Unmarshal(apiResp.Data, &raw); err != nil {
+		return nil, fmt.Errorf("parse config options: %w", err)
+	}
+
+	opts := make([]RemoteConfigOption, 0, len(raw))
+	for _, o := range raw {
+		opts = append(opts, RemoteConfigOption{
+			Name:    o.Name,
+			Type:    o.Type,
+			Options: o.Options,
+		})
+	}
+	return opts, nil
+}

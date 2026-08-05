@@ -102,7 +102,7 @@ const handleTabChange = (tab: string | number) => {
 
 onMounted(async () => {
   try {
-    const { data } = await request.get('/api/v2/balance/logs')
+    const { data } = await request.get('/api/v1/balance/logs')
     if (data?.data) {
       stats.totalIncome = data.data.totalIncome || 0
       stats.totalExpense = data.data.totalExpense || 0

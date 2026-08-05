@@ -347,7 +347,7 @@ const fetchOrderData = async () => {
       return
     }
     
-    const { data } = await request.post('/api/v2/orders/preview', {
+    const { data } = await request.post('/api/v1/orders/preview', {
       items: checkoutItems
     })
     
@@ -370,7 +370,7 @@ const applyCoupon = async () => {
   
   couponLoading.value = true
   try {
-    const { data } = await request.post('/api/v2/promo-codes/validate', {
+    const { data } = await request.post('/api/v1/promo-codes/validate', {
       code: couponCode.value
     })
     if (data?.data) {
@@ -408,7 +408,7 @@ const submitOrder = async () => {
   try {
     const checkoutItems = JSON.parse(localStorage.getItem('checkout_items') || '[]')
     
-    const { data } = await request.post('/api/v2/orders', {
+    const { data } = await request.post('/api/v1/orders', {
       items: checkoutItems,
       payment: selectedPayment.value,
       coupon: couponApplied.value ? couponCode.value : '',

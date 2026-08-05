@@ -120,7 +120,7 @@ function deviceIcon(type: string) {
 async function loadData() {
   loading.value = true
   try {
-    const res = await request.get('/api/v2/login-logs', {
+    const res = await request.get('/api/v1/login-logs', {
       params: { page: currentPage.value, page_size: pageSize.value, status: filters.status, ip: filters.ip }
     })
     logs.value = res.data?.data || []

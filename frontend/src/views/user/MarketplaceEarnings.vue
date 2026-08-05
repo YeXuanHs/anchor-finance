@@ -192,7 +192,7 @@ const withdrawStatusText = (status: string) => {
 
 async function fetchEarnings() {
   try {
-    const res = await request.get('/api/v2/marketplace/earnings')
+    const res = await request.get('/api/v1/marketplace/earnings')
     earnings.value = res.data?.data || earnings.value
   } catch {}
 }
@@ -202,7 +202,7 @@ async function fetchWithdrawRecords() {
   try {
     const params: any = { page: currentPage.value, page_size: pageSize.value }
     if (withdrawStatusFilter.value) params.status = withdrawStatusFilter.value
-    const res = await request.get('/api/v2/marketplace/withdrawals', { params })
+    const res = await request.get('/api/v1/marketplace/withdrawals', { params })
     withdrawRecords.value = res.data?.data?.list || res.data?.list || []
     total.value = res.data?.data?.total || 0
   } catch {
@@ -223,7 +223,7 @@ async function handleWithdraw() {
   }
   submitting.value = true
   try {
-    await request.post('/api/v2/marketplace/withdrawals', withdrawForm.value)
+    await request.post('/api/v1/marketplace/withdrawals', withdrawForm.value)
     ElMessage.success('提现申请已提交')
     withdrawDialogVisible.value = false
     withdrawForm.value = { amount: 0, method: 'bank', account: '', real_name: '' }

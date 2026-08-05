@@ -746,7 +746,7 @@ async function fetchServerInfo() {
 
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v2/hosts/${hostId}`)
+    const { data } = await request.get(`/api/v1/hosts/${hostId}`)
     if (data?.data) {
       const info = data.data
       serverInfo.name = info.product_name || info.name || ''
@@ -801,7 +801,7 @@ async function handlePowerAction(action: string) {
     })
 
     actionLoading.value = action
-    await request.post(`/api/v2/hosts/${hostId}/${config.api}`)
+    await request.post(`/api/v1/hosts/${hostId}/${config.api}`)
     ElMessage.success('操作已提交')
 
     // 更新状态
@@ -832,7 +832,7 @@ async function confirmRescue() {
 
   rescueLoading.value = true
   try {
-    await request.post(`/api/v2/hosts/${hostId}/rescue`, {
+    await request.post(`/api/v1/hosts/${hostId}/rescue`, {
       type: rescueForm.type,
       password: rescueForm.password
     })
@@ -857,7 +857,7 @@ async function confirmResetPassword() {
 
   passwordLoading.value = true
   try {
-    await request.post(`/api/v2/hosts/${hostId}/reset-password`, {
+    await request.post(`/api/v1/hosts/${hostId}/reset-password`, {
       user: passwordForm.user === 'custom' ? passwordForm.username : passwordForm.user,
       password: passwordForm.password
     })
@@ -884,7 +884,7 @@ async function confirmFormat() {
     })
 
     formatLoading.value = true
-    await request.post(`/api/v2/hosts/${hostId}/format`, {
+    await request.post(`/api/v1/hosts/${hostId}/format`, {
       type: formatForm.type
     })
     showFormatDialog.value = false
@@ -915,7 +915,7 @@ async function cancelTask() {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.post(`/api/v2/hosts/${hostId}/cancel-task`)
+    await request.post(`/api/v1/hosts/${hostId}/cancel-task`)
     ElMessage.success('任务已取消')
   } catch (e: any) {
     if (e !== 'cancel') {
@@ -931,7 +931,7 @@ async function fetchLogs() {
 
   logLoading.value = true
   try {
-    const { data } = await request.get(`/api/v2/hosts/${hostId}/log`)
+    const { data } = await request.get(`/api/v1/hosts/${hostId}/log`)
     if (data?.data?.list) {
       logs.value = data.data.list
     }
@@ -977,7 +977,7 @@ async function fetchCheckReinstall() {
   if (!hostId) return
 
   try {
-    const { data } = await request.get(`/api/v2/hosts/${hostId}/check-reinstall`)
+    const { data } = await request.get(`/api/v1/hosts/${hostId}/check-reinstall`)
     reinstallCheckData.value = data?.data || null
   } catch (e: any) {
     if (e?.response?.data?.status === 400 && e.response.data.price) {
@@ -992,7 +992,7 @@ async function fetchOsList() {
   if (!hostId) return
 
   try {
-    const { data } = await request.get(`/api/v2/hosts/${hostId}/os-list`)
+    const { data } = await request.get(`/api/v1/hosts/${hostId}/os-list`)
     if (data?.data) {
       osGroups.value = data.data.groups || []
       osList.value = data.data.os || []
@@ -1060,7 +1060,7 @@ async function confirmReinstall() {
     )
 
     reinstallLoading.value = true
-    await request.post(`/api/v2/hosts/${hostId}/reinstall`, {
+    await request.post(`/api/v1/hosts/${hostId}/reinstall`, {
       os: reinstallForm.osId,
       password: reinstallForm.password,
       port: reinstallForm.port,
@@ -1089,7 +1089,7 @@ async function openKvm() {
 
   kvmLoading.value = true
   try {
-    const { data } = await request.post(`/api/v2/hosts/${hostId}/kvm`)
+    const { data } = await request.post(`/api/v1/hosts/${hostId}/kvm`)
     if (data?.data?.url) {
       window.open(data.data.url, '_blank', 'width=1280,height=800')
     } else if (data?.data?.jnl) {
@@ -1114,7 +1114,7 @@ async function openIkv() {
 
   ikvmLoading.value = true
   try {
-    const { data } = await request.post(`/api/v2/hosts/${hostId}/ikvm`)
+    const { data } = await request.post(`/api/v1/hosts/${hostId}/ikvm`)
     if (data?.data?.url) {
       window.open(data.data.url, '_blank', 'width=1280,height=800')
     } else {
@@ -1152,7 +1152,7 @@ async function fetchTasks() {
 
   taskLoading.value = true
   try {
-    const { data } = await request.get(`/api/v2/hosts/${hostId}/tasks`)
+    const { data } = await request.get(`/api/v1/hosts/${hostId}/tasks`)
     if (data?.data) {
       taskList.value = data.data.list || data.data || []
       hasActiveTask.value = taskList.value.some((t: any) =>
@@ -1177,7 +1177,7 @@ async function cancelSpecificTask(taskId: string | number) {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await request.post(`/api/v2/hosts/${hostId}/tasks/${taskId}/cancel`)
+    await request.post(`/api/v1/hosts/${hostId}/tasks/${taskId}/cancel`)
     ElMessage.success('任务已取消')
     fetchTasks()
   } catch (e: any) {

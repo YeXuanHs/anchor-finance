@@ -1,9 +1,9 @@
-import { defineStore } from 'pinia'
+﻿import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import request from '@/utils/request'
 
 interface PublicConfig {
-  // 公司信息
+  // 鍏徃淇℃伅
   company_name: string
   company_email: string
   company_phone: string
@@ -16,7 +16,7 @@ interface PublicConfig {
   logo_url_home: string
   favicon_url: string
 
-  // 登录注册方式
+  // 鐧诲綍娉ㄥ唽鏂瑰紡
   login_methods: {
     phone: boolean
     email: boolean
@@ -29,20 +29,19 @@ interface PublicConfig {
     wechat: boolean
   }
 
-  // 功能开关
-  affiliate_enabled: boolean
+  // 鍔熻兘寮€鍏?  affiliate_enabled: boolean
   addfunds_enabled: boolean
   credit_limit: boolean
   show_cancel: boolean
   nologin_send_ticket: boolean
   evaluate_ticket: boolean
 
-  // 显示配置
+  // 鏄剧ず閰嶇疆
   language: string
   allow_user_language: boolean
   default_country: string
 
-  // 法律条款
+  // 娉曞緥鏉℃
   server_clause_url: string
   privacy_clause_url: string
 
@@ -50,7 +49,7 @@ interface PublicConfig {
   seo_keywords: string
   seo_desc: string
 
-  // 维护模式
+  // 缁存姢妯″紡
   maintenance_mode: boolean
 }
 
@@ -95,10 +94,10 @@ export const useConfigStore = defineStore('config', () => {
   const config = ref<PublicConfig>({ ...defaultConfig })
   const loaded = ref(false)
 
-  // 获取公开配置
+  // 鑾峰彇鍏紑閰嶇疆
   async function fetchPublicConfig() {
     try {
-      const res = await request.get('/api/v2/system/settings')
+      const res = await request.get('/api/v1/system/settings')
       if (res.data?.data) {
         config.value = { ...defaultConfig, ...res.data.data }
         loaded.value = true
@@ -108,17 +107,17 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
-  // 获取登录配置
+  // 鑾峰彇鐧诲綍閰嶇疆
   function getLoginMethods() {
     return config.value.login_methods
   }
 
-  // 获取注册配置
+  // 鑾峰彇娉ㄥ唽閰嶇疆
   function getRegisterMethods() {
     return config.value.register_methods
   }
 
-  // 是否显示某个功能
+  // 鏄惁鏄剧ず鏌愪釜鍔熻兘
   function isFeatureEnabled(feature: string): boolean {
     switch (feature) {
       case 'affiliate':
@@ -149,7 +148,7 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
-  // 获取Logo
+  // 鑾峰彇Logo
   function getLogo(scene: string = 'default'): string {
     switch (scene) {
       case 'home':
@@ -162,7 +161,7 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
-  // 获取公司信息
+  // 鑾峰彇鍏徃淇℃伅
   function getCompanyInfo() {
     return {
       name: config.value.company_name,

@@ -125,7 +125,7 @@ onMounted(async () => {
   if (id) {
     loading.value = true
     try {
-      const { data } = await request.get(`/api/v2/hosts/${id}`)
+      const { data } = await request.get(`/api/v1/hosts/${id}`)
       localInfo.value = data.data || data || {}
     } catch (e) {
       console.error('Failed to fetch domain data:', e)

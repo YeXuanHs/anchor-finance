@@ -118,7 +118,7 @@ const invoices = ref<Invoice[]>([])
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v2/invoices', { params: { page: currentPage.value } })
+    const { data } = await request.get('/api/v1/invoices', { params: { page: currentPage.value } })
     invoices.value = data.data?.list || data.list || []
     summaryPending.value = data.data?.summaryPending || '0.00'
     summaryPaid.value = data.data?.summaryPaid || '0.00'

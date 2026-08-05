@@ -56,7 +56,7 @@ const total = ref(0)
 async function loadData() {
   loading.value = true
   try {
-    const res = await request.get('/api/v2/system-logs', {
+    const res = await request.get('/api/v1/system-logs', {
       params: {
         page: currentPage.value,
         page_size: pageSize.value,

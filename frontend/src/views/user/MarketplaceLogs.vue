@@ -125,7 +125,7 @@ async function fetchList() {
       params.start_date = dateRange.value[0]
       params.end_date = dateRange.value[1]
     }
-    const res = await request.get('/api/v2/marketplace/logs', { params })
+    const res = await request.get('/api/v1/marketplace/logs', { params })
     tableData.value = res.data?.data?.list || res.data?.list || []
     total.value = res.data?.data?.total || 0
   } catch {

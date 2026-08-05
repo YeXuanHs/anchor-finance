@@ -170,7 +170,7 @@ const scrollToTop = () => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/v2/domain/suffixes')
+    const res = await request.get('/api/v1/domain/suffixes')
     if (res.data?.data?.length) {
       suffixes.value = res.data.data
     }

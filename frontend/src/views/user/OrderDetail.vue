@@ -90,7 +90,7 @@ const getStatusText = (status: string) => {
 const fetchOrder = async () => {
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v2/orders/${route.params.id}`)
+    const { data } = await request.get(`/api/v1/orders/${route.params.id}`)
     if (data?.data) {
       order.value = data.data
     }
@@ -108,7 +108,7 @@ const payOrder = () => {
 const cancelOrder = async () => {
   try {
     await ElMessageBox.confirm('确定要取消这个订单吗？', '提示', { type: 'warning' })
-    await request.post(`/api/v2/orders/${order.value.id}/cancel`)
+    await request.post(`/api/v1/orders/${order.value.id}/cancel`)
     ElMessage.success('订单已取消')
     fetchOrder()
   } catch (error) {

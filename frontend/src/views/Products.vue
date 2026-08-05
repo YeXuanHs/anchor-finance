@@ -169,13 +169,13 @@ const fetchData = async () => {
   loading.value = true
   try {
     // 获取产品分组
-    const groupRes = await request.get('/api/v2/product-groups')
+    const groupRes = await request.get('/api/v1/product-groups')
     if (groupRes.data?.data) {
       productGroups.value = groupRes.data.data
     }
     
     // 获取产品列表
-    const productRes = await request.get('/api/v2/products', {
+    const productRes = await request.get('/api/v1/products', {
       params: {
         group: selectedGroup.value,
         sort: sortBy.value,

@@ -225,7 +225,7 @@ const sendPhoneCode = async () => {
     return
   }
   try {
-    await request.post('/api/v2/sms/send', { phone: phoneForm.value.phone })
+    await request.post('/api/v1/sms/send', { phone: phoneForm.value.phone })
     startCooldown('phone')
     ElMessage.success('验证码已发送')
   } catch (e: any) {
@@ -239,7 +239,7 @@ const sendEmailCode = async () => {
     return
   }
   try {
-    await request.post('/api/v2/email/send', { email: emailForm.value.email })
+    await request.post('/api/v1/email/send', { email: emailForm.value.email })
     startCooldown('email')
     ElMessage.success('验证码已发送')
   } catch (e: any) {
@@ -259,7 +259,7 @@ const confirmBindQQ = async () => {
   }
   qqSubmitting.value = true
   try {
-    await request.post('/api/v2/interflow/bind', { qq: qqForm.value.qq })
+    await request.post('/api/v1/interflow/bind', { qq: qqForm.value.qq })
     qqNumber.value = qqForm.value.qq
     qqBound.value = true
     qqDialogVisible.value = false
@@ -276,7 +276,7 @@ const unbindQQ = async () => {
     await ElMessageBox.confirm('确定要解绑QQ机器人吗？', '确认解绑', {
       type: 'warning'
     })
-    await request.post('/api/v2/interflow/unbind')
+    await request.post('/api/v1/interflow/unbind')
     qqBound.value = false
     qqNumber.value = ''
     ElMessage.success('解绑成功')
@@ -294,7 +294,7 @@ const confirmPhone = async () => {
   }
   submitting.value = true
   try {
-    await request.post('/api/v2/user/bind-phone', {
+    await request.post('/api/v1/user/bind-phone', {
     phone.value = phoneForm.value.phone
     phoneDialogVisible.value = false
     ElMessage.success('手机绑定成功')
@@ -312,7 +312,7 @@ const confirmEmail = async () => {
   }
   submitting.value = true
   try {
-    await request.post('/api/v2/user/bind-email', {
+    await request.post('/api/v1/user/bind-email', {
     email.value = emailForm.value.email
     emailDialogVisible.value = false
     ElMessage.success('邮箱绑定成功')
@@ -341,7 +341,7 @@ const unbindProvider = async (provider: any) => {
     await ElMessageBox.confirm(`确定要解绑${provider.label}吗？`, '确认解绑', {
       type: 'warning'
     })
-    await request.post('/api/v2/oauth/unbind', { provider: provider.name })
+    await request.post('/api/v1/oauth/unbind', { provider: provider.name })
     provider.bound = false
     provider.account = ''
     ElMessage.success('解绑成功')
@@ -367,14 +367,14 @@ onMounted(async () => {
     }
   } catch {}
   try {
-    const { data } = await request.get('/api/v2/user/profile')
+    const { data } = await request.get('/api/v1/user/profile')
     if (data?.data) {
       phone.value = data.data.phone || ''
       email.value = data.data.email || ''
     }
   } catch {}
   try {
-    const { data } = await request.get('/api/v2/interflow/bind-info')
+    const { data } = await request.get('/api/v1/interflow/bind-info')
     if (data?.data?.qq) {
       qqNumber.value = data.data.qq.replace(/,\s*$/, '')
       qqBound.value = !!qqNumber.value

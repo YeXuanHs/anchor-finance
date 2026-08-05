@@ -338,9 +338,9 @@ async function handleNextStep() {
     const account = accountForm.value.account
     const isEmail = account.includes('@')
     if (isEmail) {
-      await request.post('/api/v2/email/send', { email: account })
+      await request.post('/api/v1/email/send', { email: account })
     } else {
-      await request.post('/api/v2/sms/send', { phone: account })
+      await request.post('/api/v1/sms/send', { phone: account })
     }
     message.success('验证码已发送')
     currentStep.value = 2
@@ -384,9 +384,9 @@ async function handleResendCode() {
     const account = accountForm.value.account
     const isEmail = account.includes('@')
     if (isEmail) {
-      await request.post('/api/v2/email/send', { email: account })
+      await request.post('/api/v1/email/send', { email: account })
     } else {
-      await request.post('/api/v2/sms/send', { phone: account })
+      await request.post('/api/v1/sms/send', { phone: account })
     }
     message.success('验证码已重新发送')
     startCooldown()

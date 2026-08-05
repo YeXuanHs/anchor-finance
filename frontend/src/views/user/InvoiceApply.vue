@@ -119,7 +119,7 @@ const availableOrders = ref<OrderOption[]>([])
 onMounted(async () => {
   loadingOrders.value = true
   try {
-    const { data } = await request.get('/api/v2/orders')
+    const { data } = await request.get('/api/v1/orders')
     availableOrders.value = data.data?.list || data.list || data.data || []
   } catch (e) { console.error(e) } finally { loadingOrders.value = false }
 })
@@ -167,7 +167,7 @@ async function handleSubmit() {
     if (valid) {
       submitting.value = true
       try {
-        await request.post('/api/v2/vouchers', {
+        await request.post('/api/v1/vouchers', {
           invoiceType: form.invoiceType,
           orderIds: form.orderIds,
           title: form.title,

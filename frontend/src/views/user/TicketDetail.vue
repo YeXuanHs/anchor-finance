@@ -71,7 +71,7 @@
         <el-input v-model="replyContent" type="textarea" :rows="4" placeholder="请输入回复内容..." />
         <div class="reply-actions">
           <el-upload
-            :action="`/api/v2/tickets/${route.params.id}/attachments`"
+            :action="`/api/v1/tickets/${route.params.id}/attachments`"
             :on-success="handleUploadSuccess"
             :show-file-list="false"
           >
@@ -144,7 +144,7 @@ const handleUploadSuccess = (response: any) => {
 const fetchTicket = async () => {
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v2/tickets/${route.params.id}`)
+    const { data } = await request.get(`/api/v1/tickets/${route.params.id}`)
     if (data?.data) {
       ticket.value = data.data
     }
@@ -163,7 +163,7 @@ const submitReply = async () => {
   
   submitting.value = true
   try {
-    await request.post(`/api/v2/tickets/${route.params.id}/reply`, {
+    await request.post(`/api/v1/tickets/${route.params.id}/reply`, {
       content: replyContent.value
     })
     ElMessage.success('回复成功')

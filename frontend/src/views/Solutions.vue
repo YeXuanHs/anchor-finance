@@ -154,7 +154,7 @@ const loading = ref(false)
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v2/solutions')
+    const { data } = await request.get('/api/v1/solutions')
     if (data?.data?.list?.length) {
       solutions.value = data.data.list
     }

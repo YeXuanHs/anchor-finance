@@ -233,7 +233,7 @@ func (s *AggregateLoginService) getProviderByCode(code string) (*model.Aggregate
 
 // createJuheProvider creates a juhe.Provider from the database config.
 func (s *AggregateLoginService) createJuheProvider(p *model.AggregateLoginProvider) *juhe.Provider {
-	redirectURL := s.baseURL + "/api/v2/auth/aggregate/" + p.Code + "/callback"
+	redirectURL := s.baseURL + "/api/v1/auth/aggregate/" + p.Code + "/callback"
 	return juhe.New(p.APIURL, p.AppID, p.AppKey, p.Code, redirectURL)
 }
 

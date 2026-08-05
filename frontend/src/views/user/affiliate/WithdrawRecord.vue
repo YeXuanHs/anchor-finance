@@ -217,7 +217,7 @@ const loading = ref(false)
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/api/v2/affiliate/withdraws')
+    const { data } = await request.get('/api/v1/affiliate/withdraws')
     if (data?.data) {
       records.value = data.data.list || data.data || []
       if (data.data.balance !== undefined) {

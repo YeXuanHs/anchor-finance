@@ -111,7 +111,7 @@ const categories = ref<any[]>([])
 const fetchArticle = async (id: string) => {
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v2/news/${id}`)
+    const { data } = await request.get(`/api/v1/news/${id}`)
     if (data?.data) {
       article.value = data.data.article || {}
       prevArticle.value = data.data.prev || null
@@ -127,8 +127,8 @@ const fetchArticle = async (id: string) => {
 const fetchSidebar = async () => {
   try {
     const [recentRes, catRes] = await Promise.all([
-      request.get('/api/v2/news?limit=5'),
-      request.get('/api/v2/news/categories')
+      request.get('/api/v1/news?limit=5'),
+      request.get('/api/v1/news/categories')
     ])
     
     if (recentRes.data?.data) recentNews.value = recentRes.data.data

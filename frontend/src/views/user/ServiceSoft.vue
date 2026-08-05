@@ -30,7 +30,7 @@ const service = ref<any>({})
 
 const fetchData = async () => {
   try {
-    const { data } = await request.get('/api/v2/user/services/software')
+    const { data } = await request.get('/api/v1/user/services/software')
     service.value = data.data || {}
   } catch {}
 }
@@ -39,7 +39,7 @@ const handleRenew = () => { ElMessage.info('跳转到续费页面') }
 const handleDownload = () => { ElMessage.info('开始下载') }
 const handleResetKey = async () => {
   await ElMessageBox.confirm('重置后旧的授权码将立即失效，确定继续？', '确认')
-  try { await request.post('/api/v2/user/services/software/reset-key'); ElMessage.success('已重置'); fetchData() } catch {}
+  try { await request.post('/api/v1/user/services/software/reset-key'); ElMessage.success('已重置'); fetchData() } catch {}
 }
 
 onMounted(fetchData)

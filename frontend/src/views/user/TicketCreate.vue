@@ -44,7 +44,7 @@
         
         <el-form-item label="附件">
           <el-upload
-            action="/api/v2/tickets/0/attachments"
+            action="/api/v1/tickets/0/attachments"
             :on-success="handleUploadSuccess"
             :file-list="form.attachments"
           >
@@ -100,7 +100,7 @@ const handleUploadSuccess = (response: any) => {
 
 const fetchProducts = async () => {
   try {
-    const { data } = await request.get('/api/v2/user/products')
+    const { data } = await request.get('/api/v1/user/products')
     if (data?.data) {
       products.value = data.data
     }
@@ -114,7 +114,7 @@ const submitTicket = async () => {
     await formRef.value.validate()
     submitting.value = true
     
-    await request.post('/api/v2/tickets', form.value)
+    await request.post('/api/v1/tickets', form.value)
     ElMessage.success('工单已提交')
     router.push('/user/tickets')
   } catch (error) {

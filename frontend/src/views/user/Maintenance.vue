@@ -137,7 +137,7 @@ const viewDetail = (notice: MaintenanceNotice) => {
 }
 
 const loadNotices = async () => {
-  const res = await request.get('/api/v2/maintenance/notices', { params: { page: currentPage.value, page_size: pageSize.value } })
+  const res = await request.get('/api/v1/maintenance/notices', { params: { page: currentPage.value, page_size: pageSize.value } })
   notices.value = res.data.data.list
   total.value = res.data.data.total
 }

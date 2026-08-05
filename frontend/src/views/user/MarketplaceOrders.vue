@@ -191,7 +191,7 @@ async function fetchOrders() {
 async function payOrder(order: any) {
   try {
     await ElMessageBox.confirm('确定要支付此订单吗？', '确认支付', { type: 'warning' })
-    await request.post(`/api/v2/marketplace/orders/${order.id}/pay`)
+    await request.post(`/api/v1/marketplace/orders/${order.id}/pay`)
     ElMessage.success('支付成功')
     fetchOrders()
   } catch (e: any) {

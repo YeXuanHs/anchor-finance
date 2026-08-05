@@ -7,7 +7,6 @@ import (
 
 	"anchorfinance/internal/api/admin"
 	"anchorfinance/internal/api/middleware"
-	v1 "anchorfinance/internal/api/v1"
 	v2 "anchorfinance/internal/api/v2"
 	"anchorfinance/internal/config"
 	"anchorfinance/internal/service"
@@ -123,13 +122,9 @@ func (s *Server) setupRoutes() {
 		c.JSON(http.StatusOK, gin.H{"admin_path": adminPath})
 	})
 
-	// API v1 - 兼容智简魔方
+	// API v1 - 锚点财务原生
 	v1Group := s.router.Group("/api/v1")
-	v1.RegisterRoutes(v1Group, s.deps.toV1Deps())
-
-	// API v2 - 锚点财务原生
-	v2Group := s.router.Group("/api/v2")
-	v2.RegisterRoutes(v2Group, s.deps.toV2Deps())
+	v2.RegisterRoutes(v1Group, s.deps.toV2Deps())
 
 	// Admin routes
 	adminGroup := s.router.Group("/api/admin")
@@ -142,24 +137,6 @@ func (s *Server) setupRoutes() {
 	// zjmf 兼容 API
 	zjmfCompat := NewZjmfCompatHandler(s.deps.DB, s.deps.Log)
 	s.router.POST("/api.php", zjmfCompat.Handle)
-}
-
-// toV1Deps converts Deps to v1.Deps.
-func (d *Deps) toV1Deps() v1.Deps {
-	return v1.Deps{
-		DB:         d.DB,
-		Redis:      d.Redis,
-		Log:        d.Log,
-		JWTKey:     d.JWTKey,
-		JWTManager: d.JWTManager,
-		UserSvc:    d.UserSvc,
-		ProdSvc:    d.ProdSvc,
-		OrdSvc:     d.OrdSvc,
-		InvSvc:     d.InvSvc,
-		TicSvc:     d.TicSvc,
-		CartSvc:    d.CartSvc,
-		OAuthSvc:   d.OAuthSvc,
-	}
 }
 
 // toV2Deps converts Deps to v2.Deps.

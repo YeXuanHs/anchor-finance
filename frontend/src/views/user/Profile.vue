@@ -178,7 +178,7 @@ const userForm = reactive({ nickname: '', email: '', phone: '' })
 
 async function fetchProfile() {
   try {
-    const res = await request.get('/api/v2/user/profile')
+    const res = await request.get('/api/v1/user/profile')
     const profile = res.data?.data || res.data || {}
     userForm.nickname = profile.nickname || ''
     userForm.email = profile.email || ''
@@ -227,7 +227,7 @@ async function handleSaveProfile() {
   try {
     await profileFormRef.value.validate()
     saving.value = true
-    await request.put('/api/v2/user/profile', { nickname: userForm.nickname, email: userForm.email, phone: userForm.phone })
+    await request.put('/api/v1/user/profile', { nickname: userForm.nickname, email: userForm.email, phone: userForm.phone })
     ElMessage.success('个人信息已更新')
   } catch (e: any) { ElMessage.error(e?.message || '保存失败，请重试') } finally { saving.value = false }
 }
@@ -237,7 +237,7 @@ async function handleChangePassword() {
   try {
     await passwordFormRef.value.validate()
     changingPassword.value = true
-    await request.post('/api/v2/user/change-password', { oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword })
+    await request.post('/api/v1/user/change-password', { oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword })
     showPasswordDialog.value = false
     ElMessage.success('密码已修改')
     passwordForm.oldPassword = ''
@@ -263,7 +263,7 @@ function handleSendEmailCode() {
 async function handleBindPhone() {
   if (!bindPhoneForm.phone || !bindPhoneForm.code) { ElMessage.warning('请填写手机号和验证码'); return }
   try {
-    await request.post('/api/v2/user/bind-phone', { phone: bindPhoneForm.phone, code: bindPhoneForm.code })
+    await request.post('/api/v1/user/bind-phone', { phone: bindPhoneForm.phone, code: bindPhoneForm.code })
     userForm.phone = bindPhoneForm.phone
     showPhoneDialog.value = false
     bindPhoneForm.phone = ''
@@ -275,7 +275,7 @@ async function handleBindPhone() {
 async function handleBindEmail() {
   if (!bindEmailForm.email || !bindEmailForm.code) { ElMessage.warning('请填写邮箱和验证码'); return }
   try {
-    await request.post('/api/v2/user/bind-email', { email: bindEmailForm.email, code: bindEmailForm.code })
+    await request.post('/api/v1/user/bind-email', { email: bindEmailForm.email, code: bindEmailForm.code })
     userForm.email = bindEmailForm.email
     showEmailDialog.value = false
     bindEmailForm.email = ''

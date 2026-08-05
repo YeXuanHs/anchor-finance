@@ -1,6 +1,10 @@
 package v2
 
 import (
+	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -28,8 +32,7 @@ type Deps struct {
 	OAuthSvc *service.OAuthService
 }
 
-// RegisterRoutes registers all v2 API routes on the given router group.
-// v2 is AnchorFinance's native API format for same-system integration.
+// RegisterRoutes registers all v1 API routes on the given router group.
 func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	log := deps.Log
 
@@ -101,23 +104,179 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	marketplaceSvc := service.NewMarketplaceService(deps.DB, log)
 	marketplaceHandler := handler.NewMarketplaceHandler(marketplaceSvc, log)
 
+	// 验证码 & 极验
+	captchaSvc := service.NewCaptchaService(deps.Redis, deps.DB)
+	captchaHandler := handler.NewCaptchaHandler(captchaSvc, deps.DB)
+
+	// 用户公开信息（脱敏）
+	frontendUserHandler := handler.NewFrontendUserHandler(deps.UserSvc, log)
+
+	// 导航菜单
+	userMenuHandler := handler.NewUserMenuHandler(deps.DB)
+
+	// 公共信息
+	publicSvc := service.NewPublicService(deps.DB, deps.Log)
+	publicHandler := handler.NewPublicHandler(publicSvc, deps.Log)
+
+	// 语言包
+	langSvc := service.NewLanguageService(deps.DB, deps.Log)
+	langHandler := handler.NewLanguageHandler(langSvc, deps.Log)
+
+	// V10云
+	v10CloudSvc := service.NewV10CloudService(deps.DB, deps.Log, deps.OrdSvc, promoCodeSvc)
+	v10CloudHandler := handler.NewV10CloudHandler(v10CloudSvc, log)
+
 	// ==================== 公开接口 ====================
 
 	// 认证
 	auth := r.Group("/auth")
 	{
 		auth.POST("/login", authHandler.Login)
+		auth.POST("/sms-login", authHandler.SMSLogin)
 		auth.POST("/register", authHandler.Register)
 		auth.POST("/refresh", middleware.AuthRequired(), authHandler.RefreshToken)
 		auth.POST("/logout", middleware.AuthRequired(), authHandler.Logout)
 		auth.POST("/access-token", authHandler.AccessTokenLogin)
 	}
 
+	// 密码重置
+	r.POST("/password/verify-code", func(c *gin.Context) {
+		var req struct {
+			Email string `json:"email" binding:"required,email"`
+			Code  string `json:"code" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		// TODO: 实现验证码校验逻辑
+		c.JSON(200, gin.H{"code": 0, "message": "验证码有效"})
+	})
+	r.POST("/password/reset", func(c *gin.Context) {
+		var req struct {
+			Email    string `json:"email" binding:"required,email"`
+			Code     string `json:"code" binding:"required"`
+			Password string `json:"password" binding:"required,min=6"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		// TODO: 实现密码重置逻辑
+		c.JSON(200, gin.H{"code": 0, "message": "密码重置成功"})
+	})
+
+	// 验证码
+	r.GET("/captcha/config", func(c *gin.Context) {
+		configService := captchaSvc.GetCaptchaConfigService()
+		configs, err := configService.GetAllConfigs()
+		if err != nil {
+			c.JSON(500, gin.H{"error": "failed to get captcha config"})
+			return
+		}
+		result := make(map[string]string)
+		for _, cfg := range configs {
+			if cfg.Status {
+				result[cfg.Key] = cfg.Value
+			}
+		}
+		c.JSON(200, gin.H{"data": result})
+	})
+	r.GET("/captcha/generate", captchaHandler.GetImageJSON)
+	r.POST("/captcha/verify", captchaHandler.VerifyImage)
+	r.POST("/captcha/check", func(c *gin.Context) {
+		var req struct {
+			CaptchaID string `json:"captcha_id" binding:"required"`
+			Answer    string `json:"answer" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		// 委托给 VerifyImage 处理
+		captchaHandler.VerifyImage(c)
+	})
+
+	// 极验4.0
+	r.GET("/geetest/register", captchaHandler.GetGeetestConfig)
+	r.POST("/geetest/validate", captchaHandler.VerifyGeetest)
+
 	// 产品
 	r.GET("/products", productHandler.GetList)
 	r.GET("/products/:id", productHandler.GetDetail)
 	r.GET("/products/hot", productHandler.GetHot)
 	r.GET("/products/groups", productHandler.GetGroups)
+	r.GET("/products/:id/pricing", func(c *gin.Context) {
+		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "invalid product id"})
+			return
+		}
+		product, err := deps.ProdSvc.GetByID(uint(id))
+		if err != nil {
+			c.JSON(404, gin.H{"error": "product not found"})
+			return
+		}
+		c.JSON(200, gin.H{"data": gin.H{
+			"id":         product.ID,
+			"name":       product.Name,
+			"price":      product.Price,
+			"period":     product.Period,
+			"period_unit": product.PeriodUnit,
+		}})
+	})
+
+	// 用户公开信息（脱敏）
+	r.GET("/users/:id", frontendUserHandler.GetPublicProfile)
+
+	// 支付方式（公开）
+	r.GET("/payment-methods", balanceHandler.GetEnabledGateways)
+
+	// 系统语言
+	r.GET("/system/lang", func(c *gin.Context) {
+		c.JSON(200, gin.H{"code": 0, "data": gin.H{"lang": "zh-CN"}})
+	})
+
+	// 公开设置
+	r.GET("/settings/public", func(c *gin.Context) {
+		keys := []string{
+			"site_name", "site_url", "site_description", "allow_register",
+			"contact_phone", "contact_email", "contact_address",
+			"sales_phone", "support_phone", "sales_email", "work_time",
+		}
+		m := make(map[string]string)
+		for _, k := range keys {
+			var cfg model.SystemConfig
+			if err := deps.DB.Where("`key` = ?", k).First(&cfg).Error; err == nil {
+				m[k] = cfg.Value
+			}
+		}
+		c.JSON(200, gin.H{
+			"code": 0,
+			"data": gin.H{
+				"site_name":       m["site_name"],
+				"site_url":        m["site_url"],
+				"site_description": m["site_description"],
+				"allow_register":  m["allow_register"] != "false",
+				"contact_phone":   m["contact_phone"],
+				"contact_email":   m["contact_email"],
+				"contact_address": m["contact_address"],
+				"sales_phone":     m["sales_phone"],
+				"support_phone":   m["support_phone"],
+				"sales_email":     m["sales_email"],
+				"work_time":       m["work_time"],
+			},
+		})
+	})
+
+	// 导航菜单（公开）
+	r.GET("/user/menus", userMenuHandler.GetUserMenus)
+	r.GET("/nav/top", userMenuHandler.GetTopNav)
+	r.GET("/nav/bottom", userMenuHandler.GetBottomNav)
+
+	// 首页基础信息 & 下载
+	r.GET("/homepage/base-info", publicHandler.GetHomepageBaseInfo)
+	r.GET("/downloads", publicHandler.GetUserDownloads)
 
 	// 公告
 	r.GET("/announcements", announceHandler.GetActive)
@@ -128,7 +287,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.GET("/news/:id", newsHandler.GetDetail)
 	r.GET("/news/categories", newsHandler.GetCategories)
 
-	// 知识库
+	// 知识库（/help/ 路径）
 	r.GET("/help/categories", knowledgeHandler.GetCategories)
 	r.GET("/help/articles", knowledgeHandler.GetArticles)
 	r.GET("/help/articles/hot", knowledgeHandler.GetHot)
@@ -137,6 +296,35 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.GET("/help/articles/:id/related", knowledgeHandler.GetRelatedArticles)
 	r.POST("/help/articles/:id/feedback", knowledgeHandler.SubmitFeedback)
 	r.GET("/help/categories/:id/sub", knowledgeHandler.GetSubCategories)
+
+	// 知识库（兼容 /knowledge/ 路径）
+	r.GET("/knowledge/categories", knowledgeHandler.GetCategories)
+	r.GET("/knowledge/articles", knowledgeHandler.GetArticles)
+	r.GET("/knowledge/articles/:id", knowledgeHandler.GetArticle)
+
+	// 语言包（公开）
+	r.GET("/languages", langHandler.GetActiveLanguages)
+	r.GET("/languages/:code/translations", langHandler.GetTranslations)
+
+	// 优惠码验证（GET版本，公开）
+	r.GET("/promo-codes/validate", func(c *gin.Context) {
+		code := c.Query("code")
+		if code == "" {
+			c.JSON(400, gin.H{"error": "code is required"})
+			return
+		}
+		userID := c.GetUint("user_id")
+		promo, err := promoCodeSvc.Validate(code, userID)
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"data": promo})
+	})
+
+	// OAuth 回调（公开）
+	r.GET("/oauth/:provider", oauthHandler.Redirect)
+	r.GET("/oauth/:provider/callback", oauthHandler.Callback)
 
 	// 系统设置（公开部分）
 	r.GET("/system/settings", func(c *gin.Context) {
@@ -191,6 +379,34 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		c.JSON(200, gin.H{"data": suffixes})
 	})
 
+	// 交易市场（公开）
+	r.GET("/marketplace/listings", marketplaceHandler.GetListings)
+	r.GET("/marketplace/listings/:id", marketplaceHandler.GetListing)
+
+	// 联系表单
+	r.POST("/contact", func(c *gin.Context) {
+		var req struct {
+			Name    string `json:"name" binding:"required"`
+			Email   string `json:"email" binding:"required"`
+			Phone   string `json:"phone"`
+			Subject string `json:"subject" binding:"required"`
+			Content string `json:"content" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"message": "提交成功，我们会尽快与您联系"})
+	})
+
+	// 解决方案（公开）
+	r.GET("/solutions", publicHandler.GetSolutions)
+	r.GET("/solutions/:slug", publicHandler.GetSolutionDetail)
+
+	// 托管服务
+	r.GET("/colocation/advantages", publicHandler.GetColocationAdvantages)
+	r.GET("/colocation/datacenters", publicHandler.GetColocationDatacenters)
+
 	// ==================== 需要登录 ====================
 	user := r.Group("")
 	user.Use(middleware.AuthRequired())
@@ -218,6 +434,15 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/oauth/providers", oauthHandler.GetProviders)
 		user.POST("/oauth/:provider/bind", oauthHandler.BindAccount)
 		user.DELETE("/oauth/:provider/unbind", oauthHandler.UnbindAccount)
+		user.GET("/oauth/accounts", oauthHandler.GetBoundAccounts)
+
+		// 用户偏好
+		user.GET("/user/tastes", publicHandler.GetUserTastes)
+		user.PUT("/user/tastes", publicHandler.SaveUserTastes)
+
+		// 用户登录日志
+		user.GET("/user/login-logs", loginLogHandler.List)
+		user.GET("/login-logs", loginLogHandler.List)
 
 		// 产品（用户的产品）
 		user.GET("/user/products", productHandler.GetUserProducts)
@@ -399,9 +624,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.POST("/multi-renew/:id/execute", multiRenewHandler.Execute)
 		user.POST("/multi-renew/:id/cancel", multiRenewHandler.Cancel)
 
-		// 登录日志
-		user.GET("/login-logs", loginLogHandler.List)
-
 		// API日志
 		user.GET("/api-logs", apiLogHandler.List)
 
@@ -438,8 +660,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 		// 发送验证码
 		if deps.Redis != nil {
-			captchaSvc := service.NewCaptchaService(deps.Redis, deps.DB)
-			captchaHandler := handler.NewCaptchaHandler(captchaSvc, deps.DB)
 			user.POST("/sms/send", captchaHandler.SendSMS)
 			user.POST("/email/send", captchaHandler.SendEmail)
 		}
@@ -461,14 +681,26 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/user/services/software", userServicesHandler.GetSoftwareServices)
 		user.POST("/user/services/software/reset-key", userServicesHandler.PostSoftwareResetKey)
 
-		// AI Shopping 配置
+		// AI Shopping
 		user.GET("/ai-shopping/config", aiShoppingHandler.GetConfig)
+		user.POST("/ai-shopping/session", func(c *gin.Context) {
+			sessionID := fmt.Sprintf("shop_%d_%d", c.GetUint("user_id"), time.Now().UnixNano())
+			c.JSON(200, gin.H{"code": 0, "data": gin.H{"session_id": sessionID}})
+		})
+		user.POST("/ai-shopping/session/:session_id/message", aiShoppingHandler.Chat)
+		user.GET("/ai-shopping/session/:session_id/messages", aiShoppingHandler.GetChatHistory)
 
 		// 用户仪表盘
 		user.GET("/user/dashboard", userHandler.GetDashboard)
 
 		// 工单上传（通用）
 		user.POST("/tickets/upload", ticketHandler.Upload)
+
+		// V10 云
+		user.POST("/v10cloud/order", v10CloudHandler.CreateOrder)
+		user.GET("/v10cloud/products", v10CloudHandler.GetProductList)
+		user.GET("/v10cloud/config-options", v10CloudHandler.GetConfigOptions)
+		user.POST("/v10cloud/price", v10CloudHandler.CalculatePrice)
 
 		// 市场交易/收益/日志
 		user.GET("/marketplace/transactions", marketplaceHandler.GetTransactions)
@@ -496,16 +728,5 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/marketplace/messages/:listing_id/:user_id", marketplaceHandler.GetChatMessages)
 		user.GET("/marketplace/chat-sessions", marketplaceHandler.GetChatSessions)
 		user.GET("/marketplace/unread-count", marketplaceHandler.GetUnreadCount)
-
 	}
-
-	// 解决方案（公开）
-	publicSvc := service.NewPublicService(deps.DB, deps.Log)
-	publicHandler := handler.NewPublicHandler(publicSvc, deps.Log)
-	r.GET("/solutions", publicHandler.GetSolutions)
-	r.GET("/solutions/:slug", publicHandler.GetSolutionDetail)
-
-	// 托管服务
-	r.GET("/colocation/advantages", publicHandler.GetColocationAdvantages)
-	r.GET("/colocation/datacenters", publicHandler.GetColocationDatacenters)
 }

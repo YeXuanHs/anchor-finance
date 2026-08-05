@@ -267,7 +267,7 @@ const submitApply = async () => {
   }
   submitting.value = true
   try {
-    await request.post('/api/v2/credit/apply', {
+    await request.post('/api/v1/credit/apply', {
       amount: applyForm.value.amount,
       reason: applyForm.value.reason
     })
@@ -287,7 +287,7 @@ const submitRepay = async () => {
   }
   submitting.value = true
   try {
-    await request.post('/api/v2/credit/repay', { amount: repayForm.value.amount })
+    await request.post('/api/v1/credit/repay', { amount: repayForm.value.amount })
     creditInfo.value.used -= repayForm.value.amount
     creditInfo.value.available += repayForm.value.amount
     ElMessage.success('还款成功')
@@ -302,7 +302,7 @@ const submitRepay = async () => {
 
 const loadCreditLogs = async () => {
   try {
-    const { data } = await request.get('/api/v2/credit/logs', {
+    const { data } = await request.get('/api/v1/credit/logs', {
       params: { page: currentPage.value, page_size: pageSize.value }
     })
     creditLogs.value = data?.data?.list || data?.data?.items || []
@@ -315,7 +315,7 @@ const loadCreditLogs = async () => {
 
 onMounted(async () => {
   try {
-    const { data } = await request.get('/api/v2/credit')
+    const { data } = await request.get('/api/v1/credit')
     if (data?.data) {
       creditInfo.value = {
         total: data.data.limit || data.data.total || 0,

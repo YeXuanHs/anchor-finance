@@ -23,7 +23,7 @@ import { ref } from 'vue'
 import request from '@/utils/request'
 const providers = ref<any[]>([])
 const fetchData = async () => {
-  const { data } = await request.get('/api/v2/oauth/providers')
+  const { data } = await request.get('/api/v1/oauth/providers')
   providers.value = data || []
 }
 const handleBind = async (item: any) => {
@@ -31,7 +31,7 @@ const handleBind = async (item: any) => {
   if (data?.data?.url) window.location.href = data.data.url
 }
 const handleUnbind = async (item: any) => {
-  await request.post('/api/v2/oauth/unbind', { provider: item.name })
+  await request.post('/api/v1/oauth/unbind', { provider: item.name })
   fetchData()
 }
 fetchData()

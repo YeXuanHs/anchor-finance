@@ -128,7 +128,7 @@ const handleScroll = () => {
 
 const fetchProductGroups = async () => {
   try {
-    const { data } = await request.get('/api/v2/product-groups')
+    const { data } = await request.get('/api/v1/product-groups')
     if (data?.data) {
       productGroups.value = data.data
     }

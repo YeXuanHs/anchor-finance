@@ -273,7 +273,7 @@ const totalPrice = computed(() => basePrice.value + configPrice.value)
 const fetchProduct = async () => {
   loading.value = true
   try {
-    const { data } = await request.get(`/api/v2/products/${route.params.id}`)
+    const { data } = await request.get(`/api/v1/products/${route.params.id}`)
     if (data?.data) {
       product.value = data.data
       regions.value = data.data.regions || []
@@ -310,7 +310,7 @@ const applyCoupon = async () => {
   if (!couponCode.value) return
   
   try {
-    const { data } = await request.post('/api/v2/promo-codes/validate', {
+    const { data } = await request.post('/api/v1/promo-codes/validate', {
       code: couponCode.value
     })
     if (data?.ok) {
@@ -325,7 +325,7 @@ const applyCoupon = async () => {
 
 const addToCart = async () => {
   try {
-    const { data } = await request.post('/api/v2/cart/add', {
+    const { data } = await request.post('/api/v1/cart/add', {
       product_id: product.value.id,
       region: selectedRegion.value,
       os: selectedOs.value,
