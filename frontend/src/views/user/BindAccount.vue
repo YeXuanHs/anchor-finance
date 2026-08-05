@@ -44,6 +44,29 @@
       <el-divider />
 
       <div class="bind-section">
+        <h3 class="section-title">{{ $t('user.bindAccount.qqBotBind') || 'QQ机器人绑定' }}</h3>
+        <div class="bind-item">
+          <div class="bind-info">
+            <el-icon :size="24" color="#12b7f5"><ChatDotRound /></el-icon>
+            <div class="bind-text">
+              <div class="bind-label">{{ $t('user.bindAccount.qqNumber') || 'QQ号码' }}</div>
+              <div class="bind-value" v-if="qqBound">{{ qqNumber }}</div>
+              <div class="bind-value unbound" v-else>{{ $t('user.bindAccount.unbound') || '未绑定' }}</div>
+            </div>
+          </div>
+          <el-button v-if="qqBound" type="danger" plain @click="unbindQQ">{{ $t('user.bindAccount.unbind') || '解绑' }}</el-button>
+          <el-button v-else type="primary" @click="showQQDialog">{{ $t('user.bindAccount.bind') || '绑定' }}</el-button>
+        </div>
+        <div class="bind-tips">
+          <el-text type="info" size="small">
+            {{ $t('user.bindAccount.qqBotTips') || '绑定QQ号码后，可通过QQ机器人接收消息通知。多个QQ号请用英文逗号分隔。' }}
+          </el-text>
+        </div>
+      </div>
+
+      <el-divider />
+
+      <div class="bind-section">
         <h3 class="section-title">第三方账号绑定</h3>
         <div
           v-for="provider in providers"
@@ -117,18 +140,41 @@
         <el-button type="primary" :loading="submitting" @click="confirmEmail">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- QQ机器人绑定对话框 -->
+    <el-dialog v-model="qqDialogVisible" :title="$t('user.bindAccount.qqBotDialogTitle') || '绑定QQ机器人'" width="420px">
+      <el-form :model="qqForm" label-width="80px">
+        <el-form-item :label="$t('user.bindAccount.qqNumber') || 'QQ号码'">
+          <el-input
+            v-model="qqForm.qq"
+            :placeholder="$t('user.bindAccount.qqPlaceholder') || '请输入QQ号码，多个用英文逗号分隔'"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="qqDialogVisible = false">{{ $t('common.cancel') || '取消' }}</el-button>
+        <el-button type="primary" :loading="qqSubmitting" @click="confirmBindQQ">{{ $t('common.confirm') || '确定' }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Iphone, Message } from '@element-plus/icons-vue'
+import { Iphone, Message, ChatDotRound } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const phone = ref('')
 const email = ref('')
 const submitting = ref(false)
+
+// QQ机器人绑定
+const qqBound = ref(false)
+const qqNumber = ref('')
+const qqDialogVisible = ref(false)
+const qqSubmitting = ref(false)
+const qqForm = ref({ qq: '' })
 
 // 手机绑定
 const phoneDialogVisible = ref(false)
@@ -198,6 +244,46 @@ const sendEmailCode = async () => {
     ElMessage.success('验证码已发送')
   } catch (e: any) {
     ElMessage.error(e.response?.data?.message || '发送失败，请稍后重试')
+  }
+}
+
+const showQQDialog = () => {
+  qqForm.value.qq = qqNumber.value || ''
+  qqDialogVisible.value = true
+}
+
+const confirmBindQQ = async () => {
+  if (!qqForm.value.qq.trim()) {
+    ElMessage.warning('请输入QQ号码')
+    return
+  }
+  qqSubmitting.value = true
+  try {
+    await request.post('/api/v2/interflow/bind', { qq: qqForm.value.qq })
+    qqNumber.value = qqForm.value.qq
+    qqBound.value = true
+    qqDialogVisible.value = false
+    ElMessage.success('QQ机器人绑定成功')
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '绑定失败')
+  } finally {
+    qqSubmitting.value = false
+  }
+}
+
+const unbindQQ = async () => {
+  try {
+    await ElMessageBox.confirm('确定要解绑QQ机器人吗？', '确认解绑', {
+      type: 'warning'
+    })
+    await request.post('/api/v2/interflow/unbind')
+    qqBound.value = false
+    qqNumber.value = ''
+    ElMessage.success('解绑成功')
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      ElMessage.error(e.response?.data?.message || '解绑失败')
+    }
   }
 }
 
@@ -287,6 +373,13 @@ onMounted(async () => {
       email.value = data.data.email || ''
     }
   } catch {}
+  try {
+    const { data } = await request.get('/api/v2/interflow/bind-info')
+    if (data?.data?.qq) {
+      qqNumber.value = data.data.qq.replace(/,\s*$/, '')
+      qqBound.value = !!qqNumber.value
+    }
+  } catch {}
 })
 </script>
 
@@ -346,6 +439,11 @@ onMounted(async () => {
     display: flex;
     gap: 10px;
     width: 100%;
+  }
+
+  .bind-tips {
+    margin-top: 8px;
+    padding: 0 20px;
   }
 }
 </style>
