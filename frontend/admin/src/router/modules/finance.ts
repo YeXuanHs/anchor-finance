@@ -1196,6 +1196,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '导航分组',
             icon: 'ep:menu'
           }
+        },
+        {
+          path: 'rule-middle',
+          name: 'RuleMiddle',
+          component: () => import('@/views/finance/system/rule-middle/index.vue'),
+          meta: {
+            title: '规则中间件',
+            icon: 'ep:operation'
+          }
         }
       ]
     },
