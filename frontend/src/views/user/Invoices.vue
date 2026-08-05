@@ -67,7 +67,7 @@
         <el-table-column :label="$t('common.operating')" width="120" fixed="right">
           <template #default="{ row }">
             <el-button v-if="row.status !== 'paid'" type="primary" size="small" @click="handlePay(row)">{{ $t('invoice.pay') }}</el-button>
-            <el-button type="primary" size="small" link>{{ $t('common.view') }}</el-button>
+            <el-button type="primary" size="small" link @click="router.push(`/user/invoices/${row.id}`)">{{ $t('common.view') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -87,11 +87,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { Wallet, CircleCheck, Document } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
+const router = useRouter()
 const { t } = useI18n()
 
 const statusFilter = ref('all')

@@ -1322,6 +1322,33 @@ export const financeRoutes: AppRouteRecord = {
             title: '缓存清理管理',
             icon: 'ep:delete'
           }
+        },
+        {
+          path: 'authorize',
+          name: 'SystemAuthorize',
+          component: () => import('@/views/finance/system/authorize/index.vue'),
+          meta: {
+            title: '系统授权',
+            icon: 'ep:key'
+          }
+        },
+        {
+          path: 'auto-update',
+          name: 'AutoUpdate',
+          component: () => import('@/views/finance/system/auto-update/index.vue'),
+          meta: {
+            title: '系统更新',
+            icon: 'ep:refresh'
+          }
+        },
+        {
+          path: 'wechat-config',
+          name: 'WechatConfig',
+          component: () => import('@/views/finance/system/wechat-config/index.vue'),
+          meta: {
+            title: '微信配置',
+            icon: 'ep:chat-dot-round'
+          }
         }
       ]
     },

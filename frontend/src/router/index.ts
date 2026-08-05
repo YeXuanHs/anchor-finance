@@ -339,6 +339,11 @@ const router = createRouter({
           component: () => import('@/views/user/InvoiceCompany.vue')
         },
         {
+          path: 'invoices/:id',
+          name: 'InvoiceDetail',
+          component: () => import('@/views/user/InvoiceDetail.vue')
+        },
+        {
           path: 'wallet',
           name: 'UserWallet',
           component: () => import('@/views/Wallet.vue')
