@@ -287,12 +287,21 @@ var xssPatterns = []*regexp.Regexp{
 }
 
 // SanitizeHTML 清理 HTML（防止 XSS）
+// 注意：此函数用于清理用户提交的内容，会移除 script 和事件处理器
+// admin 提交的内容（商品介绍等）不应使用此函数，应保留完整 HTML
 func SanitizeHTML(html string) string {
 	result := html
 	for _, pattern := range xssPatterns {
 		result = pattern.ReplaceAllString(result, "")
 	}
 	return result
+}
+
+// SanitizeHTMLForUser 清理用户提交的 HTML（防止 XSS）
+// 用于处理用户端提交的内容（如工单回复、评论等）
+// 会移除 script、iframe、事件处理器等危险内容
+func SanitizeHTMLForUser(html string) string {
+	return SanitizeHTML(html)
 }
 
 // EscapeHTML 转义 HTML 特殊字符

@@ -29,7 +29,7 @@
  * - 权限列表从当前路由的 meta.authList 中获取
  *
  * @module directives/auth
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 
 import { router } from '@/router'

@@ -7,7 +7,7 @@ import (
 
 	"anchorfinance/internal/api/admin"
 	"anchorfinance/internal/api/middleware"
-	v2 "anchorfinance/internal/api/v2"
+	v1 "anchorfinance/internal/api/v1"
 	"anchorfinance/internal/config"
 	"anchorfinance/internal/service"
 	"anchorfinance/pkg/auth"
@@ -124,7 +124,7 @@ func (s *Server) setupRoutes() {
 
 	// API v1 - 锚点财务原生
 	v1Group := s.router.Group("/api/v1")
-	v2.RegisterRoutes(v1Group, s.deps.toV2Deps())
+	v1.RegisterRoutes(v1Group, s.deps.toV1Deps())
 
 	// Admin routes
 	adminGroup := s.router.Group("/api/admin")
@@ -139,9 +139,9 @@ func (s *Server) setupRoutes() {
 	s.router.POST("/api.php", zjmfCompat.Handle)
 }
 
-// toV2Deps converts Deps to v2.Deps.
-func (d *Deps) toV2Deps() v2.Deps {
-	return v2.Deps{
+// toV1Deps converts Deps to v1.Deps.
+func (d *Deps) toV1Deps() v1.Deps {
+	return v1.Deps{
 		DB:      d.DB,
 		Log:     d.Log,
 		JWTKey:  d.JWTKey,

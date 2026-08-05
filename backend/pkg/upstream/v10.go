@@ -147,33 +147,3 @@ func (c *v10Client) FetchProductsWithGroups() (*UpstreamProductsResult, error) {
 func (c *v10Client) FetchProductsByGroup(groupID string) ([]RemoteProduct, error) {
 	return c.FetchProducts()
 }
-
-// FetchConfigOptions retrieves configurable options for a product from V10 upstream.
-func (c *v10Client) FetchConfigOptions(productID string) ([]RemoteConfigOption, error) {
-	resp, err := c.doRequest("GET", fmt.Sprintf("/api/products/%s/config-options", productID))
-	if err != nil {
-		return nil, err
-	}
-	if resp.Code != 0 && resp.Code != 200 {
-		return nil, fmt.Errorf("v10 api error: %s", resp.Message)
-	}
-
-	var raw []struct {
-		Name    string   `json:"name"`
-		Type    string   `json:"type"`
-		Options []string `json:"options"`
-	}
-	if err := json.Unmarshal(resp.Data, &raw); err != nil {
-		return nil, fmt.Errorf("parse config options: %w", err)
-	}
-
-	opts := make([]RemoteConfigOption, 0, len(raw))
-	for _, o := range raw {
-		opts = append(opts, RemoteConfigOption{
-			Name:    o.Name,
-			Type:    o.Type,
-			Options: o.Options,
-		})
-	}
-	return opts, nil
-}

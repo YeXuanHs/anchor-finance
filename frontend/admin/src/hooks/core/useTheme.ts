@@ -28,7 +28,7 @@
  * ```
  *
  * @module useTheme
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 
 import { useSettingStore } from '@/store/modules/setting'

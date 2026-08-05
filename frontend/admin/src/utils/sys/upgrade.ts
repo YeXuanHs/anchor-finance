@@ -32,7 +32,7 @@
  * 6. 更新本地版本号
  *
  * @module utils/sys/upgrade
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 import { ref } from 'vue'
 import { ElNotification } from 'element-plus'

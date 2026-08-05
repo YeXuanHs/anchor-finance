@@ -1,66 +1,89 @@
 package config
 
-import "github.com/spf13/viper"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
 
-// Config 仅包含启动所需的最小配置，其余全部存数据库
+	"github.com/joho/godotenv"
+)
+
+// Config 仅包含启动所需的最小配置（从 .env 读取），其余全部存数据库
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
+	Server   ServerConfig
+	Database DatabaseConfig
 }
 
 type ServerConfig struct {
-	Host string `mapstructure:"host"`
-	Port int    `mapstructure:"port"`
-	Mode string `mapstructure:"mode"`
+	Host string
+	Port int
+	Mode string
 }
 
 type DatabaseConfig struct {
-	Host         string `mapstructure:"host"`
-	Port         string `mapstructure:"port"`
-	User         string `mapstructure:"user"`
-	Password     string `mapstructure:"password"`
-	DBName       string `mapstructure:"dbname"`
-	Charset      string `mapstructure:"charset"`
-	MaxIdleConns int    `mapstructure:"max_idle_conns"`
-	MaxOpenConns int    `mapstructure:"max_open_conns"`
+	Host         string
+	Port         string
+	User         string
+	Password     string
+	DBName       string
+	Charset      string
+	MaxIdleConns int
+	MaxOpenConns int
 }
 
-type RedisConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     string `mapstructure:"port"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db"`
-}
-
-type JWTConfig struct {
-	Secret      string `mapstructure:"secret"`
-	ExpireHours int    `mapstructure:"expire_hours"`
-}
-
+// Load 从 .env 文件加载配置（仅数据库和服务器信息）
+// .env 文件位置：当前目录或上一级目录
 func Load() (*Config, error) {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./configs")
-	viper.AddConfigPath(".")
-	viper.SetDefault("server.host", "127.0.0.1")
-	viper.SetDefault("server.port", 8080)
-	viper.SetDefault("server.mode", "release")
-	viper.SetDefault("database.host", "localhost")
-	viper.SetDefault("database.port", "3306")
-	viper.SetDefault("database.charset", "utf8mb4")
-	viper.SetDefault("database.max_idle_conns", 10)
-	viper.SetDefault("database.max_open_conns", 100)
-	viper.SetDefault("jwt.expire_hours", 72)
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, err
+	// 尝试加载 .env 文件（不强制存在，也支持环境变量）
+	envPaths := []string{".env", "../.env"}
+	for _, p := range envPaths {
+		if abs, err := filepath.Abs(p); err == nil {
+			if _, err := os.Stat(abs); err == nil {
+				_ = godotenv.Load(abs)
+				break
+			}
 		}
 	}
-	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, err
+
+	cfg := &Config{
+		Server: ServerConfig{
+			Host: getEnv("SERVER_HOST", "127.0.0.1"),
+			Port: getEnvInt("SERVER_PORT", 8080),
+			Mode: getEnv("SERVER_MODE", "release"),
+		},
+		Database: DatabaseConfig{
+			Host:         getEnv("DB_HOST", "localhost"),
+			Port:         getEnv("DB_PORT", "3306"),
+			User:         getEnv("DB_USER", "root"),
+			Password:     getEnv("DB_PASS", ""),
+			DBName:       getEnv("DB_NAME", "anchorfinance"),
+			Charset:      getEnv("DB_CHARSET", "utf8mb4"),
+			MaxIdleConns: getEnvInt("DB_MAX_IDLE", 10),
+			MaxOpenConns: getEnvInt("DB_MAX_OPEN", 100),
+		},
 	}
-	return &cfg, nil
+
+	// 校验必填项
+	if cfg.Database.Host == "" || cfg.Database.User == "" || cfg.Database.DBName == "" {
+		return nil, fmt.Errorf("数据库配置不完整，请检查 .env 文件（DB_HOST, DB_USER, DB_NAME）")
+	}
+
+	return cfg, nil
+}
+
+func getEnv(key, defaultVal string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return defaultVal
+}
+
+func getEnvInt(key string, defaultVal int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return defaultVal
 }

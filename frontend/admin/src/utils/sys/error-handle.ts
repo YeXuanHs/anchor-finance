@@ -27,7 +27,7 @@
  * - ResourceError: 静态资源加载失败
  *
  * @module utils/sys/error-handle
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 import type { App } from 'vue'
 

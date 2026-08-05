@@ -46,7 +46,7 @@
  * ```
  *
  * @module useChart
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 
 import { echarts, type EChartsOption } from '@/plugins/echarts'

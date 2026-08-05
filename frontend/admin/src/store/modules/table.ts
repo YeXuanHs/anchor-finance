@@ -23,7 +23,7 @@
  * - 用户配置跨页面保持
  *
  * @module store/modules/table
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'

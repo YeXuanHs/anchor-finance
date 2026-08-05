@@ -4,7 +4,7 @@
  * 负责菜单数据的获取、过滤和处理
  *
  * @module router/core/MenuProcessor
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 
 import type { AppRouteRecord } from '@/types/router'

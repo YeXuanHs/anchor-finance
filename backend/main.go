@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -25,9 +24,12 @@ import (
 )
 
 func main() {
-	// 检查是否已安装（config.yaml 是否存在）
-	configPath := filepath.Join("configs", "config.yaml")
-	if !fileExists(configPath) {
+	// 检查是否已安装（.env 是否存在）
+	envPath := ".env"
+	if !fileExists(envPath) {
+		envPath = "../.env"
+	}
+	if !fileExists(envPath) {
 		fmt.Println("========================================")
 		fmt.Println("  锚点财务 - 未检测到配置文件")
 		fmt.Println("  请先运行安装脚本: bash install.sh")
@@ -73,11 +75,8 @@ func main() {
 		Output: "stdout",
 	})
 
-	// JWT 配置（优先从 config.yaml 读取，否则从数据库读取）
-	jwtSecret := cfg.JWT.Secret
-	if jwtSecret == "" {
-		jwtSecret = db.GetSystemSetting("jwt_secret")
-	}
+	// JWT 配置从数据库读取
+	jwtSecret := db.GetSystemSetting("jwt_secret")
 	if jwtSecret == "" {
 		// 首次启动：生成随机密钥并持久化到数据库
 		jwtSecret = generateRandomSecret(64)
@@ -86,14 +85,10 @@ func main() {
 		}
 		logger.Warn("已自动生成 JWT 密钥并保存到数据库")
 	}
-	jwtExpire := cfg.JWT.ExpireHours
-	if jwtExpire == 0 {
-		jwtExpireStr := db.GetSystemSetting("jwt_expire_hours")
-		if v, err := strconv.Atoi(jwtExpireStr); err == nil && v > 0 {
-			jwtExpire = v
-		} else {
-			jwtExpire = 72
-		}
+	jwtExpireStr := db.GetSystemSetting("jwt_expire_hours")
+	jwtExpire := 72
+	if v, err := strconv.Atoi(jwtExpireStr); err == nil && v > 0 {
+		jwtExpire = v
 	}
 	jwtMgr := auth.NewJWTManager(jwtSecret, jwtExpire)
 
@@ -142,7 +137,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// 启动上游产品库存和价格自动同步（默认30分钟）
+	// 启动上游产品库存、价格和可配置选项自动同步（默认15分钟）
 	upstreamSyncInterval := getUpstreamSyncInterval()
 	upstreamSvc := service.NewUpstreamService(db.DB(), logger.Default())
 	go upstreamSvc.StartAutoSync(upstreamSyncInterval)
@@ -172,15 +167,15 @@ func initDefaultMenus(db *gorm.DB) {
 	// 所有默认数据通过 init.sql 导入，不再硬编码
 }
 
-// getUpstreamSyncInterval 从数据库读取上游同步间隔（分钟），默认30分钟
+// getUpstreamSyncInterval 从数据库读取上游同步间隔（分钟），默认15分钟
 func getUpstreamSyncInterval() time.Duration {
 	intervalStr := db.GetSystemSetting("upstream_sync_interval")
 	if intervalStr == "" {
-		return 30 * time.Minute
+		return 15 * time.Minute
 	}
 	minutes, err := strconv.Atoi(intervalStr)
 	if err != nil || minutes <= 0 {
-		return 30 * time.Minute
+		return 15 * time.Minute
 	}
 	return time.Duration(minutes) * time.Minute
 }

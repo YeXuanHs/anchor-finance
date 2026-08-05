@@ -269,7 +269,7 @@ const baseUrl = computed(() => window.location.origin)
 const loginCallbackUrl = computed(() => `${baseUrl.value}/wechat_login_handle`)
 const payCallbackUrl = computed(() => `${baseUrl.value}/api/payment/callback/wechat`)
 const refundCallbackUrl = computed(() => `${baseUrl.value}/api/payment/refund/callback/wechat`)
-const certUploadUrl = computed(() => `${import.meta.env.VITE_API_URL}/api/admin/wechat/pay/cert`)
+const certUploadUrl = computed(() => `${import.meta.env.VITE_API_URL || ''}/api/admin/wechat/pay/cert`)
 const uploadHeaders = computed(() => ({
   Authorization: localStorage.getItem('token') || ''
 }))

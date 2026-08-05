@@ -17,7 +17,7 @@
  * - 权限控制
  *
  * @module types/router/index
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 
 import { RouteRecordRaw } from 'vue-router'

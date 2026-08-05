@@ -65,8 +65,10 @@ func Security(config *SecurityConfig) gin.HandlerFunc {
 			return
 		}
 
-		// 4. XSS 防护：检查查询参数
-		if config.EnableXSSFilter {
+		// 4. XSS 防护：检查查询参数（admin 路径跳过，对齐 zjmf 策略）
+		path := c.Request.URL.Path
+		isAdminPath := strings.HasPrefix(path, "/api/admin/")
+		if config.EnableXSSFilter && !isAdminPath {
 			if detectXSS(c.Request.URL.RawQuery) {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 					"code":    400,
@@ -128,10 +130,17 @@ func SecurityHeaders() gin.HandlerFunc {
 }
 
 // RequestBodySanitizer 请求体清理中间件
+// admin 路径跳过 XSS 检测，对齐 zjmf 策略：admin 输入支持完整 HTML
 func RequestBodySanitizer() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 只对 POST/PUT/PATCH 请求处理
 		if c.Request.Method != "POST" && c.Request.Method != "PUT" && c.Request.Method != "PATCH" {
+			c.Next()
+			return
+		}
+
+		// admin 路径跳过 XSS 检测
+		if strings.HasPrefix(c.Request.URL.Path, "/api/admin/") {
 			c.Next()
 			return
 		}

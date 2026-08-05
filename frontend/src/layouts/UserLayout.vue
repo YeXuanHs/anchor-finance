@@ -7,7 +7,7 @@
     <aside class="sidebar" :class="{ 'mobile-open': sidebarVisible }">
       <div class="sidebar-header">
         <div class="logo" @click="$router.push('/')">
-          <img src="/logo.png" :alt="$t('userLayout.brandName')" class="logo-img" />
+          <img :src="configStore.getLogo('home') || '/logo.png'" :alt="$t('userLayout.brandName')" class="logo-img" />
           <span class="logo-text">{{ $t('userLayout.brandName') }}</span>
         </div>
         <el-icon class="sidebar-close-mobile" :size="18" @click="sidebarVisible = false"><Close /></el-icon>
@@ -116,6 +116,7 @@ import { ref, computed, onMounted, markRaw } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
+import { useConfigStore } from '@/stores/config'
 import {
   Fold, Close, Bell, ArrowDown, User, Setting, SwitchButton,
   HomeFilled, Box, ShoppingCart, Wallet, Tickets, Ticket, Connection,
@@ -128,6 +129,7 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const configStore = useConfigStore()
 
 const sidebarVisible = ref(false)
 const unreadCount = ref(0)

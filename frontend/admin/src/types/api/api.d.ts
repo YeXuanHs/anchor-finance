@@ -29,7 +29,7 @@
  * ```
  *
  * @module types/api/api
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 
 declare namespace Api {

@@ -4,7 +4,7 @@
     <header class="header" :class="{ 'header-scrolled': scrolled }">
       <div class="header-inner">
         <div class="logo" @click="$router.push('/')">
-          <img src="/logo.png" :alt="$t('landing.brandName')" class="logo-img" />
+          <img :src="configStore.getLogo('home') || '/logo.png'" :alt="$t('landing.brandName')" class="logo-img" />
           <span class="logo-text">{{ $t('landing.brandName') }}</span>
         </div>
         <nav class="nav-links">
@@ -239,7 +239,7 @@
         <div class="footer-grid">
           <div class="footer-col">
             <div class="footer-logo">
-              <img src="/logo.png" :alt="$t('landing.brandName')" />
+              <img :src="configStore.getLogo('home') || '/logo.png'" :alt="$t('landing.brandName')" />
               <span>{{ $t('landing.brandName') }}</span>
             </div>
             <p class="footer-desc">{{ siteSettings.site_description || $t('landing.defaultDesc') }}</p>
@@ -285,6 +285,7 @@ import {
   Promotion, OfficeBuilding, ShoppingBag, DataLine
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { useConfigStore } from '@/stores/config'
 import LanguageSwitch from '@/components/LanguageSwitch.vue'
 
 const { t } = useI18n()
@@ -308,6 +309,7 @@ const hotProducts = ref([])
 const announcements = ref([])
 const partners = ref([])
 const siteSettings = ref({})
+const configStore = useConfigStore()
 
 // 快捷入口
 const quickEntries = [

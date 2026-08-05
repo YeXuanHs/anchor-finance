@@ -27,7 +27,7 @@
  * 4. 返回当前版本的存储键供使用
  *
  * @module utils/storage/storage-key-manager
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 import { StorageConfig } from '@/utils/storage'
 

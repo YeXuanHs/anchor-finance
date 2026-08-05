@@ -2,7 +2,7 @@
  * 路由核心模块导出
  *
  * @module router/core
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 
 export { RouteRegistry } from './RouteRegistry'

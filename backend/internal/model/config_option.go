@@ -34,13 +34,45 @@ type ConfigOption struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 }
 
-// ProductConfigGroup groups config options that are linked to products.
+// ProductConfigGroup 可配置选项组，对标zjmf的product_config_groups
 type ProductConfigGroup struct {
-	gorm.Model
+	ID          uint   `gorm:"primaryKey" json:"id"`
 	Name        string `gorm:"type:varchar(255);not null" json:"name"`
 	Description string `gorm:"type:text" json:"description"`
 	SortOrder   int    `gorm:"default:0" json:"sort_order"`
 	Enabled     bool   `gorm:"default:true" json:"enabled"`
+	UpstreamID  string `gorm:"type:varchar(64);index" json:"upstream_id"` // 上游ID映射
+	ProductID   uint   `gorm:"index" json:"product_id"`                  // 关联产品
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// ProductConfigOption 可配置选项，对标zjmf的product_config_options
+type ProductConfigOption struct {
+	ID         uint   `gorm:"primaryKey" json:"id"`
+	Name       string `gorm:"type:varchar(255);not null" json:"name"`
+	Type       int    `gorm:"default:0" json:"type"` // 3=yes/no, 5=os, 6=quantity, 12=NOC等
+	GroupID    uint   `gorm:"index;not null" json:"group_id"`
+	SortOrder  int    `gorm:"default:0" json:"sort_order"`
+	Hidden     bool   `gorm:"default:false" json:"hidden"`
+	UpstreamID string `gorm:"type:varchar(64);index" json:"upstream_id"` // 上游ID映射
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// ProductConfigOptionSub 可配置子选项，对标zjmf的product_config_options_sub
+type ProductConfigOptionSub struct {
+	ID         uint    `gorm:"primaryKey" json:"id"`
+	Name       string  `gorm:"type:varchar(255);not null" json:"name"`
+	OptionID   uint    `gorm:"index;not null" json:"option_id"` // 关联的config option
+	SortOrder  int     `gorm:"default:0" json:"sort_order"`
+	Hidden     bool    `gorm:"default:false" json:"hidden"`
+	OS         string  `gorm:"type:varchar(64)" json:"os,omitempty"`      // OS类型(如CentOS)
+	Version    string  `gorm:"type:varchar(64)" json:"version,omitempty"` // 版本号(如7.6)
+	UpstreamID string  `gorm:"type:varchar(64);index" json:"upstream_id"` // 上游ID映射
+	Price      float64 `gorm:"type:decimal(10,2);default:0" json:"price"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // ProductConfigOptionLink links config groups to products.

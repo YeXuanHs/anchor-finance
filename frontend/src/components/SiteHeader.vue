@@ -2,7 +2,7 @@
   <header class="site-header" :class="{ 'header-scrolled': scrolled }">
     <div class="header-inner">
       <div class="logo" @click="$router.push('/')">
-        <img src="/logo.png" :alt="siteName" class="logo-img" />
+        <img :src="configStore.getLogo('home') || '/logo.png'" :alt="siteName" class="logo-img" />
         <span class="logo-text">{{ siteName }}</span>
       </div>
       
@@ -96,11 +96,13 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useConfigStore } from '@/stores/config'
 import { ArrowDown, User } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const router = useRouter()
 const userStore = useUserStore()
+const configStore = useConfigStore()
 
 const scrolled = ref(false)
 const productGroups = ref<any[]>([])

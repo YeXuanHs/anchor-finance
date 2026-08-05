@@ -118,7 +118,7 @@
   const { t } = useI18n()
 
   // 环境变量
-  const ENCRYPT_KEY = import.meta.env.VITE_LOCK_ENCRYPT_KEY
+  const ENCRYPT_KEY = import.meta.env.VITE_LOCK_ENCRYPT_KEY || 'anchor-finance-key'
 
   // Store
   const userStore = useUserStore()

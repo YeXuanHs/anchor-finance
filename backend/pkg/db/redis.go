@@ -39,6 +39,7 @@ func InitRedisFromDB() error {
 	host := GetSystemSetting("redis_host")
 	port := GetSystemSetting("redis_port")
 	password := GetSystemSetting("redis_password")
+	dbStr := GetSystemSetting("redis_db")
 
 	if host == "" {
 		host = "localhost"
@@ -46,12 +47,16 @@ func InitRedisFromDB() error {
 	if port == "" {
 		port = "6379"
 	}
+	dbNum := 0
+	if dbStr != "" {
+		fmt.Sscanf(dbStr, "%d", &dbNum)
+	}
 
 	_, err := InitRedis(RedisConfig{
 		Host:     host,
 		Port:     port,
 		Password: password,
-		DB:       0,
+		DB:       dbNum,
 	})
 	return err
 }

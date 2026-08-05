@@ -7,7 +7,7 @@
  * - 表格尺寸枚举（默认、紧凑、宽松）
  *
  * @module enums/formEnum
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 
 // 页面类型

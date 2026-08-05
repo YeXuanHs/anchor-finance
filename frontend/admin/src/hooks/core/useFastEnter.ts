@@ -12,7 +12,7 @@
  * 4. 宽度控制 - 提供最小显示宽度配置，支持响应式布局
  *
  * @module useFastEnter
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 
 import { computed } from 'vue'

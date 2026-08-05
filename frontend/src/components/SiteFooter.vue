@@ -4,7 +4,7 @@
       <div class="footer-grid">
         <div class="footer-col footer-brand">
           <div class="footer-logo">
-            <img src="/logo.png" :alt="siteSettings.site_name" />
+            <img :src="configStore.getLogo('home') || '/logo.png'" :alt="siteSettings.site_name" />
             <span>{{ siteSettings.site_name }}</span>
           </div>
           <p class="footer-desc">{{ siteSettings.site_description || '高效、安全的财务管理系统' }}</p>
@@ -77,8 +77,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { Phone, Message } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { useConfigStore } from '@/stores/config'
 
 const currentYear = computed(() => new Date().getFullYear())
+const configStore = useConfigStore()
 
 const siteSettings = ref({
   contact_phone: '',

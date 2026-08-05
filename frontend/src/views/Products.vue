@@ -4,7 +4,7 @@
     <header class="page-header">
       <div class="header-inner">
         <router-link to="/" class="logo">
-          <img src="/logo.png" :alt="siteName" class="logo-img" />
+          <img :src="configStore.getLogo('home') || '/logo.png'" :alt="siteName" class="logo-img" />
           <span class="logo-text">{{ siteName }}</span>
         </router-link>
         <nav class="nav-links">
@@ -140,8 +140,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ArrowDown, Search, Monitor, Box } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { useConfigStore } from '@/stores/config'
 
 const route = useRoute()
+const configStore = useConfigStore()
 const loading = ref(false)
 
 const productGroups = ref([])

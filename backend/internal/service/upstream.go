@@ -552,7 +552,122 @@ func (s *UpstreamService) SyncStockAndPrices(providerID uint) (int, error) {
 	return synced, nil
 }
 
-// StartAutoSync 启动后台自动同步库存和价格
+// SyncConfigOptions 从上游同步可配置选项（OS列表等），对标zjmf的syncProductInfo
+// 仅支持zjmf类型上游，通过JWT调用cart/get_product_config
+func (s *UpstreamService) SyncConfigOptions(providerID uint) (int, error) {
+	var provider model.UpstreamProvider
+	if err := s.db.First(&provider, providerID).Error; err != nil {
+		return 0, fmt.Errorf("provider not found: %w", err)
+	}
+
+	client, err := upstream.NewClient(&provider)
+	if err != nil {
+		return 0, err
+	}
+
+	fetcher, ok := client.(upstream.ConfigOptionFetcher)
+	if !ok {
+		return 0, nil // 不支持config option拉取
+	}
+
+	// 获取已对接的产品映射
+	var upstreamProducts []model.UpstreamProduct
+	if err := s.db.Where("upstream_id = ?", providerID).Find(&upstreamProducts).Error; err != nil {
+		return 0, fmt.Errorf("query docked products: %w", err)
+	}
+
+	synced := 0
+	for _, up := range upstreamProducts {
+		groups, err := fetcher.FetchConfigOptions(up.RemoteProductID)
+		if err != nil {
+			s.log.WithField("local_product_id", up.LocalProductID).Warnf("fetch config options failed: %v", err)
+			continue
+		}
+
+		if len(groups) == 0 {
+			continue
+		}
+
+		// 同步到本地数据库
+		if err := s.syncConfigGroupsToDB(up.LocalProductID, groups); err != nil {
+			s.log.WithField("local_product_id", up.LocalProductID).Errorf("sync config options to db failed: %v", err)
+			continue
+		}
+		synced++
+	}
+
+	return synced, nil
+}
+
+// syncConfigGroupsToDB 将上游的可配置选项组同步到本地数据库
+func (s *UpstreamService) syncConfigGroupsToDB(productID uint, groups []upstream.RemoteConfigGroup) error {
+	for _, group := range groups {
+		// 查找或创建配置组
+		var configGroup model.ProductConfigGroup
+		err := s.db.Where("upstream_id = ? AND product_id = ?", group.RemoteID, productID).First(&configGroup).Error
+		if err != nil {
+			// 创建新组
+			configGroup = model.ProductConfigGroup{
+				Name:      group.Name,
+				UpstreamID: group.RemoteID,
+				ProductID: productID,
+			}
+			if err := s.db.Create(&configGroup).Error; err != nil {
+				return fmt.Errorf("create config group: %w", err)
+			}
+		} else {
+			configGroup.Name = group.Name
+			s.db.Save(&configGroup)
+		}
+
+		for _, option := range group.Options {
+			// 查找或创建配置选项
+			var configOption model.ProductConfigOption
+			err := s.db.Where("upstream_id = ? AND group_id = ?", option.RemoteID, configGroup.ID).First(&configOption).Error
+			if err != nil {
+				configOption = model.ProductConfigOption{
+					Name:      option.Name,
+					Type:      option.Type,
+					UpstreamID: option.RemoteID,
+					GroupID:   configGroup.ID,
+				}
+				if err := s.db.Create(&configOption).Error; err != nil {
+					return fmt.Errorf("create config option: %w", err)
+				}
+			} else {
+				configOption.Name = option.Name
+				configOption.Type = option.Type
+				s.db.Save(&configOption)
+			}
+
+			// 同步子选项
+			for _, sub := range option.Sub {
+				var configSub model.ProductConfigOptionSub
+				err := s.db.Where("upstream_id = ? AND option_id = ?", sub.RemoteID, configOption.ID).First(&configSub).Error
+				if err != nil {
+					configSub = model.ProductConfigOptionSub{
+						Name:      sub.Name,
+						OS:        sub.OS,
+						Version:   sub.Version,
+						UpstreamID: sub.RemoteID,
+						OptionID:  configOption.ID,
+					}
+					if err := s.db.Create(&configSub).Error; err != nil {
+						return fmt.Errorf("create config sub: %w", err)
+					}
+				} else {
+					configSub.Name = sub.Name
+					configSub.OS = sub.OS
+					configSub.Version = sub.Version
+					s.db.Save(&configSub)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// StartAutoSync 启动后台自动同步库存、价格和可配置选项
 func (s *UpstreamService) StartAutoSync(interval time.Duration) {
 	// 从数据库读取同步间隔配置
 	intervalStr := getSystemConfigValue(s.db, "upstream_sync_interval")
@@ -587,11 +702,22 @@ func (s *UpstreamService) StartAutoSync(interval time.Duration) {
 		}
 
 		for _, provider := range providers {
+			// 同步库存和价格
 			synced, err := s.SyncStockAndPrices(provider.ID)
 			if err != nil {
-				s.log.WithField("provider_id", provider.ID).Errorf("auto-sync failed: %v", err)
+				s.log.WithField("provider_id", provider.ID).Errorf("auto-sync stock/price failed: %v", err)
 			} else {
-				s.log.WithField("provider_id", provider.ID).Infof("auto-sync completed: %d products updated", synced)
+				s.log.WithField("provider_id", provider.ID).Infof("auto-sync stock/price completed: %d products updated", synced)
+			}
+
+			// 同步可配置选项（仅zjmf类型，对标zjmf的syncProductInfo）
+			if provider.Type == "zjmf" || provider.Type == "zjmfv3" {
+				configSynced, err := s.SyncConfigOptions(provider.ID)
+				if err != nil {
+					s.log.WithField("provider_id", provider.ID).Errorf("auto-sync config options failed: %v", err)
+				} else if configSynced > 0 {
+					s.log.WithField("provider_id", provider.ID).Infof("auto-sync config options completed: %d products synced", configSynced)
+				}
 			}
 		}
 	}

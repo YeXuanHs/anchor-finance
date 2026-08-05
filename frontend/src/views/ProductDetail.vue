@@ -4,7 +4,7 @@
     <header class="page-header">
       <div class="header-inner">
         <router-link to="/" class="logo">
-          <img src="/logo.png" :alt="siteName" class="logo-img" />
+          <img :src="configStore.getLogo('home') || '/logo.png'" :alt="siteName" class="logo-img" />
           <span class="logo-text">{{ siteName }}</span>
         </router-link>
         <nav class="nav-links">
@@ -201,9 +201,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { CircleCheckFilled, CircleCheck, ShoppingCart } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
+import { useConfigStore } from '@/stores/config'
 
 const route = useRoute()
 const router = useRouter()
+const configStore = useConfigStore()
 const loading = ref(false)
 const siteName = ref('')
 

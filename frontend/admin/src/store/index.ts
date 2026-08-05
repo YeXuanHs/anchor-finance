@@ -20,7 +20,7 @@
  * - 使用 localStorage 作为存储介质
  *
  * @module store/index
- * @author Art Design Pro Team
+ * @author 锚点财务团队
  */
 import type { App } from 'vue'
 import { createPinia } from 'pinia'

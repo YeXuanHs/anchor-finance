@@ -77,7 +77,11 @@ type Client interface {
 	FetchProducts() ([]RemoteProduct, error)
 	FetchProductsWithGroups() (*UpstreamProductsResult, error)
 	FetchProductsByGroup(groupID string) ([]RemoteProduct, error)
-	FetchConfigOptions(productID string) ([]RemoteConfigOption, error)
+}
+
+// ConfigOptionFetcher is optionally implemented by clients that support fetching config options.
+type ConfigOptionFetcher interface {
+	FetchConfigOptions(productID string) ([]RemoteConfigGroup, error)
 }
 
 func NewClient(provider *model.UpstreamProvider) (Client, error) {

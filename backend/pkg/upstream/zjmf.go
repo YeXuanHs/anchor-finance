@@ -15,9 +15,10 @@ import (
 )
 
 type zjmfClient struct {
-	baseURL string
-	apiKey  string
-	config  map[string]interface{}
+	baseURL  string
+	apiKey   string
+	config   map[string]interface{}
+	jwtToken string // cached JWT for authenticated API calls
 }
 
 func newZJMFClient(p *model.UpstreamProvider) *zjmfClient {
@@ -353,32 +354,237 @@ func (c *zjmfClient) FetchProductsByGroup(groupID string) ([]RemoteProduct, erro
 	return filtered, nil
 }
 
+// zjmfLogin authenticates with the upstream zjmf and caches the JWT token.
+func (c *zjmfClient) zjmfLogin() error {
+	if c.jwtToken != "" {
+		return nil
+	}
+
+	username, _ := c.config["username"].(string)
+	password, _ := c.config["password"].(string)
+	if username == "" || password == "" {
+		return fmt.Errorf("zjmf JWT auth requires username and password in config")
+	}
+
+	loginURL := c.baseURL + "/zjmf_api_login"
+	form := url.Values{}
+	form.Set("username", username)
+	form.Set("password", password)
+
+	client := &http.Client{Timeout: newHTTPTimeout()}
+	resp, err := client.Post(loginURL, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+	if err != nil {
+		return fmt.Errorf("zjmf login failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("zjmf login read body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("zjmf login http %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		Status int    `json:"status"`
+		JWT    string `json:"jwt"`
+		Data   struct {
+			JWT string `json:"jwt"`
+		} `json:"data"`
+		Msg string `json:"msg"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return fmt.Errorf("zjmf login parse: %w", err)
+	}
+
+	jwt := result.JWT
+	if jwt == "" {
+		jwt = result.Data.JWT
+	}
+	if jwt == "" {
+		return fmt.Errorf("zjmf login no jwt returned: %s", result.Msg)
+	}
+
+	c.jwtToken = jwt
+	return nil
+}
+
+// doJWTRequest sends a GET request with JWT authentication.
+func (c *zjmfClient) doJWTRequest(path string, params map[string]string) ([]byte, error) {
+	if err := c.zjmfLogin(); err != nil {
+		return nil, err
+	}
+
+	reqURL := c.baseURL + "/" + strings.TrimLeft(path, "/")
+	if len(params) > 0 {
+		q := url.Values{}
+		for k, v := range params {
+			q.Set(k, v)
+		}
+		reqURL += "?" + q.Encode()
+	}
+
+	client := &http.Client{Timeout: newHTTPTimeout()}
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("zjmf jwt build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.jwtToken)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("zjmf jwt request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("zjmf jwt read body: %w", err)
+	}
+
+	// If 405, token expired - retry once
+	if resp.StatusCode == 405 {
+		c.jwtToken = ""
+		if err := c.zjmfLogin(); err != nil {
+			return nil, err
+		}
+		req, _ = http.NewRequest("GET", reqURL, nil)
+		req.Header.Set("Authorization", "Bearer "+c.jwtToken)
+		resp, err = client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("zjmf jwt retry failed: %w", err)
+		}
+		defer resp.Body.Close()
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("zjmf jwt http %d: %s", resp.StatusCode, string(body))
+	}
+
+	return body, nil
+}
+
 // FetchConfigOptions retrieves configurable options for a product from zjmf upstream.
-func (c *zjmfClient) FetchConfigOptions(productID string) ([]RemoteConfigOption, error) {
-	resp, err := c.doRequest("getproductconfigoptions", map[string]string{"pid": productID})
+// Uses JWT auth to call cart/get_product_config, same as zjmf's getZjmfUpstreamProductConfig.
+func (c *zjmfClient) FetchConfigOptions(productID string) ([]RemoteConfigGroup, error) {
+	body, err := c.doJWTRequest("cart/get_product_config", map[string]string{"pid": productID})
 	if err != nil {
 		return nil, err
 	}
-	if resp.Result != "success" {
-		return nil, fmt.Errorf("zjmf api error: %s", resp.Msg)
-	}
 
-	var raw []struct {
-		Name    string   `json:"name"`
-		Type    string   `json:"type"`
-		Options []string `json:"options"`
+	var result struct {
+		Status int `json:"status"`
+		Data   struct {
+			ConfigGroups []struct {
+				ID      int    `json:"id"`
+				Name    string `json:"name"`
+				Options []struct {
+					ID           int    `json:"id"`
+					OptionName   string `json:"option_name"`
+					OptionType   int    `json:"option_type"`
+					QtyMinimum   int    `json:"qty_minimum"`
+					QtyMaximum   int    `json:"qty_maximum"`
+					UpstreamID   int    `json:"upstream_id"`
+					Sub          []struct {
+						ID         int    `json:"id"`
+						OptionName string `json:"option_name"`
+						SortOrder  int    `json:"sort_order"`
+						UpstreamID int    `json:"upstream_id"`
+						Pricing    []struct {
+							Currency  int     `json:"currency"`
+							Monthly   float64 `json:"monthly"`
+							Quarterly float64 `json:"quarterly"`
+							Annually  float64 `json:"annually"`
+						} `json:"pricing"`
+					} `json:"sub"`
+				} `json:"options"`
+			} `json:"config_groups"`
+		} `json:"data"`
+		Msg string `json:"msg"`
 	}
-	if err := json.Unmarshal(resp.Data, &raw); err != nil {
+	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, fmt.Errorf("parse config options: %w", err)
 	}
-
-	opts := make([]RemoteConfigOption, 0, len(raw))
-	for _, o := range raw {
-		opts = append(opts, RemoteConfigOption{
-			Name:    o.Name,
-			Type:    o.Type,
-			Options: o.Options,
-		})
+	if result.Status != 200 {
+		return nil, fmt.Errorf("zjmf api error: %s", result.Msg)
 	}
-	return opts, nil
+
+	groups := make([]RemoteConfigGroup, 0, len(result.Data.ConfigGroups))
+	for _, g := range result.Data.ConfigGroups {
+		group := RemoteConfigGroup{
+			RemoteID: fmt.Sprintf("%d", g.ID),
+			Name:     g.Name,
+			Options:  make([]RemoteConfigOption, 0, len(g.Options)),
+		}
+		for _, opt := range g.Options {
+			option := RemoteConfigOption{
+				RemoteID:  fmt.Sprintf("%d", opt.ID),
+				Name:      parseOptionName(opt.OptionName),
+				Type:      opt.OptionType,
+				GroupName: g.Name,
+				GroupID:   fmt.Sprintf("%d", g.ID),
+				Sub:       make([]RemoteConfigOptionSub, 0, len(opt.Sub)),
+			}
+			for _, sub := range opt.Sub {
+				subOpt := RemoteConfigOptionSub{
+					RemoteID: fmt.Sprintf("%d", sub.ID),
+					Name:     parseSubOptionName(sub.OptionName),
+				}
+				// For OS type (option_type=5), extract OS and version
+				if opt.OptionType == 5 {
+					subOpt.OS, subOpt.Version = parseOSName(sub.OptionName)
+				}
+				// Use first pricing if available
+				if len(sub.Pricing) > 0 {
+					subOpt.Price = sub.Pricing[0].Monthly
+				}
+				option.Sub = append(option.Sub, subOpt)
+			}
+			group.Options = append(group.Options, option)
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
+}
+
+// parseOptionName extracts the display name from zjmf's pipe-separated format.
+// Format: "key|DisplayName" -> "DisplayName", or just "name" if no pipe.
+func parseOptionName(name string) string {
+	parts := strings.SplitN(name, "|", 2)
+	if len(parts) == 2 {
+		return parts[1]
+	}
+	return name
+}
+
+// parseSubOptionName extracts the display name from zjmf's pipe-separated format.
+func parseSubOptionName(name string) string {
+	parts := strings.SplitN(name, "|", 2)
+	if len(parts) == 2 {
+		name = parts[1]
+	}
+	// Remove version part after ^
+	if idx := strings.Index(name, "^"); idx >= 0 {
+		return name[:idx]
+	}
+	return name
+}
+
+// parseOSName extracts OS name and version from zjmf's format.
+// Format: "CentOS^7.6" or "Windows Server^2019" or "os_name|display^version"
+func parseOSName(name string) (os, version string) {
+	parts := strings.SplitN(name, "|", 2)
+	if len(parts) == 2 {
+		name = parts[1]
+	}
+	if idx := strings.Index(name, "^"); idx >= 0 {
+		return name[:idx], name[idx+1:]
+	}
+	return name, ""
 }
