@@ -138,6 +138,10 @@ func (s *Server) setupRoutes() {
 	// Public API routes (banners, payment methods, OAuth providers)
 	publicGroup := s.router.Group("/api/public")
 	admin.RegisterPublicRoutes(publicGroup, s.deps.DB, s.deps.Log)
+
+	// zjmf 兼容 API
+	zjmfCompat := NewZjmfCompatHandler(s.deps.DB, s.deps.Log)
+	s.router.POST("/api.php", zjmfCompat.Handle)
 }
 
 // toV1Deps converts Deps to v1.Deps.

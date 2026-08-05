@@ -63,6 +63,8 @@ func NewClient(provider *model.UpstreamProvider) (Client, error) {
 		return newV10Client(provider), nil
 	case "custom":
 		return newCustomClient(provider), nil
+	case "anchorfinance", "af":
+		return newAnchorFinanceClient(provider), nil
 	default:
 		return nil, fmt.Errorf("unsupported upstream type: %s", provider.Type)
 	}

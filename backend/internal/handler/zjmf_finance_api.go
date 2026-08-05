@@ -28,7 +28,7 @@ func (h *ZjmfFinanceApiHandler) GetApis(c *gin.Context) {
 	var providers []model.UpstreamProvider
 	var total int64
 
-	query := h.db.Model(&model.UpstreamProvider{}).Where("type = ?", "zjmf")
+	query := h.db.Model(&model.UpstreamProvider{}).Where("type IN ?", []string{"zjmf", "anchorfinance"})
 	if keyword := c.Query("keyword"); keyword != "" {
 		like := "%" + keyword + "%"
 		query = query.Where("name LIKE ?", like)
@@ -52,7 +52,7 @@ func (h *ZjmfFinanceApiHandler) GetApi(c *gin.Context) {
 	}
 
 	var provider model.UpstreamProvider
-	if err := h.db.Where("type = ?", "zjmf").First(&provider, id).Error; err != nil {
+	if err := h.db.Where("type IN ?", []string{"zjmf", "anchorfinance"}).First(&provider, id).Error; err != nil {
 		response.NotFound(c, "api not found")
 		return
 	}
@@ -120,7 +120,7 @@ func (h *ZjmfFinanceApiHandler) UpdateApi(c *gin.Context) {
 	}
 
 	var provider model.UpstreamProvider
-	if err := h.db.Where("type = ?", "zjmf").First(&provider, id).Error; err != nil {
+	if err := h.db.Where("type IN ?", []string{"zjmf", "anchorfinance"}).First(&provider, id).Error; err != nil {
 		response.NotFound(c, "api not found")
 		return
 	}
@@ -168,7 +168,7 @@ func (h *ZjmfFinanceApiHandler) DeleteApi(c *gin.Context) {
 		return
 	}
 
-	if err := h.db.Where("type = ?", "zjmf").Delete(&model.UpstreamProvider{}, id).Error; err != nil {
+	if err := h.db.Where("type IN ?", []string{"zjmf", "anchorfinance"}).Delete(&model.UpstreamProvider{}, id).Error; err != nil {
 		response.ServerError(c, err.Error())
 		return
 	}
@@ -184,7 +184,7 @@ func (h *ZjmfFinanceApiHandler) TestConnection(c *gin.Context) {
 	}
 
 	var provider model.UpstreamProvider
-	if err := h.db.Where("type = ?", "zjmf").First(&provider, id).Error; err != nil {
+	if err := h.db.Where("type IN ?", []string{"zjmf", "anchorfinance"}).First(&provider, id).Error; err != nil {
 		response.NotFound(c, "api not found")
 		return
 	}
@@ -216,7 +216,7 @@ func (h *ZjmfFinanceApiHandler) SyncProducts(c *gin.Context) {
 	}
 
 	var provider model.UpstreamProvider
-	if err := h.db.Where("type = ?", "zjmf").First(&provider, id).Error; err != nil {
+	if err := h.db.Where("type IN ?", []string{"zjmf", "anchorfinance"}).First(&provider, id).Error; err != nil {
 		response.NotFound(c, "api not found")
 		return
 	}
@@ -242,7 +242,7 @@ func (h *ZjmfFinanceApiHandler) SyncProducts(c *gin.Context) {
 // GetSummary 获取接口汇总信息
 func (h *ZjmfFinanceApiHandler) GetSummary(c *gin.Context) {
 	var total int64
-	h.db.Model(&model.UpstreamProvider{}).Where("type = ?", "zjmf").Count(&total)
+	h.db.Model(&model.UpstreamProvider{}).Where("type IN ?", []string{"zjmf", "anchorfinance"}).Count(&total)
 
 	var active int64
 	h.db.Model(&model.UpstreamProvider{}).Where("type = ? AND is_active = ?", "zjmf", true).Count(&active)
@@ -398,7 +398,7 @@ func (h *ZjmfFinanceApiHandler) GetUpstreamHosts(c *gin.Context) {
 // GetDownstreamSummary 获取下游汇总
 func (h *ZjmfFinanceApiHandler) GetDownstreamSummary(c *gin.Context) {
 	var total int64
-	h.db.Model(&model.UpstreamProvider{}).Where("type = ?", "zjmf").Count(&total)
+	h.db.Model(&model.UpstreamProvider{}).Where("type IN ?", []string{"zjmf", "anchorfinance"}).Count(&total)
 
 	var products int64
 	h.db.Model(&model.UpstreamProduct{}).Joins("JOIN upstream_providers ON upstream_providers.id = upstream_products.upstream_id").
