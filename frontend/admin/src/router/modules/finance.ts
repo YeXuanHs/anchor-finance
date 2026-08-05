@@ -1286,6 +1286,42 @@ export const financeRoutes: AppRouteRecord = {
             title: '服务器组管理',
             icon: 'ep:monitor'
           }
+        },
+        {
+          path: 'menu-groups',
+          name: 'MenuGroups',
+          component: () => import('@/views/finance/system/menu-groups/index.vue'),
+          meta: {
+            title: '菜单分组管理',
+            icon: 'ep:menu'
+          }
+        },
+        {
+          path: 'sms-batch',
+          name: 'SmsBatch',
+          component: () => import('@/views/finance/system/sms-batch/index.vue'),
+          meta: {
+            title: '短信批量发送',
+            icon: 'ep:message'
+          }
+        },
+        {
+          path: 'oauth-bind',
+          name: 'OAuthBind',
+          component: () => import('@/views/finance/system/oauth-bind/index.vue'),
+          meta: {
+            title: 'OAuth账号绑定',
+            icon: 'ep:connection'
+          }
+        },
+        {
+          path: 'cache-clear',
+          name: 'CacheClear',
+          component: () => import('@/views/finance/system/cache-clear/index.vue'),
+          meta: {
+            title: '缓存清理管理',
+            icon: 'ep:delete'
+          }
         }
       ]
     },
