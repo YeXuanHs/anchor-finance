@@ -2,6 +2,8 @@ package handler
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -14,12 +16,19 @@ import (
 )
 
 type ContractHandler struct {
-	db  *gorm.DB
-	log *logger.Logger
+	db        *gorm.DB
+	log       *logger.Logger
+	uploadDir string
 }
 
-func NewContractHandler(db *gorm.DB, log *logger.Logger) *ContractHandler {
-	return &ContractHandler{db: db, log: log}
+func NewContractHandler(db *gorm.DB, log *logger.Logger, uploadDir ...string) *ContractHandler {
+	h := &ContractHandler{db: db, log: log}
+	if len(uploadDir) > 0 && uploadDir[0] != "" {
+		h.uploadDir = uploadDir[0]
+	} else {
+		h.uploadDir = "uploads/contracts"
+	}
+	return h
 }
 
 // ---------- User Endpoints ----------

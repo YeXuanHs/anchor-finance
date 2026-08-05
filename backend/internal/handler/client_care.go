@@ -135,6 +135,26 @@ func (h *ClientCareHandler) DeleteRule(c *gin.Context) {
 	response.SuccessMsg(c, "rule deleted")
 }
 
+// GetSearchCondition returns available search/trigger conditions for client care rules.
+// GET /admin/client-care/search-condition
+func (h *ClientCareHandler) GetSearchCondition(c *gin.Context) {
+	triggers := []map[string]interface{}{
+		{"name": "product_suspended", "name_zh": "产品被暂停"},
+		{"name": "product_terminated", "name_zh": "产品被终止"},
+		{"name": "product_active", "name_zh": "产品激活"},
+		{"name": "product_unpaid", "name_zh": "产品未付款"},
+		{"name": "register", "name_zh": "用户注册"},
+		{"name": "product_created", "name_zh": "产品开通"},
+		{"name": "invoice_unpaid", "name_zh": "账单未支付"},
+		{"name": "invoice_overdue", "name_zh": "账单逾期"},
+		{"name": "ticket_created", "name_zh": "工单创建"},
+		{"name": "ticket_replied", "name_zh": "工单回复"},
+		{"name": "product_expiring", "name_zh": "产品即将到期"},
+		{"name": "product_expired", "name_zh": "产品已到期"},
+	}
+	response.Success(c, gin.H{"trigger": triggers})
+}
+
 // GetLogs returns client care logs with pagination (admin).
 func (h *ClientCareHandler) GetLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

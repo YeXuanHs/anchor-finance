@@ -222,6 +222,15 @@ export const financeRoutes: AppRouteRecord = {
             icon: 'ep:user',
             isHide: true
           }
+        },
+        {
+          path: 'custom-field-groups',
+          name: 'CustomFieldGroups',
+          component: () => import('@/views/finance/clients/custom-field-groups/index.vue'),
+          meta: {
+            title: '自定义字段组',
+            icon: 'ep:files'
+          }
         }
       ]
     },
@@ -304,6 +313,42 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '产品转移配置',
             icon: 'ep:switch'
+          }
+        },
+        {
+          path: 'first-groups',
+          name: 'ProductFirstGroups',
+          component: () => import('@/views/finance/products/first-groups/index.vue'),
+          meta: {
+            title: '一级产品分组',
+            icon: 'ep:folder-opened'
+          }
+        },
+        {
+          path: 'config-groups',
+          name: 'ProductConfigGroups',
+          component: () => import('@/views/finance/products/config-groups/index.vue'),
+          meta: {
+            title: '产品配置组',
+            icon: 'ep:setting'
+          }
+        },
+        {
+          path: 'interflows',
+          name: 'Interflows',
+          component: () => import('@/views/finance/products/interflows/index.vue'),
+          meta: {
+            title: '互通管理',
+            icon: 'ep:connection'
+          }
+        },
+        {
+          path: 'downloads',
+          name: 'ProductDownloads',
+          component: () => import('@/views/finance/products/downloads/index.vue'),
+          meta: {
+            title: '产品下载管理',
+            icon: 'ep:download'
           }
         }
       ]
@@ -1222,6 +1267,24 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '备份管理',
             icon: 'ep:folder-checked'
+          }
+        },
+        {
+          path: 'aggregate-login',
+          name: 'AggregateLogin',
+          component: () => import('@/views/finance/system/aggregate-login/index.vue'),
+          meta: {
+            title: '聚合登录管理',
+            icon: 'ep:platform'
+          }
+        },
+        {
+          path: 'server-groups',
+          name: 'ServerGroups',
+          component: () => import('@/views/finance/system/server-groups/index.vue'),
+          meta: {
+            title: '服务器组管理',
+            icon: 'ep:monitor'
           }
         }
       ]

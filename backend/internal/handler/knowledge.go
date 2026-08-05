@@ -1,22 +1,37 @@
 package handler
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
+	"anchorfinance/internal/model"
 	"anchorfinance/internal/service"
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type KnowledgeHandler struct {
+	db           *gorm.DB
 	knowledgeSvc *service.KnowledgeService
 	log          *logger.Logger
+	uploadDir    string
 }
 
-func NewKnowledgeHandler(knowledgeSvc *service.KnowledgeService, log *logger.Logger) *KnowledgeHandler {
-	return &KnowledgeHandler{knowledgeSvc: knowledgeSvc, log: log}
+func NewKnowledgeHandler(db *gorm.DB, knowledgeSvc *service.KnowledgeService, log *logger.Logger, uploadDir ...string) *KnowledgeHandler {
+	h := &KnowledgeHandler{db: db, knowledgeSvc: knowledgeSvc, log: log}
+	if len(uploadDir) > 0 && uploadDir[0] != "" {
+		h.uploadDir = uploadDir[0]
+	} else {
+		h.uploadDir = "uploads/knowledge"
+	}
+	return h
 }
 
 // ---------- Public ----------
@@ -333,4 +348,113 @@ func (h *KnowledgeHandler) AdminDeleteArticle(c *gin.Context) {
 		return
 	}
 	response.SuccessMsg(c, "article deleted")
+}
+
+// ==================== 新增缺失方法 ====================
+
+// TagsList returns articles matching a tag/keyword with pagination (admin).
+// GET /admin/knowledge/tags
+func (h *KnowledgeHandler) TagsList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	tag := c.Query("tag")
+	if tag == "" {
+		tag = c.Query("keyword")
+	}
+
+	var articles []model.KnowledgeArticle
+	var total int64
+
+	query := h.db.Model(&model.KnowledgeArticle{})
+	if tag != "" {
+		q := "%" + tag + "%"
+		query = query.Where("keywords LIKE ? OR title LIKE ?", q, q)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).
+		Order("id DESC").
+		Preload("Category").
+		Find(&articles).Error; err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	// Collect all unique tags from articles
+	tagSet := make(map[string]bool)
+	for _, article := range articles {
+		for _, kw := range strings.Split(article.Keywords, ",") {
+			kw = strings.TrimSpace(kw)
+			if kw != "" {
+				tagSet[kw] = true
+			}
+		}
+	}
+	tags := make([]string, 0, len(tagSet))
+	for t := range tagSet {
+		tags = append(tags, t)
+	}
+
+	response.Success(c, gin.H{
+		"articles": articles,
+		"total":    total,
+		"tags":     tags,
+	})
+}
+
+// UploadHandle handles file upload for knowledge articles (admin).
+// POST /admin/knowledge/upload
+func (h *KnowledgeHandler) UploadHandle(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		response.BadRequest(c, "file is required")
+		return
+	}
+
+	// Validate file size (max 10MB)
+	if file.Size > 10*1024*1024 {
+		response.BadRequest(c, "file size exceeds 10MB limit")
+		return
+	}
+
+	// Validate file extension
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	allowedExts := map[string]bool{
+		".jpg": true, ".jpeg": true, ".png": true, ".gif": true,
+		".pdf": true, ".doc": true, ".docx": true, ".xls": true, ".xlsx": true,
+		".zip": true, ".rar": true, ".txt": true, ".md": true,
+	}
+	if !allowedExts[ext] {
+		response.BadRequest(c, "unsupported file type: "+ext)
+		return
+	}
+
+	// Create upload directory
+	uploadDir := filepath.Join(h.uploadDir, time.Now().Format("200601"))
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		response.ServerError(c, "failed to create upload directory")
+		return
+	}
+
+	// Generate unique filename
+	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+	savePath := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveUploadedFile(file, savePath); err != nil {
+		response.ServerError(c, "failed to save file")
+		return
+	}
+
+	// Return the relative URL
+	urlPath := strings.ReplaceAll(savePath, "\\", "/")
+	response.Success(c, gin.H{
+		"url":      "/" + urlPath,
+		"filename": file.Filename,
+		"size":     file.Size,
+	})
 }
