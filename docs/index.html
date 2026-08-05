@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>锚点财务API文档</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="navbar">
+  <a class="brand" href="index.html?page=public">锚点财务API文档</a>
+  <div class="nav-links" id="navLinks">
+    <a href="index.html?page=public" data-page="public">公共接口</a>
+    <a href="index.html?page=user" data-page="user">用户接口</a>
+    <a href="index.html?page=admin" data-page="admin">管理接口</a>
+  </div>
+  <div class="search-box">
+    <input type="text" id="apiSearch" placeholder="搜索API... (Ctrl+K)" autocomplete="off">
+    <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+    <div class="search-results" id="searchResults"></div>
+  </div>
+</nav>
+
+<div class="side-nav" id="sidebar"></div>
+<div class="side-content"><div class="doc-content" id="content"></div></div>
+
+<script>
+// ========== API Data ==========
+var API_DATA = {
+  public: {
+    title: '公共接口',
+    groups: [
+      {
+        name: '基础信息',
+        items: [
+          { id:'header', title:'头部公共请求参数', method:'ALL', url:'', desc:'登录后请求的接口需要在Header中增加Authorization参数',
+            reqParams:[], resParams:[{n:'Authorization',t:'string',r:'需登录接口必填',d:'JWT后面有空格',e:'JWT eyJ0eXAiOi...'}],
+            reqExample:'GET /api/v1/user/profile HTTP/1.1\nHost: api.example.com\nAuthorization: JWT eyJ0eXAiOi...\nContent-Type: application/json',
+            resExample:'{\n  "code": 0,\n  "message": "success",\n  "data": {}\n}'
+          },
+          { id:'pagination', title:'分页和搜索参数', method:'GET', url:'', desc:'列表接口通用分页和搜索参数',
+            reqParams:[{n:'page',t:'int',r:'选填',d:'页码，默认1',e:'1'},{n:'limit',t:'int',r:'选填',d:'每页条数，默认20',e:'20'},{n:'sort',t:'string',r:'选填',d:'排序字段',e:'id'},{n:'order',t:'string',r:'选填',d:'排序方式',e:'desc'},{n:'keyword',t:'string',r:'选填',d:'关键词搜索',e:'test'}],
+            resParams:[], reqExample:'GET /api/v1/products?page=1&limit=20&keyword=test',
+            resExample:'{\n  "code": 0,\n  "data": {\n    "list": [...],\n    "total": 50,\n    "page": 1,\n    "limit": 20\n  }\n}'
+          },
+          { id:'response', title:'接口通用返回说明', method:'', url:'', desc:'所有接口统一返回格式',
+            reqParams:[],
+            resParams:[{n:'code',t:'int',r:'',d:'状态码，0为成功',e:'0'},{n:'message',t:'string',r:'',d:'提示信息',e:'success'},{n:'data',t:'object',r:'',d:'返回数据',e:'{}'}],
+            reqExample:'', resExample:'// 成功\n{ "code": 0, "message": "success", "data": {} }\n\n// 失败\n{ "code": 400, "message": "参数错误" }'
+          }
+        ]
+      },
+      {
+        name: '登录/注册',
+        items: [
+          { id:'login', title:'用户登录', method:'POST', url:'/api/v1/auth/login', desc:'用户登录，返回JWT令牌',
+            reqParams:[{n:'account',t:'string',r:'必填',d:'用户名/邮箱/手机号',e:'admin'},{n:'password',t:'string',r:'必填',d:'密码',e:'123456'}],
+            resParams:[{n:'access_token',t:'string',r:'',d:'访问令牌',e:'eyJ0eXAiOi...'},{n:'refresh_token',t:'string',r:'',d:'刷新令牌',e:'eyJ0eXAiOi...'},{n:'user',t:'object',r:'',d:'用户信息',e:'{id:1,...}'}],
+            reqExample:'POST /api/v1/auth/login HTTP/1.1\nContent-Type: application/json\n\n{\n  "account": "admin",\n  "password": "123456"\n}',
+            resExample:'{\n  "code": 0,\n  "data": {\n    "access_token": "eyJ0eXAiOi...",\n    "refresh_token": "eyJ0eXAiOi...",\n    "user": {\n      "id": 1,\n      "username": "admin",\n      "role": "user"\n    }\n  }\n}'
+          },
+          { id:'sms-login', title:'短信登录', method:'POST', url:'/api/v1/auth/sms-login', desc:'短信验证码登录',
+            reqParams:[{n:'phone',t:'string',r:'必填',d:'手机号',e:'13800138000'},{n:'code',t:'string',r:'必填',d:'验证码',e:'123456'}],
+            resParams:[{n:'access_token',t:'string',r:'',d:'访问令牌',e:'eyJ...'},{n:'user',t:'object',r:'',d:'用户信息',e:'{}'}],
+            reqExample:'POST /api/v1/auth/sms-login\nContent-Type: application/json\n\n{"phone":"13800138000","code":"123456"}',
+            resExample:'{"code":0,"data":{"access_token":"eyJ...","user":{"id":1}}}'
+          },
+          { id:'register', title:'用户注册', method:'POST', url:'/api/v1/auth/register', desc:'用户注册',
+            reqParams:[{n:'username',t:'string',r:'必填',d:'用户名(3-64字符)',e:'testuser'},{n:'password',t:'string',r:'必填',d:'密码(6-128位)',e:'Abc123456'},{n:'email',t:'string',r:'选填',d:'邮箱',e:'test@example.com'},{n:'phone',t:'string',r:'选填',d:'手机号',e:'13800138000'}],
+            resParams:[{n:'access_token',t:'string',r:'',d:'访问令牌',e:'eyJ...'},{n:'user',t:'object',r:'',d:'用户信息',e:'{}'}],
+            reqExample:'POST /api/v1/auth/register\n\n{"username":"testuser","password":"Abc123456","email":"test@example.com"}',
+            resExample:'{"code":0,"message":"注册成功","data":{"access_token":"eyJ...","user":{"id":2,"username":"testuser"}}}'
+          },
+          { id:'refresh', title:'刷新令牌', method:'POST', url:'/api/v1/auth/refresh', desc:'刷新JWT令牌',
+            reqParams:[{n:'refresh_token',t:'string',r:'必填',d:'刷新令牌',e:'eyJ...'}],
+            resParams:[{n:'access_token',t:'string',r:'',d:'新访问令牌',e:'eyJ...'},{n:'expires_at',t:'int',r:'',d:'过期时间戳',e:'1720000000'}],
+            reqExample:'POST /api/v1/auth/refresh\n\n{"refresh_token":"eyJ..."}',
+            resExample:'{"code":0,"data":{"access_token":"eyJ...","expires_at":1720000000}}'
+          },
+          { id:'logout', title:'退出登录', method:'POST', url:'/api/v1/auth/logout', desc:'退出登录，使当前JWT失效',
+            reqParams:[], resParams:[],
+            reqExample:'POST /api/v1/auth/logout\nAuthorization: JWT eyJ...',
+            resExample:'{"code":0,"message":"退出成功"}'
+          },
+          { id:'access-token', title:'API密钥登录', method:'POST', url:'/api/v1/auth/access-token', desc:'通过API密钥登录（系统对接用）',
+            reqParams:[{n:'api_key',t:'string',r:'必填',d:'API密钥',e:'ak_xxxx'}],
+            resParams:[{n:'access_token',t:'string',r:'',d:'访问令牌',e:'eyJ...'},{n:'user',t:'object',r:'',d:'用户信息',e:'{}'}],
+            reqExample:'POST /api/v1/auth/access-token\n\n{"api_key":"ak_xxxx"}',
+            resExample:'{"code":0,"data":{"access_token":"eyJ...","user":{"id":1}}}'
+          }
+        ]
+      },
+      {
+        name: '密码重置',
+        items: [
+          { id:'verify-code', title:'验证重置码', method:'POST', url:'/api/v1/password/verify-code', desc:'验证密码重置验证码',
+            reqParams:[{n:'email',t:'string',r:'必填',d:'注册邮箱',e:'test@example.com'},{n:'code',t:'string',r:'必填',d:'验证码',e:'123456'}],
+            resParams:[], reqExample:'POST /api/v1/password/verify-code\n\n{"email":"test@example.com","code":"123456"}',
+            resExample:'{"code":0,"message":"验证码有效"}'
+          },
+          { id:'reset-pwd', title:'重置密码', method:'POST', url:'/api/v1/password/reset', desc:'通过验证码重置密码',
+            reqParams:[{n:'email',t:'string',r:'必填',d:'注册邮箱',e:'test@example.com'},{n:'code',t:'string',r:'必填',d:'验证码',e:'123456'},{n:'password',t:'string',r:'必填',d:'新密码',e:'NewPass123'}],
+            resParams:[], reqExample:'POST /api/v1/password/reset\n\n{"email":"test@example.com","code":"123456","password":"NewPass123"}',
+            resExample:'{"code":0,"message":"密码重置成功"}'
+          }
+        ]
+      },
+      {
+        name: '验证码',
+        items: [
+          { id:'captcha-config', title:'获取验证码配置', method:'GET', url:'/api/v1/captcha/config', desc:'获取验证码配置',
+            reqParams:[], resParams:[{n:'data',t:'object',r:'',d:'验证码配置键值对',e:'{"image":"true"}'}],
+            reqExample:'GET /api/v1/captcha/config', resExample:'{"code":0,"data":{"image":"true","geetest":"false"}}'
+          },
+          { id:'captcha-generate', title:'获取图形验证码', method:'GET', url:'/api/v1/captcha/generate', desc:'生成图形验证码',
+            reqParams:[], resParams:[{n:'data.captcha_id',t:'string',r:'',d:'验证码ID',e:'abc123'},{n:'data.image',t:'string',r:'',d:'base64图片',e:'data:image/png;base64,...'}],
+            reqExample:'GET /api/v1/captcha/generate', resExample:'{"code":0,"data":{"captcha_id":"abc123","image":"data:image/png;base64,..."}}'
+          },
+          { id:'captcha-verify', title:'验证图形验证码', method:'POST', url:'/api/v1/captcha/verify', desc:'验证图形验证码',
+            reqParams:[{n:'captcha_id',t:'string',r:'必填',d:'验证码ID',e:'abc123'},{n:'answer',t:'string',r:'必填',d:'答案',e:'x5km'}],
+            resParams:[{n:'data.verified',t:'bool',r:'',d:'是否通过',e:'true'}],
+            reqExample:'POST /api/v1/captcha/verify\n\n{"captcha_id":"abc123","answer":"x5km"}',
+            resExample:'{"code":0,"data":{"verified":true}}'
+          },
+          { id:'geetest-register', title:'获取极验配置', method:'GET', url:'/api/v1/geetest/register', desc:'获取极验4.0配置',
+            reqParams:[], resParams:[{n:'data.captcha_id',t:'string',r:'',d:'极验ID',e:'gt_xxx'}],
+            reqExample:'GET /api/v1/geetest/register', resExample:'{"code":0,"data":{"captcha_id":"gt_xxx"}}'
+          },
+          { id:'geetest-validate', title:'极验二次验证', method:'POST', url:'/api/v1/geetest/validate', desc:'极验4.0二次验证',
+            reqParams:[{n:'captcha_id',t:'string',r:'必填',d:'极验ID',e:'gt_xxx'},{n:'captcha_output',t:'string',r:'必填',d:'验证输出',e:'xxx'}],
+            resParams:[], reqExample:'POST /api/v1/geetest/validate\n\n{"captcha_id":"gt_xxx","captcha_output":"xxx"}',
+            resExample:'{"code":0,"data":{"result":"success"}}'
+          }
+        ]
+      },
+      {
+        name: '产品',
+        items: [
+          { id:'product-list', title:'获取产品列表', method:'GET', url:'/api/v1/products', desc:'获取产品列表',
+            reqParams:[{n:'group_id',t:'int',r:'选填',d:'产品组ID',e:'1'},{n:'page',t:'int',r:'选填',d:'页码',e:'1'},{n:'page_size',t:'int',r:'选填',d:'每页数量',e:'20'}],
+            resParams:[{n:'data.list',t:'array',r:'',d:'产品列表',e:'[{id:1,...}]'},{n:'data.total',t:'int',r:'',d:'总数',e:'50'}],
+            reqExample:'GET /api/v1/products?group_id=1&page=1', resExample:'{"code":0,"data":{"list":[{"id":1,"name":"基础型","price":"99.00"}],"total":50}}'
+          },
+          { id:'product-detail', title:'获取产品详情', method:'GET', url:'/api/v1/products/:id', desc:'获取产品详情',
+            reqParams:[], resParams:[{n:'data.id',t:'int',r:'',d:'产品ID',e:'1'},{n:'data.name',t:'string',r:'',d:'产品名称',e:'基础型'},{n:'data.price',t:'string',r:'',d:'价格',e:'99.00'}],
+            reqExample:'GET /api/v1/products/1', resExample:'{"code":0,"data":{"id":1,"name":"基础型","price":"99.00","stock":100}}'
+          },
+          { id:'product-hot', title:'获取热门产品', method:'GET', url:'/api/v1/products/hot', desc:'获取热门产品',
+            reqParams:[], resParams:[{n:'data',t:'array',r:'',d:'热门产品列表',e:'[{id:1,...}]'}],
+            reqExample:'GET /api/v1/products/hot', resExample:'{"code":0,"data":[{"id":1,"name":"基础型","price":"99.00"}]}'
+          },
+          { id:'product-groups', title:'获取产品分组', method:'GET', url:'/api/v1/products/groups', desc:'获取产品分组',
+            reqParams:[], resParams:[{n:'data[].id',t:'int',r:'',d:'分组ID',e:'1'},{n:'data[].name',t:'string',r:'',d:'分组名称',e:'云服务器'}],
+            reqExample:'GET /api/v1/products/groups', resExample:'{"code":0,"data":[{"id":1,"name":"云服务器","slug":"cloud"}]}'
+          },
+          { id:'product-pricing', title:'获取产品价格', method:'GET', url:'/api/v1/products/:id/pricing', desc:'获取产品价格',
+            reqParams:[], resParams:[{n:'data.price',t:'string',r:'',d:'价格',e:'99.00'},{n:'data.period',t:'string',r:'',d:'周期',e:'month'}],
+            reqExample:'GET /api/v1/products/1/pricing', resExample:'{"code":0,"data":{"id":1,"price":"99.00","period":"month"}}'
+          }
+        ]
+      },
+      {
+        name: '公开设置',
+        items: [
+          { id:'settings-public', title:'站点公开设置', method:'GET', url:'/api/v1/settings/public', desc:'获取站点公开设置',
+            reqParams:[], resParams:[{n:'data.site_name',t:'string',r:'',d:'站点名称',e:'锚点财务'},{n:'data.contact_phone',t:'string',r:'',d:'联系电话',e:'400-xxx-xxxx'},{n:'data.contact_email',t:'string',r:'',d:'联系邮箱',e:'support@example.com'}],
+            reqExample:'GET /api/v1/settings/public', resExample:'{"code":0,"data":{"site_name":"锚点财务","contact_phone":"400-xxx-xxxx"}}'
+          },
+          { id:'settings-system', title:'系统设置', method:'GET', url:'/api/v1/system/settings', desc:'获取系统公开设置',
+            reqParams:[], resParams:[{n:'data.company_name',t:'string',r:'',d:'公司名',e:'锚点云计算'},{n:'data.logo_url',t:'string',r:'',d:'Logo',e:'/assets/logo.png'}],
+            reqExample:'GET /api/v1/system/settings', resExample:'{"code":0,"data":{"company_name":"锚点云计算","logo_url":"/assets/logo.png"}}'
+          },
+          { id:'system-lang', title:'系统语言', method:'GET', url:'/api/v1/system/lang', desc:'获取当前系统语言',
+            reqParams:[], resParams:[{n:'data.lang',t:'string',r:'',d:'语言代码',e:'zh-CN'}],
+            reqExample:'GET /api/v1/system/lang', resExample:'{"code":0,"data":{"lang":"zh-CN"}}'
+          }
+        ]
+      },
+      {
+        name: '导航菜单',
+        items: [
+          { id:'user-menus', title:'用户中心菜单', method:'GET', url:'/api/v1/user/menus', desc:'获取用户中心侧边栏菜单',
+            reqParams:[], resParams:[{n:'data[].name',t:'string',r:'',d:'菜单名称',e:'产品管理'},{n:'data[].path',t:'string',r:'',d:'路由路径',e:'/user/products'}],
+            reqExample:'GET /api/v1/user/menus', resExample:'{"code":0,"data":[{"name":"产品管理","path":"/user/products","children":[]}]}'
+          },
+          { id:'nav-top', title:'顶部导航', method:'GET', url:'/api/v1/nav/top', desc:'获取顶部导航菜单',
+            reqParams:[], resParams:[{n:'data[].name',t:'string',r:'',d:'菜单名称',e:'首页'},{n:'data[].path',t:'string',r:'',d:'链接',e:'/'}],
+            reqExample:'GET /api/v1/nav/top', resExample:'{"code":0,"data":[{"name":"首页","path":"/"},{"name":"产品","path":"/products"}]}'
+          },
+          { id:'nav-bottom', title:'底部导航', method:'GET', url:'/api/v1/nav/bottom', desc:'获取底部导航菜单',
+            reqParams:[], resParams:[{n:'data[].name',t:'string',r:'',d:'菜单名称',e:'关于我们'}],
+            reqExample:'GET /api/v1/nav/bottom', resExample:'{"code":0,"data":[{"name":"关于我们","path":"/about"}]}'
+          }
+        ]
+      },
+      {
+        name: '公告/新闻',
+        items: [
+          { id:'announcements', title:'公告列表', method:'GET', url:'/api/v1/announcements', desc:'获取有效公告列表',
+            reqParams:[], resParams:[{n:'data[].id',t:'int',r:'',d:'公告ID',e:'1'},{n:'data[].title',t:'string',r:'',d:'标题',e:'系统维护通知'}],
+            reqExample:'GET /api/v1/announcements', resExample:'{"code":0,"data":[{"id":1,"title":"系统维护通知","type":"notice"}]}'
+          },
+          { id:'announcement-detail', title:'公告详情', method:'GET', url:'/api/v1/announcements/:id', desc:'获取公告详情',
+            reqParams:[], resParams:[{n:'data.id',t:'int',r:'',d:'公告ID',e:'1'},{n:'data.content',t:'string',r:'',d:'内容(HTML)',e:'<p>...</p>'}],
+            reqExample:'GET /api/v1/announcements/1', resExample:'{"code":0,"data":{"id":1,"title":"系统维护通知","content":"<p>...</p>"}}'
+          },
+          { id:'news-list', title:'新闻列表', method:'GET', url:'/api/v1/news', desc:'获取新闻列表',
+            reqParams:[], resParams:[{n:'data[].id',t:'int',r:'',d:'新闻ID',e:'1'},{n:'data[].title',t:'string',r:'',d:'标题',e:'产品更新公告'}],
+            reqExample:'GET /api/v1/news', resExample:'{"code":0,"data":{"list":[{"id":1,"title":"产品更新公告"}],"total":20}}'
+          },
+          { id:'news-detail', title:'新闻详情', method:'GET', url:'/api/v1/news/:id', desc:'获取新闻详情',
+            reqParams:[], resParams:[{n:'data.id',t:'int',r:'',d:'新闻ID',e:'1'},{n:'data.content',t:'string',r:'',d:'内容',e:'<p>...</p>'}],
+            reqExample:'GET /api/v1/news/1', resExample:'{"code":0,"data":{"id":1,"title":"产品更新公告","content":"..."}}'
+          }
+        ]
+      },
+      {
+        name: '帮助中心',
+        items: [
+          { id:'help-categories', title:'帮助分类', method:'GET', url:'/api/v1/help/categories', desc:'获取知识库分类',
+            reqParams:[], resParams:[{n:'data[].id',t:'int',r:'',d:'分类ID',e:'1'},{n:'data[].name',t:'string',r:'',d:'分类名',e:'常见问题'}],
+            reqExample:'GET /api/v1/help/categories', resExample:'{"code":0,"data":[{"id":1,"name":"常见问题","count":15}]}'
+          },
+          { id:'help-articles', title:'文章列表', method:'GET', url:'/api/v1/help/articles', desc:'获取文章列表',
+            reqParams:[{n:'category_id',t:'int',r:'选填',d:'分类ID',e:'1'}], resParams:[{n:'data.list',t:'array',r:'',d:'文章列表',e:'[{id:1,...}]'}],
+            reqExample:'GET /api/v1/help/articles?category_id=1', resExample:'{"code":0,"data":{"list":[{"id":1,"title":"如何购买"}],"total":15}}'
+          },
+          { id:'help-hot', title:'热门文章', method:'GET', url:'/api/v1/help/articles/hot', desc:'获取热门文章',
+            reqParams:[], resParams:[{n:'data',t:'array',r:'',d:'热门文章',e:'[{id:1,...}]'}],
+            reqExample:'GET /api/v1/help/articles/hot', resExample:'{"code":0,"data":[{"id":1,"title":"如何购买","views":128}]}'
+          },
+          { id:'help-search', title:'搜索文章', method:'GET', url:'/api/v1/help/articles/search', desc:'搜索知识库文章',
+            reqParams:[{n:'keyword',t:'string',r:'必填',d:'搜索关键词',e:'服务器'}], resParams:[{n:'data',t:'array',r:'',d:'搜索结果',e:'[{id:1,...}]'}],
+            reqExample:'GET /api/v1/help/articles/search?keyword=服务器', resExample:'{"code":0,"data":[{"id":1,"title":"如何购买服务器"}]}'
+          },
+          { id:'help-article', title:'文章详情', method:'GET', url:'/api/v1/help/articles/:id', desc:'获取文章详情',
+            reqParams:[], resParams:[{n:'data.id',t:'int',r:'',d:'文章ID',e:'1'},{n:'data.content',t:'string',r:'',d:'内容',e:'<p>...</p>'}],
+            reqExample:'GET /api/v1/help/articles/1', resExample:'{"code":0,"data":{"id":1,"title":"如何购买","content":"..."}}'
+          },
+          { id:'help-related', title:'相关文章', method:'GET', url:'/api/v1/help/articles/:id/related', desc:'获取相关文章',
+            reqParams:[], resParams:[{n:'data',t:'array',r:'',d:'相关文章',e:'[{id:2,...}]'}],
+            reqExample:'GET /api/v1/help/articles/1/related', resExample:'{"code":0,"data":[{"id":2,"title":"如何续费"}]}'
+          },
+          { id:'help-feedback', title:'文章反馈', method:'POST', url:'/api/v1/help/articles/:id/feedback', desc:'提交文章反馈',
+            reqParams:[{n:'helpful',t:'bool',r:'必填',d:'是否有用',e:'true'}], resParams:[],
+            reqExample:'POST /api/v1/help/articles/1/feedback\n\n{"helpful":true}', resExample:'{"code":0,"message":"感谢您的反馈"}'
+          }
+        ]
+      },
+      {
+        name: '其他',
+        items: [
+          { id:'languages', title:'语言列表', method:'GET', url:'/api/v1/languages', desc:'获取可用语言列表',
+            reqParams:[], resParams:[{n:'data[].code',t:'string',r:'',d:'语言代码',e:'zh-CN'},{n:'data[].name',t:'string',r:'',d:'语言名称',e:'简体中文'}],
+            reqExample:'GET /api/v1/languages', resExample:'{"code":0,"data":[{"code":"zh-CN","name":"简体中文"},{"code":"en-US","name":"English"}]}'
+          },
+          { id:'promo-validate', title:'验证优惠码', method:'GET', url:'/api/v1/promo-codes/validate', desc:'验证优惠码是否有效',
+            reqParams:[{n:'code',t:'string',r:'必填',d:'优惠码',e:'SAVE20'}],
+            resParams:[{n:'data.discount_type',t:'string',r:'',d:'折扣类型',e:'percent'},{n:'data.discount_value',t:'string',r:'',d:'折扣值',e:'20'}],
+            reqExample:'GET /api/v1/promo-codes/validate?code=SAVE20', resExample:'{"code":0,"data":{"code":"SAVE20","discount_type":"percent","discount_value":"20"}}'
+          },
+          { id:'oauth-redirect', title:'OAuth授权', method:'GET', url:'/api/v1/oauth/:provider', desc:'跳转到OAuth授权页面',
+            reqParams:[], resParams:[],
+            reqExample:'GET /api/v1/oauth/github', resExample:'302 Redirect → https://github.com/login/oauth/authorize?client_id=xxx'
+          },
+          { id:'payment-methods', title:'支付方式', method:'GET', url:'/api/v1/payment-methods', desc:'获取可用支付方式',
+            reqParams:[], resParams:[{n:'data[].id',t:'int',r:'',d:'支付方式ID',e:'1'},{n:'data[].name',t:'string',r:'',d:'名称',e:'支付宝-官方'}],
+            reqExample:'GET /api/v1/payment-methods', resExample:'{"code":0,"data":[{"id":1,"name":"支付宝-官方","code":"alipay"}]}'
+          },
+          { id:'banners', title:'轮播图', method:'GET', url:'/api/v1/banners', desc:'获取首页轮播图',
+            reqParams:[], resParams:[{n:'data[].id',t:'int',r:'',d:'ID',e:'1'},{n:'data[].title',t:'string',r:'',d:'标题',e:'高性能云服务器'}],
+            reqExample:'GET /api/v1/banners', resExample:'{"code":0,"data":[{"id":1,"title":"高性能云服务器","image_url":"/carousel/1.jpg"}]}'
+          },
+          { id:'contact', title:'联系表单', method:'POST', url:'/api/v1/contact', desc:'提交联系表单',
+            reqParams:[{n:'name',t:'string',r:'必填',d:'姓名',e:'张三'},{n:'email',t:'string',r:'必填',d:'邮箱',e:'test@example.com'},{n:'subject',t:'string',r:'必填',d:'主题',e:'咨询'},{n:'content',t:'string',r:'必填',d:'内容',e:'我想了解产品'}],
+            resParams:[],
+            reqExample:'POST /api/v1/contact\n\n{"name":"张三","email":"test@example.com","subject":"咨询","content":"我想了解产品"}',
+            resExample:'{"code":0,"message":"提交成功，我们会尽快与您联系"}'
+          }
+        ]
+      }
+    ]
+  },
+
+  user: {
+    title: '用户接口',
+    groups: [
+      { name:'会员基础资料', items:[
+        {id:'user-profile',title:'获取会员资料',method:'GET',url:'/api/v1/user/profile',desc:'获取当前登录用户资料',reqParams:[],resParams:[{n:'data.id',t:'int',r:'',d:'用户ID',e:'1'},{n:'data.username',t:'string',r:'',d:'用户名',e:'admin'},{n:'data.email',t:'string',r:'',d:'邮箱',e:'admin@example.com'}],reqExample:'GET /api/v1/user/profile',resExample:'{"code":0,"data":{"id":1,"username":"admin","email":"admin@example.com","phone":"138****0000"}}'},
+        {id:'user-profile-update',title:'修改会员资料',method:'PUT',url:'/api/v1/user/profile',desc:'更新用户资料',reqParams:[{n:'nickname',t:'string',r:'选填',d:'昵称',e:'测试用户'},{n:'phone',t:'string',r:'选填',d:'手机号',e:'13800138000'},{n:'company',t:'string',r:'选填',d:'公司名',e:'测试公司'}],resParams:[],reqExample:'PUT /api/v1/user/profile\n\n{"nickname":"测试用户","phone":"13800138000"}',resExample:'{"code":0,"message":"更新成功"}'},
+        {id:'user-change-pwd',title:'修改密码',method:'POST',url:'/api/v1/user/change-password',desc:'修改登录密码',reqParams:[{n:'old_password',t:'string',r:'必填',d:'旧密码',e:'123456'},{n:'new_password',t:'string',r:'必填',d:'新密码',e:'NewPass123'}],resParams:[],reqExample:'POST /api/v1/user/change-password\n\n{"old_password":"123456","new_password":"NewPass123"}',resExample:'{"code":0,"message":"密码修改成功"}'},
+        {id:'user-bind-phone',title:'手机绑定',method:'POST',url:'/api/v1/user/bind-phone',desc:'绑定手机号',reqParams:[{n:'phone',t:'string',r:'必填',d:'手机号',e:'13800138000'},{n:'code',t:'string',r:'必填',d:'验证码',e:'123456'}],resParams:[],reqExample:'POST /api/v1/user/bind-phone\n\n{"phone":"13800138000","code":"123456"}',resExample:'{"code":0,"message":"绑定成功"}'},
+        {id:'user-bind-email',title:'邮箱绑定',method:'POST',url:'/api/v1/user/bind-email',desc:'绑定邮箱',reqParams:[{n:'email',t:'string',r:'必填',d:'邮箱',e:'test@example.com'},{n:'code',t:'string',r:'必填',d:'验证码',e:'123456'}],resParams:[],reqExample:'POST /api/v1/user/bind-email\n\n{"email":"test@example.com","code":"123456"}',resExample:'{"code":0,"message":"绑定成功"}'},
+        {id:'user-dashboard',title:'用户仪表盘',method:'GET',url:'/api/v1/user/dashboard',desc:'获取用户仪表盘数据',reqParams:[],resParams:[{n:'data.products_count',t:'int',r:'',d:'产品数',e:'5'},{n:'data.tickets_count',t:'int',r:'',d:'工单数',e:'2'},{n:'data.balance',t:'string',r:'',d:'余额',e:'1000.00'},{n:'data.unread_messages',t:'int',r:'',d:'未读消息',e:'3'}],reqExample:'GET /api/v1/user/dashboard',resExample:'{"code":0,"data":{"products_count":5,"tickets_count":2,"balance":"1000.00","unread_messages":3}}'}
+      ]},
+      { name:'二步验证', items:[
+        {id:'2fa-status',title:'获取2FA状态',method:'GET',url:'/api/v1/user/2fa',desc:'获取二步验证状态',reqParams:[],resParams:[{n:'data.enabled',t:'bool',r:'',d:'是否开启',e:'false'},{n:'data.type',t:'string',r:'',d:'类型',e:'totp'}],reqExample:'GET /api/v1/user/2fa',resExample:'{"code":0,"data":{"enabled":false,"type":"totp"}}'},
+        {id:'2fa-enable',title:'开启2FA',method:'POST',url:'/api/v1/user/2fa/enable',desc:'开启二步验证',reqParams:[{n:'type',t:'string',r:'必填',d:'类型(totp)',e:'totp'}],resParams:[{n:'data.secret',t:'string',r:'',d:'密钥',e:'JBSWY3DPEHPK3PXP'},{n:'data.qr_code',t:'string',r:'',d:'二维码',e:'data:image/png;base64,...'}],reqExample:'POST /api/v1/user/2fa/enable\n\n{"type":"totp"}',resExample:'{"code":0,"data":{"secret":"JBSWY3D...","qr_code":"data:image/png;base64,..."}}'},
+        {id:'2fa-verify',title:'验证2FA',method:'POST',url:'/api/v1/user/2fa/verify',desc:'验证二步验证码',reqParams:[{n:'code',t:'string',r:'必填',d:'6位验证码',e:'123456'}],resParams:[],reqExample:'POST /api/v1/user/2fa/verify\n\n{"code":"123456"}',resExample:'{"code":0,"message":"验证成功"}'},
+        {id:'2fa-disable',title:'关闭2FA',method:'POST',url:'/api/v1/user/2fa/disable',desc:'关闭二步验证',reqParams:[{n:'code',t:'string',r:'必填',d:'当前验证码',e:'123456'}],resParams:[],reqExample:'POST /api/v1/user/2fa/disable\n\n{"code":"123456"}',resExample:'{"code":0,"message":"已关闭"}'}
+      ]},
+      { name:'API密钥', items:[
+        {id:'apikey-list',title:'密钥列表',method:'GET',url:'/api/v1/user/api-keys',desc:'获取API密钥列表',reqParams:[],resParams:[{n:'data[].id',t:'int',r:'',d:'ID',e:'1'},{n:'data[].name',t:'string',r:'',d:'名称',e:'我的密钥'},{n:'data[].key',t:'string',r:'',d:'密钥(前8位)',e:'ak_xxxx...'}],reqExample:'GET /api/v1/user/api-keys',resExample:'{"code":0,"data":[{"id":1,"name":"我的密钥","key":"ak_xxxx...","status":"active"}]}'},
+        {id:'apikey-create',title:'创建密钥',method:'POST',url:'/api/v1/user/api-keys',desc:'创建API密钥',reqParams:[{n:'name',t:'string',r:'必填',d:'密钥名称',e:'我的密钥'}],resParams:[{n:'data.id',t:'int',r:'',d:'ID',e:'1'},{n:'data.key',t:'string',r:'',d:'完整密钥(仅显示一次)',e:'ak_xxxxxxxxxxxx'}],reqExample:'POST /api/v1/user/api-keys\n\n{"name":"我的密钥"}',resExample:'{"code":0,"data":{"id":1,"key":"ak_xxxxxxxxxxxx","name":"我的密钥"}}'},
+        {id:'apikey-toggle',title:'启用/禁用',method:'PUT',url:'/api/v1/user/api-keys/:id/toggle',desc:'切换API密钥状态',reqParams:[],resParams:[],reqExample:'PUT /api/v1/user/api-keys/1/toggle',resExample:'{"code":0,"message":"状态已切换"}'},
+        {id:'apikey-delete',title:'删除密钥',method:'DELETE',url:'/api/v1/user/api-keys/:id',desc:'删除API密钥',reqParams:[],resParams:[],reqExample:'DELETE /api/v1/user/api-keys/1',resExample:'{"code":0,"message":"删除成功"}'}
+      ]},
+      { name:'产品管理', items:[
+        {id:'host-list',title:'主机列表',method:'GET',url:'/api/v1/hosts',desc:'获取用户的主机列表',reqParams:[],resParams:[{n:'data[].id',t:'int',r:'',d:'主机ID',e:'1'},{n:'data[].product_name',t:'string',r:'',d:'产品名',e:'基础型云服务器'},{n:'data[].ip',t:'string',r:'',d:'IP地址',e:'1.2.3.4'},{n:'data[].status',t:'string',r:'',d:'状态',e:'active'},{n:'data[].due_date',t:'string',r:'',d:'到期时间',e:'2026-12-31'}],reqExample:'GET /api/v1/hosts',resExample:'{"code":0,"data":[{"id":1,"product_name":"基础型","ip":"1.2.3.4","status":"active","due_date":"2026-12-31"}]}'},
+        {id:'host-detail',title:'主机详情',method:'GET',url:'/api/v1/hosts/:id',desc:'获取主机详情',reqParams:[],resParams:[{n:'data.id',t:'int',r:'',d:'主机ID',e:'1'},{n:'data.product_name',t:'string',r:'',d:'产品名',e:'基础型'},{n:'data.config_options',t:'object',r:'',d:'配置选项',e:'{os:"CentOS",...}'}],reqExample:'GET /api/v1/hosts/1',resExample:'{"code":0,"data":{"id":1,"product_name":"基础型","ip":"1.2.3.4","config_options":{"os":"CentOS"}}}'},
+        {id:'host-ops',title:'可用操作',method:'GET',url:'/api/v1/hosts/:id/operations',desc:'获取主机可用操作',reqParams:[],resParams:[{n:'data[].action',t:'string',r:'',d:'操作标识',e:'start'},{n:'data[].name',t:'string',r:'',d:'操作名称',e:'开机'}],reqExample:'GET /api/v1/hosts/1/operations',resExample:'{"code":0,"data":[{"action":"start","name":"开机"},{"action":"stop","name":"关机"}]}'},
+        {id:'host-billing',title:'主机账单',method:'GET',url:'/api/v1/hosts/:id/billing',desc:'获取主机账单',reqParams:[],resParams:[],reqExample:'GET /api/v1/hosts/1/billing',resExample:'{"code":0,"data":{"invoices":[],"total_due":"0.00"}}'},
+        {id:'host-log',title:'操作日志',method:'GET',url:'/api/v1/hosts/:id/log',desc:'获取主机操作日志',reqParams:[],resParams:[],reqExample:'GET /api/v1/hosts/1/log',resExample:'{"code":0,"data":[{"action":"start","time":"2026-08-06 10:00:00"}]}'},
+        {id:'host-remark',title:'设置备注',method:'POST',url:'/api/v1/hosts/:id/remark',desc:'设置主机备注',reqParams:[{n:'remark',t:'string',r:'必填',d:'备注内容',e:'生产环境服务器'}],resParams:[],reqExample:'POST /api/v1/hosts/1/remark\n\n{"remark":"生产环境服务器"}',resExample:'{"code":0,"message":"设置成功"}'},
+        {id:'host-action',title:'执行操作',method:'POST',url:'/api/v1/hosts/:id/:action',desc:'执行主机操作(start/stop/restart/reinstall)',reqParams:[],resParams:[],reqExample:'POST /api/v1/hosts/1/start',resExample:'{"code":0,"message":"操作已提交"}'}
+      ]},
+      { name:'购物车', items:[
+        {id:'cart-get',title:'获取购物车',method:'GET',url:'/api/v1/cart',desc:'获取购物车内容',reqParams:[],resParams:[{n:'data.items',t:'array',r:'',d:'购物车商品',e:'[{id:1,...}]'},{n:'data.total',t:'string',r:'',d:'总价',e:'198.00'}],reqExample:'GET /api/v1/cart',resExample:'{"code":0,"data":{"items":[{"id":1,"product_name":"基础型","price":"99.00"}],"total":"198.00"}}'},
+        {id:'cart-add',title:'添加商品',method:'POST',url:'/api/v1/cart/add',desc:'添加商品到购物车',reqParams:[{n:'product_id',t:'int',r:'必填',d:'产品ID',e:'1'},{n:'period',t:'string',r:'必填',d:'周期',e:'month'},{n:'config_options',t:'object',r:'选填',d:'配置选项',e:'{"os":"CentOS"}'}],resParams:[],reqExample:'POST /api/v1/cart/add\n\n{"product_id":1,"period":"month","config_options":{"os":"CentOS"}}',resExample:'{"code":0,"message":"添加成功"}'},
+        {id:'cart-update',title:'更新商品',method:'PUT',url:'/api/v1/cart/:id',desc:'更新购物车商品',reqParams:[{n:'period',t:'string',r:'选填',d:'周期',e:'year'}],resParams:[],reqExample:'PUT /api/v1/cart/1\n\n{"period":"year"}',resExample:'{"code":0,"message":"更新成功"}'},
+        {id:'cart-remove',title:'移除商品',method:'DELETE',url:'/api/v1/cart/:id',desc:'从购物车移除商品',reqParams:[],resParams:[],reqExample:'DELETE /api/v1/cart/1',resExample:'{"code":0,"message":"移除成功"}'},
+        {id:'cart-clear',title:'清空购物车',method:'DELETE',url:'/api/v1/cart',desc:'清空购物车',reqParams:[],resParams:[],reqExample:'DELETE /api/v1/cart',resExample:'{"code":0,"message":"已清空"}'},
+        {id:'cart-checkout',title:'结算',method:'POST',url:'/api/v1/cart/checkout',desc:'购物车结算',reqParams:[{n:'payment_method_id',t:'int',r:'必填',d:'支付方式ID',e:'1'},{n:'promo_code',t:'string',r:'选填',d:'优惠码',e:'SAVE20'}],resParams:[{n:'data.order_id',t:'int',r:'',d:'订单ID',e:'1'},{n:'data.amount',t:'string',r:'',d:'应付金额',e:'158.00'}],reqExample:'POST /api/v1/cart/checkout\n\n{"payment_method_id":1,"promo_code":"SAVE20"}',resExample:'{"code":0,"data":{"order_id":1,"amount":"158.00"}}'}
+      ]},
+      { name:'订单', items:[
+        {id:'order-create',title:'创建订单',method:'POST',url:'/api/v1/orders',desc:'创建新订单',reqParams:[{n:'product_id',t:'int',r:'必填',d:'产品ID',e:'1'},{n:'period',t:'string',r:'必填',d:'周期',e:'month'},{n:'payment_method_id',t:'int',r:'必填',d:'支付方式',e:'1'}],resParams:[{n:'data.order_id',t:'int',r:'',d:'订单ID',e:'1'},{n:'data.order_no',t:'string',r:'',d:'订单号',e:'AF20260806001'}],reqExample:'POST /api/v1/orders\n\n{"product_id":1,"period":"month","payment_method_id":1}',resExample:'{"code":0,"data":{"order_id":1,"order_no":"AF20260806001","amount":"99.00"}}'},
+        {id:'order-list',title:'订单列表',method:'GET',url:'/api/v1/orders',desc:'获取订单列表',reqParams:[],resParams:[{n:'data[].id',t:'int',r:'',d:'订单ID',e:'1'},{n:'data[].order_no',t:'string',r:'',d:'订单号',e:'AF20260806001'},{n:'data[].amount',t:'string',r:'',d:'金额',e:'99.00'},{n:'data[].status',t:'string',r:'',d:'状态',e:'pending'}],reqExample:'GET /api/v1/orders',resExample:'{"code":0,"data":[{"id":1,"order_no":"AF20260806001","amount":"99.00","status":"pending"}]}'},
+        {id:'order-detail',title:'订单详情',method:'GET',url:'/api/v1/orders/:id',desc:'获取订单详情',reqParams:[],resParams:[],reqExample:'GET /api/v1/orders/1',resExample:'{"code":0,"data":{"id":1,"order_no":"AF20260806001","items":[],"amount":"99.00"}}'},
+        {id:'order-pay',title:'支付订单',method:'POST',url:'/api/v1/orders/:id/pay',desc:'支付订单',reqParams:[{n:'payment_method_id',t:'int',r:'必填',d:'支付方式',e:'1'},{n:'balance_amount',t:'string',r:'选填',d:'使用余额',e:'10.00'}],resParams:[{n:'data.payment_url',t:'string',r:'',d:'支付跳转URL',e:'https://pay.example.com/...'}],reqExample:'POST /api/v1/orders/1/pay\n\n{"payment_method_id":1}',resExample:'{"code":0,"data":{"payment_url":"https://pay.example.com/..."}}'},
+        {id:'order-cancel',title:'取消订单',method:'POST',url:'/api/v1/orders/:id/cancel',desc:'取消订单',reqParams:[],resParams:[],reqExample:'POST /api/v1/orders/1/cancel',resExample:'{"code":0,"message":"订单已取消"}'}
+      ]},
+      { name:'财务管理', items:[
+        {id:'invoice-list',title:'账单列表',method:'GET',url:'/api/v1/invoices',desc:'获取账单列表',reqParams:[],resParams:[{n:'data[].id',t:'int',r:'',d:'账单ID',e:'1'},{n:'data[].invoice_no',t:'string',r:'',d:'账单号',e:'INV2026001'},{n:'data[].amount',t:'string',r:'',d:'金额',e:'99.00'},{n:'data[].status',t:'string',r:'',d:'状态',e:'unpaid'}],reqExample:'GET /api/v1/invoices',resExample:'{"code":0,"data":[{"id":1,"invoice_no":"INV2026001","amount":"99.00","status":"unpaid"}]}'},
+        {id:'invoice-detail',title:'账单详情',method:'GET',url:'/api/v1/invoices/:id',desc:'获取账单详情',reqParams:[],resParams:[],reqExample:'GET /api/v1/invoices/1',resExample:'{"code":0,"data":{"id":1,"invoice_no":"INV2026001","items":[],"amount":"99.00"}}'},
+        {id:'invoice-pay',title:'支付账单',method:'POST',url:'/api/v1/invoices/:id/pay',desc:'支付账单',reqParams:[{n:'payment_method_id',t:'int',r:'必填',d:'支付方式',e:'1'}],resParams:[],reqExample:'POST /api/v1/invoices/1/pay\n\n{"payment_method_id":1}',resExample:'{"code":0,"data":{"payment_url":"https://..."}}'},
+        {id:'balance-get',title:'获取余额',method:'GET',url:'/api/v1/balance',desc:'获取账户余额',reqParams:[],resParams:[{n:'data.balance',t:'string',r:'',d:'可用余额',e:'1000.00'},{n:'data.frozen',t:'string',r:'',d:'冻结金额',e:'0.00'}],reqExample:'GET /api/v1/balance',resExample:'{"code":0,"data":{"balance":"1000.00","frozen":"0.00"}}'},
+        {id:'balance-recharge',title:'充值',method:'POST',url:'/api/v1/balance/recharge',desc:'账户充值',reqParams:[{n:'amount',t:'string',r:'必填',d:'充值金额',e:'100.00'},{n:'payment_method_id',t:'int',r:'必填',d:'支付方式',e:'1'}],resParams:[],reqExample:'POST /api/v1/balance/recharge\n\n{"amount":"100.00","payment_method_id":1}',resExample:'{"code":0,"data":{"payment_url":"https://..."}}'},
+        {id:'balance-logs',title:'余额记录',method:'GET',url:'/api/v1/balance/logs',desc:'余额变动记录',reqParams:[],resParams:[{n:'data[].type',t:'string',r:'',d:'类型',e:'recharge'},{n:'data[].amount',t:'string',r:'',d:'金额',e:'100.00'},{n:'data[].balance_after',t:'string',r:'',d:'变动后余额',e:'1100.00'}],reqExample:'GET /api/v1/balance/logs',resExample:'{"code":0,"data":[{"type":"recharge","amount":"100.00","balance_after":"1100.00"}]}'},
+        {id:'credit-info',title:'信用额度',method:'GET',url:'/api/v1/credit',desc:'获取信用额度信息',reqParams:[],resParams:[{n:'data.total',t:'string',r:'',d:'总额度',e:'5000.00'},{n:'data.used',t:'string',r:'',d:'已用',e:'1000.00'},{n:'data.available',t:'string',r:'',d:'可用',e:'4000.00'}],reqExample:'GET /api/v1/credit',resExample:'{"code":0,"data":{"total":"5000.00","used":"1000.00","available":"4000.00"}}'}
+      ]},
+      { name:'技术支持', items:[
+        {id:'ticket-create',title:'提交工单',method:'POST',url:'/api/v1/tickets',desc:'提交工单',reqParams:[{n:'subject',t:'string',r:'必填',d:'主题',e:'服务器无法访问'},{n:'content',t:'string',r:'必填',d:'内容',e:'我的服务器...'},{n:'department_id',t:'int',r:'必填',d:'部门ID',e:'1'},{n:'priority',t:'string',r:'选填',d:'优先级',e:'high'}],resParams:[{n:'data.id',t:'int',r:'',d:'工单ID',e:'1'},{n:'data.ticket_no',t:'string',r:'',d:'工单号',e:'TK2026001'}],reqExample:'POST /api/v1/tickets\n\n{"subject":"服务器无法访问","content":"我的服务器...","department_id":1,"priority":"high"}',resExample:'{"code":0,"data":{"id":1,"ticket_no":"TK2026001"}}'},
+        {id:'ticket-list',title:'工单列表',method:'GET',url:'/api/v1/tickets',desc:'获取工单列表',reqParams:[],resParams:[{n:'data[].id',t:'int',r:'',d:'工单ID',e:'1'},{n:'data[].subject',t:'string',r:'',d:'主题',e:'服务器无法访问'},{n:'data[].status',t:'string',r:'',d:'状态',e:'open'}],reqExample:'GET /api/v1/tickets',resExample:'{"code":0,"data":[{"id":1,"subject":"服务器无法访问","status":"open"}]}'},
+        {id:'ticket-detail',title:'工单详情',method:'GET',url:'/api/v1/tickets/:id',desc:'获取工单详情',reqParams:[],resParams:[{n:'data.id',t:'int',r:'',d:'工单ID',e:'1'},{n:'data.messages',t:'array',r:'',d:'对话记录',e:'[{...}]'}],reqExample:'GET /api/v1/tickets/1',resExample:'{"code":0,"data":{"id":1,"subject":"服务器无法访问","messages":[{"content":"...","is_admin":false}]}}'},
+        {id:'ticket-reply',title:'回复工单',method:'POST',url:'/api/v1/tickets/:id/reply',desc:'回复工单',reqParams:[{n:'content',t:'string',r:'必填',d:'回复内容',e:'我已经检查过了...'}],resParams:[],reqExample:'POST /api/v1/tickets/1/reply\n\n{"content":"我已经检查过了..."}',resExample:'{"code":0,"message":"回复成功"}'},
+        {id:'ticket-close',title:'关闭工单',method:'POST',url:'/api/v1/tickets/:id/close',desc:'关闭工单',reqParams:[],resParams:[],reqExample:'POST /api/v1/tickets/1/close',resExample:'{"code":0,"message":"工单已关闭"}'}
+      ]},
+      { name:'其他', items:[
+        {id:'contact-list',title:'联系人列表',method:'GET',url:'/api/v1/contacts',desc:'获取联系人列表',reqParams:[],resParams:[{n:'data[].id',t:'int',r:'',d:'ID',e:'1'},{n:'data[].name',t:'string',r:'',d:'姓名',e:'张三'}],reqExample:'GET /api/v1/contacts',resExample:'{"code":0,"data":[{"id":1,"name":"张三","phone":"138****0000"}]}'},
+        {id:'message-list',title:'消息列表',method:'GET',url:'/api/v1/messages',desc:'获取系统消息',reqParams:[],resParams:[{n:'data[].id',t:'int',r:'',d:'ID',e:'1'},{n:'data[].title',t:'string',r:'',d:'标题',e:'系统通知'},{n:'data[].is_read',t:'bool',r:'',d:'是否已读',e:'false'}],reqExample:'GET /api/v1/messages',resExample:'{"code":0,"data":[{"id":1,"title":"系统通知","is_read":false}]}'},
+        {id:'cert-status',title:'认证状态',method:'GET',url:'/api/v1/certification/status',desc:'获取实名认证状态',reqParams:[],resParams:[{n:'data.status',t:'string',r:'',d:'状态',e:'approved'},{n:'data.real_name',t:'string',r:'',d:'真实姓名(脱敏)',e:'张**'}],reqExample:'GET /api/v1/certification/status',resExample:'{"code":0,"data":{"status":"approved","real_name":"张**"}}'},
+        {id:'cert-submit',title:'提交认证',method:'POST',url:'/api/v1/certification/submit',desc:'提交实名认证',reqParams:[{n:'real_name',t:'string',r:'必填',d:'真实姓名',e:'张三'},{n:'id_card',t:'string',r:'必填',d:'身份证号',e:'110101199001011234'}],resParams:[],reqExample:'POST /api/v1/certification/submit\n\n{"real_name":"张三","id_card":"110101199001011234"}',resExample:'{"code":0,"message":"提交成功，等待审核"}'},
+        {id:'divert-create',title:'发起转移',method:'POST',url:'/api/v1/product-diverts',desc:'发起产品转移',reqParams:[{n:'host_id',t:'int',r:'必填',d:'主机ID',e:'1'},{n:'target_user',t:'string',r:'必填',d:'目标用户(邮箱/手机)',e:'test@example.com'}],resParams:[{n:'data.transfer_code',t:'string',r:'',d:'转移码',e:'TC123456'}],reqExample:'POST /api/v1/product-diverts\n\n{"host_id":1,"target_user":"test@example.com"}',resExample:'{"code":0,"data":{"transfer_code":"TC123456"}}'},
+        {id:'divert-list',title:'转移记录',method:'GET',url:'/api/v1/product-diverts',desc:'获取转移记录',reqParams:[],resParams:[],reqExample:'GET /api/v1/product-diverts',resExample:'{"code":0,"data":[{"id":1,"status":"pending","host_name":"基础型"}]}'},
+        {id:'market-listings',title:'在售列表',method:'GET',url:'/api/v1/marketplace/listings',desc:'获取交易市场在售列表',reqParams:[],resParams:[],reqExample:'GET /api/v1/marketplace/listings',resExample:'{"code":0,"data":[{"id":1,"title":"出售云服务器","price":"500.00"}]}'},
+        {id:'market-create',title:'挂售商品',method:'POST',url:'/api/v1/marketplace/listings',desc:'挂售商品到交易市场',reqParams:[{n:'host_id',t:'int',r:'必填',d:'主机ID',e:'1'},{n:'price',t:'string',r:'必填',d:'售价',e:'500.00'},{n:'description',t:'string',r:'选填',d:'描述',e:'九成新服务器'}],resParams:[],reqExample:'POST /api/v1/marketplace/listings\n\n{"host_id":1,"price":"500.00","description":"九成新服务器"}',resExample:'{"code":0,"message":"挂售成功"}'},
+        {id:'sms-send',title:'发送验证码',method:'POST',url:'/api/v1/sms/send',desc:'发送短信验证码',reqParams:[{n:'phone',t:'string',r:'必填',d:'手机号',e:'13800138000'},{n:'type',t:'string',r:'必填',d:'类型(bind/login)',e:'bind'}],resParams:[],reqExample:'POST /api/v1/sms/send\n\n{"phone":"13800138000","type":"bind"}',resExample:'{"code":0,"message":"发送成功"}'},
+        {id:'ssl-list',title:'SSL证书',method:'GET',url:'/api/v1/ssl/certificates',desc:'获取SSL证书列表',reqParams:[],resParams:[],reqExample:'GET /api/v1/ssl/certificates',resExample:'{"code":0,"data":[{"id":1,"domain":"example.com","status":"active"}]}'},
+        {id:'ai-shopping',title:'AI购物助手',method:'POST',url:'/api/v1/ai-shopping/session',desc:'创建AI购物助手会话',reqParams:[],resParams:[{n:'data.session_id',t:'string',r:'',d:'会话ID',e:'shop_1_1720000000'}],reqExample:'POST /api/v1/ai-shopping/session',resExample:'{"code":0,"data":{"session_id":"shop_1_1720000000"}}'}
+      ]}
+    ]
+  },
+
+  admin: {
+    title: '管理接口',
+    groups: [
+      { name:'仪表盘', items:[
+        {id:'dash-main',title:'仪表盘概览',method:'GET',url:'/api/admin/dashboard',desc:'获取仪表盘概览数据',reqParams:[],resParams:[{n:'data.users_count',t:'int',r:'',d:'用户数',e:'128'},{n:'data.orders_count',t:'int',r:'',d:'订单数',e:'256'},{n:'data.income_today',t:'string',r:'',d:'今日收入',e:'5000.00'},{n:'data.tickets_open',t:'int',r:'',d:'待处理工单',e:'3'}],reqExample:'GET /api/admin/dashboard',resExample:'{"code":0,"data":{"users_count":128,"orders_count":256,"income_today":"5000.00","tickets_open":3}}'},
+        {id:'dash-stats',title:'统计数据',method:'GET',url:'/api/admin/dashboard/stats',desc:'获取统计数据',reqParams:[],resParams:[],reqExample:'GET /api/admin/dashboard/stats',resExample:'{"code":0,"data":{"monthly_income":"50000.00","active_hosts":100}}'},
+        {id:'dash-income',title:'收入趋势',method:'GET',url:'/api/admin/dashboard/income-trend',desc:'收入趋势图表数据',reqParams:[{n:'days',t:'int',r:'选填',d:'天数，默认30',e:'30'}],resParams:[{n:'data.dates',t:'array',r:'',d:'日期数组',e:'["2026-08-01",...]'},{n:'data.values',t:'array',r:'',d:'收入数组',e:'[1000,2000,...]'}],reqExample:'GET /api/admin/dashboard/income-trend?days=30',resExample:'{"code":0,"data":{"dates":["2026-08-01"],"values":[1000]}}'},
+        {id:'dash-search',title:'全局搜索',method:'GET',url:'/api/admin/dashboard/global-search',desc:'全局搜索',reqParams:[{n:'keyword',t:'string',r:'必填',d:'关键词',e:'test'},{n:'type',t:'string',r:'选填',d:'类型(user/order/ticket)',e:'user'}],resParams:[],reqExample:'GET /api/admin/dashboard/global-search?keyword=test&type=user',resExample:'{"code":0,"data":{"users":[],"orders":[],"tickets":[]}}'}
+      ]},
+      { name:'用户管理', items:[
+        {id:'admin-users',title:'用户列表',method:'GET',url:'/api/admin/users',desc:'获取用户列表',reqParams:[{n:'keyword',t:'string',r:'选填',d:'关键词',e:'test'},{n:'status',t:'string',r:'选填',d:'状态',e:'active'},{n:'page',t:'int',r:'选填',d:'页码',e:'1'}],resParams:[{n:'data.list',t:'array',r:'',d:'用户列表',e:'[{id:1,...}]'},{n:'data.total',t:'int',r:'',d:'总数',e:'128'}],reqExample:'GET /api/admin/users?keyword=test&page=1',resExample:'{"code":0,"data":{"list":[{"id":1,"username":"test","status":"active"}],"total":128}}'},
+        {id:'admin-user-detail',title:'用户详情',method:'GET',url:'/api/admin/users/:id',desc:'获取用户详情',reqParams:[],resParams:[{n:'data.id',t:'int',r:'',d:'用户ID',e:'1'},{n:'data.username',t:'string',r:'',d:'用户名',e:'test'},{n:'data.hosts',t:'array',r:'',d:'关联主机',e:'[{...}]'}],reqExample:'GET /api/admin/users/1',resExample:'{"code":0,"data":{"id":1,"username":"test","email":"test@example.com","hosts":[]}}'},
+        {id:'admin-user-update',title:'更新用户',method:'PUT',url:'/api/admin/users/:id',desc:'更新用户信息',reqParams:[{n:'nickname',t:'string',r:'选填',d:'昵称',e:'测试'},{n:'group_id',t:'int',r:'选填',d:'用户组ID',e:'1'},{n:'status',t:'string',r:'选填',d:'状态',e:'active'}],resParams:[],reqExample:'PUT /api/admin/users/1\n\n{"nickname":"测试","status":"active"}',resExample:'{"code":0,"message":"更新成功"}'},
+        {id:'admin-user-status',title:'变更状态',method:'POST',url:'/api/admin/users/:id/status',desc:'变更用户状态',reqParams:[{n:'status',t:'string',r:'必填',d:'状态(active/disabled)',e:'active'}],resParams:[],reqExample:'POST /api/admin/users/1/status\n\n{"status":"active"}',resExample:'{"code":0,"message":"状态已更新"}'}
+      ]},
+      { name:'产品管理', items:[
+        {id:'admin-products',title:'产品列表',method:'GET',url:'/api/admin/products',desc:'获取产品列表',reqParams:[{n:'group_id',t:'int',r:'选填',d:'分组ID',e:'1'}],resParams:[{n:'data',t:'array',r:'',d:'产品列表',e:'[{id:1,...}]'}],reqExample:'GET /api/admin/products?group_id=1',resExample:'{"code":0,"data":[{"id":1,"name":"基础型","price":"99.00"}]}'},
+        {id:'admin-product-create',title:'创建产品',method:'POST',url:'/api/admin/products',desc:'创建产品',reqParams:[{n:'name',t:'string',r:'必填',d:'产品名称',e:'基础型'},{n:'group_id',t:'int',r:'必填',d:'分组ID',e:'1'},{n:'price',t:'string',r:'必填',d:'价格',e:'99.00'},{n:'period',t:'string',r:'必填',d:'周期',e:'month'}],resParams:[{n:'data.id',t:'int',r:'',d:'产品ID',e:'1'}],reqExample:'POST /api/admin/products\n\n{"name":"基础型","group_id":1,"price":"99.00","period":"month"}',resExample:'{"code":0,"data":{"id":1}}'},
+        {id:'admin-product-update',title:'更新产品',method:'PUT',url:'/api/admin/products/:id',desc:'更新产品',reqParams:[{n:'name',t:'string',r:'选填',d:'产品名称',e:'基础型'},{n:'price',t:'string',r:'选填',d:'价格',e:'99.00'}],resParams:[],reqExample:'PUT /api/admin/products/1\n\n{"price":"89.00"}',resExample:'{"code":0,"message":"更新成功"}'},
+        {id:'admin-product-groups',title:'产品分组',method:'GET',url:'/api/admin/product-groups',desc:'获取产品分组',reqParams:[],resParams:[{n:'data',t:'array',r:'',d:'分组列表',e:'[{id:1,...}]'}],reqExample:'GET /api/admin/product-groups',resExample:'{"code":0,"data":[{"id":1,"name":"云服务器","slug":"cloud"}]}'}
+      ]},
+      { name:'订单/账单', items:[
+        {id:'admin-orders',title:'订单列表',method:'GET',url:'/api/admin/orders',desc:'获取订单列表',reqParams:[{n:'status',t:'string',r:'选填',d:'状态',e:'pending'}],resParams:[{n:'data',t:'array',r:'',d:'订单列表',e:'[{id:1,...}]'}],reqExample:'GET /api/admin/orders?status=pending',resExample:'{"code":0,"data":[{"id":1,"order_no":"AF2026001","amount":"99.00"}]}'},
+        {id:'admin-invoices',title:'账单列表',method:'GET',url:'/api/admin/invoices',desc:'获取账单列表',reqParams:[],resParams:[],reqExample:'GET /api/admin/invoices',resExample:'{"code":0,"data":[{"id":1,"invoice_no":"INV2026001","status":"unpaid"}]}'},
+        {id:'admin-invoice-create',title:'创建账单',method:'POST',url:'/api/admin/invoices',desc:'手动创建账单',reqParams:[{n:'user_id',t:'int',r:'必填',d:'用户ID',e:'1'},{n:'amount',t:'string',r:'必填',d:'金额',e:'99.00'},{n:'description',t:'string',r:'必填',d:'描述',e:'云服务器续费'}],resParams:[],reqExample:'POST /api/admin/invoices\n\n{"user_id":1,"amount":"99.00","description":"云服务器续费"}',resExample:'{"code":0,"data":{"id":1,"invoice_no":"INV2026002"}}'}
+      ]},
+      { name:'工单管理', items:[
+        {id:'admin-tickets',title:'工单列表',method:'GET',url:'/api/admin/tickets',desc:'获取工单列表',reqParams:[{n:'status',t:'string',r:'选填',d:'状态',e:'open'},{n:'department_id',t:'int',r:'选填',d:'部门ID',e:'1'}],resParams:[{n:'data',t:'array',r:'',d:'工单列表',e:'[{id:1,...}]'}],reqExample:'GET /api/admin/tickets?status=open',resExample:'{"code":0,"data":[{"id":1,"subject":"服务器问题","status":"open"}]}'},
+        {id:'admin-ticket-reply',title:'回复工单',method:'POST',url:'/api/admin/tickets/:id/reply',desc:'回复工单',reqParams:[{n:'content',t:'string',r:'必填',d:'回复内容',e:'已处理...'},{n:'status',t:'string',r:'选填',d:'更新状态',e:'answered'}],resParams:[],reqExample:'POST /api/admin/tickets/1/reply\n\n{"content":"已处理...","status":"answered"}',resExample:'{"code":0,"message":"回复成功"}'},
+        {id:'admin-ticket-transfer',title:'转交工单',method:'POST',url:'/api/admin/tickets/:id/transfer',desc:'转交工单',reqParams:[{n:'department_id',t:'int',r:'必填',d:'目标部门ID',e:'2'},{n:'admin_id',t:'int',r:'选填',d:'指定管理员ID',e:'3'}],resParams:[],reqExample:'POST /api/admin/tickets/1/transfer\n\n{"department_id":2}',resExample:'{"code":0,"message":"转交成功"}'}
+      ]},
+      { name:'上游供应商', items:[
+        {id:'upstream-list',title:'供应商列表',method:'GET',url:'/api/admin/upstream-providers',desc:'获取上游供应商列表',reqParams:[],resParams:[{n:'data',t:'array',r:'',d:'供应商列表',e:'[{id:1,...}]'}],reqExample:'GET /api/admin/upstream-providers',resExample:'{"code":0,"data":[{"id":1,"name":"智简魔方","type":"zjmf","status":"active"}]}'},
+        {id:'upstream-add',title:'添加供应商',method:'POST',url:'/api/admin/upstream-providers',desc:'添加上游供应商',reqParams:[{n:'name',t:'string',r:'必填',d:'名称',e:'智简魔方'},{n:'type',t:'string',r:'必填',d:'类型(zjmf/v10/anchor)',e:'zjmf'},{n:'url',t:'string',r:'必填',d:'API地址',e:'https://api.example.com'},{n:'api_key',t:'string',r:'必填',d:'API密钥',e:'ak_xxxx'}],resParams:[],reqExample:'POST /api/admin/upstream-providers\n\n{"name":"智简魔方","type":"zjmf","url":"https://api.example.com","api_key":"ak_xxxx"}',resExample:'{"code":0,"data":{"id":1}}'},
+        {id:'upstream-sync',title:'同步产品',method:'POST',url:'/api/admin/upstream-providers/:id/sync',desc:'同步上游产品',reqParams:[],resParams:[],reqExample:'POST /api/admin/upstream-providers/1/sync',resExample:'{"code":0,"message":"同步成功，新增5个产品"}'}
+      ]},
+      { name:'系统设置', items:[
+        {id:'settings-general',title:'通用设置',method:'GET',url:'/api/admin/settings/general',desc:'获取通用设置',reqParams:[],resParams:[],reqExample:'GET /api/admin/settings/general',resExample:'{"code":0,"data":{"site_name":"锚点财务","admin_path":"/admin"}}'},
+        {id:'settings-save',title:'保存设置',method:'POST',url:'/api/admin/settings/general',desc:'保存通用设置',reqParams:[{n:'site_name',t:'string',r:'选填',d:'站点名称',e:'锚点财务'},{n:'admin_path',t:'string',r:'选填',d:'后台路径',e:'/admin'}],resParams:[],reqExample:'POST /api/admin/settings/general\n\n{"site_name":"锚点财务","admin_path":"/admin"}',resExample:'{"code":0,"message":"保存成功"}'},
+        {id:'settings-email',title:'邮件设置',method:'GET',url:'/api/admin/settings/email',desc:'获取邮件设置',reqParams:[],resParams:[],reqExample:'GET /api/admin/settings/email',resExample:'{"code":0,"data":{"smtp_host":"smtp.example.com","smtp_port":465}}'},
+        {id:'settings-payment',title:'支付设置',method:'GET',url:'/api/admin/settings/payment',desc:'获取支付设置',reqParams:[],resParams:[],reqExample:'GET /api/admin/settings/payment',resExample:'{"code":0,"data":[{"id":1,"name":"支付宝-官方","code":"alipay","enabled":true}]}'}
+      ]},
+      { name:'内容管理', items:[
+        {id:'content-announcements',title:'公告管理',method:'GET',url:'/api/admin/announcements',desc:'公告管理(CRUD)',reqParams:[],resParams:[],reqExample:'GET /api/admin/announcements',resExample:'{"code":0,"data":[{"id":1,"title":"系统维护","status":1}]}'},
+        {id:'content-news',title:'新闻管理',method:'GET',url:'/api/admin/news',desc:'新闻管理(CRUD)',reqParams:[],resParams:[],reqExample:'GET /api/admin/news',resExample:'{"code":0,"data":[{"id":1,"title":"产品更新"}]}'},
+        {id:'content-kb',title:'知识库管理',method:'GET',url:'/api/admin/knowledge-base',desc:'知识库管理(CRUD)',reqParams:[],resParams:[],reqExample:'GET /api/admin/knowledge-base',resExample:'{"code":0,"data":[{"id":1,"title":"常见问题"}]}'},
+        {id:'content-banners',title:'轮播图管理',method:'GET',url:'/api/admin/banners',desc:'轮播图管理(CRUD)',reqParams:[],resParams:[],reqExample:'GET /api/admin/banners',resExample:'{"code":0,"data":[{"id":1,"title":"高性能云服务器","sort_order":0}]}'},
+        {id:'content-navs',title:'导航管理',method:'GET',url:'/api/admin/navs',desc:'导航菜单管理(CRUD)',reqParams:[],resParams:[],reqExample:'GET /api/admin/navs',resExample:'{"code":0,"data":[{"id":1,"name":"首页","path":"/"}]}'}
+      ]},
+      { name:'其他管理', items:[
+        {id:'admin-admins',title:'管理员列表',method:'GET',url:'/api/admin/admins',desc:'获取管理员列表',reqParams:[],resParams:[],reqExample:'GET /api/admin/admins',resExample:'{"code":0,"data":[{"id":1,"username":"admin","role":"super"}]}'},
+        {id:'admin-roles',title:'角色管理',method:'GET',url:'/api/admin/roles',desc:'获取角色列表',reqParams:[],resParams:[],reqExample:'GET /api/admin/roles',resExample:'{"code":0,"data":[{"id":1,"name":"超级管理员"}]}'},
+        {id:'admin-certs',title:'实名审核',method:'GET',url:'/api/admin/certifications',desc:'实名认证审核',reqParams:[],resParams:[],reqExample:'GET /api/admin/certifications',resExample:'{"code":0,"data":[{"id":1,"status":"pending","real_name":"张三"}]}'},
+        {id:'admin-logs',title:'系统日志',method:'GET',url:'/api/admin/system-logs',desc:'系统日志',reqParams:[],resParams:[],reqExample:'GET /api/admin/system-logs',resExample:'{"code":0,"data":[{"id":1,"action":"login","ip":"1.2.3.4"}]}'},
+        {id:'admin-plugins',title:'插件管理',method:'GET',url:'/api/admin/plugins',desc:'插件管理',reqParams:[],resParams:[],reqExample:'GET /api/admin/plugins',resExample:'{"code":0,"data":[{"id":1,"name":"OAuth登录","status":"enabled"}]}'},
+        {id:'admin-backup',title:'数据备份',method:'POST',url:'/api/admin/backup',desc:'数据备份',reqParams:[],resParams:[],reqExample:'POST /api/admin/backup',resExample:'{"code":0,"message":"备份成功","data":{"file":"backup_20260806.sql"}}'},
+        {id:'dcim-servers',title:'服务器列表',method:'GET',url:'/api/admin/dcim/servers',desc:'DCIM服务器列表',reqParams:[],resParams:[],reqExample:'GET /api/admin/dcim/servers',resExample:'{"code":0,"data":[{"id":1,"ip":"1.2.3.4","status":"online"}]}'},
+        {id:'dcim-actions',title:'服务器操作',method:'POST',url:'/api/admin/dcim/servers/:id/:action',desc:'服务器操作(开机/关机/重启/KVM等)',reqParams:[],resParams:[],reqExample:'POST /api/admin/dcim/servers/1/start',resExample:'{"code":0,"message":"操作已提交"}'}
+      ]}
+    ]
+  }
+};
+
+// ========== Render ==========
+function getParam(key) {
+  return new URLSearchParams(window.location.search).get(key);
+}
+
+function getPage() { return getParam('page') || 'public'; }
+function getApi() { return getParam('api') || ''; }
+
+// Find first API id for a page
+function getFirstApiId(page) {
+  var data = API_DATA[page];
+  if (data && data.groups.length > 0 && data.groups[0].items.length > 0) {
+    return data.groups[0].items[0].id;
+  }
+  return '';
+}
+
+// Find an API item by id
+function findApiItem(page, apiId) {
+  var data = API_DATA[page];
+  if (!data) return null;
+  for (var g = 0; g < data.groups.length; g++) {
+    for (var i = 0; i < data.groups[g].items.length; i++) {
+      if (data.groups[g].items[i].id === apiId) {
+        return { item: data.groups[g].items[i], group: data.groups[g] };
+      }
+    }
+  }
+  return null;
+}
+
+function render() {
+  var page = getPage();
+  var apiId = getApi();
+  var data = API_DATA[page];
+  if (!data) { data = API_DATA.public; page = 'public'; }
+
+  // If no api selected, default to first
+  if (!apiId) {
+    apiId = getFirstApiId(page);
+    if (apiId) {
+      window.location.replace('index.html?page=' + page + '&api=' + apiId);
+      return;
+    }
+  }
+
+  var found = findApiItem(page, apiId);
+  if (!found) {
+    apiId = getFirstApiId(page);
+    found = findApiItem(page, apiId);
+    if (!found) return;
+  }
+  var currentItem = found.item;
+  var currentGroup = found.group;
+
+  // Update nav active state
+  document.querySelectorAll('#navLinks a').forEach(function(a) {
+    a.classList.toggle('active', a.getAttribute('data-page') === page);
+  });
+
+  // Render sidebar
+  var sidebarHtml = '<div class="panel-group">';
+  data.groups.forEach(function(group) {
+    var isActiveGroup = group.name === currentGroup.name;
+    var isActiveGroup = group.name === currentGroup.name;
+    sidebarHtml += '<div class="panel-heading">';
+    sidebarHtml += '<a class="side-nav-item item-title">' + group.name + '</a>';
+    sidebarHtml += '<div class="panel-collapse' + (isActiveGroup ? ' show' : '') + '">';
+    sidebarHtml += '<div class="item-body"><ul class="list-unstyled">';
+    group.items.forEach(function(item) {
+      var isActive = item.id === apiId;
+      sidebarHtml += '<li><a href="index.html?page=' + page + '&api=' + item.id + '"' + (isActive ? ' class="active"' : '') + '>' + item.title + '</a></li>';
+    });
+    sidebarHtml += '</ul></div></div></div>';
+  });
+  sidebarHtml += '</div>';
+  document.getElementById('sidebar').innerHTML = sidebarHtml;
+
+  // Render single API content
+  var item = currentItem;
+  var contentHtml = '<h2 class="class-title">' + currentGroup.name + '</h2>';
+  contentHtml += '<div class="action-item">';
+  contentHtml += '<div class="table-item">';
+  contentHtml += '<h4 class="action-title">API - ' + item.title + '</h4>';
+  contentHtml += '<p>描述：' + item.desc + '</p>';
+  if (item.method) contentHtml += '<p>请求方式：<span class="method-badge method-' + item.method.toLowerCase() + '">' + item.method + '</span></p>';
+  if (item.url) contentHtml += '<p>请求地址：<span>' + item.url + '</span></p>';
+  contentHtml += '<p>版本：v1</p>';
+  contentHtml += '</div>';
+
+  if (item.reqParams && item.reqParams.length > 0) {
+    contentHtml += '<div class="table-item"><p class="table-title"><span class="badge badge-danger">请求参数</span></p>';
+    contentHtml += '<table class="table"><tbody>';
+    contentHtml += '<tr><td width="160">参数</td><td width="70">类型</td><td width="100">验证规则</td><td>描述</td><td>示例</td></tr>';
+    item.reqParams.forEach(function(p) {
+      contentHtml += '<tr><td>' + p.n + '</td><td>' + p.t + '</td><td>' + p.r + '</td><td>' + p.d + '</td><td>' + p.e + '</td></tr>';
+    });
+    contentHtml += '</tbody></table></div>';
+  }
+
+  if (item.resParams && item.resParams.length > 0) {
+    contentHtml += '<div class="table-item"><p class="table-title"><span class="badge badge-success">返回参数</span></p>';
+    contentHtml += '<table class="table"><tbody>';
+    contentHtml += '<tr><td width="160">参数</td><td width="70">类型</td><td>描述</td><td>示例</td></tr>';
+    item.resParams.forEach(function(p) {
+      contentHtml += '<tr><td>' + p.n + '</td><td>' + p.t + '</td><td>' + p.d + '</td><td>' + p.e + '</td></tr>';
+    });
+    contentHtml += '</tbody></table></div>';
+  }
+
+  if (item.reqExample) {
+    contentHtml += '<div class="table-item"><p class="table-title"><span class="badge badge-info">请求示例</span></p>';
+    contentHtml += '<pre>' + escapeHtml(item.reqExample) + '</pre></div>';
+  }
+
+  if (item.resExample) {
+    contentHtml += '<div class="table-item"><p class="table-title"><span class="badge badge-info">返回示例</span></p>';
+    contentHtml += '<pre>' + escapeHtml(item.resExample) + '</pre></div>';
+  }
+
+  contentHtml += '</div>';
+
+  document.getElementById('content').innerHTML = contentHtml;
+
+  // Re-init
+  initSidebar();
+  initSearch();
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function initSidebar() {
+  document.querySelectorAll('.item-title').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var panel = this.closest('.panel-heading');
+      var collapse = panel.querySelector('.panel-collapse');
+      collapse.classList.toggle('show');
+    });
+  });
+}
+
+function initSearch() {
+  var searchInput = document.getElementById('apiSearch');
+  var searchResults = document.getElementById('searchResults');
+  if (!searchInput || !searchResults) return;
+
+  // Build index across ALL pages
+  var index = [];
+  var pageNames = {public:'公共接口', user:'用户接口', admin:'管理接口'};
+  ['public','user','admin'].forEach(function(pg) {
+    var data = API_DATA[pg];
+    if (!data) return;
+    data.groups.forEach(function(group) {
+      group.items.forEach(function(item) {
+        var paramNames = '';
+        if (item.reqParams) paramNames += item.reqParams.map(function(p){return p.n}).join(' ');
+        if (item.resParams) paramNames += ' ' + item.resParams.map(function(p){return p.n}).join(' ');
+        index.push({
+          title: item.title,
+          method: item.method,
+          url: item.url,
+          desc: item.desc,
+          params: paramNames,
+          id: item.id,
+          page: pg,
+          pageName: pageNames[pg] || pg,
+          groupName: group.name
+        });
+      });
+    });
+  });
+
+  searchInput.oninput = function() {
+    var q = this.value.trim().toLowerCase();
+    if (!q) { searchResults.classList.remove('show'); return; }
+    var matches = index.filter(function(item) {
+      return (item.title + ' ' + item.url + ' ' + item.params + ' ' + item.desc).toLowerCase().includes(q);
+    });
+    if (matches.length === 0) {
+      searchResults.innerHTML = '<div class="no-result">没有找到匹配的API (´;ω;`)</div>';
+    } else {
+      var html = '';
+      matches.slice(0, 20).forEach(function(m) {
+        var mc = 'method-' + (m.method || 'get').toLowerCase();
+        var hl = function(s) { return q ? s.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')','gi'),'<span class="result-highlight">$1</span>') : s; };
+        html += '<div class="result-item" data-page="' + m.page + '" data-id="' + m.id + '">';
+        html += '<span class="result-method ' + mc + '">' + m.method + '</span>';
+        html += '<span class="result-name">' + hl(m.title) + '</span>';
+        html += '<span class="result-tag">' + m.pageName + '</span>';
+        html += '<div class="result-path">' + hl(m.url) + '</div>';
+        html += '</div>';
+      });
+      searchResults.innerHTML = html;
+    }
+    searchResults.classList.add('show');
+
+    searchResults.querySelectorAll('.result-item').forEach(function(ri) {
+      ri.onclick = function() {
+        var pg = this.getAttribute('data-page');
+        var apiId = this.getAttribute('data-id');
+        window.location.href = 'index.html?page=' + pg + '&api=' + apiId;
+      };
+    });
+  };
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-box')) searchResults.classList.remove('show');
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey||e.metaKey) && e.key==='k') { e.preventDefault(); searchInput.focus(); }
+    if (e.key==='Escape') { searchResults.classList.remove('show'); searchInput.blur(); }
+  });
+}
+
+function initScroll() {
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+      var href = this.getAttribute('href');
+      if (href.startsWith('#')) {
+        var target = document.querySelector(href);
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({behavior:'smooth',block:'start'});
+        }
+      }
+    });
+  });
+
+  // Active link tracking
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        var id = entry.target.id;
+        document.querySelectorAll('.item-body a').forEach(function(a) {
+          a.classList.remove('active');
+          if (a.getAttribute('href') === '#' + id) a.classList.add('active');
+        });
+      }
+    });
+  }, {threshold:0.3,rootMargin:'-60px 0px -60% 0px'});
+
+  document.querySelectorAll('.action-item[id]').forEach(function(item) {
+    observer.observe(item);
+  });
+}
+
+// ========== Flash Animation ==========
+var s = document.createElement('style');
+s.textContent = '@keyframes flash{0%{box-shadow:0 0 0 0 rgba(255,107,157,0.6)}50%{box-shadow:0 0 0 8px rgba(255,107,157,0)}100%{box-shadow:none}}';
+document.head.appendChild(s);
+
+// ========== Init ==========
+render();
+</script>
+</body>
+</html>

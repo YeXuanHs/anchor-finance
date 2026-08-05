@@ -1,8 +1,7 @@
 {
   "latest_version": "1.0.0-demo",
   "released_at": "2026-08-06",
-  "download_url": "https://qm.qq.com/q/m3i0A7bwga",
-  "download_tip": "请加入交流群下载最新安装包",
+  "github_release": "https://github.com/YeXuanHs/anchor-finance/releases/latest",
   "changelog": [
     {
       "version": "1.0.0-demo",

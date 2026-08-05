@@ -34,8 +34,8 @@
         <el-col :span="6">
           <el-card shadow="hover" class="stat-card">
             <div class="stat-value">
-              <el-tag :type="versionType === 'stable' ? 'success' : 'warning'" size="large">
-                {{ currentVersion.includes('demo') || currentVersion.includes('beta') ? '测试版' : '稳定版' }}
+              <el-tag :type="isStable ? 'success' : 'warning'" size="large">
+                {{ isStable ? '稳定版' : '测试版' }}
               </el-tag>
             </div>
             <div class="stat-label">版本类型</div>
@@ -53,7 +53,7 @@
         </el-col>
       </el-row>
 
-      <!-- 更新提示 -->
+      <!-- 有更新 -->
       <el-alert
         v-if="hasUpdate"
         type="warning"
@@ -62,25 +62,30 @@
         style="margin-bottom: 20px"
       >
         <template #title>
-          发现新版本 {{ remoteVersion }}，请加入交流群下载最新安装包
+          发现新版本 {{ remoteVersion }}，请前往 GitHub Release 下载
         </template>
         <template #default>
           <div style="margin-top: 8px">
-            <el-button type="primary" size="small" @click="openQQGroup">
-              加入交流群下载
+            <el-button type="warning" size="small" @click="openGitHubRelease">
+              下载最新版本
             </el-button>
-            <el-button size="small" @click="showChangelog = true">
-              查看更新日志
+            <el-button size="small" @click="openQQGroup">
+              <el-icon><ChatDotRound /></el-icon> 加入交流群
+            </el-button>
+            <el-button size="small" @click="showChangelogDialog = true">
+              <el-icon><Document /></el-icon> 查看更新日志
             </el-button>
           </div>
         </template>
       </el-alert>
 
+      <!-- 已是最新 -->
       <el-alert
-        v-else-if="checked && !hasUpdate"
+        v-else-if="checked"
         type="success"
         :closable="false"
         show-icon
+        style="margin-bottom: 20px"
       >
         <template #title>
           当前已是最新版本 v{{ currentVersion }}
@@ -88,7 +93,7 @@
       </el-alert>
     </el-card>
 
-    <!-- 更新日志 -->
+    <!-- 更新日志（始终显示） -->
     <el-card shadow="never" class="section-card" v-if="changelog.length > 0">
       <template #header>
         <div class="card-header">
@@ -102,16 +107,33 @@
           :timestamp="log.date"
           placement="top"
           :type="log.type === 'stable' ? 'success' : 'warning'"
+          :hollow="log.version !== currentVersion"
         >
           <el-card shadow="hover">
             <h4 style="margin: 0 0 8px">
               v{{ log.version }}
-              <el-tag :type="log.type === 'stable' ? 'success' : 'warning'" size="small" style="margin-left: 8px">
+              <el-tag
+                :type="log.type === 'stable' ? 'success' : 'warning'"
+                size="small"
+                style="margin-left: 8px"
+              >
                 {{ log.type === 'stable' ? '稳定版' : '测试版' }}
+              </el-tag>
+              <el-tag
+                v-if="log.version === currentVersion"
+                type="primary"
+                size="small"
+                style="margin-left: 4px"
+              >
+                当前
               </el-tag>
             </h4>
             <ul style="margin: 0; padding-left: 20px">
-              <li v-for="(change, idx) in log.changes" :key="idx" style="color: #666; line-height: 1.8">
+              <li
+                v-for="(change, idx) in log.changes"
+                :key="idx"
+                style="color: #666; line-height: 1.8"
+              >
                 {{ change }}
               </li>
             </ul>
@@ -121,7 +143,7 @@
     </el-card>
 
     <!-- 更新日志弹窗 -->
-    <el-dialog v-model="showChangelog" title="更新日志" width="600px">
+    <el-dialog v-model="showChangelogDialog" title="更新日志" width="600px">
       <el-timeline v-if="changelog.length > 0">
         <el-timeline-item
           v-for="log in changelog"
@@ -129,7 +151,17 @@
           :timestamp="log.date"
           placement="top"
         >
-          <h4>v{{ log.version }}</h4>
+          <h4>
+            v{{ log.version }}
+            <el-tag
+              v-if="log.version === currentVersion"
+              type="primary"
+              size="small"
+              style="margin-left: 8px"
+            >
+              当前
+            </el-tag>
+          </h4>
           <ul>
             <li v-for="(change, idx) in log.changes" :key="idx">{{ change }}</li>
           </ul>
@@ -142,26 +174,27 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh, ChatDotRound, Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
-// GitHub raw URL for version.json
 const VERSION_URL = 'https://raw.githubusercontent.com/YeXuanHs/anchor-finance/master/version.json'
 const QQ_GROUP_URL = 'https://qm.qq.com/q/m3i0A7bwga'
 
 const currentVersion = ref(__APP_VERSION__ || '1.0.0')
 const remoteVersion = ref('')
-const versionType = ref('')
+const downloadUrl = ref('')
 const changelog = ref<any[]>([])
-const downloadTip = ref('')
 const checking = ref(false)
 const checked = ref(false)
-const showChangelog = ref(false)
+const showChangelogDialog = ref(false)
 
-const hasUpdate = computed(() => {
-  if (!remoteVersion.value) return false
-  return remoteVersion.value !== currentVersion.value
-})
+const isStable = computed(() =>
+  !currentVersion.value.includes('demo') && !currentVersion.value.includes('beta')
+)
+
+const hasUpdate = computed(() =>
+  remoteVersion.value !== '' && remoteVersion.value !== currentVersion.value
+)
 
 const handleCheckUpdate = async () => {
   checking.value = true
@@ -171,8 +204,8 @@ const handleCheckUpdate = async () => {
     const data = await res.json()
 
     remoteVersion.value = data.latest_version || ''
+    downloadUrl.value = data.github_release || ''
     changelog.value = data.changelog || []
-    downloadTip.value = data.download_tip || '请加入交流群下载最新安装包'
     checked.value = true
 
     if (hasUpdate.value) {
@@ -192,8 +225,15 @@ const openQQGroup = () => {
   window.open(QQ_GROUP_URL, '_blank')
 }
 
+const openGitHubRelease = () => {
+  if (downloadUrl.value) {
+    window.open(downloadUrl.value, '_blank')
+  } else {
+    ElMessage.warning('暂无下载链接')
+  }
+}
+
 onMounted(() => {
-  // 自动检查一次
   handleCheckUpdate()
 })
 </script>
