@@ -14,7 +14,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default ({ mode }: { mode: string }) => {
   const root = process.cwd()
   const env = loadEnv(mode, root)
-  const VITE_VERSION = env.VITE_VERSION || '3.0.0'
+  const VITE_VERSION = env.VITE_VERSION || '1.0.0'
   const VITE_PORT = env.VITE_PORT || '3006'
   const VITE_BASE_URL = env.VITE_BASE_URL || '/'
   const VITE_API_URL = env.VITE_API_URL || '/'

@@ -41,6 +41,10 @@ for arg in "$@"; do
     esac
 done
 
+# 读取版本号
+APP_VERSION=$(cat "$SCRIPT_DIR/VERSION" 2>/dev/null | tr -d '[:space:]' || echo "1.0.0")
+info "版本号: $APP_VERSION"
+
 # 创建安装目录
 mkdir -p "$INSTALL_DIR"
 
@@ -75,7 +79,7 @@ if [ "$SKIP_FRONTEND" = false ]; then
     info "编译用户端前端..."
     cd "$SCRIPT_DIR/frontend"
     npm install --legacy-peer-deps 2>&1 | tail -1
-    npm run build 2>&1 | tail -5 || error "用户端前端编译失败"
+    VITE_VERSION="$APP_VERSION" npm run build 2>&1 | tail -5 || error "用户端前端编译失败"
     mkdir -p "$INSTALL_DIR/frontend"
     cp -r dist/* "$INSTALL_DIR/frontend/"
     ok "用户端前端编译完成: $INSTALL_DIR/frontend/"
@@ -83,7 +87,7 @@ if [ "$SKIP_FRONTEND" = false ]; then
     info "编译管理端前端..."
     cd "$SCRIPT_DIR/frontend/admin"
     npm install --legacy-peer-deps 2>&1 | tail -1
-    npm run build 2>&1 | tail -5 || error "管理端前端编译失败"
+    VITE_VERSION="$APP_VERSION" npm run build 2>&1 | tail -5 || error "管理端前端编译失败"
     mkdir -p "$INSTALL_DIR/admin"
     cp -r dist/* "$INSTALL_DIR/admin/"
     ok "管理端前端编译完成: $INSTALL_DIR/admin/"
