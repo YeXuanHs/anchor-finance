@@ -202,6 +202,9 @@ var DefaultSystemConfigs = []SystemConfig{
 	{Group: ConfigGroupOAuth, Key: "wechat_login_appid", Value: "", Type: "string", Name: "微信登录AppID", SortOrder: 1},
 	{Group: ConfigGroupOAuth, Key: "wechat_login_secret", Value: "", Type: "string", Name: "微信登录Secret", SortOrder: 2},
 
+	// ========== 上游对接 ==========
+	{Group: ConfigGroupUpstream, Key: "upstream_sync_interval", Value: "30", Type: "int", Name: "自动同步间隔(分钟)", SortOrder: 1},
+
 	// ========== 短信配置 ==========
 	{Group: ConfigGroupSMS, Key: "sms_provider", Value: "aliyun", Type: "string", Name: "短信服务商", SortOrder: 1,
 		Options: `[{"label":"阿里云","value":"aliyun"},{"label":"腾讯云","value":"tencent"},{"label":"互亿无线","value":"huyi"},{"label":"自定义","value":"custom"}]`},

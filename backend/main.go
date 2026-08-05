@@ -10,11 +10,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"syscall"
+	"time"
 
 	"anchorfinance/internal/api"
 	"anchorfinance/internal/config"
 	"anchorfinance/internal/job"
 	"anchorfinance/internal/model"
+	"anchorfinance/internal/service"
 	"anchorfinance/pkg/auth"
 	"anchorfinance/pkg/db"
 	"anchorfinance/pkg/logger"
@@ -139,6 +141,12 @@ func main() {
 	// 优雅关闭
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// 启动上游产品库存和价格自动同步（默认30分钟）
+	upstreamSyncInterval := getUpstreamSyncInterval()
+	upstreamSvc := service.NewUpstreamService(db.DB(), logger.Default())
+	go upstreamSvc.StartAutoSync(upstreamSyncInterval)
+
 	<-quit
 	logger.Info("服务正在关闭...")
 	job.StopAll()
@@ -162,4 +170,17 @@ func generateRandomSecret(n int) string {
 // initDefaultMenus 初始化默认菜单数据（已迁移到 scripts/init.sql）
 func initDefaultMenus(db *gorm.DB) {
 	// 所有默认数据通过 init.sql 导入，不再硬编码
+}
+
+// getUpstreamSyncInterval 从数据库读取上游同步间隔（分钟），默认30分钟
+func getUpstreamSyncInterval() time.Duration {
+	intervalStr := db.GetSystemSetting("upstream_sync_interval")
+	if intervalStr == "" {
+		return 30 * time.Minute
+	}
+	minutes, err := strconv.Atoi(intervalStr)
+	if err != nil || minutes <= 0 {
+		return 30 * time.Minute
+	}
+	return time.Duration(minutes) * time.Minute
 }

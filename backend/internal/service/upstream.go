@@ -358,6 +358,7 @@ func (s *UpstreamService) SyncProducts(id uint) (int, error) {
 				Price:    price,
 				Currency: rp.Currency,
 				Type:     rp.Type,
+				Stock:    rp.Stock,
 				Status:   1,
 			}
 			if err := s.db.Create(&localProduct).Error; err != nil {
@@ -381,11 +382,13 @@ func (s *UpstreamService) SyncProducts(id uint) (int, error) {
 			s.log.WithField("remote_id", rp.RemoteID).Errorf("query mapping: %v", err)
 			continue
 		} else {
+			stock := rp.Stock
 			s.db.Model(&model.Product{}).Where("id = ?", mapping.LocalProductID).Updates(map[string]interface{}{
 				"name":     rp.Name,
 				"price":    price,
 				"currency": rp.Currency,
 				"type":     rp.Type,
+				"stock":    stock,
 			})
 			s.db.Model(&mapping).Updates(map[string]interface{}{
 				"config": model.JSON{"remote_name": rp.Name},
@@ -463,4 +466,142 @@ func (s *UpstreamService) GetProviderList() ([]model.UpstreamProvider, error) {
 	var providers []model.UpstreamProvider
 	err := s.db.Find(&providers).Error
 	return providers, err
+}
+
+// SyncStockAndPrices 只同步已对接产品的库存和价格（不创建新产品）
+func (s *UpstreamService) SyncStockAndPrices(providerID uint) (int, error) {
+	provider, err := s.GetProviderByID(providerID)
+	if err != nil {
+		return 0, fmt.Errorf("provider not found: %w", err)
+	}
+
+	// 查出该 provider 所有已对接的 UpstreamProduct
+	var mappings []model.UpstreamProduct
+	if err := s.db.Where("upstream_id = ?", providerID).Find(&mappings).Error; err != nil {
+		return 0, fmt.Errorf("query mappings: %w", err)
+	}
+
+	if len(mappings) == 0 {
+		return 0, nil
+	}
+
+	// 构建 remoteID -> mapping 的索引
+	mappingIndex := make(map[string]*model.UpstreamProduct, len(mappings))
+	for i := range mappings {
+		mappingIndex[mappings[i].RemoteProductID] = &mappings[i]
+	}
+
+	// 调用 client.FetchProducts() 获取最新数据
+	client, err := upstream.NewClient(provider)
+	if err != nil {
+		return 0, err
+	}
+
+	remoteProducts, err := client.FetchProducts()
+	if err != nil {
+		s.db.Create(&model.UpstreamSyncLog{
+			UpstreamID: provider.ID,
+			Action:     "sync_stock_prices",
+			Status:     "failed",
+			Message:    err.Error(),
+		})
+		return 0, fmt.Errorf("fetch products: %w", err)
+	}
+
+	// 构建 remoteID -> remoteProduct 的索引
+	remoteIndex := make(map[string]upstream.RemoteProduct, len(remoteProducts))
+	for _, rp := range remoteProducts {
+		remoteIndex[rp.RemoteID] = rp
+	}
+
+	synced := 0
+	for remoteID, mapping := range mappingIndex {
+		rp, exists := remoteIndex[remoteID]
+		if !exists {
+			// 上游产品已不存在，标记本地产品为下架
+			s.db.Model(&model.Product{}).Where("id = ?", mapping.LocalProductID).Update("status", int16(0))
+			s.log.WithField("remote_id", remoteID).Warnf("upstream product gone, marked as offline")
+			continue
+		}
+
+		price := decimal.NewFromFloat(rp.Price)
+		stock := rp.Stock
+
+		// 如果 stock=0，标记为下架状态
+		status := int16(1)
+		if stock == 0 {
+			status = int16(0)
+		}
+
+		s.db.Model(&model.Product{}).Where("id = ?", mapping.LocalProductID).Updates(map[string]interface{}{
+			"price":  price,
+			"stock":  stock,
+			"status": status,
+		})
+		synced++
+	}
+
+	s.db.Create(&model.UpstreamSyncLog{
+		UpstreamID: provider.ID,
+		Action:     "sync_stock_prices",
+		Status:     "success",
+		Message:    fmt.Sprintf("synced %d products stock/prices", synced),
+	})
+
+	s.log.WithField("provider_id", providerID).Infof("stock & price sync completed: %d products", synced)
+	return synced, nil
+}
+
+// StartAutoSync 启动后台自动同步库存和价格
+func (s *UpstreamService) StartAutoSync(interval time.Duration) {
+	// 从数据库读取同步间隔配置
+	intervalStr := getSystemConfigValue(s.db, "upstream_sync_interval")
+	if intervalStr != "" {
+		if minutes, err := time.ParseDuration(intervalStr + "m"); err == nil && minutes > 0 {
+			interval = minutes
+		}
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	s.log.Infof("upstream auto-sync started, interval: %s", interval)
+
+	for range ticker.C {
+		// 每次 tick 重新读取间隔配置（支持动态修改）
+		newIntervalStr := getSystemConfigValue(s.db, "upstream_sync_interval")
+		if newIntervalStr != "" {
+			if minutes, err := time.ParseDuration(newIntervalStr + "m"); err == nil && minutes > 0 {
+				if minutes != interval {
+					interval = minutes
+					ticker.Reset(interval)
+					s.log.Infof("upstream auto-sync interval changed to: %s", interval)
+				}
+			}
+		}
+
+		var providers []model.UpstreamProvider
+		if err := s.db.Where("is_active = ?", true).Find(&providers).Error; err != nil {
+			s.log.Errorf("auto-sync: failed to query providers: %v", err)
+			continue
+		}
+
+		for _, provider := range providers {
+			synced, err := s.SyncStockAndPrices(provider.ID)
+			if err != nil {
+				s.log.WithField("provider_id", provider.ID).Errorf("auto-sync failed: %v", err)
+			} else {
+				s.log.WithField("provider_id", provider.ID).Infof("auto-sync completed: %d products updated", synced)
+			}
+		}
+	}
+}
+
+// getSystemConfigValue 从 system_configs 表读取配置值
+func getSystemConfigValue(db *gorm.DB, key string) string {
+	var config model.SystemConfig
+	if err := db.Where("`key` = ?", key).First(&config).Error; err != nil {
+		return ""
+	}
+	return config.Value
 }
