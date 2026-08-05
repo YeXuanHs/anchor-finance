@@ -948,6 +948,14 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/rule-middle/menus/:id", ruleMiddleHandler.UpdateMenu)
 		admin.DELETE("/rule-middle/menus/:id", ruleMiddleHandler.DeleteMenu)
 
+		// 规则菜单管理 (auth_rule)
+		ruleManageHandler := handler.NewRuleManageHandler(deps.DB, deps.Log)
+		admin.GET("/rule-manage/menus", ruleManageHandler.GetMenuList)
+		admin.POST("/rule-manage/menus", ruleManageHandler.AddMenu)
+		admin.PUT("/rule-manage/menus/:id", ruleManageHandler.EditMenu)
+		admin.DELETE("/rule-manage/menus/:id", ruleManageHandler.DeleteMenu)
+		admin.POST("/rule-manage/menus/save", ruleManageHandler.SaveMenuList)
+
 		// 批量发送消息
 		sendMsgBatchSvc := service.NewSendMessageBatchService(deps.DB, deps.Log)
 		sendMsgBatchHandler := handler.NewSendMessageBatchHandler(sendMsgBatchSvc, deps.Log, deps.DB)
