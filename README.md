@@ -17,8 +17,8 @@
 ### 一键安装
 
 ```bash
-git clone https://github.com/your-repo/AnchorFinance.git
-cd AnchorFinance
+git clone https://github.com/YeXuanHs/anchor-finance.git
+cd anchor-finance
 bash install.sh
 ```
 
@@ -162,7 +162,7 @@ mysql -u root -p anchorfinance -e "UPDATE users SET password='新密码的bcrypt
 **Q: 如何更新版本？**
 
 ```bash
-cd AnchorFinance
+cd anchor-finance
 git pull
 bash build.sh
 systemctl restart anchorfinance
@@ -179,7 +179,7 @@ mysqldump -u root -p anchorfinance > backup_$(date +%Y%m%d).sql
 - **系统**: 锚点财务
 - **团队**: 锚点云计算
 - **开发者**: @Sora
-- **QQ**: 2338795574（仅文本）
+- **QQ**: 2338795574
 - **Telegram**: @soranb666
 - **交流群**: [1009624286](https://qm.qq.com/q/m3i0A7bwga)
 
