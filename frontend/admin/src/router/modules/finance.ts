@@ -114,6 +114,24 @@ export const financeRoutes: AppRouteRecord = {
           }
         },
         {
+          path: 'resource-pool/settings',
+          name: 'ResourcePoolSettings',
+          component: () => import('@/views/finance/clients/resource-pool/settings.vue'),
+          meta: {
+            title: '资源池设置',
+            icon: 'ep:setting'
+          }
+        },
+        {
+          path: 'resource-pool/tasks',
+          name: 'ResourcePoolTasks',
+          component: () => import('@/views/finance/clients/resource-pool/tasks.vue'),
+          meta: {
+            title: '资源池任务',
+            icon: 'ep:list'
+          }
+        },
+        {
           path: 'sales-statistics',
           name: 'SalesStatistics',
           component: () => import('@/views/finance/clients/sales-statistics/index.vue'),
@@ -350,6 +368,15 @@ export const financeRoutes: AppRouteRecord = {
             title: '产品下载管理',
             icon: 'ep:download'
           }
+        },
+        {
+          path: 'servers',
+          name: 'ProductServers',
+          component: () => import('@/views/finance/products/servers/index.vue'),
+          meta: {
+            title: '关联服务器',
+            icon: 'ep:monitor'
+          }
         }
       ]
     },
@@ -471,6 +498,16 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '升级管理',
             icon: 'ep:top'
+          }
+        },
+        {
+          path: 'refund-detail/:id',
+          name: 'RefundDetail',
+          component: () => import('@/views/finance/orders/refund-detail/index.vue'),
+          meta: {
+            title: '退款详情',
+            icon: 'ep:document',
+            isHide: true
           }
         }
       ]
@@ -687,6 +724,15 @@ export const financeRoutes: AppRouteRecord = {
           meta: {
             title: '优惠码',
             icon: 'ep:ticket'
+          }
+        },
+        {
+          path: 'promo-plan',
+          name: 'PromoPlan',
+          component: () => import('@/views/finance/marketing/promo-plan/index.vue'),
+          meta: {
+            title: '推广计划',
+            icon: 'ep:present'
           }
         }
       ]
