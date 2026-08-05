@@ -1,6 +1,8 @@
 package model
 
 import (
+	cryptoRand "crypto/rand"
+	"math/big"
 	"time"
 
 	"gorm.io/datatypes"
@@ -36,6 +38,11 @@ type User struct {
 	Inviter      *User          `gorm:"foreignKey:InvitedBy" json:"inviter,omitempty"`
 	CommissionRate datatypes.Decimal `gorm:"type:decimal(5,4);default:0" json:"commission_rate"`
 	Remark       string         `gorm:"type:text" json:"remark"`
+	// API密钥管理（对齐zjmf：每个用户一个密钥，存储在用户表中）
+	APIOpen       int8       `gorm:"type:tinyint;default:0;not null" json:"api_open"`        // 0=关闭 1=开启
+	APIPassword   string     `gorm:"type:varchar(255)" json:"-"`                              // AES加密存储
+	APICreateTime *time.Time `json:"api_create_time"`                                         // API开启时间
+	APIUsedCount  int64      `gorm:"-" json:"api_used_count,omitempty"`                       // 今日调用次数（不存储）
 	Addresses    []UserAddress  `gorm:"foreignKey:UserID" json:"addresses,omitempty"`
 	LoginLogs    []LoginLog     `gorm:"foreignKey:UserID" json:"login_logs,omitempty"`
 }
@@ -83,4 +90,40 @@ type LoginLog struct {
 	Device    string `gorm:"type:varchar(128)" json:"device"`
 	Status    int16  `gorm:"type:smallint;not null" json:"status"` // 1=成功 0=失败
 	Remark    string `gorm:"type:varchar(256)" json:"remark"`
+}
+
+// GenerateRandomPassword generates a random password matching zjmf's randStrToPass(12, 0)
+// 12 chars with uppercase, lowercase, digits, and special chars
+func GenerateRandomPassword(length int) string {
+	if length < 8 {
+		length = 12
+	}
+	const (
+		upper  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		lower  = "abcdefghijklmnopqrstuvwxyz"
+		digits = "0123456789"
+		special = "!@#$%^&*"
+		all    = upper + lower + digits + special
+	)
+	
+	result := make([]byte, length)
+	// Ensure at least one of each type
+	result[0] = upper[cryptoRandInt(len(upper))]
+	result[1] = lower[cryptoRandInt(len(lower))]
+	result[2] = digits[cryptoRandInt(len(digits))]
+	result[3] = special[cryptoRandInt(len(special))]
+	for i := 4; i < length; i++ {
+		result[i] = all[cryptoRandInt(len(all))]
+	}
+	// Shuffle
+	for i := length - 1; i > 0; i-- {
+		j := cryptoRandInt(i + 1)
+		result[i], result[j] = result[j], result[i]
+	}
+	return string(result)
+}
+
+func cryptoRandInt(max int) int {
+	n, _ := cryptoRand.Int(cryptoRand.Reader, big.NewInt(int64(max)))
+	return int(n.Int64())
 }

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"anchorfinance/internal/security"
 	"anchorfinance/internal/service"
 	"anchorfinance/internal/validator"
 	"anchorfinance/pkg/logger"
@@ -16,11 +17,16 @@ import (
 type UserHandler struct {
 	userSvc    *service.UserService
 	captchaSvc *service.CaptchaService
+	encryptor  *security.Encryptor
 	log        *logger.Logger
 }
 
 func NewUserHandler(userSvc *service.UserService, log *logger.Logger) *UserHandler {
 	return &UserHandler{userSvc: userSvc, log: log}
+}
+
+func NewUserHandlerWithEncryptor(userSvc *service.UserService, encryptor *security.Encryptor, log *logger.Logger) *UserHandler {
+	return &UserHandler{userSvc: userSvc, encryptor: encryptor, log: log}
 }
 
 func NewUserHandlerWithCaptcha(userSvc *service.UserService, captchaSvc *service.CaptchaService, log *logger.Logger) *UserHandler {
@@ -489,77 +495,50 @@ func (h *UserHandler) Disable2FA(c *gin.Context) {
 	response.SuccessMsg(c, "二步验证已关闭")
 }
 
-// ─── API Key User-Facing Methods ───
+// ─── API密钥管理（对齐zjmf：开关/查看/重置） ───
 
-// GetAPIKeys returns the authenticated user's API keys.
-// GET /user/api-keys
-func (h *UserHandler) GetAPIKeys(c *gin.Context) {
+// GetAPISummary 返回用户的API状态、密钥和统计
+// GET /user/api/summary
+func (h *UserHandler) GetAPISummary(c *gin.Context) {
 	userID := c.GetUint("user_id")
-
-	keys, err := h.userSvc.GetAPIKeys(userID)
+	data, err := h.userSvc.GetAPISummary(userID, h.encryptor)
 	if err != nil {
-		response.ServerError(c, err.Error())
+		response.BadRequest(c, err.Error())
 		return
 	}
-	response.Success(c, keys)
+	response.Success(c, data)
 }
 
-// CreateAPIKey creates a new API key for the user.
-// POST /user/api-keys
-func (h *UserHandler) CreateAPIKey(c *gin.Context) {
+// ToggleAPIOpen 开关用户的API功能
+// POST /user/api/open
+func (h *UserHandler) ToggleAPIOpen(c *gin.Context) {
 	userID := c.GetUint("user_id")
-
 	var req struct {
-		Name string `json:"name" binding:"required,max=100"`
+		Open int8 `json:"open" binding:"required,oneof=0 1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		response.BadRequest(c, "参数错误：open 必须为 0 或 1")
 		return
 	}
+	if err := h.userSvc.ToggleAPIOpen(userID, req.Open); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	if req.Open == 1 {
+		response.SuccessMsg(c, "开启成功")
+	} else {
+		response.SuccessMsg(c, "关闭成功")
+	}
+}
 
-	key, plainKey, err := h.userSvc.CreateAPIKey(userID, req.Name)
+// ResetAPIKey 重置用户的API密钥（自动生成新密钥）
+// POST /user/api/reset
+func (h *UserHandler) ResetAPIKey(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	newKey, err := h.userSvc.ResetAPIKey(userID, h.encryptor)
 	if err != nil {
 		response.ServerError(c, err.Error())
 		return
 	}
-	response.Success(c, gin.H{
-		"id":         key.ID,
-		"name":       key.Name,
-		"key":        plainKey,
-		"created_at": key.CreatedAt,
-	})
-}
-
-// ToggleAPIKey toggles the active status of a user's API key.
-// PUT /user/api-keys/:id/toggle
-func (h *UserHandler) ToggleAPIKey(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		response.BadRequest(c, "invalid api key id")
-		return
-	}
-
-	if err := h.userSvc.ToggleAPIKey(userID, uint(id)); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	response.SuccessMsg(c, "api key toggled")
-}
-
-// DeleteAPIKey deletes a user's API key.
-// DELETE /user/api-keys/:id
-func (h *UserHandler) DeleteAPIKey(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		response.BadRequest(c, "invalid api key id")
-		return
-	}
-
-	if err := h.userSvc.DeleteAPIKey(userID, uint(id)); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-	response.SuccessMsg(c, "api key deleted")
+	response.Success(c, gin.H{"api_password": newKey})
 }

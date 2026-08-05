@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"anchorfinance/internal/model"
+	"anchorfinance/internal/security"
 	"anchorfinance/pkg/logger"
 
+	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -228,47 +230,82 @@ func (s *UserService) UpdateTwoFactorKey(userID uint, key string) error {
 	return s.db.Model(&User{}).Where("id = ?", userID).Update("two_factor_key", key).Error
 }
 
-// GetAPIKeys returns all API keys for a user.
-func (s *UserService) GetAPIKeys(userID uint) ([]model.UserAPIKey, error) {
-	var keys []model.UserAPIKey
-	if err := s.db.Where("user_id = ?", userID).Order("id DESC").Find(&keys).Error; err != nil {
+// ─── API密钥管理（对齐zjmf逻辑：每用户一个密钥，开关/查看/重置） ───
+
+// GetAPISummary 返回用户的API状态、密钥和调用统计
+func (s *UserService) GetAPISummary(userID uint, encryptor *security.Encryptor) (gin.H, error) {
+	var user model.User
+	if err := s.db.Select("id", "api_open", "api_password", "api_create_time").Where("id = ?", userID).First(&user).Error; err != nil {
 		return nil, err
 	}
-	return keys, nil
+	if user.APIOpen != 1 {
+		return nil, errors.New("API功能未开启")
+	}
+	// 解密密钥
+	decryptedKey := ""
+	if user.APIPassword != "" && encryptor != nil {
+		if plain, err := encryptor.Decrypt(user.APIPassword); err == nil {
+			decryptedKey = plain
+		}
+	}
+	// 主机数
+	var hostCount int64
+	s.db.Model(&model.Host{}).Where("owner_id = ?", userID).Count(&hostCount)
+	// 活跃主机数（status=1 运行中）
+	var activeCount int64
+	s.db.Model(&model.Host{}).Where("owner_id = ? AND status = ?", userID, 1).Count(&activeCount)
+	return gin.H{
+		"api_password":    decryptedKey,
+		"api_create_time": user.APICreateTime,
+		"host_count":      hostCount,
+		"active_count":    activeCount,
+	}, nil
 }
 
-// CreateAPIKey creates a new API key for a user. Returns the key record and the plaintext key.
-func (s *UserService) CreateAPIKey(userID uint, name string) (*model.UserAPIKey, string, error) {
-	plainKey := model.GenerateAPIKey()
-	key := model.UserAPIKey{
-		UserID:   userID,
-		Name:     name,
-		Key:      plainKey,
-		IsActive: true,
+// ToggleAPIOpen 开关用户的API功能
+func (s *UserService) ToggleAPIOpen(userID uint, open int8) error {
+	updates := map[string]interface{}{"api_open": open}
+	if open == 1 {
+		now := time.Now()
+		updates["api_create_time"] = &now
+		// 首次开启时自动生成密钥
+		var user model.User
+		s.db.Select("api_password").Where("id = ?", userID).First(&user)
+		if user.APIPassword == "" {
+			encryptor := security.NewEncryptor(s.getJWTSecret())
+			encrypted, err := encryptor.Encrypt(model.GenerateRandomPassword(12))
+			if err == nil {
+				updates["api_password"] = encrypted
+			}
+		}
 	}
-	if err := s.db.Create(&key).Error; err != nil {
-		return nil, "", err
-	}
-	return &key, plainKey, nil
+	return s.db.Model(&model.User{}).Where("id = ?", userID).Updates(updates).Error
 }
 
-// ToggleAPIKey toggles the active status of an API key.
-func (s *UserService) ToggleAPIKey(userID uint, keyID uint) error {
-	var key model.UserAPIKey
-	if err := s.db.Where("id = ? AND user_id = ?", keyID, userID).First(&key).Error; err != nil {
-		return errors.New("api key not found")
+// ResetAPIKey 重置用户的API密钥（自动生成新密钥并保存）
+func (s *UserService) ResetAPIKey(userID uint, encryptor *security.Encryptor) (string, error) {
+	newKey := model.GenerateRandomPassword(12)
+	encrypted, err := encryptor.Encrypt(newKey)
+	if err != nil {
+		return "", err
 	}
-	return s.db.Model(&key).Update("is_active", !key.IsActive).Error
+	if err := s.db.Model(&model.User{}).Where("id = ?", userID).Update("api_password", encrypted).Error; err != nil {
+		return "", err
+	}
+	return newKey, nil
 }
 
-// DeleteAPIKey deletes an API key.
-func (s *UserService) DeleteAPIKey(userID uint, keyID uint) error {
-	result := s.db.Where("id = ? AND user_id = ?", keyID, userID).Delete(&model.UserAPIKey{})
-	if result.RowsAffected == 0 {
-		return errors.New("api key not found")
+// getJWTSecret 从数据库获取JWT密钥（用于AES加密API密码）
+func (s *UserService) getJWTSecret() string {
+	var config model.SystemConfig
+	if err := s.db.Where("`key` = ?", "jwt_secret").First(&config).Error; err != nil {
+		return "default-secret-key-change-me"
 	}
-	return result.Error
+	return config.Value
 }
+
+// APIRequestLog API请求日志模型（用于统计）
+// 如果model包中已有此模型则不需要重复定义
 
 // BindPhone binds a phone number to the user account.
 func (s *UserService) BindPhone(userID uint, phone string) error {

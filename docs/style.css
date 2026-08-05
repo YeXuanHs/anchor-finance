@@ -61,7 +61,7 @@ body{
 }
 .search-results{
   position:absolute;top:44px;right:0;width:400px;max-height:400px;
-  background:#fff;border-radius:16px;overflow:hidden;
+  background:#fff;border-radius:16px;overflow-y:auto;overflow-x:hidden;
   box-shadow:0 8px 32px rgba(0,0,0,0.15);
   display:none;z-index:200;
   border:2px solid rgba(255,107,157,0.2);
@@ -85,6 +85,9 @@ body{
 .search-results .result-method{
   display:inline-block;padding:1px 6px;border-radius:4px;
   font-size:10px;font-weight:600;color:#fff;margin-right:6px;
+}
+.search-results .result-method.method-empty{
+  display:none;
 }
 .search-results .no-result{
   padding:20px;text-align:center;color:#999;font-size:13px;
@@ -269,7 +272,53 @@ pre .str{color:#a6e3a1}
 pre .cmt{color:#6c7086;font-style:italic}
 pre .num{color:#fab387}
 
-/* ========== Responsive ========== */
+/* ========== Sidebar Page Nav (mobile only) ========== */
+.sidebar-page-nav{
+  display:none;
+  padding:12px 14px;
+  border-bottom:1px solid rgba(255,107,157,0.15);
+  margin-bottom:4px;
+}
+.sidebar-page-nav a{
+  display:block;padding:10px 14px;margin-bottom:4px;
+  border-radius:10px;font-size:13px;font-weight:500;
+  color:#555;text-decoration:none;
+  background:rgba(255,107,157,0.05);
+  border:1px solid rgba(255,107,157,0.1);
+  transition:all .15s ease;
+}
+.sidebar-page-nav a:hover{
+  background:rgba(255,107,157,0.1);
+  color:#ff6b9d;
+}
+.sidebar-page-nav a.active{
+  background:linear-gradient(135deg,#ff6b9d,#c084fc);
+  color:#fff;border-color:transparent;
+  box-shadow:0 2px 8px rgba(255,107,157,0.3);
+}
+
+/* ========== Hamburger Button ========== */
+.hamburger{
+  display:none;
+  background:none;border:none;cursor:pointer;
+  color:#fff;padding:8px;border-radius:8px;
+  transition:background .2s ease;
+  flex-shrink:0;
+}
+.hamburger:hover{background:rgba(255,255,255,.2)}
+.hamburger svg{display:block}
+
+/* ========== Sidebar Overlay ========== */
+.sidebar-overlay{
+  display:none;
+  position:fixed;top:60px;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.4);
+  z-index:49;
+  backdrop-filter:blur(2px);
+}
+.sidebar-overlay.show{display:block}
+
+/* ========== Responsive: Tablet ========== */
 @media(max-width:900px){
   .side-nav{width:220px}
   .side-content{left:220px}
@@ -277,8 +326,104 @@ pre .num{color:#fab387}
   .search-box input:focus{width:240px}
   .search-results{width:320px}
 }
-@media(max-width:600px){
-  .side-nav{display:none}
-  .side-content{left:0;padding:16px}
-  .search-box input{width:160px}
+
+/* ========== Responsive: Mobile ========== */
+@media(max-width:768px){
+  /* Hide navbar page links on mobile */
+  .navbar .nav-links{display:none}
+  .sidebar-page-nav{display:block}
+
+  /* Navbar - single row on mobile */
+  .navbar{
+    padding:0 12px;
+    height:56px;
+    flex-wrap:nowrap;
+  }
+  .sidebar-overlay{top:56px}
+  .hamburger{display:flex;align-items:center;justify-content:center}
+  .navbar .brand{
+    font-size:15px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  /* Search */
+  .search-box{
+    margin-left:auto;
+    order:2;
+  }
+  .search-box input{
+    width:140px;height:32px;
+    font-size:12px;padding:0 32px 0 12px;
+  }
+  .search-box input:focus{width:180px}
+  .search-results{
+    position:fixed;
+    top:56px;left:12px;right:12px;
+    width:auto;max-height:60vh;
+    border-radius:12px;
+  }
+
+  /* Sidebar: hidden by default, slides in as overlay */
+  .side-nav{
+    position:fixed;
+    top:56px;left:0;bottom:0;
+    width:280px;
+    transform:translateX(-100%);
+    transition:transform .3s ease;
+    z-index:50;
+    background:rgba(255,255,255,0.95);
+    backdrop-filter:blur(20px);
+    box-shadow:4px 0 20px rgba(0,0,0,0.15);
+    display:block;
+  }
+  .side-nav.open{
+    transform:translateX(0);
+  }
+
+  /* Content: full width */
+  .side-content{
+    left:0;
+    padding:16px;
+    top:56px;
+  }
+  .doc-content{max-width:100%}
+
+  /* Tables: horizontal scroll */
+  .table-item{
+    padding:10px 12px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .table{
+    min-width:480px;
+    font-size:11px;
+  }
+  .table td{
+    padding:6px 8px;
+    white-space:nowrap;
+  }
+  .table td:first-child{
+    white-space:normal;
+    word-break:break-all;
+  }
+
+  /* Code blocks: horizontal scroll */
+  pre{
+    font-size:11px;
+    padding:12px;
+    white-space:pre;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* Content adjustments */
+  .class-title{font-size:17px;margin:16px 0 12px}
+  .action-title{font-size:14px}
+  .table-item p{font-size:12px}
+
+  /* Badges and method badges */
+  .method-badge{font-size:10px;padding:2px 8px}
+  .badge{font-size:10px;padding:3px 8px}
 }

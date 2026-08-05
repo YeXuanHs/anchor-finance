@@ -11,6 +11,7 @@ import (
 	"anchorfinance/internal/handler"
 	"anchorfinance/internal/api/middleware"
 	"anchorfinance/internal/model"
+	"anchorfinance/internal/security"
 	"anchorfinance/internal/service"
 	"anchorfinance/pkg/auth"
 	"anchorfinance/pkg/logger"
@@ -38,7 +39,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 
 	// 初始化处理器
 	authHandler := handler.NewAuthHandler(deps.UserSvc, log, deps.JWTMgr)
-	userHandler := handler.NewUserHandler(deps.UserSvc, log)
+	encryptor := security.NewEncryptor(deps.JWTKey)
+	userHandler := handler.NewUserHandlerWithEncryptor(deps.UserSvc, encryptor, log)
 	productHandler := handler.NewProductHandler(deps.ProdSvc, log)
 	orderHandler := handler.NewOrderHandlerWithDB(deps.OrdSvc, deps.DB, log)
 	invoiceHandler := handler.NewInvoiceHandler(deps.InvSvc, log)
@@ -424,11 +426,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.POST("/user/2fa/verify", userHandler.Verify2FA)
 		user.POST("/user/2fa/disable", userHandler.Disable2FA)
 
-		// API密钥管理
-		user.GET("/user/api-keys", userHandler.GetAPIKeys)
-		user.POST("/user/api-keys", userHandler.CreateAPIKey)
-		user.PUT("/user/api-keys/:id/toggle", userHandler.ToggleAPIKey)
-		user.DELETE("/user/api-keys/:id", userHandler.DeleteAPIKey)
+		// API密钥管理（对齐zjmf：开关/查看/重置）
+		user.GET("/user/api/summary", userHandler.GetAPISummary)
+		user.POST("/user/api/open", userHandler.ToggleAPIOpen)
+		user.POST("/user/api/reset", userHandler.ResetAPIKey)
 
 		// OAuth绑定
 		user.GET("/oauth/providers", oauthHandler.GetProviders)
