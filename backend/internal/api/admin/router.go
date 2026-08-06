@@ -518,7 +518,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/user-manage/:id/status", userManageHandler.GetStatus)
 		admin.GET("/user-manage/:id/operation-logs", userManageHandler.GetOperationLogs)
 		// 新增缺失路由
-		admin.GET("/user-manage/:uid/hosts-by-uid", userManageHandler.HostByUid)
+		admin.GET("/user-manage/:id/hosts-by-uid", userManageHandler.HostByUid)
 		admin.GET("/user-manage/certification/list", userManageHandler.CerifyList)
 		admin.GET("/user-manage/certification/log-list", userManageHandler.CerifyLogList)
 		admin.GET("/user-manage/certification/person/:id", userManageHandler.CertifiPersonDetail)

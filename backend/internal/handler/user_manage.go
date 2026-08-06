@@ -887,7 +887,7 @@ func (h *UserManageHandler) UserProductInvoice(c *gin.Context) {
 // HostByUid returns hosts for a specific user.
 // GET /manage/users/:uid/hosts-by-uid
 func (h *UserManageHandler) HostByUid(c *gin.Context) {
-	uid, err := strconv.ParseUint(c.Param("uid"), 10, 64)
+	uid, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.BadRequest(c, "invalid user id")
 		return
