@@ -226,10 +226,21 @@ func (h *CurrencyHandler) AdminUpdateAllPrices(c *gin.Context) {
 		for i, col := range columns {
 			rowMap[col] = values[i]
 		}
+		pricingType, _ := rowMap["type"].(string)
+		var relID uint
+		if v, ok := rowMap["relid"]; ok {
+			if id, ok := v.(int64); ok {
+				relID = uint(id)
+			}
+		}
 		defaultPricings = append(defaultPricings, struct {
 			Type   string
 			RelID  uint
-			Fields map[string]interface{}{
+			Fields map[string]interface{}
+		}{
+			Type:  pricingType,
+			RelID: relID,
+			Fields: map[string]interface{}{
 				"type":  rowMap["type"],
 				"relid": rowMap["relid"],
 				"data":  rowMap,
