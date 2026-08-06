@@ -240,7 +240,7 @@ func (h *BalanceHandler) RechargeNotify(c *gin.Context) {
 		return
 	}
 
-	if !notify.Success {
+	if notify.Status != "success" {
 		c.JSON(http.StatusOK, gin.H{"status": "ignored"})
 		return
 	}
