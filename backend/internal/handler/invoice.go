@@ -222,7 +222,7 @@ func (h *InvoiceHandler) Option(c *gin.Context) {
 		return
 	}
 
-	_, err := h.invoiceSvc.GetByID(uint(id))
+	_, err = h.invoiceSvc.GetByID(uint(id))
 	if err != nil {
 		response.NotFound(c, "ID错误")
 		return

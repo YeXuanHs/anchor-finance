@@ -71,7 +71,7 @@ func (h *LinkKnowledgeHandler) Index(c *gin.Context) {
 	for i, item := range items {
 		enriched[i] = EnrichedKnowledge{
 			LinkKnowledge: item,
-			TypeName:      typeNames[strconv.Itoa(int(item.Type))],
+			TypeName:      typeNames[item.Type],
 		}
 
 		// Get keywords

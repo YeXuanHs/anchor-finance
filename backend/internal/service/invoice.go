@@ -329,3 +329,39 @@ func (s *InvoiceService) GetUser(userID uint) (*InvoiceUser, error) {
 func (s *InvoiceService) GetDB() *gorm.DB {
 	return s.db
 }
+
+// DeleteInvoice deletes an invoice by ID.
+func (s *InvoiceService) DeleteInvoice(id uint) error {
+	result := s.db.Delete(&Invoice{}, id)
+	if result.RowsAffected == 0 {
+		return errors.New("invoice not found")
+	}
+	return result.Error
+}
+
+// UpdateInvoiceItem updates invoice item fields.
+func (s *InvoiceService) UpdateInvoiceItem(id uint, updates map[string]interface{}) error {
+	if len(updates) == 0 {
+		return nil
+	}
+	return s.db.Table("invoice_items").Where("id = ?", id).Updates(updates).Error
+}
+
+// DeleteInvoiceItem deletes an invoice item by ID.
+func (s *InvoiceService) DeleteInvoiceItem(id uint) error {
+	result := s.db.Table("invoice_items").Where("id = ?", id).Delete(nil)
+	if result.RowsAffected == 0 {
+		return errors.New("item not found")
+	}
+	return result.Error
+}
+
+// DeleteInvoiceAccount deletes a payment record from an invoice.
+func (s *InvoiceService) DeleteInvoiceAccount(id uint) error {
+	// Reset invoice status to unpaid
+	return s.db.Model(&Invoice{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"status":    0,
+		"paid_at":   nil,
+		"payment":   "",
+	}).Error
+}
