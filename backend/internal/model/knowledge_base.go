@@ -51,18 +51,20 @@ type AIConfig struct {
 
 // AITicketAutoReplyConfig 工单自动回复配置
 type AITicketAutoReplyConfig struct {
-	ID                uint    `gorm:"primaryKey" json:"id"`
-	Enabled           bool    `gorm:"default:false" json:"enabled"`
-	AIConfigID        uint    `gorm:"not null" json:"ai_config_id"`
-	ReplyDelay        int     `gorm:"default:5;comment:回复延迟（秒）" json:"reply_delay"`
+	ID                uint      `gorm:"primaryKey" json:"id"`
+	Enabled           bool      `gorm:"default:false" json:"enabled"`
+	AIConfigID        uint      `gorm:"not null" json:"ai_config_id"`
+	ReplyDelay        int       `gorm:"default:5;comment:回复延迟（秒）" json:"reply_delay"`
 	ConfidenceThreshold float64 `gorm:"type:decimal(3,2);default:0.7;comment:置信度阈值" json:"confidence_threshold"`
-	MaxAutoReplies    int     `gorm:"default:3;comment:同一工单最大自动回复数" json:"max_auto_replies"`
-	IncludeKBContent  bool    `gorm:"default:true;comment:是否包含知识库内容" json:"include_kb_content"`
-	KBSearchLimit     int     `gorm:"default:5;comment:知识库搜索结果数量" json:"kb_search_limit"`
-	DeptIDs           string  `gorm:"type:varchar(500);comment:适用的工单部门ID，逗号分隔" json:"dept_ids"`
-	ExcludeKeywords   string  `gorm:"type:text;comment:排除关键词，逗号分隔" json:"exclude_keywords"`
-	AddDisclaimer     bool    `gorm:"default:true;comment:是否添加AI回复声明" json:"add_disclaimer"`
-	DisclaimerText    string  `gorm:"type:varchar(500);default:此回复由AI生成，仅供参考。如需人工帮助请回复「转人工」" json:"disclaimer_text"`
+	MaxAutoReplies    int       `gorm:"default:3;comment:同一工单最大自动回复数" json:"max_auto_replies"`
+	IncludeKBContent  bool      `gorm:"default:true;comment:是否包含知识库内容" json:"include_kb_content"`
+	KBSearchLimit     int       `gorm:"default:5;comment:知识库搜索结果数量" json:"kb_search_limit"`
+	DeptIDs           string    `gorm:"type:varchar(500);comment:适用的工单部门ID，逗号分隔" json:"dept_ids"`
+	ExcludeKeywords   string    `gorm:"type:text;comment:排除关键词，逗号分隔" json:"exclude_keywords"`
+	AddDisclaimer     bool      `gorm:"default:true;comment:是否添加AI回复声明" json:"add_disclaimer"`
+	DisclaimerText    string    `gorm:"type:varchar(500);default:此回复由AI生成，仅供参考。如需人工帮助请回复「转人工」" json:"disclaimer_text"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 // AITicketLog AI 工单回复日志
