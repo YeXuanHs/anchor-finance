@@ -112,12 +112,12 @@ func (s *SystemLogService) Export(level, module string, startTime, endTime *time
 	query.Order("created_at DESC").Limit(10000).Find(&logs)
 
 	var buf strings.Builder
-	buf.WriteString("ID,Level,Module,Message,IP,User,Data,CreatedAt\n")
+	buf.WriteString("ID,Level,Module,Message,IP,UserID,Details,CreatedAt\n")
 	for _, l := range logs {
 		msg := strings.ReplaceAll(l.Message, "\"", "\"\"")
-		data := strings.ReplaceAll(l.Data, "\"", "\"\"")
-		buf.WriteString(fmt.Sprintf("%d,%s,%s,\"%s\",%s,%s,\"%s\",%s\n",
-			l.ID, l.Level, l.Module, msg, l.IP, l.User, data, l.CreatedAt.Format("2006-01-02 15:04:05")))
+		details := strings.ReplaceAll(l.Details, "\"", "\"\"")
+		buf.WriteString(fmt.Sprintf("%d,%s,%s,\"%s\",%s,%d,\"%s\",%s\n",
+			l.ID, l.Level, l.Module, msg, l.IP, l.UserID, details, l.CreatedAt.Format("2006-01-02 15:04:05")))
 	}
 	return buf.String(), nil
 }

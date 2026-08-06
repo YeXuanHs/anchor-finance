@@ -25,10 +25,7 @@ type SystemMessageInfo struct {
 	Type      string     `json:"type"`
 	Title     string     `json:"title"`
 	Content   string     `json:"content"`
-	Icon      string     `json:"icon"`
-	ActionURL string     `json:"action_url"`
-	RelType   string     `json:"rel_type"`
-	RelID     uint       `json:"rel_id"`
+	Link      string     `json:"link"`
 	IsRead    bool       `json:"is_read"`
 	ReadAt    *time.Time `json:"read_at"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -36,10 +33,10 @@ type SystemMessageInfo struct {
 
 // GetList returns paginated system messages for a user.
 func (s *SystemMessageService) GetList(userID uint, page, pageSize int, msgType string, onlyUnread bool) ([]SystemMessageInfo, int64, error) {
-	var messages []model.Notification
+	var messages []model.SystemMessage
 	var total int64
 
-	query := s.db.Model(&model.Notification{}).Where("user_id = ?", userID)
+	query := s.db.Model(&model.SystemMessage{}).Where("user_id = ?", userID)
 	if msgType != "" {
 		query = query.Where("type = ?", msgType)
 	}
@@ -63,10 +60,7 @@ func (s *SystemMessageService) GetList(userID uint, page, pageSize int, msgType 
 			Type:      m.Type,
 			Title:     m.Title,
 			Content:   m.Content,
-			Icon:      m.Icon,
-			ActionURL: m.ActionURL,
-			RelType:   m.RelType,
-			RelID:     m.RelID,
+			Link:      m.Link,
 			IsRead:    m.IsRead,
 			ReadAt:    m.ReadAt,
 			CreatedAt: m.CreatedAt,
@@ -77,7 +71,7 @@ func (s *SystemMessageService) GetList(userID uint, page, pageSize int, msgType 
 
 // GetByID returns a single message by ID.
 func (s *SystemMessageService) GetByID(userID, msgID uint) (*SystemMessageInfo, error) {
-	var msg model.Notification
+	var msg model.SystemMessage
 	if err := s.db.Where("id = ? AND user_id = ?", msgID, userID).First(&msg).Error; err != nil {
 		return nil, err
 	}
@@ -87,10 +81,7 @@ func (s *SystemMessageService) GetByID(userID, msgID uint) (*SystemMessageInfo, 
 		Type:      msg.Type,
 		Title:     msg.Title,
 		Content:   msg.Content,
-		Icon:      msg.Icon,
-		ActionURL: msg.ActionURL,
-		RelType:   msg.RelType,
-		RelID:     msg.RelID,
+		Link:      msg.Link,
 		IsRead:    msg.IsRead,
 		ReadAt:    msg.ReadAt,
 		CreatedAt: msg.CreatedAt,
@@ -100,7 +91,7 @@ func (s *SystemMessageService) GetByID(userID, msgID uint) (*SystemMessageInfo, 
 // MarkRead marks a single message as read.
 func (s *SystemMessageService) MarkRead(userID, msgID uint) error {
 	now := time.Now()
-	result := s.db.Model(&model.Notification{}).
+	result := s.db.Model(&model.SystemMessage{}).
 		Where("id = ? AND user_id = ? AND is_read = false", msgID, userID).
 		Updates(map[string]interface{}{
 			"is_read": true,
@@ -118,7 +109,7 @@ func (s *SystemMessageService) MarkRead(userID, msgID uint) error {
 // MarkAllRead marks all messages for a user as read.
 func (s *SystemMessageService) MarkAllRead(userID uint) (int64, error) {
 	now := time.Now()
-	result := s.db.Model(&model.Notification{}).
+	result := s.db.Model(&model.SystemMessage{}).
 		Where("user_id = ? AND is_read = false", userID).
 		Updates(map[string]interface{}{
 			"is_read": true,
@@ -129,7 +120,7 @@ func (s *SystemMessageService) MarkAllRead(userID uint) (int64, error) {
 
 // Delete deletes a message for a user.
 func (s *SystemMessageService) Delete(userID, msgID uint) error {
-	result := s.db.Where("id = ? AND user_id = ?", msgID, userID).Delete(&model.Notification{})
+	result := s.db.Where("id = ? AND user_id = ?", msgID, userID).Delete(&model.SystemMessage{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -141,14 +132,14 @@ func (s *SystemMessageService) Delete(userID, msgID uint) error {
 
 // DeleteAll deletes all messages for a user.
 func (s *SystemMessageService) DeleteAll(userID uint) (int64, error) {
-	result := s.db.Where("user_id = ?", userID).Delete(&model.Notification{})
+	result := s.db.Where("user_id = ?", userID).Delete(&model.SystemMessage{})
 	return result.RowsAffected, result.Error
 }
 
 // GetUnreadCount returns the number of unread messages for a user.
 func (s *SystemMessageService) GetUnreadCount(userID uint) (int64, error) {
 	var count int64
-	if err := s.db.Model(&model.Notification{}).Where("user_id = ? AND is_read = false", userID).Count(&count).Error; err != nil {
+	if err := s.db.Model(&model.SystemMessage{}).Where("user_id = ? AND is_read = false", userID).Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return count, nil
@@ -157,7 +148,7 @@ func (s *SystemMessageService) GetUnreadCount(userID uint) (int64, error) {
 // GetTypes returns distinct message types for a user.
 func (s *SystemMessageService) GetTypes(userID uint) ([]string, error) {
 	var types []string
-	if err := s.db.Model(&model.Notification{}).Where("user_id = ?", userID).Distinct("type").Pluck("type", &types).Error; err != nil {
+	if err := s.db.Model(&model.SystemMessage{}).Where("user_id = ?", userID).Distinct("type").Pluck("type", &types).Error; err != nil {
 		return nil, err
 	}
 	return types, nil

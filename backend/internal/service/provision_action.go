@@ -546,9 +546,12 @@ func (s *ProvisionService) handleLocalProvision(module *model.ProvisionModule, u
 	case "renew":
 		// Extract renew_days from module config, default to billing cycle
 		days := 30
-		if module.Config != nil {
-			if d, ok := module.Config["renew_days"].(float64); ok && d > 0 {
-				days = int(d)
+		if len(module.Config) > 0 {
+			var configMap map[string]interface{}
+			if err := json.Unmarshal(module.Config, &configMap); err == nil {
+				if d, ok := configMap["renew_days"].(float64); ok && d > 0 {
+					days = int(d)
+				}
 			}
 		}
 		return s.localRenew(up, days)

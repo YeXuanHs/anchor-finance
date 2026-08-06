@@ -80,7 +80,7 @@ func (s *SystemService) GetSystemLog(page, pageSize int, level string, module st
 // ClearCache clears system cache by flushing Redis.
 func (s *SystemService) ClearCache() error {
 	if s.redis != nil {
-		if err := s.redis.FlushDB(context.Background()).Error(); err != nil {
+		if err := s.redis.FlushDB(context.Background()).Err(); err != nil {
 			s.log.Errorf("redis flush failed: %v", err)
 			return err
 		}

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -52,15 +53,15 @@ func (s *RenewEnhancedService) SetOtherParams(hostID uint, params map[string]int
 	}
 
 	config := make(map[string]interface{})
-	if host.Config != nil {
-		host.Config.Unmarshal(&config)
+	if len(host.Config) > 0 {
+		json.Unmarshal(host.Config, &config)
 	}
 
 	for k, v := range params {
 		config[k] = v
 	}
 
-	configJSON, _ := datatypes.MarshalJSON(config)
+	configJSON, _ := json.Marshal(config)
 	return s.db.Table("hosts").Where("id = ?", hostID).Update("config", configJSON).Error
 }
 
@@ -74,8 +75,8 @@ func (s *RenewEnhancedService) GetOtherParams(hostID uint) (map[string]interface
 	}
 
 	config := make(map[string]interface{})
-	if host.Config != nil {
-		host.Config.Unmarshal(&config)
+	if len(host.Config) > 0 {
+		json.Unmarshal(host.Config, &config)
 	}
 
 	return config, nil
