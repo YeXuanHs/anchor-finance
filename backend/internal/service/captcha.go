@@ -206,3 +206,9 @@ func (s *CaptchaService) CheckAndConsume(key, code string) bool {
 	s.rdb.Del(ctx, key)
 	return true
 }
+
+// Store stores a value with the given key and TTL.
+func (s *CaptchaService) Store(key, value string, ttl time.Duration) error {
+	ctx := context.Background()
+	return s.rdb.Set(ctx, key, value, ttl).Err()
+}

@@ -15,20 +15,21 @@ import (
 )
 
 type User struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	Username  string         `gorm:"uniqueIndex;size:64;not null" json:"username"`
-	Email     string         `gorm:"uniqueIndex;size:128" json:"email"`
-	Phone     string         `gorm:"uniqueIndex;size:32" json:"phone"`
-	Password  string         `gorm:"size:128;not null" json:"-"`
-	Nickname  string         `gorm:"size:64" json:"nickname"`
-	Avatar    string         `gorm:"size:256" json:"avatar"`
-	Status    int            `gorm:"default:1;comment:1=active 0=disabled" json:"status"`
-	Role      string         `gorm:"size:32;default:user;comment:user/admin" json:"role"`
-	Balance   float64        `gorm:"type:decimal(12,2);default:0" json:"balance"`
-	LastLogin *time.Time     `json:"last_login"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID            uint           `gorm:"primaryKey" json:"id"`
+	Username      string         `gorm:"uniqueIndex;size:64;not null" json:"username"`
+	Email         string         `gorm:"uniqueIndex;size:128" json:"email"`
+	Phone         string         `gorm:"uniqueIndex;size:32" json:"phone"`
+	Password      string         `gorm:"size:128;not null" json:"-"`
+	Nickname      string         `gorm:"size:64" json:"nickname"`
+	Avatar        string         `gorm:"size:256" json:"avatar"`
+	Status        int            `gorm:"default:1;comment:1=active 0=disabled" json:"status"`
+	Role          string         `gorm:"size:32;default:user;comment:user/admin" json:"role"`
+	Balance       float64        `gorm:"type:decimal(12,2);default:0" json:"balance"`
+	TwoFactorKey  string         `gorm:"size:128" json:"-"`
+	LastLogin     *time.Time     `json:"last_login"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type UserService struct {
@@ -387,4 +388,27 @@ func (s *UserService) GetLoginLogs(userID uint, page, pageSize int) ([]LoginLog,
 	}
 
 	return logs, total, nil
+}
+
+// List returns paginated users (alias for GetList).
+func (s *UserService) List(page, pageSize int, keyword string) ([]User, int64, error) {
+	return s.GetList(page, pageSize, keyword)
+}
+
+// UpdateStatus updates a user's status.
+func (s *UserService) UpdateStatus(id uint, status int) error {
+	result := s.db.Model(&User{}).Where("id = ?", id).Update("status", status)
+	if result.RowsAffected == 0 {
+		return errors.New("user not found")
+	}
+	return result.Error
+}
+
+// Delete soft-deletes a user.
+func (s *UserService) Delete(id uint) error {
+	result := s.db.Delete(&User{}, id)
+	if result.RowsAffected == 0 {
+		return errors.New("user not found")
+	}
+	return result.Error
 }
