@@ -140,7 +140,7 @@ func (h *ProductHandler) GetGroups(c *gin.Context) {
 
 // CreateGroup creates a product group (admin).
 func (h *ProductHandler) CreateGroup(c *gin.Context) {
-	var req service.CreateGroupRequest
+	var req service.CreateProductGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -160,7 +160,7 @@ func (h *ProductHandler) UpdateGroup(c *gin.Context) {
 		response.BadRequest(c, "invalid group id")
 		return
 	}
-	var req service.UpdateGroupRequest
+	var req service.UpdateProductGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return

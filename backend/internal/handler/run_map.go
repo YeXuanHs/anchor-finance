@@ -142,7 +142,6 @@ func (h *RunMapHandler) GetCronTrend(c *gin.Context) {
 
 	for i := days - 1; i >= 0; i-- {
 		date := now.AddDate(0, 0, -i)
-		dateStr := date.Format("20060102")
 		startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC).Unix()
 		endOfDay := time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 0, time.UTC).Unix()
 
@@ -150,13 +149,17 @@ func (h *RunMapHandler) GetCronTrend(c *gin.Context) {
 		item.Date = date.Format("01-02")
 
 		// 从 system_logs 或 run_map 表统计执行情况
+		var total int64
 		h.db.Table("run_maps").
 			Where("created_at >= ? AND created_at <= ?", startOfDay, endOfDay).
-			Count(&item.Total)
+			Count(&total)
+		item.Total = int(total)
 
+		var fail int64
 		h.db.Table("run_maps").
 			Where("created_at >= ? AND created_at <= ? AND run_count = 0", startOfDay, endOfDay).
-			Count(&item.Fail)
+			Count(&fail)
+		item.Fail = int(fail)
 
 		trends = append(trends, item)
 	}
@@ -220,18 +223,22 @@ func (h *RunMapHandler) GetCronHistory(c *gin.Context) {
 
 		// 统计全部执行次数
 		if ct.Keywords != "" {
+			var allCount int64
 			h.db.Table("run_maps").
 				Where("description LIKE ? AND created_at >= ? AND created_at <= ?",
 					"%"+ct.Keywords+"%", startOfDay.Unix(), endOfDay.Unix()).
-				Count(&item.All)
+				Count(&allCount)
+			item.All = int(allCount)
 		}
 
 		// 统计失败次数
 		if ct.ShowFail == 1 && ct.Keywords != "" {
+			var failCount int64
 			h.db.Table("run_maps").
 				Where("description LIKE ? AND created_at >= ? AND created_at <= ? AND run_count = 0",
 					"%"+ct.Keywords+"%", startOfDay.Unix(), endOfDay.Unix()).
-				Count(&item.Fail)
+				Count(&failCount)
+			item.Fail = int(failCount)
 		}
 
 		result = append(result, item)
