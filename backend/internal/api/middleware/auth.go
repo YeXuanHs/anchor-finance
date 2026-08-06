@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"anchorfinance/pkg/auth"
-	"anchorfinance/pkg/db"
 
 	"github.com/gin-gonic/gin"
 )
@@ -68,7 +67,7 @@ func JWTAuth(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		}
 
 		// 检查 Token 是否在密码修改之后签发（移植自 zjmf client_user_update_pass_）
-		if !IsTokenValid(claims.UserID, claims.IssuedAt) {
+		if !IsTokenValid(claims.UserID, claims.IssuedAt.Unix()) {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"ok":      false,
 				"message": "密码已修改，请重新登录",

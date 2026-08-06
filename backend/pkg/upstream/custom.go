@@ -100,7 +100,7 @@ func (c *customClient) doRequest(method, path string) ([]byte, int, error) {
 func (c *customClient) TestConnection() (*ConnectionResult, error) {
 	start := time.Now()
 
-	body, statusCode, err := c.doRequest("GET", c.testEndpoint)
+	_, statusCode, err := c.doRequest("GET", c.testEndpoint)
 	latency := time.Since(start).Milliseconds()
 	if err != nil {
 		return &ConnectionResult{OK: false, Message: err.Error(), Latency: latency}, err
