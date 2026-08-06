@@ -229,13 +229,13 @@ const product = ref({
   price: 0
 })
 
-const regions = ref([])
-const osTypes = ref([])
-const billingCycles = ref([])
-const cpuOptions = ref([])
-const memoryOptions = ref([])
-const diskOptions = ref([])
-const bandwidthOptions = ref([])
+const regions = ref<any[]>([])
+const osTypes = ref<any[]>([])
+const billingCycles = ref<any[]>([])
+const cpuOptions = ref<any[]>([])
+const memoryOptions = ref<any[]>([])
+const diskOptions = ref<any[]>([])
+const bandwidthOptions = ref<any[]>([])
 
 // 选择的配置
 const selectedRegion = ref('')
