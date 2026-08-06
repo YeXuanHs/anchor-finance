@@ -104,7 +104,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Warning, Lock, Position, Connection, OfficeBuilding, Check } from '@element-plus/icons-vue'
+import { Warning, Lock, Position, Check } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'

@@ -104,7 +104,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { VideoCamera, Position, Cpu, Connection, DataLine, Check } from '@element-plus/icons-vue'
+import { VideoCamera, Check } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'

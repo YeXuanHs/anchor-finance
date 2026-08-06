@@ -64,6 +64,7 @@ const editingContact = ref<any>(null)
 const formRef = ref()
 
 const form = ref({
+  id: 0,
   name: '',
   email: '',
   phone: '',

@@ -89,6 +89,7 @@ const tableRef = ref()
 const products = ref<Product[]>([])
 const selectedProducts = ref<Product[]>([])
 const submitting = ref(false)
+const renewCycle = ref(1)
 
 const isSelectable = (row: Product) => {
   return row.status !== 'cancelled'

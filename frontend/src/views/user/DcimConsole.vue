@@ -644,12 +644,11 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Refresh, RefreshRight, VideoPlay, VideoPause, CopyDocument,
   FirstAidKit, Key, Delete, Monitor, CircleClose, TrendCharts,
-  Top, Bottom, Setting, Connection, Tickets, Cpu
+  Top, Bottom, Setting, Connection, Tickets
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
