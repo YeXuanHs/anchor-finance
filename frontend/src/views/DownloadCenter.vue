@@ -5,7 +5,7 @@
       <div class="header-inner">
         <router-link to="/" class="logo">
           <div class="logo-icon">
-            <n-icon size="24" color="#fff"><AnchorOutline /></n-icon>
+            <n-icon size="24" color="#fff"><BookmarkOutline /></n-icon>
           </div>
           <span class="logo-text">{{ siteName }}</span>
         </router-link>
@@ -117,7 +117,7 @@
 <script setup lang="ts">
 import { ref, computed, h, onMounted } from 'vue'
 import {
-  AnchorOutline,
+  BookmarkOutline,
   SearchOutline,
   FolderOpenOutline,
   ServerOutline,
