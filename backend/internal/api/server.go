@@ -188,31 +188,56 @@ func (s *Server) serveStaticFiles() {
 		adminPath = "/" + adminPath
 	}
 
-	// Serve admin static files at dynamic admin path
+	// Serve admin static files at dynamic admin path (e.g. /SB111111/assets/xxx.js)
 	if info, err := os.Stat(adminDir); err == nil && info.IsDir() {
 		s.router.Static(adminPath, adminDir)
-		s.router.NoRoute(func(c *gin.Context) {
-			if len(c.Request.URL.Path) >= len(adminPath) && c.Request.URL.Path[:len(adminPath)] == adminPath {
-				indexPath := filepath.Join(adminDir, "index.html")
-				if _, err := os.Stat(indexPath); err == nil {
-					c.File(indexPath)
-					return
-				}
-			}
-			indexPath := filepath.Join(frontendDir, "index.html")
+	}
+
+	// Serve favicon from frontend
+	if _, err := os.Stat(filepath.Join(frontendDir, "favicon.ico")); err == nil {
+		s.router.StaticFile("/favicon.ico", filepath.Join(frontendDir, "favicon.ico"))
+	}
+
+	// Custom /assets handler: check admin first, then frontend
+	// This is needed because admin index.html references /assets/xxx (without admin path prefix)
+	s.router.GET("/assets/*filepath", func(c *gin.Context) {
+		fp := c.Param("filepath")
+		// Try admin/assets first
+		adminFile := filepath.Join(adminDir, "assets", fp)
+		if _, err := os.Stat(adminFile); err == nil {
+			c.File(adminFile)
+			return
+		}
+		// Fallback to frontend/assets
+		frontendFile := filepath.Join(frontendDir, "assets", fp)
+		if _, err := os.Stat(frontendFile); err == nil {
+			c.File(frontendFile)
+			return
+		}
+		c.Status(http.StatusNotFound)
+	})
+
+	// NoRoute: SPA fallback for both admin and frontend
+	s.router.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		// Check if admin path prefix matches -> serve admin index.html
+		if len(path) >= len(adminPath) && path[:len(adminPath)] == adminPath {
+			indexPath := filepath.Join(adminDir, "index.html")
 			if _, err := os.Stat(indexPath); err == nil {
 				c.File(indexPath)
 				return
 			}
-			c.JSON(http.StatusNotFound, gin.H{"ok": false, "message": "not found"})
-		})
-	}
+		}
 
-	// Serve frontend static files at /
-	if info, err := os.Stat(frontendDir); err == nil && info.IsDir() {
-		s.router.Static("/assets", filepath.Join(frontendDir, "assets"))
-		s.router.StaticFile("/favicon.ico", filepath.Join(frontendDir, "favicon.ico"))
-	}
+		// Default: serve frontend index.html
+		indexPath := filepath.Join(frontendDir, "index.html")
+		if _, err := os.Stat(indexPath); err == nil {
+			c.File(indexPath)
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"ok": false, "message": "not found"})
+	})
 }
 
 // Run starts the HTTP server on the given address.
