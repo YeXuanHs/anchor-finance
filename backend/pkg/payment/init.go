@@ -120,3 +120,10 @@ func ConfigToString(config interface{}) (string, error) {
 	}
 	return string(data), nil
 }
+
+// GetAll returns all registered payment gateways.
+func GetAll() map[string]Gateway {
+	return map[string]Gateway{
+		GatewayBalance: &BalanceGateway{},
+	}
+}

@@ -148,7 +148,12 @@ func (h *PaymentHandler) AlipayNotify(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if err := h.paymentSvc.HandleNotify(r.Context(), "alipay", body); err != nil {
+	// Convert body to map[string]string
+	data := map[string]string{
+		"body": string(body),
+	}
+
+	if err := h.paymentSvc.HandleNotify(r.Context(), "alipay", data); err != nil {
 		// Alipay expects "failure" text on error.
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("failure"))
@@ -175,7 +180,12 @@ func (h *PaymentHandler) WechatNotify(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if err := h.paymentSvc.HandleNotify(r.Context(), "wechat", body); err != nil {
+	// Convert body to map[string]string
+	data := map[string]string{
+		"body": string(body),
+	}
+
+	if err := h.paymentSvc.HandleNotify(r.Context(), "wechat", data); err != nil {
 		// WePay expects XML error response.
 		w.Header().Set("Content-Type", "application/xml")
 		w.WriteHeader(http.StatusOK)
@@ -202,13 +212,6 @@ func (h *PaymentHandler) ReturnURL(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "trade_no is required")
 		return
 	}
-
-	// Query payment status through the store interface
-	type queryResult struct {
-		OrderNo string
-		Status  string
-	}
-	var result queryResult
 
 	// Try to get transaction details via the service's store
 	// The actual status update happens via HandleNotify (async webhook)

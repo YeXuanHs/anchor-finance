@@ -11,6 +11,7 @@ type PaymentGateway struct {
 	Description string `gorm:"type:varchar(256)" json:"description"`                     // 描述
 	Gateway     string `gorm:"type:varchar(32);not null;index" json:"gateway"`           // 支付接口：epay、xunhupay、alipay、wxpay、balance
 	Code        string `gorm:"type:varchar(32);not null" json:"code"`                    // 支付类型：alipay、wechat、qqpay、usdt、bank
+	Icon        string `gorm:"type:varchar(255)" json:"icon"`                            // 图标路径
 	Config      string `gorm:"type:json" json:"config"`                                 // 接口配置（商户ID、密钥等）
 	FeeRate     float64 `gorm:"type:decimal(5,4);default:0" json:"fee_rate"`             // 手续费率
 	MinAmount   float64 `gorm:"type:decimal(12,2);default:0" json:"min_amount"`          // 最低金额

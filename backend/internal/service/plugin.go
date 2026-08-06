@@ -476,3 +476,55 @@ func (s *PluginService) GetServerGroupList() ([]model.ServerGroup, error) {
 	}
 	return groups, nil
 }
+
+// ==================== OAuth提供商管理 ====================
+
+// GetOAuthProviderList 获取OAuth提供商列表
+func (s *PluginService) GetOAuthProviderList() ([]model.OAuthProvider, error) {
+	var items []model.OAuthProvider
+	if err := s.db.Order("sort_order ASC, id ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+// CreateOAuthProvider 创建OAuth提供商
+func (s *PluginService) CreateOAuthProvider(req model.OAuthProvider) (*model.OAuthProvider, error) {
+	if err := s.db.Create(&req).Error; err != nil {
+		return nil, err
+	}
+	return &req, nil
+}
+
+// UpdateOAuthProvider 更新OAuth提供商
+func (s *PluginService) UpdateOAuthProvider(id uint, updates map[string]interface{}) error {
+	result := s.db.Model(&model.OAuthProvider{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("OAuth提供商不存在")
+	}
+	return nil
+}
+
+// DeleteOAuthProvider 删除OAuth提供商
+func (s *PluginService) DeleteOAuthProvider(id uint) error {
+	result := s.db.Delete(&model.OAuthProvider{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("OAuth提供商不存在")
+	}
+	return nil
+}
+
+// GetEnabledOAuthProviders 获取启用的OAuth提供商
+func (s *PluginService) GetEnabledOAuthProviders() ([]model.OAuthProvider, error) {
+	var items []model.OAuthProvider
+	if err := s.db.Where("is_enabled = ?", true).Order("sort_order ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
