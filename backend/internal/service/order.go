@@ -393,7 +393,7 @@ func (s *OrderService) AdminCreateOrder(adminID uint, req AdminCreateOrderReques
 		}
 
 		// Calculate price
-		basePrice, _ := product.Price.Float64()
+		basePrice := product.Price
 		price := basePrice
 		cycle := item.BillingCycle
 		if cycle == "" {
@@ -462,15 +462,15 @@ func (s *OrderService) AdminCreateOrder(adminID uint, req AdminCreateOrderReques
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		// Create order record
 		order = &Order{
-			OrderNo:    util.GenerateOrderNo(),
-			UserID:     req.UserID,
-			ProductID:  items[0].product.ID, // primary product
-			Quantity:   req.Items[0].Quantity,
-			TotalPrice: finalTotal,
-			Period:     items[0].product.Period,
-			PeriodUnit: items[0].product.PeriodUnit,
-			Status:     req.Status,
-			Remark:     req.AdminNotes,
+			OrderNo:     util.GenerateOrderNo(),
+			UserID:      req.UserID,
+			ProductID:   items[0].product.ID, // primary product
+			PromoCodeID: promoID,
+			Quantity:    req.Items[0].Quantity,
+			TotalPrice:  finalTotal,
+			Period:      items[0].product.BillingCycle,
+			Status:      int(req.Status),
+			Remark:      req.AdminNotes,
 		}
 		if order.Status == 0 {
 			order.Status = 0 // Pending
@@ -826,7 +826,7 @@ func (s *OrderService) GetMultiTotal(items []MultiProductItem, couponCode string
 			qty = 1
 		}
 
-		basePrice, _ := product.Price.Float64()
+		basePrice := product.Price
 		price := basePrice
 		cycle := item.BillingCycle
 		if cycle == "" {

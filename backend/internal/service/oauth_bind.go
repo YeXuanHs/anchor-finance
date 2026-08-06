@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 
 	"anchorfinance/internal/model"
@@ -82,7 +83,7 @@ func (s *OAuthBindService) Bind(userID uint, req SimpleBindOAuthRequest) error {
 	}
 
 	// Create binding
-	rawDataJSON, _ := datatypes.MarshalJSON(userInfo.RawData)
+	rawDataJSON, _ := json.Marshal(userInfo.RawData)
 	oauthAccount := model.OAuthAccount{
 		UserID:   userID,
 		Provider: req.Provider,
