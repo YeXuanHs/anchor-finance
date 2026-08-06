@@ -12,6 +12,8 @@ import (
 
 type Product = model.Product
 type UserProduct = model.UserProduct
+type ProductPricing = model.ProductPricing
+type ProductDownload = model.ProductDownload
 
 type ProductService struct {
 	db  *gorm.DB

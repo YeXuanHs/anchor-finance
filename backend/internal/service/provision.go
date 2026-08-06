@@ -9,6 +9,7 @@ import (
 	"anchorfinance/internal/model"
 	"anchorfinance/pkg/logger"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -68,8 +69,8 @@ func (s *ProvisionService) Create(req CreateProvisionRequest) (*model.ProvisionM
 		Slug:              req.Slug,
 		Description:       req.Description,
 		Type:              req.Type,
-		SupportedProducts: req.SupportedProducts,
-		Config:            req.Config,
+		SupportedProducts: datatypes.JSON(req.SupportedProducts),
+		Config:            datatypes.JSON(req.Config),
 		ServerURL:         req.ServerURL,
 		ServerIP:          req.ServerIP,
 		APIKey:            req.APIKey,
@@ -82,7 +83,7 @@ func (s *ProvisionService) Create(req CreateProvisionRequest) (*model.ProvisionM
 		Weight:            req.Weight,
 		MaxRetries:        req.MaxRetries,
 		Timeout:           req.Timeout,
-		Metadata:          req.Metadata,
+		Metadata:          datatypes.JSON(req.Metadata),
 	}
 	if module.Weight == 0 {
 		module.Weight = 1
