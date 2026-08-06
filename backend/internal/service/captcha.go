@@ -195,3 +195,14 @@ func (s *CaptchaService) GetCaptchaConfigService() *CaptchaConfigService {
 func (s *CaptchaService) InitDefaultConfigs() error {
 	return s.config.InitDefaultConfigs()
 }
+
+// CheckAndConsume checks if a code matches the stored value and consumes it.
+func (s *CaptchaService) CheckAndConsume(key, code string) bool {
+	ctx := context.Background()
+	stored, err := s.rdb.Get(ctx, key).Result()
+	if err != nil || stored != code {
+		return false
+	}
+	s.rdb.Del(ctx, key)
+	return true
+}

@@ -202,6 +202,6 @@ func (s *UploadService) GetURL(file *UploadedFile) string {
 }
 
 // UploadByType handles file upload with specific type validation.
-func (s *UploadService) UploadByType(userID uint, file *multipart.FileHeader, relType string, relID uint) (*UploadedFile, error) {
-	return s.Upload(userID, file, relType, relID)
+func (s *UploadService) UploadByType(file *multipart.FileHeader, relType string) (*UploadedFile, error) {
+	return s.Upload(0, file, relType, 0)
 }

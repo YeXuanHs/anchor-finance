@@ -61,11 +61,14 @@ type UpdateProfileRequest struct {
 	Username    string `json:"username" binding:"omitempty,min=3,max=64"`
 	QQ          string `json:"qq" binding:"omitempty"`
 	CompanyName string `json:"company_name" binding:"omitempty"`
+	Address     string `json:"address" binding:"omitempty"`
+	Signature   string `json:"signature" binding:"omitempty"`
 }
 
 type ChangePasswordRequest struct {
-	OldPassword string `json:"old_password" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required,min=6,max=128"`
+	OldPassword     string `json:"old_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,min=6,max=128"`
+	ConfirmPassword string `json:"confirm_password" binding:"required"`
 }
 
 // Register creates a new user account.
