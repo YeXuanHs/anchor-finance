@@ -366,12 +366,11 @@ func (s *BusinessListService) LogActivity(module, action, targetType string, tar
 		result = 1
 	}
 	s.db.Create(&model.ACFPLog{
-		ModuleKey:  module,
-		Action:     action,
-		TargetType: targetType,
-		TargetID:   targetID,
-		Detail:     detail,
-		Result:     result,
-		AdminID:    adminID,
+		Module:   module,
+		Action:   action,
+		Target:   targetType,
+		TargetID: targetID,
+		Content:  detail,
+		Status:   int8(result),
 	})
 }

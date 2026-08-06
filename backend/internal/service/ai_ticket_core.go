@@ -689,7 +689,8 @@ func (s *AITicketCoreService) callAIWithTools(baseURL, apiKey, modelName string,
 			// 检查工具是否启用
 			toolResult := ""
 			if !isToolEnabled(fnName, s.GetEnabledTools()) {
-				toolResult = toJSON(map[string]interface{}{"error": "工具未启用: " + fnName})
+				b, _ := json.Marshal(map[string]interface{}{"error": "工具未启用: " + fnName})
+				toolResult = string(b)
 			} else {
 				toolResult = executor.Execute(fnName, fnArgs)
 			}

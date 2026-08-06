@@ -88,3 +88,20 @@ type AITicketConfig struct {
 	Key   string `gorm:"type:varchar(50);uniqueIndex;not null" json:"key"`
 	Value string `gorm:"type:text" json:"value"`
 }
+
+// AITicketAutoReplyConfig AI工单自动回复配置
+type AITicketAutoReplyConfig struct {
+	ID             uint      `gorm:"primaryKey" json:"id"`
+	Enabled        bool      `gorm:"default:false" json:"enabled"`
+	AIConfigID     uint      `gorm:"not null" json:"ai_config_id"`
+	PromptTemplate string    `gorm:"type:text" json:"prompt_template"`
+	MaxTokens      int       `gorm:"default:2000" json:"max_tokens"`
+	Temperature    float64   `gorm:"type:decimal(3,2);default:0.7" json:"temperature"`
+	AutoClose      bool      `gorm:"default:false" json:"auto_close"`
+	AutoCloseHours int       `gorm:"default:24" json:"auto_close_hours"`
+	Confidence     float64   `gorm:"type:decimal(3,2);default:0.8" json:"confidence"`
+	DeptIDs        string    `gorm:"type:text;comment:适用部门ID逗号分隔" json:"dept_ids"`
+	ExcludeKeywords string   `gorm:"type:text;comment:排除关键词逗号分隔" json:"exclude_keywords"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}

@@ -7,15 +7,17 @@ import (
 // AIShoppingAssistantConfig AI 购物助手配置
 // 移植自 mahiru_ai_shopping
 type AIShoppingAssistantConfig struct {
-	ID              uint    `gorm:"primaryKey" json:"id"`
-	Enabled         bool    `gorm:"default:false" json:"enabled"`
-	AIConfigID      uint    `gorm:"not null" json:"ai_config_id"`
-	WelcomeMessage  string  `gorm:"type:text;default:您好！我是AI购物助手，可以帮您推荐合适的产品和服务。请问您有什么需求？" json:"welcome_message"`
-	SystemPrompt    string  `gorm:"type:text" json:"system_prompt"`
-	MaxRecommendations int  `gorm:"default:5;comment:最大推荐产品数" json:"max_recommendations"`
-	IncludePricing  bool    `gorm:"default:true;comment:是否展示价格" json:"include_pricing"`
-	ShowOnAllPages  bool    `gorm:"default:true;comment:是否在所有页面显示" json:"show_on_all_pages"`
-	TriggerKeywords string  `gorm:"type:text;comment:触发关键词，逗号分隔" json:"trigger_keywords"`
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	Enabled         bool      `gorm:"default:false" json:"enabled"`
+	AIConfigID      uint      `gorm:"not null" json:"ai_config_id"`
+	WelcomeMessage  string    `gorm:"type:text;default:您好！我是AI购物助手，可以帮您推荐合适的产品和服务。请问您有什么需求？" json:"welcome_message"`
+	SystemPrompt    string    `gorm:"type:text" json:"system_prompt"`
+	MaxRecommendations int   `gorm:"default:5;comment:最大推荐产品数" json:"max_recommendations"`
+	IncludePricing  bool      `gorm:"default:true;comment:是否展示价格" json:"include_pricing"`
+	ShowOnAllPages  bool      `gorm:"default:true;comment:是否在所有页面显示" json:"show_on_all_pages"`
+	TriggerKeywords string    `gorm:"type:text;comment:触发关键词，逗号分隔" json:"trigger_keywords"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // AIShoppingSession AI 购物助手会话

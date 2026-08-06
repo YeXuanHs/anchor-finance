@@ -39,28 +39,25 @@ type UpdateContactRequest struct {
 
 // Create adds a new contact for a user.
 func (s *ClientContactService) Create(req CreateContactRequest) (*model.ClientContact, error) {
-	return s.db.Transaction(func(tx *gorm.DB) (*model.ClientContact, error) {
+	contact := &model.ClientContact{
+		UserID:    req.UserID,
+		Name:      req.Name,
+		Email:     req.Email,
+		Phone:     req.Phone,
+		Position:  req.Position,
+		IsDefault: req.IsDefault,
+	}
+	err := s.db.Transaction(func(tx *gorm.DB) error {
 		if req.IsDefault {
 			if err := tx.Model(&model.ClientContact{}).
 				Where("user_id = ? AND is_default = ?", req.UserID, true).
 				Update("is_default", false).Error; err != nil {
-				return nil, err
+				return err
 			}
 		}
-
-		contact := &model.ClientContact{
-			UserID:    req.UserID,
-			Name:      req.Name,
-			Email:     req.Email,
-			Phone:     req.Phone,
-			Position:  req.Position,
-			IsDefault: req.IsDefault,
-		}
-		if err := tx.Create(contact).Error; err != nil {
-			return nil, err
-		}
-		return contact, nil
+		return tx.Create(contact).Error
 	})
+	return contact, err
 }
 
 // GetByID fetches a contact by ID.

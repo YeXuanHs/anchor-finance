@@ -151,7 +151,7 @@ func (e *AIToolExecutor) Execute(toolName string, args map[string]interface{}) s
 		result = e.checkUpstreamRefundResult(args)
 
 	// 商品导购
-	case "search_products":
+	case "search_products_guided":
 		result = e.searchProducts(args)
 	case "get_product_detail":
 		result = e.getProductDetail(args)
