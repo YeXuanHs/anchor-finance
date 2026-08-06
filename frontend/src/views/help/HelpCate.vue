@@ -61,13 +61,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
-import { Search, ArrowRight, Document, Setting, Monitor, CreditCard, ChatDotRound, Star } from '@element-plus/icons-vue'
+import { Search, ArrowRight } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'
 
-const { t } = useI18n()
 const router = useRouter()
 const searchKeyword = ref('')
 

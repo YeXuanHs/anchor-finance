@@ -58,7 +58,7 @@ import { useRouter } from 'vue-router'
 import request from '@/utils/request'
 import { 
   VideoCamera, Monitor, ShoppingBag, Trophy, Shield, OfficeBuilding,
-  Connection, Cpu, Position, DataLine,
+  Connection, Cpu,
   Check, ArrowRight
 } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'

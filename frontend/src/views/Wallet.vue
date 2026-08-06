@@ -308,6 +308,7 @@ const pagination = reactive({
   pageSize: 10,
   showSizePicker: true,
   pageSizes: [10, 20, 50],
+  itemCount: 0,
   onChange: (page: number) => { pagination.page = page },
   onUpdatePageSize: (pageSize: number) => {
     pagination.pageSize = pageSize
@@ -369,7 +370,7 @@ async function handleRecharge() {
   try {
     await rechargeFormRef.value?.validate()
     recharging.value = true
-    const res = await request.post('/api/v1/balance/recharge', { amount: rechargeForm.value.amount, payment_method: rechargeForm.value.payMethod })
+    await request.post('/api/v1/balance/recharge', { amount: rechargeForm.value.amount, payment_method: rechargeForm.value.payMethod })
     balance.value += rechargeForm.value.amount || 0
     message.success(t('wallet.rechargeSuccess'))
     showRechargeModal.value = false

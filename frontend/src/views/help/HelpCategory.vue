@@ -153,8 +153,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
-  Search, Document, View, Clock, ArrowRight, Folder, Tickets,
-  ShoppingCart, Wallet, Setting, Connection
+  Search, Document, View, Clock, ArrowRight, Folder, Tickets
 } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
