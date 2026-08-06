@@ -78,6 +78,8 @@ func AutoMigrate(db *gorm.DB, models ...interface{}) error {
 type systemSetting struct {
 	Key   string `gorm:"column:key"`
 	Value string `gorm:"column:value"`
+	Group string `gorm:"column:group"`
+	Name  string `gorm:"column:name"`
 }
 
 func (systemSetting) TableName() string {
@@ -117,11 +119,11 @@ func SetSystemSetting(key, value, group, desc string) error {
 	if dbConn == nil {
 		return fmt.Errorf("database not initialized")
 	}
-	s := systemSetting{Key: key, Value: value}
+	s := systemSetting{Key: key, Value: value, Group: group, Name: desc}
 	result := dbConn.Where("`key` = ?", key).Assign(map[string]interface{}{
 		"value":  value,
 		"group":  group,
-		"desc":   desc,
+		"name":   desc,
 	}).FirstOrCreate(&s)
 	return result.Error
 }
