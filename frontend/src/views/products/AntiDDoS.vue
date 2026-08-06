@@ -122,10 +122,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import {
-  CircleCheck, Shield, Lightning, Monitor, Warning,
-  Lock, DataLine, TrendCharts, Headset, View
-} from '@element-plus/icons-vue'
+import { CircleCheck } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const loading = ref(true)
