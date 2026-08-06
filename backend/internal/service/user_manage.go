@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"anchorfinance/internal/model"
@@ -747,11 +748,10 @@ func (s *UserManageService) GetCancelReasons() ([]CancelReason, error) {
 }
 
 // AddCancelReason adds a new cancel reason.
-func (s *UserManageService) AddCancelReason(reason string, sortOrder int) error {
+func (s *UserManageService) AddCancelReason(reason string) error {
 	r := &CancelReason{
-		Reason:    reason,
-		SortOrder: sortOrder,
-		Status:    1,
+		Reason: reason,
+		Status: 1,
 	}
 	return s.db.Create(r).Error
 }
@@ -781,11 +781,10 @@ func (s *UserManageService) CreateRechargeInvoice(userID uint, amount float64, d
 }
 
 // CreateUserInvoice creates a general invoice for a user.
-func (s *UserManageService) CreateUserInvoice(userID uint, invoiceType string, items []map[string]interface{}) (*model.Invoice, error) {
+func (s *UserManageService) CreateUserInvoice(userID uint) (*model.Invoice, error) {
 	invoice := &model.Invoice{
 		UserID: userID,
 		Status: 0,
-		Type:   invoiceType,
 	}
 	if err := s.db.Create(invoice).Error; err != nil {
 		return nil, err
@@ -795,29 +794,81 @@ func (s *UserManageService) CreateUserInvoice(userID uint, invoiceType string, i
 
 // ==================== Certification File ====================
 
-// GetCertificationFile returns the certification file info for a client.
-func (s *UserManageService) GetCertificationFile(clientID uint) (map[string]interface{}, error) {
+// GetCertificationFile returns the certification file path and name.
+func (s *UserManageService) GetCertificationFile(certID uint, fileType string) (string, string, error) {
 	var cert model.Certification
-	err := s.db.Where("user_id = ?", clientID).First(&cert).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
+	if err := s.db.First(&cert, certID).Error; err != nil {
+		return "", "", fmt.Errorf("certification not found: %w", err)
 	}
+
+	var filePath string
+	switch fileType {
+	case "front":
+		filePath = cert.FrontImage
+	case "back":
+		filePath = cert.BackImage
+	case "hand":
+		filePath = cert.HandImage
+	case "business":
+		filePath = cert.BusinessLicense
+	default:
+		return "", "", errors.New("invalid file type")
+	}
+
+	if filePath == "" {
+		return "", "", errors.New("file not found")
+	}
+
+	fileName := fmt.Sprintf("%s_%s_%d%s", cert.RealName, fileType, cert.ID, filepath.Ext(filePath))
+	return filePath, fileName, nil
+}
+
+// GetPersonalCertificationFile returns personal certification file by client ID.
+func (s *UserManageService) GetPersonalCertificationFile(clientID uint, fileType string) (string, string, error) {
+	var cert model.Certification
+	err := s.db.Where("user_id = ? AND type = ?", clientID, "individual").First(&cert).Error
 	if err != nil {
-		return nil, err
+		return "", "", fmt.Errorf("certification not found: %w", err)
 	}
-	return map[string]interface{}{
-		"id":             cert.ID,
-		"user_id":        cert.UserID,
-		"type":           cert.Type,
-		"real_name":      cert.RealName,
-		"id_number":      cert.IDCard,
-		"front_image":    cert.FrontImage,
-		"back_image":     cert.BackImage,
-		"handheld_image": cert.HandImage,
-		"status":         cert.Status,
-		"reject_reason":  cert.RejectReason,
-		"reviewed_by":    cert.ReviewedBy,
-		"reviewed_at":    cert.ReviewedAt,
-		"created_at":     cert.CreatedAt,
-	}, nil
+	return s.GetCertificationFile(cert.ID, fileType)
+}
+
+// GetCertifyHistoryLog returns certification history logs.
+func (s *UserManageService) GetCertifyHistoryLog(certID uint, page, pageSize int) ([]map[string]interface{}, int64, error) {
+	var logs []map[string]interface{}
+	var total int64
+
+	query := s.db.Table("system_logs").Where("target_id = ? AND target_type = ?", certID, "certification")
+	query.Count(&total)
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
+
+	return logs, total, nil
+}
+
+// BindSale binds a salesperson to a user.
+func (s *UserManageService) BindSale(userID uint, saleID uint) error {
+	return s.db.Model(&model.User{}).Where("id = ?", userID).Update("sale_id", saleID).Error
+}
+
+// GetRelationUserList returns users for relation selection.
+func (s *UserManageService) GetRelationUserList(page, pageSize int, keyword string) ([]model.User, int64, error) {
+	var users []model.User
+	var total int64
+
+	query := s.db.Model(&model.User{})
+	if keyword != "" {
+		q := "%" + keyword + "%"
+		query = query.Where("username LIKE ? OR email LIKE ? OR phone LIKE ? OR nickname LIKE ?", q, q, q, q)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+	return users, total, nil
 }

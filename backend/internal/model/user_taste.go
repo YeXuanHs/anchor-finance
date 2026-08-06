@@ -14,7 +14,7 @@ type UserTaste struct {
 	Theme         string         `gorm:"type:varchar(32);default:default" json:"theme"`
 	Language      string         `gorm:"type:varchar(16);default:zh-CN" json:"language"`
 	Layout        string         `gorm:"type:varchar(32);default:default" json:"layout"`
-	TicketRefresh int            `gorm:"default:0" json:"ticket_refresh"`
+	TicketRefresh string         `gorm:"type:varchar(32);default:never" json:"ticket_refresh"`
 	Settings      datatypes.JSON `gorm:"type:json" json:"settings"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
