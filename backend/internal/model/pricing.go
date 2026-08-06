@@ -1,7 +1,6 @@
 package model
 
 import (
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 

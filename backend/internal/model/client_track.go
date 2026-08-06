@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // ClientTrackRecord 客户跟踪记录

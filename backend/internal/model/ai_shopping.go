@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // AIShoppingAssistantConfig AI 购物助手配置

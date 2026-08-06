@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"time"
 
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
