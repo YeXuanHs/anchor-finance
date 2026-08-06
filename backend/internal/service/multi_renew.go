@@ -191,3 +191,187 @@ func (s *MultiRenewService) extendDate(from time.Time, cycle string) time.Time {
 		return from.AddDate(0, 1, 0)
 	}
 }
+
+// MultiRenewTask represents a batch renewal task.
+type MultiRenewTask struct {
+	ID         uint       `gorm:"primaryKey" json:"id"`
+	Name       string     `gorm:"type:varchar(128)" json:"name"`
+	UserID     uint       `gorm:"index" json:"user_id"`
+	Status     int16      `gorm:"default:0" json:"status"` // 0=pending 1=running 2=completed 3=failed
+	Period     int        `json:"period"`
+	PeriodUnit string     `gorm:"type:varchar(16)" json:"period_unit"`
+	AutoPay    bool       `json:"auto_pay"`
+	Note       string     `gorm:"type:text" json:"note"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
+}
+
+// MultiRenewTaskService represents a service in a batch renewal task.
+type MultiRenewTaskService struct {
+	ID        uint `gorm:"primaryKey" json:"id"`
+	TaskID    uint `gorm:"index" json:"task_id"`
+	ServiceID uint `json:"service_id"`
+}
+
+// MultiRenewLog represents a log entry for batch renewal.
+type MultiRenewLog struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	TaskID    uint      `gorm:"index" json:"task_id"`
+	ServiceID uint      `json:"service_id"`
+	Status    string    `gorm:"type:varchar(32)" json:"status"`
+	Message   string    `gorm:"type:text" json:"message"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// List returns paginated batch renewal tasks.
+func (s *MultiRenewService) List(page, pageSize int, status *int16) ([]MultiRenewTask, int64, error) {
+	var items []MultiRenewTask
+	var total int64
+	query := s.db.Model(&MultiRenewTask{})
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+	query.Count(&total)
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&items)
+	return items, total, nil
+}
+
+// GetByID returns a batch renewal task by ID.
+func (s *MultiRenewService) GetByID(id uint) (*MultiRenewTask, error) {
+	var task MultiRenewTask
+	if err := s.db.First(&task, id).Error; err != nil {
+		return nil, err
+	}
+	return &task, nil
+}
+
+// Create creates a new batch renewal task.
+func (s *MultiRenewService) Create(name string, serviceIDs []uint, period int, periodUnit string, autoPay bool, note string) (*MultiRenewTask, error) {
+	task := &MultiRenewTask{
+		Name:       name,
+		Period:     period,
+		PeriodUnit: periodUnit,
+		AutoPay:    autoPay,
+		Note:       note,
+		Status:     0,
+	}
+	if err := s.db.Create(task).Error; err != nil {
+		return nil, err
+	}
+
+	// Add services to task
+	for _, serviceID := range serviceIDs {
+		ts := &MultiRenewTaskService{
+			TaskID:    task.ID,
+			ServiceID: serviceID,
+		}
+		s.db.Create(ts)
+	}
+
+	return task, nil
+}
+
+// Execute executes a batch renewal task.
+func (s *MultiRenewService) Execute(taskID uint) (map[string]interface{}, error) {
+	task, err := s.GetByID(taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get services for this task
+	var taskServices []MultiRenewTaskService
+	s.db.Where("task_id = ?", taskID).Find(&taskServices)
+
+	serviceIDs := make([]uint, len(taskServices))
+	for i, ts := range taskServices {
+		serviceIDs[i] = ts.ServiceID
+	}
+
+	// Use BatchRenew to execute
+	summary, err := s.BatchRenew(task.UserID, serviceIDs, task.PeriodUnit)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update task status
+	s.db.Model(task).Update("status", 2) // completed
+
+	return map[string]interface{}{
+		"task_id": taskID,
+		"summary": summary,
+	}, nil
+}
+
+// Cancel cancels a batch renewal task.
+func (s *MultiRenewService) Cancel(taskID uint) error {
+	return s.db.Model(&MultiRenewTask{}).Where("id = ?", taskID).Update("status", 3).Error
+}
+
+// Delete deletes a batch renewal task.
+func (s *MultiRenewService) Delete(taskID uint) error {
+	s.db.Where("task_id = ?", taskID).Delete(&MultiRenewTaskService{})
+	s.db.Where("task_id = ?", taskID).Delete(&MultiRenewLog{})
+	return s.db.Delete(&MultiRenewTask{}, taskID).Error
+}
+
+// GetLogs returns logs for a batch renewal task.
+func (s *MultiRenewService) GetLogs(taskID uint, page, pageSize int) ([]MultiRenewLog, int64, error) {
+	var logs []MultiRenewLog
+	var total int64
+	query := s.db.Model(&MultiRenewLog{}).Where("task_id = ?", taskID)
+	query.Count(&total)
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
+	return logs, total, nil
+}
+
+// GetStats returns batch renewal statistics.
+func (s *MultiRenewService) GetStats() (map[string]interface{}, error) {
+	var totalTasks int64
+	s.db.Model(&MultiRenewTask{}).Count(&totalTasks)
+
+	var completedTasks int64
+	s.db.Model(&MultiRenewTask{}).Where("status = ?", 2).Count(&completedTasks)
+
+	var pendingTasks int64
+	s.db.Model(&MultiRenewTask{}).Where("status = ?", 0).Count(&pendingTasks)
+
+	return map[string]interface{}{
+		"total_tasks":     totalTasks,
+		"completed_tasks": completedTasks,
+		"pending_tasks":   pendingTasks,
+	}, nil
+}
+
+// Preview previews the services that would be renewed.
+func (s *MultiRenewService) Preview(serviceIDs []uint, period int, periodUnit string) (map[string]interface{}, error) {
+	var items []map[string]interface{}
+	var totalAmount float64
+
+	for _, serviceID := range serviceIDs {
+		var svc model.ClientService
+		if err := s.db.First(&svc, serviceID).Error; err != nil {
+			continue
+		}
+
+		var product model.Product
+		s.db.First(&product, svc.ProductID)
+
+		item := map[string]interface{}{
+			"service_id": svc.ID,
+			"name":       svc.Name,
+			"product":    product.Name,
+			"amount":     product.Price,
+		}
+		items = append(items, item)
+		totalAmount += product.Price
+	}
+
+	return map[string]interface{}{
+		"services":     items,
+		"total_amount": totalAmount,
+		"period":       period,
+		"period_unit":  periodUnit,
+	}, nil
+}

@@ -128,3 +128,10 @@ func (s *LoginLogService) Export(username, ip string, startTime, endTime *time.T
 	// Placeholder - implement CSV export
 	return "", errors.New("export not implemented")
 }
+
+// Cleanup deletes old login logs.
+func (s *LoginLogService) Cleanup(days int) (int64, error) {
+	cutoff := time.Now().AddDate(0, 0, -days)
+	result := s.db.Where("created_at < ?", cutoff).Delete(&LoginLog{})
+	return result.RowsAffected, result.Error
+}
