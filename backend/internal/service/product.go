@@ -23,28 +23,26 @@ func NewProductService(db *gorm.DB, log *logger.Logger) *ProductService {
 }
 
 type CreateProductRequest struct {
-	Name        string  `json:"name" binding:"required,max=128"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price" binding:"required,gt=0"`
-	Period      int     `json:"period" binding:"required,gt=0"`
-	PeriodUnit  string  `json:"period_unit" binding:"omitempty,oneof=day month year"`
-	Category    string  `json:"category"`
-	Stock       int     `json:"stock"`
-	Sort        int     `json:"sort"`
-	Config      string  `json:"config"`
+	Name         string  `json:"name" binding:"required,max=256"`
+	Description  string  `json:"description"`
+	Price        float64 `json:"price" binding:"required,gt=0"`
+	BillingCycle string  `json:"billing_cycle" binding:"omitempty,oneof=monthly quarterly semi-annually annually biennially triennially onetime"`
+	GroupID      uint    `json:"group_id"`
+	Stock        int     `json:"stock"`
+	SortOrder    int     `json:"sort_order"`
+	Type         string  `json:"type"`
 }
 
 type UpdateProductRequest struct {
-	Name        *string  `json:"name"`
-	Description *string  `json:"description"`
-	Price       *float64 `json:"price"`
-	Period      *int     `json:"period"`
-	PeriodUnit  *string  `json:"period_unit"`
-	Category    *string  `json:"category"`
-	Stock       *int     `json:"stock"`
-	Sort        *int     `json:"sort"`
-	Status      *int     `json:"status"`
-	Config      *string  `json:"config"`
+	Name         *string  `json:"name"`
+	Description  *string  `json:"description"`
+	Price        *float64 `json:"price"`
+	BillingCycle *string  `json:"billing_cycle"`
+	GroupID      *uint    `json:"group_id"`
+	Stock        *int     `json:"stock"`
+	SortOrder    *int     `json:"sort_order"`
+	Status       *int16   `json:"status"`
+	Type         *string  `json:"type"`
 }
 
 // GetList returns active products with pagination.
@@ -93,19 +91,21 @@ func (s *ProductService) GetHotProducts(limit int) ([]Product, error) {
 // Create adds a new product.
 func (s *ProductService) Create(req CreateProductRequest) (*Product, error) {
 	product := &Product{
-		Name:        req.Name,
-		Description: req.Description,
-		Price:       req.Price,
-		Period:      req.Period,
-		PeriodUnit:  req.PeriodUnit,
-		Category:    req.Category,
-		Stock:       req.Stock,
-		Sort:        req.Sort,
-		Status:      1,
-		Config:      req.Config,
+		Name:         req.Name,
+		Description:  req.Description,
+		Price:        req.Price,
+		BillingCycle: req.BillingCycle,
+		GroupID:      req.GroupID,
+		Stock:        req.Stock,
+		SortOrder:    req.SortOrder,
+		Status:       1,
+		Type:         req.Type,
 	}
-	if product.PeriodUnit == "" {
-		product.PeriodUnit = "day"
+	if product.BillingCycle == "" {
+		product.BillingCycle = "onetime"
+	}
+	if product.Type == "" {
+		product.Type = "hosting"
 	}
 	if err := s.db.Create(product).Error; err != nil {
 		return nil, err

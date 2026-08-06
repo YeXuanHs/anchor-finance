@@ -149,7 +149,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, userID, invoiceID, g
 	// Persist transaction record.
 	if s.txStore != nil {
 		tx := &Transaction{
-			TradeNo:   result.TradeNo,
+			TradeNo:   result.OrderNo,
 			OrderNo:   orderNo,
 			UserID:    userID,
 			InvoiceID: invoiceID,
@@ -164,22 +164,22 @@ func (s *PaymentService) CreatePayment(ctx context.Context, userID, invoiceID, g
 	}
 
 	return &CreatePaymentOutput{
-		TradeNo:   result.TradeNo,
-		PayURL:    result.PayURL,
-		QrcodeURL: result.QrcodeURL,
+		TradeNo:   result.OrderNo,
+		PayURL:    result.Data,
+		QrcodeURL: result.Data,
 	}, nil
 }
 
 // HandleNotify processes an async payment notification from a gateway.
-func (s *PaymentService) HandleNotify(ctx context.Context, gatewayName string, data []byte) error {
+func (s *PaymentService) HandleNotify(ctx context.Context, gatewayName string, data map[string]string) error {
 	gw, err := payment.Factory(gatewayName, "")
 	if err != nil {
 		return fmt.Errorf("payment gateway %q not found: %w", gatewayName, err)
 	}
 
-	notify, err := gw.ParseNotify(ctx, data)
+	notify, err := gw.VerifyNotification(ctx, data)
 	if err != nil {
-		return fmt.Errorf("failed to parse notification: %w", err)
+		return fmt.Errorf("failed to verify notification: %w", err)
 	}
 
 	if notify.Status != "success" {

@@ -452,15 +452,15 @@ func (s *OrderService) AdminCreateOrder(adminID uint, req AdminCreateOrderReques
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		// Create order record
 		order = &Order{
-			OrderNo:     util.GenerateOrderNo(),
-			UserID:      req.UserID,
-			ProductID:   items[0].product.ID, // primary product
-			PromoCodeID: &promoID,
-			Quantity:    req.Items[0].Quantity,
-			TotalPrice:  finalTotal,
+			OrderNo:      util.GenerateOrderNo(),
+			UserID:       req.UserID,
+			ProductID:    items[0].product.ID, // primary product
+			PromoCodeID:  promoID,
+			Quantity:     req.Items[0].Quantity,
+			Total:        finalTotal,
 			BillingCycle: items[0].product.BillingCycle,
-			Status:      int16(req.Status),
-			AdminNotes:  req.AdminNotes,
+			Status:       int16(req.Status),
+			AdminNotes:   req.AdminNotes,
 		}
 		if order.Status == 0 {
 			order.Status = 0 // Pending
@@ -959,11 +959,11 @@ func (s *OrderService) CheckProduct(productID, userID uint) (map[string]interfac
 
 	// 检查产品试用条件（payontrial_condition）
 	var errors_list []string
-	config := product.Config
-	if config != "" {
+	configOptions := string(product.ConfigOptions)
+	if configOptions != "" && configOptions != "null" {
 		// 解析试用条件配置
 		var productConfig map[string]interface{}
-		if err := json.Unmarshal([]byte(config), &productConfig); err == nil {
+		if err := json.Unmarshal([]byte(configOptions), &productConfig); err == nil {
 			if conditions, ok := productConfig["payontrial_condition"].([]interface{}); ok {
 				for _, cond := range conditions {
 					switch cond {
