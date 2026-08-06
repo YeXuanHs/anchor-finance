@@ -303,10 +303,9 @@ func (s *CSChatService) GetOrCreateSession(userID uint) (*model.CSChatSession, e
 // SendMessage sends a message in a chat session.
 func (s *CSChatService) SendMessage(sessionID, senderID uint, senderType, content string) (*model.CSChatMessage, error) {
 	msg := &model.CSChatMessage{
-		SessionID:  sessionID,
-		SenderID:   senderID,
-		SenderType: senderType,
-		Content:    content,
+		SessionID: sessionID,
+		Role:      senderType,
+		Content:   content,
 	}
 	if err := s.db.Create(msg).Error; err != nil {
 		return nil, err
