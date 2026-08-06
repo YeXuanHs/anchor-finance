@@ -123,8 +123,7 @@ func (s *ZJMFFinanceAPIService) CreateOrder(req OrderRequest) (*model.Order, err
 		quantity = 1
 	}
 
-	price, _ := product.Price.Float64()
-	totalAmount := price * float64(quantity)
+	totalAmount := product.Price * float64(quantity)
 
 	order := model.Order{
 		OrderNo:  util.GenerateOrderNo(),

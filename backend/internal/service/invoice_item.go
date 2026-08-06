@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
 	"anchorfinance/pkg/logger"

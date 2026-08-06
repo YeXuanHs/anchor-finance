@@ -8,7 +8,6 @@ import (
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/oauth"
 
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 

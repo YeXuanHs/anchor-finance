@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"anchorfinance/internal/model"
-	"anchorfinance/pkg/logger"
 
 	"gorm.io/gorm"
 )

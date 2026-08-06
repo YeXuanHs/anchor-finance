@@ -13,7 +13,6 @@ import (
 	"anchorfinance/pkg/oauth"
 	"anchorfinance/pkg/oauth/juhe"
 
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
