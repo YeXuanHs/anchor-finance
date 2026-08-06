@@ -140,6 +140,11 @@ const router = createRouter({
       component: () => import('@/views/DownloadCenter.vue')
     },
     {
+      path: '/document',
+      name: 'Document',
+      component: () => import('@/views/Document.vue')
+    },
+    {
       path: '/news',
       name: 'News',
       component: () => import('@/views/news/NewsList.vue')

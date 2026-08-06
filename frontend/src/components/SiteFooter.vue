@@ -42,6 +42,7 @@
             <li><router-link to="/help">帮助中心</router-link></li>
             <li><router-link to="/knowledge-base">知识库</router-link></li>
             <li><router-link to="/downloads">下载中心</router-link></li>
+            <li><router-link to="/document">API文档</router-link></li>
             <li><router-link to="/contact">联系我们</router-link></li>
           </ul>
         </div>

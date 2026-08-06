@@ -20,10 +20,10 @@ type Order struct {
 	PromoCodeID   *uint          `gorm:"index" json:"promo_code_id"`
 	PromoCode     *PromoCode     `gorm:"foreignKey:PromoCodeID" json:"promo_code,omitempty"`
 	Type          string         `gorm:"type:varchar(32);not null;default:'new'" json:"type"` // new/renew/upgrade/transfer
-	Amount        datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"amount"`
-	Discount      datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"discount"`
-	Tax           datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"tax"`
-	Total         datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"total"`
+	Amount        float64 `gorm:"type:decimal(20,4);not null" json:"amount"`
+	Discount      float64 `gorm:"type:decimal(20,4);default:0" json:"discount"`
+	Tax           float64 `gorm:"type:decimal(20,4);default:0" json:"tax"`
+	Total         float64 `gorm:"type:decimal(20,4);not null" json:"total"`
 	Currency      string         `gorm:"type:varchar(8);default:'CNY';not null" json:"currency"`
 	BillingCycle  string         `gorm:"type:varchar(32)" json:"billing_cycle"`
 	Quantity      int            `gorm:"default:1" json:"quantity"`
@@ -56,11 +56,11 @@ type OrderItem struct {
 	Product   *Product       `gorm:"foreignKey:ProductID" json:"product,omitempty"`
 	Name      string         `gorm:"type:varchar(256);not null" json:"name"`
 	Quantity  int            `gorm:"default:1" json:"quantity"`
-	UnitPrice datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"unit_price"`
-	Amount    datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"amount"`
-	Discount  datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"discount"`
-	Tax       datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"tax"`
-	Total     datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"total"`
+	UnitPrice float64 `gorm:"type:decimal(20,4);not null" json:"unit_price"`
+	Amount    float64 `gorm:"type:decimal(20,4);not null" json:"amount"`
+	Discount  float64 `gorm:"type:decimal(20,4);default:0" json:"discount"`
+	Tax       float64 `gorm:"type:decimal(20,4);default:0" json:"tax"`
+	Total     float64 `gorm:"type:decimal(20,4);not null" json:"total"`
 	Config    datatypes.JSON   `gorm:"type:json" json:"config"`
 }
 

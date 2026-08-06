@@ -21,20 +21,6 @@ type LinkKnowledge struct {
 	HelpfulNo  int    `gorm:"default:0" json:"helpful_no"`
 }
 
-// LinkCause 知识库分类
-type LinkCause struct {
-	ID        uint   `gorm:"primaryKey" json:"id"`
-	Name      string `gorm:"type:varchar(128);not null" json:"name"`
-	PID       uint   `gorm:"index;default:0" json:"pid"`
-	LevelView string `gorm:"type:varchar(256)" json:"level_view"`
-	Status    int16  `gorm:"type:smallint;default:1" json:"status"`
-	Order     int    `gorm:"default:0" json:"order"`
-}
-
-func (LinkCause) TableName() string {
-	return "link_cause"
-}
-
 // LinkKeyword 知识库关键词
 type LinkKeyword struct {
 	ID         uint   `gorm:"primaryKey" json:"id"`

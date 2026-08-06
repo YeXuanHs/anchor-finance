@@ -17,14 +17,14 @@ type Invoice struct {
 	Order        *Order         `gorm:"foreignKey:OrderID" json:"order,omitempty"`
 	Type         string         `gorm:"type:varchar(32);not null;default:'invoice'" json:"type"` // invoice/proforma/credit/debit
 	Currency     string         `gorm:"type:varchar(8);default:'CNY';not null" json:"currency"`
-	SubTotal     datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"sub_total"`
-	Tax          datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"tax"`
-	TaxRate      datatypes.Decimal `gorm:"type:decimal(5,4);default:0" json:"tax_rate"`
-	Discount     datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"discount"`
-	Credit       datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"credit"`
-	Total        datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"total"`
-	PaidAmount   datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"paid_amount"`
-	Balance      datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"balance"`
+	SubTotal     float64 `gorm:"type:decimal(20,4);not null" json:"sub_total"`
+	Tax          float64 `gorm:"type:decimal(20,4);default:0" json:"tax"`
+	TaxRate      float64 `gorm:"type:decimal(5,4);default:0" json:"tax_rate"`
+	Discount     float64 `gorm:"type:decimal(20,4);default:0" json:"discount"`
+	Credit       float64 `gorm:"type:decimal(20,4);default:0" json:"credit"`
+	Total        float64 `gorm:"type:decimal(20,4);not null" json:"total"`
+	PaidAmount   float64 `gorm:"type:decimal(20,4);default:0" json:"paid_amount"`
+	Balance      float64 `gorm:"type:decimal(20,4);default:0" json:"balance"`
 	Status       int16          `gorm:"type:smallint;default:0;not null;index" json:"status"` // 0=待支付 1=已支付 2=部分支付 3=已取消 4=已退款 5=逾期 6=已催付
 	PaymentMethod string        `gorm:"type:varchar(64)" json:"payment_method"`
 	TransactionID string        `gorm:"type:varchar(256);index" json:"transaction_id"`
@@ -64,10 +64,10 @@ type InvoiceItem struct {
 	RelType   string         `gorm:"type:varchar(32)" json:"rel_type"` // 关联类型
 	Description string       `gorm:"type:varchar(512);not null" json:"description"`
 	Quantity  int            `gorm:"default:1" json:"quantity"`
-	UnitPrice datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"unit_price"`
-	Discount  datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"discount"`
-	Tax       datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"tax"`
-	Total     datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"total"`
+	UnitPrice float64 `gorm:"type:decimal(20,4);not null" json:"unit_price"`
+	Discount  float64 `gorm:"type:decimal(20,4);default:0" json:"discount"`
+	Tax       float64 `gorm:"type:decimal(20,4);default:0" json:"tax"`
+	Total     float64 `gorm:"type:decimal(20,4);not null" json:"total"`
 	SortOrder int            `gorm:"default:0" json:"sort_order"`
 }
 
@@ -83,10 +83,10 @@ type Transaction struct {
 	Order         *Order         `gorm:"foreignKey:OrderID" json:"order,omitempty"`
 	Gateway       string         `gorm:"type:varchar(64);not null" json:"gateway"`
 	GatewayTransID string        `gorm:"type:varchar(256);index" json:"gateway_trans_id"`
-	Amount        datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"amount"`
-	Fee           datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"fee"`
+	Amount        float64 `gorm:"type:decimal(20,4);not null" json:"amount"`
+	Fee           float64 `gorm:"type:decimal(20,4);default:0" json:"fee"`
 	Currency      string         `gorm:"type:varchar(8);default:'CNY';not null" json:"currency"`
-	ExchangeRate  datatypes.Decimal `gorm:"type:decimal(16,8);default:1" json:"exchange_rate"`
+	ExchangeRate  float64 `gorm:"type:decimal(16,8);default:1" json:"exchange_rate"`
 	Type          string         `gorm:"type:varchar(32);not null;default:'payment'" json:"type"` // payment/refund/credit/debit/withdrawal
 	Status        int16          `gorm:"type:smallint;default:0;not null;index" json:"status"` // 0=待处理 1=成功 2=失败 3=已取消 4=已退款 5=争议中
 	CompletedAt   *time.Time     `json:"completed_at"`

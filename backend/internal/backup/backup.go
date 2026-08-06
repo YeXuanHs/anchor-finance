@@ -96,7 +96,9 @@ func (s *Service) Backup(config BackupConfig) (*BackupResult, error) {
 		os.Remove(filepath)
 		filepath = compressedPath
 		filename = filename + ".gz"
-		size, _ = os.Stat(filepath).Size()
+		if info, err := os.Stat(filepath); err == nil {
+			size = info.Size()
+		}
 	}
 
 	s.log.Infof("数据库备份完成: %s (%.2f MB)", filename, float64(size)/1024/1024)

@@ -47,11 +47,11 @@ type Product struct {
 	Slug          string         `gorm:"type:varchar(256);uniqueIndex" json:"slug"`
 	Description   string         `gorm:"type:text" json:"description"`
 	Content       string         `gorm:"type:text" json:"content"`
-	Price         datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"price"`
-	OriginalPrice datatypes.Decimal `gorm:"type:decimal(20,4)" json:"original_price"`
+	Price         float64 `gorm:"type:decimal(20,4);not null" json:"price"`
+	OriginalPrice float64 `gorm:"type:decimal(20,4)" json:"original_price"`
 	Currency      string         `gorm:"type:varchar(8);default:'CNY';not null" json:"currency"`
 	BillingCycle  string         `gorm:"type:varchar(32)" json:"billing_cycle"` // monthly/quarterly/semi-annually/annually/triennially/onetime
-	SetupFee      datatypes.Decimal `gorm:"type:decimal(20,4);default:0" json:"setup_fee"`
+	SetupFee      float64 `gorm:"type:decimal(20,4);default:0" json:"setup_fee"`
 	Stock         int            `gorm:"default:-1" json:"stock"` // -1=无限库存
 	SalesCount    int            `gorm:"default:0" json:"sales_count"`
 	Type          string         `gorm:"type:varchar(32);not null;default:'hosting'" json:"type"` // hosting/domain/ssl/vpn/other
@@ -92,7 +92,7 @@ type UserProduct struct {
 	NS1           string         `gorm:"type:varchar(256)" json:"ns1"`
 	NS2           string         `gorm:"type:varchar(256)" json:"ns2"`
 	BillingCycle  string         `gorm:"type:varchar(32)" json:"billing_cycle"`
-	Amount        datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"amount"`
+	Amount        float64 `gorm:"type:decimal(20,4);not null" json:"amount"`
 	Currency      string         `gorm:"type:varchar(8);default:'CNY'" json:"currency"`
 	RegistrationDate *time.Time  `json:"registration_date"`
 	NextDueDate   *time.Time     `gorm:"index" json:"next_due_date"`

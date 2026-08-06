@@ -374,8 +374,17 @@ func sha256Hex(s string) string {
 }
 
 // hmacSHA256 returns HMAC-SHA256 bytes.
-func hmacSHA256(key, data string) []byte {
-	h := hmac.New(sha256.New, []byte(key))
+func hmacSHA256(key interface{}, data string) []byte {
+	var keyBytes []byte
+	switch v := key.(type) {
+	case string:
+		keyBytes = []byte(v)
+	case []byte:
+		keyBytes = v
+	default:
+		keyBytes = []byte(fmt.Sprintf("%v", key))
+	}
+	h := hmac.New(sha256.New, keyBytes)
 	h.Write([]byte(data))
 	return h.Sum(nil)
 }

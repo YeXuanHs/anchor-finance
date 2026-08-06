@@ -13,7 +13,7 @@ type RenewCycle struct {
 	UserProductID uint             `gorm:"index;not null" json:"user_product_id"`
 	UserProduct   *UserProduct     `gorm:"foreignKey:UserProductID" json:"user_product,omitempty"`
 	Cycle         string           `gorm:"type:varchar(32);not null" json:"cycle"`
-	Amount        datatypes.Decimal `gorm:"type:decimal(20,4);not null" json:"amount"`
+	Amount        float64 `gorm:"type:decimal(20,4);not null" json:"amount"`
 	NextDueDate   *time.Time       `gorm:"index" json:"next_due_date"`
 	LastRenewDate *time.Time       `json:"last_renew_date"`
 	AutoRenew     bool             `gorm:"default:false;index" json:"auto_renew"`

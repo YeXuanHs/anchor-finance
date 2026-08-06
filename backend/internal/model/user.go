@@ -23,8 +23,8 @@ type User struct {
 	Language     string         `gorm:"type:varchar(16);default:'zh-CN'" json:"language"`
 	Timezone     string         `gorm:"type:varchar(64);default:'Asia/Shanghai'" json:"timezone"`
 	Currency     string         `gorm:"type:varchar(8);default:'CNY'" json:"currency"`
-	Balance      datatypes.Decimal `gorm:"type:decimal(20,4);default:0;not null" json:"balance"`
-	Commission   datatypes.Decimal `gorm:"type:decimal(20,4);default:0;not null" json:"commission"`
+	Balance      float64 `gorm:"type:decimal(20,4);default:0;not null" json:"balance"`
+	Commission   float64 `gorm:"type:decimal(20,4);default:0;not null" json:"commission"`
 	GroupID      uint           `gorm:"index;not null;default:1" json:"group_id"`
 	Group        UserGroup      `gorm:"foreignKey:GroupID" json:"group,omitempty"`
 	Status       int16          `gorm:"type:smallint;default:1;not null;index" json:"status"` // 1=正常 0=禁用 2=待验证
@@ -36,7 +36,7 @@ type User struct {
 	InviteCode   string         `gorm:"type:varchar(32);index" json:"invite_code"`
 	InvitedBy    *uint          `gorm:"index" json:"invited_by"`
 	Inviter      *User          `gorm:"foreignKey:InvitedBy" json:"inviter,omitempty"`
-	CommissionRate datatypes.Decimal `gorm:"type:decimal(5,4);default:0" json:"commission_rate"`
+	CommissionRate float64 `gorm:"type:decimal(5,4);default:0" json:"commission_rate"`
 	Remark       string         `gorm:"type:text" json:"remark"`
 	// API密钥管理（对齐zjmf：每个用户一个密钥，存储在用户表中）
 	APIOpen       int8       `gorm:"type:tinyint;default:0;not null" json:"api_open"`        // 0=关闭 1=开启
@@ -52,8 +52,8 @@ type UserGroup struct {
 	gorm.Model
 	Name           string         `gorm:"type:varchar(64);uniqueIndex;not null" json:"name"`
 	Description    string         `gorm:"type:text" json:"description"`
-	Discount       datatypes.Decimal `gorm:"type:decimal(5,4);default:1.0000;not null" json:"discount"` // 折扣比例
-	CommissionRate datatypes.Decimal `gorm:"type:decimal(5,4);default:0" json:"commission_rate"`
+	Discount       float64 `gorm:"type:decimal(5,4);default:1.0000;not null" json:"discount"` // 折扣比例
+	CommissionRate float64 `gorm:"type:decimal(5,4);default:0" json:"commission_rate"`
 	IsDefault      bool           `gorm:"default:false" json:"is_default"`
 	SortOrder      int            `gorm:"default:0" json:"sort_order"`
 	Users          []User         `gorm:"foreignKey:GroupID" json:"users,omitempty"`

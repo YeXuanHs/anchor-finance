@@ -11,7 +11,6 @@ import (
 	"anchorfinance/pkg/response"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -1190,7 +1189,7 @@ func (h *CreditHandler) Prepayment(c *gin.Context) {
 		UserID:                userID,
 		Type:                  "credit_limit",
 		CreditLimitPrepayment: 1,
-		Total:                 datatypes.DecimalFromString(fmt.Sprintf("%.4f", totalAmount)),
+		Total:                 totalAmount,
 		Status:                0, // Unpaid
 	}
 	if err := h.db.Create(&invoice).Error; err != nil {

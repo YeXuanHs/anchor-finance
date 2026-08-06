@@ -19,14 +19,3 @@ type UserDownload struct {
 func (UserDownload) TableName() string {
 	return "user_downloads"
 }
-
-// UserTaste 用户偏好设置
-type UserTaste struct {
-	ID             uint   `gorm:"primaryKey" json:"id"`
-	UID            uint   `gorm:"uniqueIndex;not null" json:"uid"` // 用户ID
-	TicketRefresh  string `gorm:"size:20;default:never" json:"ticket_refresh"` // 工单自动刷新: never, 30s, 60s, 120s
-}
-
-func (UserTaste) TableName() string {
-	return "user_tastes"
-}
