@@ -1089,10 +1089,12 @@ CREATE TABLE IF NOT EXISTS `upstream_sync_logs` (
 
 -- ============================================
 -- 修复：upstream_providers 表添加 is_active 列
+-- 注意：MySQL 不支持 ADD COLUMN IF NOT EXISTS，
+-- 如果列已存在会报错，可忽略
 -- ============================================
-ALTER TABLE `upstream_providers` ADD COLUMN IF NOT EXISTS `is_active` tinyint(1) NOT NULL DEFAULT 1 AFTER `config`;
+ALTER TABLE `upstream_providers` ADD COLUMN `is_active` tinyint(1) NOT NULL DEFAULT 1 AFTER `config`;
 
 -- ============================================
 -- 修复：upstream_products 表对齐模型定义
 -- ============================================
-ALTER TABLE `upstream_products` ADD COLUMN IF NOT EXISTS `config` json DEFAULT NULL AFTER `remote_product_id`;
+ALTER TABLE `upstream_products` ADD COLUMN `config` json DEFAULT NULL AFTER `remote_product_id`;
