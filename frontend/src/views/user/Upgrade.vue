@@ -90,7 +90,7 @@ const priceDiff = computed(() => {
   return (newPlan?.price || 0) - (currentProduct.value?.amount || 0)
 })
 
-const showUpgradeDialog = (product: any) => {
+const showUpgradeDialog = async (product: any) => {
   currentProduct.value = product
   selectedPlan.value = ''
   showDialog.value = true
