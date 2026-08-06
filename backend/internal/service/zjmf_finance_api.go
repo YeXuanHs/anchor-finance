@@ -95,11 +95,10 @@ func (s *ZJMFFinanceAPIService) GetProducts(page, pageSize int) ([]ProductRespon
 
 	result := make([]ProductResponse, len(products))
 	for i, p := range products {
-		price, _ := p.Price.Float64()
 		result[i] = ProductResponse{
 			ID:       p.ID,
 			Name:     p.Name,
-			Price:    price,
+			Price:    p.Price,
 			Currency: p.Currency,
 			Stock:    p.Stock,
 		}

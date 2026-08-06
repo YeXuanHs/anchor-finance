@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"anchorfinance/internal/model"
 	"anchorfinance/internal/util"
 	"anchorfinance/pkg/logger"
 

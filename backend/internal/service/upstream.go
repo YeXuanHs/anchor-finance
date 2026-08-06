@@ -11,7 +11,6 @@ import (
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/upstream"
 
-	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -292,7 +291,7 @@ func (s *UpstreamService) dockSingleProduct(providerID, localGroupID uint, perce
 		GroupID:  localGroupID,
 		Name:     remoteProduct.Name,
 		Slug:     generateSlug(remoteProduct.Name, remoteID),
-		Price:    decimal.NewFromFloat(price),
+		Price:    price,
 		Currency: remoteProduct.Currency,
 		Type:     "upstream",
 		Status:   1,
@@ -348,14 +347,14 @@ func (s *UpstreamService) SyncProducts(id uint) (int, error) {
 		err := s.db.Where("upstream_id = ? AND remote_product_id = ?", provider.ID, rp.RemoteID).
 			First(&mapping).Error
 
-		price := decimal.NewFromFloat(rp.Price)
+		price := rp.Price
 
 		if err == gorm.ErrRecordNotFound {
 			localProduct := model.Product{
 				GroupID:  groupID,
 				Name:     rp.Name,
 				Slug:     generateSlug(rp.Name, rp.RemoteID),
-				Price:    price,
+				Price:    rp.Price,
 				Currency: rp.Currency,
 				Type:     rp.Type,
 				Stock:    rp.Stock,
@@ -448,10 +447,9 @@ func (s *UpstreamService) SyncSingleProduct(localProductID uint) error {
 
 	for _, p := range products {
 		if p.RemoteID == mapping.RemoteProductID {
-			price := decimal.NewFromFloat(p.Price)
 			s.db.Model(&model.Product{}).Where("id = ?", localProductID).Updates(map[string]interface{}{
 				"name":     p.Name,
-				"price":    price,
+				"price":    p.Price,
 				"currency": p.Currency,
 			})
 			return nil
@@ -524,7 +522,6 @@ func (s *UpstreamService) SyncStockAndPrices(providerID uint) (int, error) {
 			continue
 		}
 
-		price := decimal.NewFromFloat(rp.Price)
 		stock := rp.Stock
 
 		// 如果 stock=0，标记为下架状态
@@ -534,7 +531,7 @@ func (s *UpstreamService) SyncStockAndPrices(providerID uint) (int, error) {
 		}
 
 		s.db.Model(&model.Product{}).Where("id = ?", mapping.LocalProductID).Updates(map[string]interface{}{
-			"price":  price,
+			"price":  rp.Price,
 			"stock":  stock,
 			"status": status,
 		})

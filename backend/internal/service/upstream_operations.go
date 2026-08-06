@@ -411,12 +411,15 @@ func (s *UpstreamOperations) getProviderAndHostID(providerID, hostID uint) (*mod
 	// Try to get remote host ID from host metadata
 	var host model.Host
 	if err := s.db.First(&host, hostID).Error; err == nil {
-		if host.Metadata != nil {
-			if rid, ok := host.Metadata["upstream_host_id"]; ok {
-				return provider, fmt.Sprintf("%v", rid), nil
-			}
-			if rid, ok := host.Metadata["remote_host_id"]; ok {
-				return provider, fmt.Sprintf("%v", rid), nil
+		if len(host.Metadata) > 0 {
+			var meta map[string]interface{}
+			if err := json.Unmarshal(host.Metadata, &meta); err == nil {
+				if rid, ok := meta["upstream_host_id"]; ok {
+					return provider, fmt.Sprintf("%v", rid), nil
+				}
+				if rid, ok := meta["remote_host_id"]; ok {
+					return provider, fmt.Sprintf("%v", rid), nil
+				}
 			}
 		}
 	}

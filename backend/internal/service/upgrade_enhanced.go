@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -360,7 +361,7 @@ func (s *UpgradeEnhancedService) AllowUpgradeProducts(hostID uint) ([]map[string
 
 	if len(config.TargetProducts) > 0 {
 		var targetIDs []uint
-		config.TargetProducts.Unmarshal(&targetIDs)
+		json.Unmarshal(config.TargetProducts, &targetIDs)
 		s.db.Table("products").Where("id IN ?", targetIDs).Find(&products)
 	} else {
 		// 获取同组的所有产品
