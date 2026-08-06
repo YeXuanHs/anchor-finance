@@ -572,9 +572,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.PUT("/languages/:id", langHandler.UpdateLanguage)
 		admin.DELETE("/languages/:id", langHandler.DeleteLanguage)
 		admin.POST("/languages/:id/default", langHandler.SetDefaultLanguage)
-		admin.GET("/languages/:code/translations", langHandler.GetTranslations)
-		admin.POST("/languages/:code/translations", langHandler.SaveTranslations)
-		admin.POST("/languages/:code/import", langHandler.ImportTranslations)
+		admin.GET("/languages/:id/translations", langHandler.GetTranslations)
+		admin.POST("/languages/:id/translations", langHandler.SaveTranslations)
+		admin.POST("/languages/:id/import", langHandler.ImportTranslations)
 		admin.GET("/lang-keys", langHandler.GetLangKeys)
 
 		// 优惠码管理

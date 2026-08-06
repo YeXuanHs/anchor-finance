@@ -91,7 +91,7 @@ func (h *LanguageHandler) SetDefaultLanguage(c *gin.Context) {
 
 // GetTranslations 获取翻译
 func (h *LanguageHandler) GetTranslations(c *gin.Context) {
-	langCode := c.Param("code")
+	langCode := c.Param("id")
 	module := c.Query("module")
 	
 	var translations map[string]string
@@ -112,7 +112,7 @@ func (h *LanguageHandler) GetTranslations(c *gin.Context) {
 
 // SaveTranslations 保存翻译
 func (h *LanguageHandler) SaveTranslations(c *gin.Context) {
-	langCode := c.Param("code")
+	langCode := c.Param("id")
 	var translations map[string]string
 	if err := c.ShouldBindJSON(&translations); err != nil {
 		response.BadRequest(c, "参数错误")
@@ -127,7 +127,7 @@ func (h *LanguageHandler) SaveTranslations(c *gin.Context) {
 
 // ImportTranslations 导入翻译
 func (h *LanguageHandler) ImportTranslations(c *gin.Context) {
-	langCode := c.Param("code")
+	langCode := c.Param("id")
 	module := c.Query("module")
 	
 	var data map[string]string
