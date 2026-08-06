@@ -41,7 +41,7 @@ frontend/admin/dist/
 .env.*.local
 
 # Uploads
-uploads/
+/backend/uploads/
 
 # Temp
 tmp/
