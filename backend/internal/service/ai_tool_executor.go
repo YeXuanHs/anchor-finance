@@ -102,7 +102,7 @@ func (e *AIToolExecutor) Execute(toolName string, args map[string]interface{}) s
 	case "query_product":
 		result = e.queryProduct(args)
 	case "search_products":
-		result = e.searchProducts(args)
+		result = e.searchProductsSimple(args)
 	case "query_ticket_history":
 		result = e.queryTicketHistory(args)
 
@@ -385,7 +385,7 @@ func (e *AIToolExecutor) queryProduct(args map[string]interface{}) string {
 	})
 }
 
-func (e *AIToolExecutor) searchProducts(args map[string]interface{}) string {
+func (e *AIToolExecutor) searchProductsSimple(args map[string]interface{}) string {
 	keyword := strVal(args["keyword"])
 	if keyword == "" {
 		return jsonStr(map[string]interface{}{"error": "缺少搜索关键词"})

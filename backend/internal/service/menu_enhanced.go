@@ -347,7 +347,7 @@ func (s *MenuEnhancedService) SetWebNavList(navs []WebNav) error {
 }
 
 // JSON helper
-func toJSON(v interface{}) datatypes.JSON {
+func menuToJSON(v interface{}) datatypes.JSON {
 	b, _ := json.Marshal(v)
 	return datatypes.JSON(b)
 }

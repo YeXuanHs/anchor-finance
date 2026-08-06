@@ -83,11 +83,6 @@ func (s *BusinessListService) GetDB() *gorm.DB {
 	return s.db
 }
 
-// GetDB 获取数据库连接
-func (s *BusinessListService) GetDB() *gorm.DB {
-	return s.db
-}
-
 // GetList 获取业务列表（带高级筛选）
 func (s *BusinessListService) GetList(filter BusinessFilter) ([]BusinessItem, int64, *StatusStats, error) {
 	if filter.Page <= 0 {

@@ -222,7 +222,7 @@ type ProductGroup struct {
 
 func (ProductGroup) TableName() string { return "product_groups" }
 
-type CreateGroupRequest struct {
+type CreateProductGroupRequest struct {
 	Name        string `json:"name" binding:"required,max=128"`
 	Description string `json:"description"`
 	Slug        string `json:"slug" binding:"omitempty,max=128"`
@@ -231,7 +231,7 @@ type CreateGroupRequest struct {
 	SortOrder   int    `json:"sort_order"`
 }
 
-type UpdateGroupRequest struct {
+type UpdateProductGroupRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 	Slug        *string `json:"slug"`
@@ -260,7 +260,7 @@ func (s *ProductService) GetGroupByID(id uint) (*ProductGroup, error) {
 }
 
 // CreateGroup creates a new product group.
-func (s *ProductService) CreateGroup(req CreateGroupRequest) (*ProductGroup, error) {
+func (s *ProductService) CreateGroup(req CreateProductGroupRequest) (*ProductGroup, error) {
 	group := &ProductGroup{
 		Name:        req.Name,
 		Description: req.Description,
@@ -277,7 +277,7 @@ func (s *ProductService) CreateGroup(req CreateGroupRequest) (*ProductGroup, err
 }
 
 // UpdateGroup updates a product group.
-func (s *ProductService) UpdateGroup(id uint, req UpdateGroupRequest) (*ProductGroup, error) {
+func (s *ProductService) UpdateGroup(id uint, req UpdateProductGroupRequest) (*ProductGroup, error) {
 	group, err := s.GetGroupByID(id)
 	if err != nil {
 		return nil, err

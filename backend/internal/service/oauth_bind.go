@@ -22,7 +22,7 @@ func NewOAuthBindService(db *gorm.DB, log *logger.Logger, userSvc *UserService) 
 	return &OAuthBindService{db: db, log: log, userSvc: userSvc}
 }
 
-type BindOAuthRequest struct {
+type SimpleBindOAuthRequest struct {
 	Provider string `json:"provider" binding:"required"`
 	Code     string `json:"code" binding:"required"`
 }
@@ -49,7 +49,7 @@ func (s *OAuthBindService) GetProviders() []map[string]interface{} {
 }
 
 // Bind binds an OAuth account to the current user.
-func (s *OAuthBindService) Bind(userID uint, req BindOAuthRequest) error {
+func (s *OAuthBindService) Bind(userID uint, req SimpleBindOAuthRequest) error {
 	provider, ok := oauth.Get(req.Provider)
 	if !ok {
 		return errors.New("unsupported oauth provider")

@@ -56,14 +56,14 @@ type SaveValuesRequest struct {
 	Values map[string]string `json:"values" binding:"required"`
 }
 
-type CreateGroupRequest struct {
+type CreateCustomFieldGroupRequest struct {
 	Name      string `json:"name" binding:"required,max=128"`
 	Label     string `json:"label" binding:"required,max=256"`
 	Type      string `json:"type" binding:"required,oneof=product cart client host"`
 	SortOrder int    `json:"sort_order"`
 }
 
-type UpdateGroupRequest struct {
+type UpdateCustomFieldGroupRequest struct {
 	Name      *string `json:"name"`
 	Label     *string `json:"label"`
 	Type      *string `json:"type"`
@@ -293,7 +293,7 @@ func (s *CustomFieldService) GetGroups(typ string) ([]model.CustomFieldGroup, er
 }
 
 // CreateGroup creates a new field group.
-func (s *CustomFieldService) CreateGroup(req CreateGroupRequest) (*model.CustomFieldGroup, error) {
+func (s *CustomFieldService) CreateGroup(req CreateCustomFieldGroupRequest) (*model.CustomFieldGroup, error) {
 	group := model.CustomFieldGroup{
 		Name:      req.Name,
 		Label:     req.Label,
@@ -308,7 +308,7 @@ func (s *CustomFieldService) CreateGroup(req CreateGroupRequest) (*model.CustomF
 }
 
 // UpdateGroup updates an existing group.
-func (s *CustomFieldService) UpdateGroup(id uint, req UpdateGroupRequest) (*model.CustomFieldGroup, error) {
+func (s *CustomFieldService) UpdateGroup(id uint, req UpdateCustomFieldGroupRequest) (*model.CustomFieldGroup, error) {
 	var group model.CustomFieldGroup
 	if err := s.db.First(&group, id).Error; err != nil {
 		return nil, errors.New("group not found")

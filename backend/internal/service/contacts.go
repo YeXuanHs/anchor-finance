@@ -37,7 +37,7 @@ func NewContactService(db *gorm.DB, log *logger.Logger) *ContactService {
 	return &ContactService{db: db, log: log}
 }
 
-type CreateContactRequest struct {
+type CreateUserContactRequest struct {
 	Name     string `json:"name" binding:"required,max=64"`
 	Phone    string `json:"phone" binding:"omitempty,max=32"`
 	Email    string `json:"email" binding:"omitempty,email"`
@@ -49,7 +49,7 @@ type CreateContactRequest struct {
 	ZipCode  string `json:"zip_code" binding:"omitempty,max=16"`
 }
 
-type UpdateContactRequest struct {
+type UpdateUserContactRequest struct {
 	Name     string `json:"name" binding:"omitempty,max=64"`
 	Phone    string `json:"phone" binding:"omitempty,max=32"`
 	Email    string `json:"email" binding:"omitempty,email"`
@@ -62,7 +62,7 @@ type UpdateContactRequest struct {
 }
 
 // Create creates a new contact for a user.
-func (s *ContactService) Create(userID uint, req CreateContactRequest) (*Contact, error) {
+func (s *ContactService) Create(userID uint, req CreateUserContactRequest) (*Contact, error) {
 	country := req.Country
 	if country == "" {
 		country = "CN"
@@ -121,7 +121,7 @@ func (s *ContactService) GetList(userID uint, page, pageSize int, keyword string
 }
 
 // Update updates a contact.
-func (s *ContactService) Update(userID, contactID uint, req UpdateContactRequest) (*Contact, error) {
+func (s *ContactService) Update(userID, contactID uint, req UpdateUserContactRequest) (*Contact, error) {
 	contact, err := s.GetByID(userID, contactID)
 	if err != nil {
 		return nil, err
