@@ -3,84 +3,89 @@ package service
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"time"
 
-	"anchorfinance/pkg/logger"
+	"anchorfinance/internal/model"
 
 	"gorm.io/gorm"
 )
 
-type ApiKey struct {
-	ID        uint       `gorm:"primaryKey" json:"id"`
-	UserID    uint       `gorm:"index;not null" json:"user_id"`
-	Name      string     `gorm:"type:varchar(64);not null" json:"name"`
-	Key       string     `gorm:"type:varchar(64);uniqueIndex;not null" json:"key"`
-	Secret    string     `gorm:"type:varchar(128)" json:"-"`
-	Permissions string   `gorm:"type:json" json:"permissions"`
-	RateLimit int        `gorm:"default:100" json:"rate_limit"`
-	IsActive  bool       `gorm:"default:true;index" json:"is_active"`
-	LastUsedAt *time.Time `json:"last_used_at"`
-	ExpiresAt *time.Time  `json:"expires_at"`
-	CreatedAt time.Time   `json:"created_at"`
+// APIManageService manages API keys for admin.
+type APIManageService struct {
+	db *gorm.DB
 }
 
-type ApiManageService struct {
-	db  *gorm.DB
-	log *logger.Logger
+func NewAPIManageService(db *gorm.DB) *APIManageService {
+	return &APIManageService{db: db}
 }
 
-func NewApiManageService(db *gorm.DB, log *logger.Logger) *ApiManageService {
-	return &ApiManageService{db: db, log: log}
-}
+func (s *APIManageService) List(page, pageSize int, keyword string, status *int16) ([]model.APIKey, int64, error) {
+	var items []model.APIKey
+	var total int64
 
-func (s *ApiManageService) CreateKey(userID uint, name string, permissions string) (*ApiKey, error) {
-	keyBytes := make([]byte, 32)
-	rand.Read(keyBytes)
-	key := hex.EncodeToString(keyBytes)
-	secretBytes := make([]byte, 32)
-	rand.Read(secretBytes)
-	secret := hex.EncodeToString(secretBytes)
-	apiKey := ApiKey{
-		UserID:    userID,
-		Name:      name,
-		Key:       key,
-		Secret:    secret,
-		Permissions: permissions,
-		IsActive:  true,
+	query := s.db.Model(&model.APIKey{})
+	if keyword != "" {
+		query = query.Where("name LIKE ?", "%"+keyword+"%")
 	}
-	if err := s.db.Create(&apiKey).Error; err != nil {
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+
+	query.Count(&total)
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&items).Error; err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
+}
+
+func (s *APIManageService) GetByID(id uint) (*model.APIKey, error) {
+	var item model.APIKey
+	if err := s.db.First(&item, id).Error; err != nil {
 		return nil, err
 	}
-	return &apiKey, nil
+	return &item, nil
 }
 
-func (s *ApiManageService) GetByUserID(userID uint) ([]ApiKey, error) {
-	var keys []ApiKey
-	err := s.db.Where("user_id = ?", userID).Order("id DESC").Find(&keys).Error
-	return keys, err
+func (s *APIManageService) Create(apiKey *model.APIKey) error {
+	apiKey.Secret = generateAPISecret()
+	apiKey.CreatedAt = time.Now()
+	return s.db.Create(apiKey).Error
 }
 
-func (s *ApiManageService) GetByKey(key string) (*ApiKey, error) {
-	var apiKey ApiKey
-	if err := s.db.Where("`key` = ? AND is_active = ?", key, true).First(&apiKey).Error; err != nil {
-		return nil, err
+func (s *APIManageService) Update(id uint, updates map[string]interface{}) error {
+	return s.db.Model(&model.APIKey{}).Where("id = ?", id).Updates(updates).Error
+}
+
+func (s *APIManageService) Delete(id uint) error {
+	return s.db.Delete(&model.APIKey{}, id).Error
+}
+
+func (s *APIManageService) SetStatus(id uint, status int16) error {
+	return s.db.Model(&model.APIKey{}).Where("id = ?", id).Update("status", status).Error
+}
+
+func (s *APIManageService) Regenerate(id uint) (string, error) {
+	newSecret := generateAPISecret()
+	if err := s.db.Model(&model.APIKey{}).Where("id = ?", id).Update("secret", newSecret).Error; err != nil {
+		return "", err
 	}
-	return &apiKey, nil
+	return newSecret, nil
 }
 
-func (s *ApiManageService) ToggleStatus(id uint, userID uint) error {
-	result := s.db.Model(&ApiKey{}).Where("id = ? AND user_id = ?", id, userID).Update("is_active", gorm.Expr("NOT is_active"))
-	if result.RowsAffected == 0 {
-		return errors.New("api key not found")
-	}
-	return result.Error
+func (s *APIManageService) GetPermissions() ([]string, error) {
+	return []string{
+		"products:read", "products:write",
+		"orders:read", "orders:write",
+		"users:read", "users:write",
+		"tickets:read", "tickets:write",
+		"invoices:read", "invoices:write",
+		"hosts:read", "hosts:write",
+	}, nil
 }
 
-func (s *ApiManageService) Delete(id uint, userID uint) error {
-	result := s.db.Where("id = ? AND user_id = ?", id, userID).Delete(&ApiKey{})
-	if result.RowsAffected == 0 {
-		return errors.New("api key not found")
-	}
-	return result.Error
+func generateAPISecret() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }

@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var log = logger.New()
+var log = logger.New("info")
 
 type PublicHandler struct {
 	svc *service.PublicService
