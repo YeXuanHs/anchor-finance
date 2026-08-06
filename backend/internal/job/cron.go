@@ -104,3 +104,22 @@ func (j *CronJobs) ProductStatusCheck() {
 
 	j.log.Infof("ProductStatusCheck: %d products marked as expired", result.RowsAffected)
 }
+
+// Package-level cron instance for Start/StopAll
+var defaultCron *cron.Cron
+
+// Start starts the default cron jobs (package-level convenience).
+func Start() {
+	if defaultCron == nil {
+		defaultCron = cron.New()
+	}
+	defaultCron.Start()
+}
+
+// StopAll stops all cron jobs.
+func StopAll() {
+	if defaultCron != nil {
+		ctx := defaultCron.Stop()
+		<-ctx.Done()
+	}
+}

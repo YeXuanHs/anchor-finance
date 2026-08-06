@@ -83,7 +83,7 @@ func main() {
 		if err := db.SetSystemSetting("jwt_secret", jwtSecret, "jwt", "JWT 签名密钥（自动生成）"); err != nil {
 			log.Fatalf("无法保存 JWT 密钥: %v", err)
 		}
-		logger.Warn("已自动生成 JWT 密钥并保存到数据库")
+		logger.Warnf("已自动生成 JWT 密钥并保存到数据库")
 	}
 	jwtExpireStr := db.GetSystemSetting("jwt_expire_hours")
 	jwtExpire := 72
@@ -101,7 +101,7 @@ func main() {
 	}
 
 	// 自动迁移插件表
-	if err := db.DB().AutoMigrate(
+	if err := db.GetDB().AutoMigrate(
 		&model.MarketplaceListing{},
 		&model.MarketplaceOrder{},
 		&model.MarketplaceChat{},
@@ -114,7 +114,7 @@ func main() {
 	}
 
 	// 插入默认菜单数据（如果表为空）
-	initDefaultMenus(db.DB())
+	initDefaultMenus(db.GetDB())
 
 	// 启动定时任务
 	go job.Start()
@@ -139,7 +139,7 @@ func main() {
 
 	// 启动上游产品库存、价格和可配置选项自动同步（默认15分钟）
 	upstreamSyncInterval := getUpstreamSyncInterval()
-	upstreamSvc := service.NewUpstreamService(db.DB(), logger.Default())
+	upstreamSvc := service.NewUpstreamService(db.GetDB(), logger.Default())
 	go upstreamSvc.StartAutoSync(upstreamSyncInterval)
 
 	<-quit
