@@ -116,3 +116,56 @@ func (s *BindService) UpdateTokens(userID uint, provider, accessToken, refreshTo
 	}
 	return nil
 }
+
+// GetDetail returns details of a specific binding.
+func (s *BindService) GetDetail(id string) (*model.OAuthBind, error) {
+	var bind model.OAuthBind
+	if err := s.db.First(&bind, id).Error; err != nil {
+		return nil, err
+	}
+	return &bind, nil
+}
+
+// GetUserBindings returns all bindings for a specific user.
+func (s *BindService) GetUserBindings(userID string) ([]model.OAuthBind, error) {
+	var binds []model.OAuthBind
+	if err := s.db.Where("user_id = ?", userID).Find(&binds).Error; err != nil {
+		return nil, err
+	}
+	return binds, nil
+}
+
+// Delete deletes a binding.
+func (s *BindService) Delete(id string) error {
+	result := s.db.Delete(&model.OAuthBind{}, id)
+	if result.RowsAffected == 0 {
+		return errors.New("binding not found")
+	}
+	return result.Error
+}
+
+// GetProviders returns available OAuth providers.
+func (s *BindService) GetProviders() ([]map[string]interface{}, error) {
+	var providers []map[string]interface{}
+	s.db.Model(&model.OAuthBind{}).Select("provider, COUNT(*) as count").Group("provider").Find(&providers)
+	return providers, nil
+}
+
+// GetStats returns binding statistics.
+func (s *BindService) GetStats() (map[string]interface{}, error) {
+	var total int64
+	s.db.Model(&model.OAuthBind{}).Count(&total)
+
+	var todayNew int64
+	s.db.Model(&model.OAuthBind{}).Where("DATE(created_at) = CURRENT_DATE").Count(&todayNew)
+
+	return map[string]interface{}{
+		"total":     total,
+		"today_new": todayNew,
+	}, nil
+}
+
+// BatchUnbind batch unbinds multiple bindings.
+func (s *BindService) BatchUnbind(ids []string) error {
+	return s.db.Delete(&model.OAuthBind{}, ids).Error
+}
