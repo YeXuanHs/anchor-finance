@@ -203,6 +203,9 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	r.GET("/geetest/register", captchaHandler.GetGeetestConfig)
 	r.POST("/geetest/validate", captchaHandler.VerifyGeetest)
 
+	// AI Shopping配置（公开）
+	r.GET("/ai-shopping/config", aiShoppingHandler.GetConfig)
+
 	// 产品
 	r.GET("/products", productHandler.GetList)
 	r.GET("/products/:id", productHandler.GetDetail)
@@ -670,8 +673,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		user.GET("/user/services/software", userServicesHandler.GetSoftwareServices)
 		user.POST("/user/services/software/reset-key", userServicesHandler.PostSoftwareResetKey)
 
-		// AI Shopping
-		user.GET("/ai-shopping/config", aiShoppingHandler.GetConfig)
+		// AI Shopping (session routes require auth)
 		user.POST("/ai-shopping/session", func(c *gin.Context) {
 			sessionID := fmt.Sprintf("shop_%d_%d", c.GetUint("user_id"), time.Now().UnixNano())
 			c.JSON(200, gin.H{"code": 0, "data": gin.H{"session_id": sessionID}})
