@@ -872,3 +872,146 @@ func (s *UserManageService) GetRelationUserList(page, pageSize int, keyword stri
 	}
 	return users, total, nil
 }
+
+// GetUserProductInvoices returns invoices related to user products.
+func (s *UserManageService) GetUserProductInvoices(uid uint, page, pageSize int, order, sort string) ([]model.Invoice, int64, error) {
+	var invoices []model.Invoice
+	var total int64
+
+	query := s.db.Model(&model.Invoice{}).Where("user_id = ?", uid)
+	query.Count(&total)
+
+	orderBy := order + " " + sort
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order(orderBy).Find(&invoices).Error; err != nil {
+		return nil, 0, err
+	}
+	return invoices, total, nil
+}
+
+// GetHostsByUID returns hosts by user ID.
+func (s *UserManageService) GetHostsByUID(uid uint) ([]model.Host, error) {
+	var hosts []model.Host
+	if err := s.db.Where("owner_id = ?", uid).Find(&hosts).Error; err != nil {
+		return nil, err
+	}
+	return hosts, nil
+}
+
+// GetCertifyList returns certification list.
+func (s *UserManageService) GetCertifyList(page, pageSize int, status, keyword string) ([]model.Certification, int64, error) {
+	var items []model.Certification
+	var total int64
+
+	query := s.db.Model(&model.Certification{})
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+	if keyword != "" {
+		q := "%" + keyword + "%"
+		query = query.Where("real_name LIKE ? OR id_card LIKE ?", q, q)
+	}
+
+	query.Count(&total)
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&items)
+	return items, total, nil
+}
+
+// GetCertifyLogList returns certification log list.
+func (s *UserManageService) GetCertifyLogList(page, pageSize int, uid, logType string) ([]map[string]interface{}, int64, error) {
+	var logs []map[string]interface{}
+	var total int64
+
+	query := s.db.Table("system_logs").Where("target_type = ?", "certification")
+	if uid != "" {
+		query = query.Where("user_id = ?", uid)
+	}
+	if logType != "" {
+		query = query.Where("action = ?", logType)
+	}
+
+	query.Count(&total)
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
+	return logs, total, nil
+}
+
+// GetCertifiPersonDetail returns personal certification detail.
+func (s *UserManageService) GetCertifiPersonDetail(id uint) (*model.Certification, error) {
+	var cert model.Certification
+	if err := s.db.Where("id = ? AND type = ?", id, "individual").First(&cert).Error; err != nil {
+		return nil, err
+	}
+	return &cert, nil
+}
+
+// ModifyCertifiPerson modifies personal certification.
+func (s *UserManageService) ModifyCertifiPerson(id uint, data map[string]interface{}) error {
+	return s.db.Model(&model.Certification{}).Where("id = ? AND type = ?", id, "individual").Updates(data).Error
+}
+
+// GetCertifiCompanyDetail returns company certification detail.
+func (s *UserManageService) GetCertifiCompanyDetail(id uint) (*model.Certification, error) {
+	var cert model.Certification
+	if err := s.db.Where("id = ? AND type = ?", id, "enterprise").First(&cert).Error; err != nil {
+		return nil, err
+	}
+	return &cert, nil
+}
+
+// ModifyCertifiCompany modifies company certification.
+func (s *UserManageService) ModifyCertifiCompany(id uint, data map[string]interface{}) error {
+	return s.db.Model(&model.Certification{}).Where("id = ? AND type = ?", id, "enterprise").Updates(data).Error
+}
+
+// GetUserProductAccounts returns product accounts for a user.
+func (s *UserManageService) GetUserProductAccounts(uid uint, page, pageSize int) ([]model.ClientService, int64, error) {
+	var services []model.ClientService
+	var total int64
+
+	query := s.db.Model(&model.ClientService{}).Where("user_id = ?", uid)
+	query.Count(&total)
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&services)
+	return services, total, nil
+}
+
+// GenerateUserToken generates a JWT token for admin impersonation.
+func (s *UserManageService) GenerateUserToken(userID uint) (string, error) {
+	var user model.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return "", fmt.Errorf("user not found: %w", err)
+	}
+	token := fmt.Sprintf("admin_impersonate_%d_%d", userID, time.Now().Unix())
+	return token, nil
+}
+
+// DeleteCancelRequest deletes a cancel request.
+func (s *UserManageService) DeleteCancelRequest(id uint) error {
+	result := s.db.Delete(&model.CancelRequest{}, id)
+	if result.RowsAffected == 0 {
+		return errors.New("request not found")
+	}
+	return result.Error
+}
+
+// AddRecordLog adds an operation record log.
+func (s *UserManageService) AddRecordLog(uid, adminID uint, content string) error {
+	log := &model.AdminNote{
+		UserID:    uid,
+		AdminID:   adminID,
+		Content:   content,
+		IsPrivate: false,
+	}
+	return s.db.Create(log).Error
+}
+
+// AddRemarkLog adds a remark log for a user.
+func (s *UserManageService) AddRemarkLog(uid, adminID uint, content string) error {
+	remark := &model.UserRemark{
+		UserID:  uid,
+		Content: content,
+	}
+	return s.db.Create(remark).Error
+}
