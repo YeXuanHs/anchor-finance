@@ -4,43 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	"anchorfinance/internal/model"
 	"anchorfinance/pkg/logger"
 
 	"gorm.io/gorm"
 )
 
-type Product struct {
-	ID          uint           `gorm:"primaryKey" json:"id"`
-	Name        string         `gorm:"size:128;not null" json:"name"`
-	Description string         `gorm:"type:text" json:"description"`
-	Price       float64        `gorm:"type:decimal(12,2);not null" json:"price"`
-	Period      int            `gorm:"not null;comment:duration in days" json:"period"`
-	PeriodUnit  string         `gorm:"size:16;default:day;comment:day/month/year" json:"period_unit"`
-	Category    string         `gorm:"size:64" json:"category"`
-	Stock       int            `gorm:"default:-1;comment:-1=unlimited" json:"stock"`
-	Sort        int            `gorm:"default:0" json:"sort"`
-	Status      int            `gorm:"default:1;comment:1=active 0=disabled" json:"status"`
-	Config      string         `gorm:"type:text;comment:json config" json:"config"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
-}
-
-type UserProduct struct {
-	ID         uint       `gorm:"primaryKey" json:"id"`
-	UserID     uint       `gorm:"index;not null" json:"user_id"`
-	ProductID  uint       `gorm:"not null" json:"product_id"`
-	Product    Product    `gorm:"foreignKey:ProductID" json:"product"`
-	OrderID    uint       `json:"order_id"`
-	OrderNo    string     `gorm:"size:64" json:"order_no"`
-	StartAt    time.Time  `json:"start_at"`
-	ExpireAt   time.Time  `gorm:"index" json:"expire_at"`
-	Status     int        `gorm:"default:1;comment:1=active 2=expired 3=cancelled" json:"status"`
-	AutoRenew  bool       `gorm:"default:false" json:"auto_renew"`
-	Remark     string     `gorm:"size:256" json:"remark"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
-}
+type Product = model.Product
+type UserProduct = model.UserProduct
 
 type ProductService struct {
 	db  *gorm.DB

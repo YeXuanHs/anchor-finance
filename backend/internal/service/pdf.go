@@ -295,7 +295,7 @@ func (s *PDFService) GenerateContractWithSeal(contractID uint, sealPath string) 
 	// 读取电子章图片
 	sealImage, err := readSealImage(sealPath)
 	if err != nil {
-		logger.Warn("Failed to read seal image, generating without seal", "error", err)
+		logger.Warnf("Failed to read seal image, generating without seal: %v", err)
 		return s.GenerateContractPDF(contractID)
 	}
 

@@ -13,22 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type Order struct {
-	ID         uint           `gorm:"primaryKey" json:"id"`
-	OrderNo    string         `gorm:"uniqueIndex;size:64;not null" json:"order_no"`
-	UserID     uint           `gorm:"index;not null" json:"user_id"`
-	ProductID  uint           `gorm:"not null" json:"product_id"`
-	Product    Product        `gorm:"foreignKey:ProductID" json:"product"`
-	Quantity   int            `gorm:"default:1" json:"quantity"`
-	TotalPrice float64        `gorm:"type:decimal(12,2);not null" json:"total_price"`
-	Period     int            `gorm:"not null" json:"period"`
-	PeriodUnit string         `gorm:"size:16;default:day" json:"period_unit"`
-	Status     int            `gorm:"default:0;comment:0=pending 1=paid 2=cancelled 3=expired" json:"status"`
-	Remark     string         `gorm:"size:256" json:"remark"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
-}
+type Order = model.Order
 
 type OrderService struct {
 	db      *gorm.DB
@@ -67,15 +52,14 @@ func (s *OrderService) Create(userID uint, req CreateOrderRequest) (*Order, erro
 	}
 
 	order := &Order{
-		OrderNo:    util.GenerateOrderNo(),
-		UserID:     userID,
-		ProductID:  product.ID,
-		Quantity:   qty,
-		TotalPrice: product.Price * float64(qty),
-		Period:     product.Period,
-		PeriodUnit: product.PeriodUnit,
-		Status:     0,
-		Remark:     req.Remark,
+		OrderNo:      util.GenerateOrderNo(),
+		UserID:       userID,
+		ProductID:    product.ID,
+		Quantity:     qty,
+		Total:        product.Price * float64(qty),
+		BillingCycle: product.BillingCycle,
+		Status:       0,
+		AdminNotes:   req.Remark,
 	}
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
@@ -148,14 +132,12 @@ func (s *OrderService) Pay(orderID uint) (*Order, error) {
 
 		// Create user_product
 		now := time.Now()
-		expire := calcExpire(now, order.Period, order.PeriodUnit)
+		expire := calcExpire(now, order.BillingCycle)
 		up := &UserProduct{
 			UserID:    order.UserID,
 			ProductID: order.ProductID,
 			OrderID:   order.ID,
-			OrderNo:   order.OrderNo,
-			StartAt:   now,
-			ExpireAt:  expire,
+			Name:      order.Product.Name,
 			Status:    1,
 		}
 		if err := tx.Create(up).Error; err != nil {
@@ -237,14 +219,13 @@ func (s *OrderService) PayWithMethod(userID, orderID uint, paymentMethod string)
 			return err
 		}
 		now := time.Now()
-		expire := calcExpire(now, order.Period, order.PeriodUnit)
+		expire := calcExpire(now, order.BillingCycle)
 		up := &UserProduct{
 			UserID:    order.UserID,
 			ProductID: order.ProductID,
 			OrderID:   order.ID,
-			OrderNo:   order.OrderNo,
-			StartAt:   now,
-			ExpireAt:  expire,
+			Name:      order.Product.Name,
+			NextDueDate: &expire,
 			Status:    1,
 		}
 		return tx.Create(up).Error
@@ -301,14 +282,22 @@ func (s *OrderService) GetList(page, pageSize int, status *int, userID *uint) ([
 	return orders, total, nil
 }
 
-func calcExpire(start time.Time, period int, unit string) time.Time {
-	switch unit {
-	case "month":
-		return start.AddDate(0, period, 0)
-	case "year":
-		return start.AddDate(period, 0, 0)
-	default: // day
-		return start.AddDate(0, 0, period)
+func calcExpire(start time.Time, billingCycle string) time.Time {
+	switch billingCycle {
+	case "monthly":
+		return start.AddDate(0, 1, 0)
+	case "quarterly":
+		return start.AddDate(0, 3, 0)
+	case "semi-annually":
+		return start.AddDate(0, 6, 0)
+	case "annually":
+		return start.AddDate(1, 0, 0)
+	case "biennially":
+		return start.AddDate(2, 0, 0)
+	case "triennially":
+		return start.AddDate(3, 0, 0)
+	default: // onetime or unknown
+		return start.AddDate(10, 0, 0) // 10年后
 	}
 }
 
@@ -465,12 +454,12 @@ func (s *OrderService) AdminCreateOrder(adminID uint, req AdminCreateOrderReques
 			OrderNo:     util.GenerateOrderNo(),
 			UserID:      req.UserID,
 			ProductID:   items[0].product.ID, // primary product
-			PromoCodeID: promoID,
+			PromoCodeID: &promoID,
 			Quantity:    req.Items[0].Quantity,
 			TotalPrice:  finalTotal,
-			Period:      items[0].product.BillingCycle,
-			Status:      int(req.Status),
-			Remark:      req.AdminNotes,
+			BillingCycle: items[0].product.BillingCycle,
+			Status:      int16(req.Status),
+			AdminNotes:  req.AdminNotes,
 		}
 		if order.Status == 0 {
 			order.Status = 0 // Pending
@@ -716,15 +705,14 @@ func (s *OrderService) ActivateOrder(orderID uint) (*Order, error) {
 		}
 
 		// Create user_product
-		expire := calcExpire(now, order.Period, order.PeriodUnit)
+		expire := calcExpire(now, order.BillingCycle)
 		up := &UserProduct{
-			UserID:    order.UserID,
-			ProductID: order.ProductID,
-			OrderID:   order.ID,
-			OrderNo:   order.OrderNo,
-			StartAt:   now,
-			ExpireAt:  expire,
-			Status:    1,
+			UserID:      order.UserID,
+			ProductID:   order.ProductID,
+			OrderID:     order.ID,
+			Name:        order.Product.Name,
+			NextDueDate: &expire,
+			Status:      1,
 		}
 		if err := tx.Create(up).Error; err != nil {
 			return err
@@ -732,7 +720,7 @@ func (s *OrderService) ActivateOrder(orderID uint) (*Order, error) {
 
 		// Create invoice if needed
 		if s.invSvc != nil {
-			if _, err := s.invSvc.CreateWithTx(tx, order.UserID, order.ID, order.OrderNo, order.TotalPrice); err != nil {
+			if _, err := s.invSvc.CreateWithTx(tx, order.UserID, order.ID, order.OrderNo, order.Total); err != nil {
 				return err
 			}
 		}
