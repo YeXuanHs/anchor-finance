@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -655,9 +656,12 @@ func (s *HostEnhancedService) GetTrafficUsage(hostID uint) (*TrafficUsageData, e
 
 	// Traffic data from host metadata
 	var usedGB float64
-	if host.Metadata != nil {
-		if v, ok := host.Metadata["traffic_used_gb"].(float64); ok {
-			usedGB = v
+	if len(host.Metadata) > 0 {
+		var meta map[string]interface{}
+		if err := json.Unmarshal(host.Metadata, &meta); err == nil {
+			if v, ok := meta["traffic_used_gb"].(float64); ok {
+				usedGB = v
+			}
 		}
 	}
 
@@ -667,10 +671,13 @@ func (s *HostEnhancedService) GetTrafficUsage(hostID uint) (*TrafficUsageData, e
 	}
 
 	var resetDate *time.Time
-	if host.Metadata != nil {
-		if v, ok := host.Metadata["traffic_reset_date"].(string); ok && v != "" {
-			if t, err := time.Parse("2006-01-02", v); err == nil {
-				resetDate = &t
+	if len(host.Metadata) > 0 {
+		var meta map[string]interface{}
+		if err := json.Unmarshal(host.Metadata, &meta); err == nil {
+			if v, ok := meta["traffic_reset_date"].(string); ok && v != "" {
+				if t, err := time.Parse("2006-01-02", v); err == nil {
+					resetDate = &t
+				}
 			}
 		}
 	}
@@ -853,11 +860,12 @@ func (s *HostEnhancedService) HideHost(hostID, userID uint) error {
 	}
 
 	tags := map[string]interface{}{}
-	if host.Tags != nil {
-		tags = host.Tags
+	if len(host.Tags) > 0 {
+		_ = json.Unmarshal(host.Tags, &tags)
 	}
 	tags["hidden"] = true
-	return s.db.Model(host).Update("tags", datatypes.JSON(tags)).Error
+	data, _ := json.Marshal(tags)
+	return s.db.Model(host).Update("tags", datatypes.JSON(data)).Error
 }
 
 // ═══════════════════ Cancel / Terminate ═══════════════════
@@ -951,21 +959,24 @@ func (s *HostEnhancedService) GetDedicatedServer(hostID uint) (*DedicatedServerD
 		BandwidthMbps: host.BandwidthMbps,
 	}
 
-	if host.Metadata != nil {
-		if v, ok := host.Metadata["port_speed"].(string); ok {
-			data.PortSpeed = v
-		}
-		if v, ok := host.Metadata["pdu"].(string); ok {
-			data.PDU = v
-		}
-		if v, ok := host.Metadata["switch"].(string); ok {
-			data.Switch = v
-		}
-		if v, ok := host.Metadata["remote_hand"].(bool); ok {
-			data.RemoteHand = v
-		}
-		if v, ok := host.Metadata["ipmi"].(string); ok {
-			data.IPMI = v
+	if len(host.Metadata) > 0 {
+		var meta map[string]interface{}
+		if err := json.Unmarshal(host.Metadata, &meta); err == nil {
+			if v, ok := meta["port_speed"].(string); ok {
+				data.PortSpeed = v
+			}
+			if v, ok := meta["pdu"].(string); ok {
+				data.PDU = v
+			}
+			if v, ok := meta["switch"].(string); ok {
+				data.Switch = v
+			}
+			if v, ok := meta["remote_hand"].(bool); ok {
+				data.RemoteHand = v
+			}
+			if v, ok := meta["ipmi"].(string); ok {
+				data.IPMI = v
+			}
 		}
 	}
 
@@ -1062,17 +1073,17 @@ func (s *HostEnhancedService) BuyFlowPacket(userID, hostID, packetID uint) (*Hos
 
 		// Add traffic to host
 		currentUsed := 0.0
-		if host.Metadata != nil {
-			if v, ok := host.Metadata["traffic_used_gb"].(float64); ok {
-				currentUsed = v
+		metadata := map[string]interface{}{}
+		if len(host.Metadata) > 0 {
+			if err := json.Unmarshal(host.Metadata, &metadata); err == nil {
+				if v, ok := metadata["traffic_used_gb"].(float64); ok {
+					currentUsed = v
+				}
 			}
 		}
-		metadata := map[string]interface{}{}
-		if host.Metadata != nil {
-			metadata = host.Metadata
-		}
 		metadata["flow_packet_added_gb"] = float64(packet.AmountGB)
-		tx.Model(host).Update("metadata", datatypes.JSON(metadata))
+		data, _ := json.Marshal(metadata)
+		tx.Model(host).Update("metadata", datatypes.JSON(data))
 
 		tx.Model(purchase).Update("status", "paid")
 		return nil
