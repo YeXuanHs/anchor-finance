@@ -421,7 +421,7 @@ func (h *OAuthHandler) UnbindAccount(c *gin.Context) {
 	provider := c.Param("provider")
 	userID := c.GetUint("user_id")
 
-	if err := h.oauthSvc.Unbind(userID, provider); err != nil {
+	if err := h.oauthSvc.UnbindAccount(userID, provider); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
