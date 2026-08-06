@@ -31,9 +31,13 @@ func (s *DownloadService) GetCategories() ([]model.DownloadCategory, error) {
 
 // CreateCategory creates a download category.
 func (s *DownloadService) CreateCategory(req CreateDownloadCategoryRequest) (*model.DownloadCategory, error) {
+	var parentID uint
+	if req.ParentID != nil {
+		parentID = *req.ParentID
+	}
 	cat := &model.DownloadCategory{
 		Name:      req.Name,
-		ParentID:  req.ParentID,
+		ParentID:  parentID,
 		SortOrder: req.SortOrder,
 		IsActive:  true,
 	}

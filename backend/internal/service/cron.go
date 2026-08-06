@@ -514,7 +514,7 @@ func (s *CronService) execInvoiceReminderTask() (error, string) {
 		msg := &model.SystemMessage{
 			UserID:  inv.UserID,
 			Title:   fmt.Sprintf("账单到期提醒: %s", inv.InvoiceNo),
-			Content: fmt.Sprintf("您的账单 %s 将于 %s 到期，请及时支付。金额: %.2f %s", inv.InvoiceNo, inv.DueDate.Format("2006-01-02"), inv.Total.InexactFloat64(), inv.Currency),
+			Content: fmt.Sprintf("您的账单 %s 将于 %s 到期，请及时支付。金额: %.2f %s", inv.InvoiceNo, inv.DueDate.Format("2006-01-02"), inv.Total, inv.Currency),
 			Type:    "system",
 		}
 		if err := s.db.Create(msg).Error; err != nil {
@@ -613,7 +613,7 @@ func (s *CronService) execAutoRenewTask() (error, string) {
 		msg := &model.SystemMessage{
 			UserID:  up.UserID,
 			Title:   fmt.Sprintf("自动续费订单已创建: %s", up.Name),
-			Content: fmt.Sprintf("您的产品 %s 自动续费订单 %s 已创建，金额: %.2f %s，请及时支付。", up.Name, order.OrderNo, rc.Amount.InexactFloat64(), up.Currency),
+			Content: fmt.Sprintf("您的产品 %s 自动续费订单 %s 已创建，金额: %.2f %s，请及时支付。", up.Name, order.OrderNo, rc.Amount, up.Currency),
 			Type:    "order",
 			Link:    fmt.Sprintf("/order/%d", order.ID),
 		}

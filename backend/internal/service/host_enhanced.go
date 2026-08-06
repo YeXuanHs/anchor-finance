@@ -10,7 +10,6 @@ import (
 	"anchorfinance/internal/util"
 	"anchorfinance/pkg/logger"
 
-	"github.com/shopspring/decimal"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -320,8 +319,8 @@ func (s *HostEnhancedService) SubmitRenewal(userID, hostID uint, cycle, paymentM
 		OrderNo:       util.GenerateOrderNo(),
 		UserID:        userID,
 		Type:          "renew",
-		Amount:        decimal.NewFromFloat(price),
-		Total:         decimal.NewFromFloat(price),
+		Amount:        price,
+		Total:         price,
 		Currency:      "CNY",
 		BillingCycle:  cycle,
 		Quantity:      1,
@@ -597,11 +596,12 @@ func (s *HostEnhancedService) SetDownstream(hostID uint, downstreamID string) er
 	}
 
 	metadata := map[string]interface{}{}
-	if host.Metadata != nil {
-		metadata = host.Metadata
+	if len(host.Metadata) > 0 {
+		_ = json.Unmarshal(host.Metadata, &metadata)
 	}
 	metadata["downstream_id"] = downstreamID
-	return s.db.Model(host).Update("metadata", datatypes.JSON(metadata)).Error
+	data, _ := json.Marshal(metadata)
+	return s.db.Model(host).Update("metadata", datatypes.JSON(data)).Error
 }
 
 // SetSecondVerify toggles second verification for a host.
@@ -1030,8 +1030,8 @@ func (s *HostEnhancedService) BuyFlowPacket(userID, hostID, packetID uint) (*Hos
 			OrderNo:       util.GenerateOrderNo(),
 			UserID:        userID,
 			Type:          "new",
-			Amount:        decimal.NewFromFloat(packet.Price),
-			Total:         decimal.NewFromFloat(packet.Price),
+			Amount:        packet.Price,
+			Total:         packet.Price,
 			Currency:      "CNY",
 			BillingCycle:  "onetime",
 			Quantity:      1,
@@ -1278,8 +1278,8 @@ func (s *HostEnhancedService) renewSingleHost(userID, hostID uint, cycle string)
 		OrderNo:       util.GenerateOrderNo(),
 		UserID:        userID,
 		Type:          "renew",
-		Amount:        decimal.NewFromFloat(price),
-		Total:         decimal.NewFromFloat(price),
+		Amount:        price,
+		Total:         price,
 		Currency:      "CNY",
 		BillingCycle:  cycle,
 		Quantity:      1,

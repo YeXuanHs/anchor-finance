@@ -273,12 +273,17 @@ func boolToInt(b bool) int {
 // callUpstreamAction calls the upstream provider API to perform a host action.
 // Returns nil if no upstream is configured (manually managed host).
 func (s *HostService) callUpstreamAction(host *Host, action, params string) error {
-	if host.Metadata == nil {
+	if len(host.Metadata) == 0 {
 		return nil // manually managed host, no upstream
 	}
 
-	providerIDRaw, hasProvider := host.Metadata["upstream_provider_id"]
-	productIDRaw, hasProduct := host.Metadata["upstream_product_id"]
+	var meta map[string]interface{}
+	if err := json.Unmarshal(host.Metadata, &meta); err != nil {
+		return nil // invalid metadata
+	}
+
+	providerIDRaw, hasProvider := meta["upstream_provider_id"]
+	productIDRaw, hasProduct := meta["upstream_product_id"]
 	if !hasProvider || !hasProduct {
 		return nil // no upstream configured
 	}
