@@ -1223,3 +1223,55 @@ func (s *DcimService) RefreshServerStatus(serverID uint) error {
 	}
 	return nil
 }
+
+// ==================== Buy Records ====================
+
+// DcimBuyRecord DCIM购买记录
+type DcimBuyRecord struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	UserID    uint      `gorm:"index" json:"user_id"`
+	ProductID uint      `json:"product_id"`
+	ServerID  uint      `json:"server_id"`
+	Amount    float64   `json:"amount"`
+	Status    string    `gorm:"size:32" json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ListBuyRecords returns paginated buy records.
+func (s *DcimService) ListBuyRecords(page, pageSize int, search, order, sort string) ([]DcimBuyRecord, int64, error) {
+	var records []DcimBuyRecord
+	var total int64
+
+	q := s.db.Model(&DcimBuyRecord{})
+	if search != "" {
+		q = q.Where("id = ? OR user_id = ?", search, search)
+	}
+
+	q.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := q.Offset(offset).Limit(pageSize).Order(fmt.Sprintf("%s %s", order, sort)).Find(&records).Error; err != nil {
+		return nil, 0, err
+	}
+	return records, total, nil
+}
+
+// DeleteBuyRecord deletes a buy record by ID.
+func (s *DcimService) DeleteBuyRecord(id uint) error {
+	result := s.db.Delete(&DcimBuyRecord{}, id)
+	if result.RowsAffected == 0 {
+		return errors.New("record not found")
+	}
+	return result.Error
+}
+
+// GetProductList returns all DCIM products.
+func (s *DcimService) GetProductList() ([]map[string]interface{}, error) {
+	var products []map[string]interface{}
+	if err := s.db.Table("products").Select("id, name, price, billing_cycle").
+		Where("type = ?", "dcim").Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
+}

@@ -169,3 +169,37 @@ func (s *CaptchaConfigService) GetBasicConfig() map[string]interface{} {
 		"captcha_combination": s.GetCaptchaCombination(),
 	}
 }
+
+// GetPublicCaptchaConfig 获取公开的验证码配置（用于前端）
+func (s *CaptchaConfigService) GetPublicCaptchaConfig() map[string]interface{} {
+	config := map[string]interface{}{
+		"enabled": s.IsCaptchaEnabled(),
+		"type":    s.GetCaptchaType(),
+		"scenes":  s.GetSceneConfig(),
+	}
+
+	// 如果是极验，返回极验配置
+	if s.IsGeetestEnabled() {
+		captchaID, _ := s.GetGeetestConfig()
+		config["geetest"] = map[string]interface{}{
+			"captcha_id": captchaID,
+		}
+	}
+
+	return config
+}
+
+// GetCaptchaType 获取验证码类型
+func (s *CaptchaConfigService) GetCaptchaType() string {
+	return s.GetValue("captcha_type")
+}
+
+// IsGeetestEnabled 检查极验是否启用
+func (s *CaptchaConfigService) IsGeetestEnabled() bool {
+	return s.GetCaptchaType() == "geetest"
+}
+
+// GetGeetestConfig 获取极验配置
+func (s *CaptchaConfigService) GetGeetestConfig() (string, string) {
+	return s.GetValue("geetest_captcha_id"), s.GetValue("geetest_captcha_key")
+}

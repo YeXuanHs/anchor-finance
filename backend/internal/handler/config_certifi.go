@@ -90,8 +90,8 @@ func (h *ConfigCertifiHandler) GetCertSetting(c *gin.Context) {
 	}
 
 	// 授权书路径URL
-	if authorPath, ok := data["certifi_business_author_path"]; ok && authorPath != "" {
-		data["certifi_business_author_path_url"] = "/uploads/author/" + authorPath
+	if authorPath, ok := data["certifi_business_author_path"]; ok && authorPath != nil {
+		data["certifi_business_author_path_url"] = "/uploads/author/" + fmt.Sprint(authorPath)
 	} else {
 		data["certifi_business_author_path_url"] = ""
 	}

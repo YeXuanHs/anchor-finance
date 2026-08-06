@@ -215,7 +215,7 @@ func (h *CustomFieldHandler) GetGroups(c *gin.Context) {
 
 // CreateGroup creates a new field group.
 func (h *CustomFieldHandler) CreateGroup(c *gin.Context) {
-	var req service.CreateGroupRequest
+	var req service.CreateCustomFieldGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -235,7 +235,7 @@ func (h *CustomFieldHandler) UpdateGroup(c *gin.Context) {
 		response.BadRequest(c, "invalid group id")
 		return
 	}
-	var req service.UpdateGroupRequest
+	var req service.UpdateCustomFieldGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return

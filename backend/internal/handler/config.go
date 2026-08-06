@@ -175,7 +175,7 @@ func (h *ConfigHandler) UpdateAdminPath(c *gin.Context) {
 // GetAdminPath 获取当前后台路径
 // GET /admin/config/admin-path
 func (h *ConfigHandler) GetAdminPath(c *gin.Context) {
-	path := h.configService.Get("admin_path")
+	path, _ := h.configService.Get("admin_path")
 	if path == "" {
 		path = "/admin"
 	}

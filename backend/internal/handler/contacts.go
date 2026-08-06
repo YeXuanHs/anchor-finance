@@ -25,7 +25,7 @@ func NewContactsHandler(contactSvc *service.ContactService, log *logger.Logger) 
 // POST /contacts
 func (h *ContactsHandler) Create(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	var req service.CreateContactRequest
+	var req service.CreateUserContactRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -83,7 +83,7 @@ func (h *ContactsHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req service.UpdateContactRequest
+	var req service.UpdateUserContactRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
