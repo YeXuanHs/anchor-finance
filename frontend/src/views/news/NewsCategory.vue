@@ -149,6 +149,9 @@ const fetchNews = async () => {
   loading.value = true
   try {
     const { data } = await request.get('/api/v1/news', {
+      params: {
+        category_id: categoryId.value,
+        page: currentPage.value,
         page_size: pageSize.value
       }
     })
