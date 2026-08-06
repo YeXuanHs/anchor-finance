@@ -130,26 +130,23 @@ func (s *ProductService) Update(id uint, req UpdateProductRequest) (*Product, er
 	if req.Price != nil {
 		updates["price"] = *req.Price
 	}
-	if req.Period != nil {
-		updates["period"] = *req.Period
+	if req.BillingCycle != nil {
+		updates["billing_cycle"] = *req.BillingCycle
 	}
-	if req.PeriodUnit != nil {
-		updates["period_unit"] = *req.PeriodUnit
-	}
-	if req.Category != nil {
-		updates["category"] = *req.Category
+	if req.GroupID != nil {
+		updates["group_id"] = *req.GroupID
 	}
 	if req.Stock != nil {
 		updates["stock"] = *req.Stock
 	}
-	if req.Sort != nil {
-		updates["sort"] = *req.Sort
+	if req.SortOrder != nil {
+		updates["sort_order"] = *req.SortOrder
 	}
 	if req.Status != nil {
 		updates["status"] = *req.Status
 	}
-	if req.Config != nil {
-		updates["config"] = *req.Config
+	if req.Type != nil {
+		updates["type"] = *req.Type
 	}
 
 	if err := s.db.Model(product).Updates(updates).Error; err != nil {
