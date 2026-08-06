@@ -71,7 +71,7 @@ func (h *OAuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	url := provider.GetLoginURL(state)
+	url := provider.GetAuthURL(state)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
@@ -132,7 +132,7 @@ func (h *OAuthHandler) Redirect(c *gin.Context) {
 		return
 	}
 
-	url := provider.GetLoginURL(state)
+	url := provider.GetAuthURL(state)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 

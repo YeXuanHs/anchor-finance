@@ -9,6 +9,8 @@ import (
 // NewsCategory 新闻分类
 type NewsCategory struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
+	ParentID  uint      `gorm:"index;default:0" json:"parent_id"`
+	Title     string    `gorm:"type:varchar(100);not null" json:"title"`
 	Name      string    `gorm:"type:varchar(50);not null" json:"name"`
 	Slug      string    `gorm:"type:varchar(50);uniqueIndex" json:"slug"`
 	SortOrder int       `gorm:"default:0" json:"sort_order"`

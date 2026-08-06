@@ -31,7 +31,7 @@ func (h *OAuthBindHandler) GetProviders(c *gin.Context) {
 func (h *OAuthBindHandler) Bind(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
-	var req service.BindOAuthRequest
+	var req service.SimpleBindOAuthRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return

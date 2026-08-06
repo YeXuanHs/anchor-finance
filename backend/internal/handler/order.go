@@ -95,8 +95,8 @@ func (h *OrderHandler) Preview(c *gin.Context) {
 			return
 		}
 
-		// Get base price from Decimal
-		basePrice, _ := product.Price.Float64()
+		// Get base price
+		basePrice := product.Price
 
 		// Determine price based on billing cycle
 		price := basePrice
