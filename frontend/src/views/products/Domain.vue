@@ -112,9 +112,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import {
-  Search, Refresh, Shield, Transfer, Setting, Connection, Timer, Document
-} from '@element-plus/icons-vue'
+import { Search } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const loading = ref(true)
