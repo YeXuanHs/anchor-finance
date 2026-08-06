@@ -100,7 +100,7 @@
             <el-table-column prop="private_port" label="内网端口" width="120" />
             <el-table-column prop="remark" label="备注" min-width="150" />
             <el-table-column label="操作" width="120" align="center">
-              <template #default="{ row, $index }">
+              <template #default>
                 <el-button link type="primary" size="small" @click="$emit('action', 'editRule')">
                   编辑
                 </el-button>
@@ -172,10 +172,6 @@ const props = withDefaults(defineProps<{
 }>(), {
   serviceInfo: () => ({})
 })
-
-const emit = defineEmits<{
-  (e: 'action', action: string): void
-}>()
 
 const loading = ref(false)
 const localInfo = ref<any>({})

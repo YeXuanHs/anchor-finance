@@ -94,6 +94,7 @@ const router = useRouter()
 
 interface WithdrawItem {
   id: string
+  order_id?: string
   created_at: string
   amount: number
   fee: number

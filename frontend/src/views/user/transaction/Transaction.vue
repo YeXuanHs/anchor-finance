@@ -96,7 +96,7 @@ const withdrawRef = ref()
 const creditRef = ref()
 const accountsRef = ref()
 
-const handleTabChange = (tab: string | number) => {
+const handleTabChange = (_tab: string | number) => {
   // 切换tab时可触发子组件刷新
 }
 

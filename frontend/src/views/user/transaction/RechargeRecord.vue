@@ -84,6 +84,7 @@ const router = useRouter()
 
 interface RechargeItem {
   id: string
+  order_id?: string
   created_at: string
   amount: number
   pay_method: string

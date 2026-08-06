@@ -196,8 +196,7 @@ import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
 import {
   CopyDocument, VideoPlay, VideoPause, RefreshRight,
-  Monitor, FolderOpened, Key, Hide, View,
-  CircleCheck, CircleClose
+  Monitor, FolderOpened, Key
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -208,10 +207,6 @@ const props = withDefaults(defineProps<{
 }>(), {
   serviceInfo: () => ({})
 })
-
-const emit = defineEmits<{
-  (e: 'action', action: string): void
-}>()
 
 const loading = ref(false)
 const localInfo = ref<any>({})
