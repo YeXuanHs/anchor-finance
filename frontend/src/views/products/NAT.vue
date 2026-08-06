@@ -123,8 +123,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import {
-  CircleCheck, Connection, Shield, Lightning, Timer,
-  Monitor, Setting, DataLine, Lock, Headset
+  CircleCheck
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 

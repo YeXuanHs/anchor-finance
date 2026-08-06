@@ -103,7 +103,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Lock, CircleCheck, Warning, Timer, Setting, Service } from '@element-plus/icons-vue'
+import { Lock, CircleCheck } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const loading = ref(true)

@@ -126,7 +126,7 @@
 import { ref, onMounted } from 'vue'
 import {
   CircleCheck, Monitor, Lightning, Shield, Timer,
-  Connection, Setting, Headset, Document
+  Connection, Setting, Headset
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
