@@ -126,21 +126,6 @@ func (s *Server) setupRoutes() {
 	v1Group := s.router.Group("/api/v1")
 	v1.RegisterRoutes(v1Group, s.deps.toV1Deps())
 
-	// Admin前端兼容路由: /api/auth/* → 转发到 /api/v1/auth/*
-	// Admin前端请求 /api/auth/login，但后端路由在 /api/v1/auth/login
-	s.router.Any("/api/auth/*path", func(c *gin.Context) {
-		newPath := "/api/v1/auth/" + c.Param("path")
-		c.Request.URL.Path = newPath
-		s.router.HandleContext(c)
-	})
-
-	// Admin前端兼容路由: /api/user/* → 转发到 /api/v1/user/*
-	s.router.Any("/api/user/*path", func(c *gin.Context) {
-		newPath := "/api/v1/user/" + c.Param("path")
-		c.Request.URL.Path = newPath
-		s.router.HandleContext(c)
-	})
-
 	// Admin routes
 	adminGroup := s.router.Group("/api/admin")
 	admin.RegisterRoutes(adminGroup, s.deps.toAdminDeps())

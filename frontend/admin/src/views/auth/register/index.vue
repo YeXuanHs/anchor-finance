@@ -208,7 +208,7 @@
         username: formData.username,
         password: formData.password
       }
-      const res = await request.post({ url: '/api/auth/register', data: params })
+      const res = await request.post({ url: '/api/v1/auth/register', data: params })
       if (res.code === ApiStatus.success) {
         ElMessage.success('注册成功')
         toLogin()
