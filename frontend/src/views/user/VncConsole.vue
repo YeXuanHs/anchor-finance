@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -223,7 +223,7 @@ function initCanvas() {
 }
 
 // 处理 VNC 消息
-function handleVncMessage(data: ArrayBuffer) {
+function handleVncMessage(_data: ArrayBuffer) {
   // 实际实现需根据 noVNC 协议解析帧数据
   // 这里是框架代码，实际项目需要集成 noVNC 客户端库
   if (!vncCanvas.value) return

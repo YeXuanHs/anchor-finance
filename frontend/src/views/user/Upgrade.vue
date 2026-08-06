@@ -82,7 +82,7 @@ const products = ref([])
 const showDialog = ref(false)
 const currentProduct = ref<any>(null)
 const selectedPlan = ref('')
-const availablePlans = ref([])
+const availablePlans = ref<any[]>([])
 
 const priceDiff = computed(() => {
   if (!selectedPlan.value || !currentProduct.value) return 0

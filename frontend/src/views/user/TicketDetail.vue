@@ -137,7 +137,7 @@ const getPriorityText = (priority: string) => {
   return map[priority] || priority
 }
 
-const handleUploadSuccess = (response: any) => {
+const handleUploadSuccess = (_response: any) => {
   // 处理上传成功
 }
 

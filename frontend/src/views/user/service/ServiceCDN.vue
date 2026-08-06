@@ -167,10 +167,6 @@ const props = withDefaults(defineProps<{
   serviceInfo: () => ({})
 })
 
-const emit = defineEmits<{
-  (e: 'action', action: string): void
-}>()
-
 const loading = ref(false)
 const localInfo = ref<any>({})
 

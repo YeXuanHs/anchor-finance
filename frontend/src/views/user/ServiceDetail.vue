@@ -831,7 +831,7 @@ async function confirmUpgrade() {
       '确认升级',
       { type: 'warning' }
     )
-    const { data } = await request.post('/api/v1/upgrades', {
+    await request.post('/api/v1/upgrades', {
       host_id: id,
       plan_id: selectedUpgradePlan.value.id
     })

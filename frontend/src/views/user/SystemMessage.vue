@@ -47,7 +47,7 @@ import { ref, onMounted } from 'vue'
 import request from '@/utils/request'
 
 const loading = ref(false)
-const messages = ref([])
+const messages = ref<any[]>([])
 const showDialog = ref(false)
 const currentMessage = ref<any>(null)
 
