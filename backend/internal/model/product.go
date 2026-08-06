@@ -82,27 +82,30 @@ type UserProduct struct {
 	Order         *Order         `gorm:"foreignKey:OrderID" json:"order,omitempty"`
 	ProductID     uint           `gorm:"index;not null" json:"product_id"`
 	Product       Product        `gorm:"foreignKey:ProductID" json:"product,omitempty"`
+	UpstreamID    uint           `gorm:"index" json:"upstream_id"`
 	Name          string         `gorm:"type:varchar(256);not null" json:"name"`
 	Domain        string         `gorm:"type:varchar(256);index" json:"domain"`
 	Username      string         `gorm:"type:varchar(128)" json:"username"`
 	Password      string         `gorm:"type:varchar(256)" json:"-"`
 	IP            string         `gorm:"type:varchar(64)" json:"ip"`
+	IPAddress     string         `gorm:"type:varchar(64)" json:"ip_address"`
 	DedicatedIP   string         `gorm:"type:varchar(64)" json:"dedicated_ip"`
 	Hostname      string         `gorm:"type:varchar(256)" json:"hostname"`
 	NS1           string         `gorm:"type:varchar(256)" json:"ns1"`
 	NS2           string         `gorm:"type:varchar(256)" json:"ns2"`
 	BillingCycle  string         `gorm:"type:varchar(32)" json:"billing_cycle"`
-	Amount        float64 `gorm:"type:decimal(20,4);not null" json:"amount"`
+	Amount        float64        `gorm:"type:decimal(20,4);not null" json:"amount"`
 	Currency      string         `gorm:"type:varchar(8);default:'CNY'" json:"currency"`
+	IsManual      bool           `gorm:"default:false" json:"is_manual"`
 	RegistrationDate *time.Time  `json:"registration_date"`
 	NextDueDate   *time.Time     `gorm:"index" json:"next_due_date"`
 	TerminationDate *time.Time   `json:"termination_date"`
 	SuspendReason string         `gorm:"type:varchar(256)" json:"suspend_reason"`
-	Status        int16          `gorm:"type:smallint;default:1;not null;index" json:"status"` // 1=活跃 2=挂起 3=待开通 4=已终止 5=已过期 6=已取消
-	ProvisioningStatus int16    `gorm:"type:smallint;default:0" json:"provisioning_status"` // 0=待处理 1=处理中 2=成功 3=失败
+	Status        string         `gorm:"type:varchar(32);default:Active;not null;index" json:"status"`
+	ProvisioningStatus int16    `gorm:"type:smallint;default:0" json:"provisioning_status"`
 	AdminNotes    string         `gorm:"type:text" json:"admin_notes"`
 	Notes         string         `gorm:"type:text" json:"notes"`
-	ConfigOptions datatypes.JSON `gorm:"type:json" json:"config_options"` // 用户自定义配置
+	ConfigOptions datatypes.JSON `gorm:"type:json" json:"config_options"`
 	CustomFields  datatypes.JSON `gorm:"type:json" json:"custom_fields"`
 	Metadata      datatypes.JSON `gorm:"type:json" json:"metadata"`
 }
