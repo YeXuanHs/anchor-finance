@@ -36,6 +36,8 @@ export interface ApiDocData {
   admin: ApiPage
 }
 
+export type PageType = keyof ApiDocData
+
 export const API_DATA: ApiDocData = {
   public: { title: "公共接口", groups: [
     { name: '认证', items: [

@@ -45,7 +45,7 @@ const features = [
   { icon: '🛡️', title: 'DDoS防护', desc: '免费基础防护，可选高防方案' }
 ]
 
-const plans = ref([])
+const plans = ref<any[]>([])
 
 onMounted(async () => {
   loading.value = true

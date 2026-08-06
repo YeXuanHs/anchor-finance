@@ -123,8 +123,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  ShoppingCart, ArrowLeft, Delete, 
-  Monitor, Connection, Ticket, Setting
+  ShoppingCart, ArrowLeft, Delete
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SiteHeader from '@/components/SiteHeader.vue'

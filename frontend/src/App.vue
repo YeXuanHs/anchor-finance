@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import type { GlobalThemeOverrides } from 'naive-ui'
 import { useConfigStore } from '@/stores/config'
 import AiShoppingWidget from '@/components/AiShoppingWidget.vue'

@@ -29,7 +29,8 @@ interface PublicConfig {
     wechat: boolean
   }
 
-  // 鍔熻兘寮€鍏?  affiliate_enabled: boolean
+  // 鍔熻鍔熻兘寮€鍏?
+  affiliate_enabled: boolean
   addfunds_enabled: boolean
   credit_limit: boolean
   show_cancel: boolean

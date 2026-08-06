@@ -93,8 +93,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import {
-  Location, Connection, Lightning, ArrowRight,
-  OfficeBuilding, Shield, Headset, Timer
+  Location, Connection, Lightning, ArrowRight, Warning
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
@@ -102,7 +101,7 @@ const loading = ref(true)
 
 const advantages = ref([
   { title: 'Tier 3+ 数据中心', description: '国际标准Tier 3+级别数据中心', icon: 'OfficeBuilding', color: '#1a56db' },
-  { title: '99.99% 可用性', description: '双路供电、UPS、柴油发电机多重保障', icon: 'Shield', color: '#10b981' },
+  { title: '99.99% 可用性', description: '双路供电、UPS、柴油发电机多重保障', icon: 'Warning', color: '#10b981' },
   { title: '7×24 运维', description: '专业运维团队全天候值守', icon: 'Headset', color: '#f59e0b' },
   { title: '快速上架', description: '签合同后24小时内完成上架', icon: 'Timer', color: '#8b5cf6' }
 ])

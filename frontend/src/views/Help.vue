@@ -108,16 +108,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import request from '@/utils/request'
 import { 
   Search, QuestionFilled, ArrowRight, Tickets, ChatDotRound, 
-  Document, VideoCamera, ShoppingCart, Wallet, Setting, Connection
+  Document, VideoCamera
 } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 
-const { t } = useI18n()
 const router = useRouter()
 const searchQuery = ref('')
 

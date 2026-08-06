@@ -119,8 +119,8 @@ import { useUserStore } from '@/stores/user'
 import { useConfigStore } from '@/stores/config'
 import {
   Fold, Close, Bell, ArrowDown, User, Setting, SwitchButton,
-  HomeFilled, Box, ShoppingCart, Wallet, Tickets, Ticket, Connection,
-  Postcard, UserFilled, Lock, Folder, Download, Document, Promotion, TrendCharts, Shop
+  HomeFilled, Box, ShoppingCart, Wallet, Tickets, Connection,
+  UserFilled, Folder, Shop
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import LanguageSwitcher from '@/components/LanguageSwitch.vue'

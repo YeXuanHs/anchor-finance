@@ -141,12 +141,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Location, Phone, Message, Clock, Aim, Warning, Cpu, Headset } from '@element-plus/icons-vue'
+import { Location, Phone, Message, Clock } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'
 
 const siteSettings = ref({
+  site_name: '',
   contact_address: '',
   contact_phone: '',
   contact_email: '',
@@ -170,7 +171,10 @@ onMounted(() => {
   fetchTeam()
 })
 
-const history = ref([])
+interface HistoryItem { year: string; title: string; desc: string }
+interface TeamMember { name: string; role: string; desc: string }
+
+const history = ref<HistoryItem[]>([])
 
 const fetchHistory = async () => {
   try {
@@ -190,7 +194,7 @@ const values = ref([
   { icon: 'Headset', title: '客户至上', desc: '7x24小时技术支持，客户满意是我们的追求' }
 ])
 
-const team = ref([])
+const team = ref<TeamMember[]>([])
 
 const fetchTeam = async () => {
   try {

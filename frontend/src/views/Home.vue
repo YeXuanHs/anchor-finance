@@ -294,21 +294,21 @@ const scrolled = ref(false)
 const currentSlide = ref(0)
 
 // 导航数据
-const topNavs = ref([])
-const bottomNavs = ref([])
+const topNavs = ref<any[]>([])
+const bottomNavs = ref<any[]>([])
 
 // 从API获取的数据（默认数据作为后备，优先从 API 加载）
-const banners = ref([
+const banners = ref<any[]>([
   { id: 1, title: t('landing.highPerfCloud'), description: t('landing.highPerfDesc'), badge: t('landing.hotRecommend'), video: '/carousel/2.webm', btn_text: t('landing.buyNow'), link: '/products' },
   { id: 2, title: t('landing.globalNodes'), description: t('landing.globalNodesDesc'), badge: t('landing.globalLayout'), video: '/carousel/3.webm', btn_text: t('landing.buyNow'), link: '/products' },
   { id: 3, title: t('landing.proTechSupport'), description: t('landing.proTechSupportDesc'), badge: t('landing.proService'), video: '/carousel/4.webm', btn_text: t('landing.contactUs'), link: '/tickets/create' }
 ])
 
-const productGroups = ref([])
-const hotProducts = ref([])
-const announcements = ref([])
-const partners = ref([])
-const siteSettings = ref({})
+const productGroups = ref<any[]>([])
+const hotProducts = ref<any[]>([])
+const announcements = ref<any[]>([])
+const partners = ref<any[]>([])
+const siteSettings = ref<Record<string, any>>({})
 const configStore = useConfigStore()
 
 // 快捷入口

@@ -198,7 +198,7 @@ const currentPageData = computed(() => apiData[activePage.value])
 const currentApi = computed(() => {
   if (!currentPageData.value || !activeApiId.value) return null
   for (const group of currentPageData.value.groups) {
-    const item = group.items.find(i => i.id === activeApiId.value)
+    const item = group.items.find((i: ApiItem) => i.id === activeApiId.value)
     if (item) return item
   }
   return null
@@ -209,7 +209,7 @@ const filteredResults = computed(() => {
   const query = searchQuery.value.toLowerCase()
   const results: Array<ApiItem & { page: PageType }> = []
 
-  for (const [page, data] of Object.entries(apiData)) {
+  for (const [page, data] of Object.entries(apiData) as [string, ApiPage][]) {
     for (const group of data.groups) {
       for (const item of group.items) {
         if (
@@ -241,7 +241,7 @@ function setApi(id: string) {
   updateUrl()
   // Auto-expand parent group
   for (const group of currentPageData.value?.groups || []) {
-    if (group.items.some(i => i.id === id)) {
+    if (group.items.some((i: ApiItem) => i.id === id)) {
       expandedGroups.value.add(group.name)
     }
   }
@@ -316,7 +316,7 @@ function initFromUrl() {
 
   // Auto-expand current group
   for (const group of apiData[activePage.value].groups) {
-    if (group.items.some(i => i.id === activeApiId.value)) {
+    if (group.items.some((i: ApiItem) => i.id === activeApiId.value)) {
       expandedGroups.value.add(group.name)
     }
   }

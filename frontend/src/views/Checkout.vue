@@ -251,7 +251,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  Monitor, Connection, Ticket, Setting, CircleCheck
+  CircleCheck
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import SiteHeader from '@/components/SiteHeader.vue'

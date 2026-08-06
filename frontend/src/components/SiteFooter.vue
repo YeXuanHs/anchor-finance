@@ -86,7 +86,8 @@ const configStore = useConfigStore()
 const siteSettings = ref({
   contact_phone: '',
   contact_email: '',
-  site_name: ''
+  site_name: '',
+  site_description: ''
 })
 
 const fetchSiteSettings = async () => {
