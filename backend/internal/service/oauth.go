@@ -3,6 +3,7 @@ package service
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/oauth"
 
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -150,7 +150,7 @@ func (s *OAuthService) createOAuthUser(providerName string, userInfo *oauth.User
 	}
 
 	// Create OAuth account binding
-	rawDataJSON, _ := datatypes.MarshalJSON(userInfo.RawData)
+	rawDataJSON, _ := json.Marshal(userInfo.RawData)
 	oauthAccount := model.OAuthAccount{
 		UserID:   user.ID,
 		Provider: providerName,
@@ -205,7 +205,7 @@ func (s *OAuthService) BindAccount(userID uint, providerName, code string) error
 	}
 
 	// Create OAuth binding
-	rawDataJSON, _ := datatypes.MarshalJSON(userInfo.RawData)
+	rawDataJSON, _ := json.Marshal(userInfo.RawData)
 	oauthAccount := model.OAuthAccount{
 		UserID:   userID,
 		Provider: providerName,
@@ -277,7 +277,7 @@ func (s *OAuthService) updateOAuthAccount(account *model.OAuthAccount, userInfo 
 		updates["union_id"] = userInfo.UnionID
 	}
 	if userInfo.RawData != nil {
-		rawDataJSON, _ := datatypes.MarshalJSON(userInfo.RawData)
+		rawDataJSON, _ := json.Marshal(userInfo.RawData)
 		updates["raw_data"] = rawDataJSON
 	}
 	s.db.Model(account).Updates(updates)

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -89,7 +90,7 @@ func (s *MaintenanceService) GetStatus() (*MaintenanceStatus, error) {
 		StartTime *string `json:"start_time"`
 		EndTime   *string `json:"end_time"`
 	}
-	if err := util.UnmarshalJSON(config.Value, &cfg); err != nil {
+	if err := json.Unmarshal([]byte(config.Value), &cfg); err != nil {
 		return &MaintenanceStatus{Enabled: false}, nil
 	}
 	status := &MaintenanceStatus{

@@ -470,7 +470,7 @@ func (s *InvoiceEnhancedService) SendInvoiceEmail(invoiceID uint, email string) 
 	templateData := map[string]string{
 		"invoice_no": inv.InvoiceNo,
 		"amount":     fmt.Sprintf("%.2f", inv.Amount),
-		"status":     inv.Status,
+		"status":     fmt.Sprintf("%d", inv.Status),
 	}
 	if err := s.emailSvc.SendEmailWithTemplate(email, "invoice_notification", templateData); err != nil {
 		s.log.Errorf("failed to send invoice email: %v", err)

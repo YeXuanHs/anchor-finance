@@ -90,7 +90,7 @@ func (s *MultiRenewService) renewSingleService(userID, serviceID uint, cycle str
 		return result
 	}
 
-	amount := product.Price.InexactFloat64()
+	amount := product.Price
 	if amount <= 0 {
 		result.Error = "product price is zero"
 		return result

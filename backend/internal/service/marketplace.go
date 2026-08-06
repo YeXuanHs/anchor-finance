@@ -129,8 +129,8 @@ func (s *MarketplaceService) CreateListing(userID uint, hostID uint, sellPrice f
 
 	// 计算到期时间
 	var expiresAt *time.Time
-	if host.ExpiresAt != nil {
-		expiresAt = host.ExpiresAt
+	if host.ExpiredAt != nil {
+		expiresAt = host.ExpiredAt
 	}
 
 	listing := &model.MarketplaceListing{
@@ -249,9 +249,9 @@ func (s *MarketplaceService) CreateOrder(buyerID uint, listingID uint, paymentMe
 
 	// 检查买家实名要求
 	if config.RequireRealName {
-		var buyer model.User
-		s.db.First(&buyer, buyerID)
-		if buyer.RealName == "" {
+		var cert model.Certification
+		result := s.db.Where("user_id = ? AND status = 2", buyerID).First(&cert)
+		if result.Error != nil {
 			return nil, errors.New("需要完成实名认证才能购买")
 		}
 	}
