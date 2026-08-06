@@ -627,17 +627,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// API日志
 		user.GET("/api-logs", apiLogHandler.List)
 
-		// 产品组（用户可见）
-		user.GET("/product-groups", func(c *gin.Context) {
-			var groups []struct {
-				ID   uint   `json:"id"`
-				Name string `json:"name"`
-				Slug string `json:"slug"`
-			}
-			deps.DB.Table("product_groups").Order("sort_order").Find(&groups)
-			c.JSON(200, gin.H{"data": groups})
-		})
-
 		// 产品转移（用户端）
 		productDivertSvc := service.NewProductDivertService(deps.DB, deps.Log)
 		productDivertHandler := handler.NewProductDivertHandler(productDivertSvc, deps.Log)
