@@ -2,11 +2,10 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
-	"anchorfinance/internal/model"
 	"anchorfinance/internal/service"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
@@ -92,7 +91,7 @@ func (h *CartHandler) UpdateCart(c *gin.Context) {
 		return
 	}
 
-	id, err := uuid.Parse(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cart item id"})
 		return
@@ -104,29 +103,9 @@ func (h *CartHandler) UpdateCart(c *gin.Context) {
 		return
 	}
 
-	// We need the uint ID for the service; since ShoppingCart.ID is uuid, adapt as needed.
-	// For now, we pass the uuid as a string and let the service handle it.
-	// Actually, looking at the model, ID is uuid.UUID. The service expects uint for userID.
-	// We'll adjust: the service method signature takes the uuid-based item ID.
-	// Let me refactor to use uuid in the service.
-
-	// NOTE: The service expects uint for the item ID. Since we use UUID, we need to adapt.
-	// For simplicity, we'll update via UUID directly here.
-	var item model.ShoppingCart
-	if err := h.cartService.GetDB().Where("id = ? AND user_id = ?", id, userID).First(&item).Error; err != nil {
+	item, err := h.cartService.UpdateItem(uint(id), userID, req.Quantity, req.Config)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "cart item not found"})
-		return
-	}
-
-	if req.Quantity > 0 {
-		item.Quantity = req.Quantity
-	}
-	if req.Config != nil {
-		item.Config = req.Config
-	}
-
-	if err := h.cartService.GetDB().Save(&item).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update cart item"})
 		return
 	}
 
@@ -141,13 +120,13 @@ func (h *CartHandler) RemoveFromCart(c *gin.Context) {
 		return
 	}
 
-	id, err := uuid.Parse(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cart item id"})
 		return
 	}
 
-	if err := h.cartService.RemoveItemByUUID(id, userID); err != nil {
+	if err := h.cartService.RemoveItem(uint(id), userID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -209,11 +188,11 @@ func (h *CartHandler) BatchDelete(c *gin.Context) {
 	}
 
 	for _, idStr := range req.IDs {
-		id, err := uuid.Parse(idStr)
+		id, err := strconv.ParseUint(idStr, 10, 64)
 		if err != nil {
 			continue
 		}
-		h.cartService.RemoveItemByUUID(id, userID)
+		h.cartService.RemoveItem(uint(id), userID)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "批量删除成功"})

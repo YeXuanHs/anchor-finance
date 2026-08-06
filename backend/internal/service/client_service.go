@@ -334,3 +334,229 @@ func (s *ClientServiceService) UpgradeConfig(hostID, newProductID uint, cycle st
 		"invoice":       invoice,
 	}, nil
 }
+
+// ==================== Admin Methods ====================
+
+// TransferService transfers a service to another user.
+func (s *ClientServiceService) TransferService(hostID, transferUID uint) error {
+	var host model.ClientService
+	if err := s.db.First(&host, hostID).Error; err != nil {
+		return errors.New("host not found")
+	}
+	return s.db.Model(&host).Update("user_id", transferUID).Error
+}
+
+// DeleteHosts deletes multiple hosts by IDs.
+func (s *ClientServiceService) DeleteHosts(hostIDs []uint) error {
+	if len(hostIDs) == 0 {
+		return errors.New("no host IDs provided")
+	}
+	return s.db.Where("id IN ?", hostIDs).Delete(&model.ClientService{}).Error
+}
+
+// GetBatchRenewPage returns batch renew page data.
+func (s *ClientServiceService) GetBatchRenewPage(uid uint, hostIDs []uint, cycles map[uint]string, amount map[uint]float64) (map[string]interface{}, error) {
+	var hosts []model.ClientService
+	if err := s.db.Where("id IN ? AND user_id = ?", hostIDs, uid).Find(&hosts).Error; err != nil {
+		return nil, err
+	}
+
+	var items []map[string]interface{}
+	for _, host := range hosts {
+		cycle := cycles[host.ID]
+		if cycle == "" {
+			cycle = "monthly"
+		}
+		amt := amount[host.ID]
+		items = append(items, map[string]interface{}{
+			"host_id": host.ID,
+			"name":    host.Name,
+			"cycle":   cycle,
+			"amount":  amt,
+		})
+	}
+
+	return map[string]interface{}{
+		"user_id": uid,
+		"items":   items,
+	}, nil
+}
+
+// ProcessBatchRenew processes batch renewal for multiple hosts.
+func (s *ClientServiceService) ProcessBatchRenew(uid uint, hostIDs []uint, cycles map[uint]string) (map[string]interface{}, error) {
+	var results []map[string]interface{}
+	for _, hostID := range hostIDs {
+		cycle := cycles[hostID]
+		if cycle == "" {
+			cycle = "monthly"
+		}
+		result, err := s.HostRenew(hostID, cycle)
+		if err != nil {
+			results = append(results, map[string]interface{}{
+				"host_id": hostID,
+				"error":   err.Error(),
+			})
+			continue
+		}
+		results = append(results, result)
+	}
+	return map[string]interface{}{
+		"user_id": uid,
+		"results": results,
+	}, nil
+}
+
+// GetApplyCreditPageData returns credit application page data.
+func (s *ClientServiceService) GetApplyCreditPageData(uid, invoiceID string) (map[string]interface{}, error) {
+	var user struct {
+		ID     uint
+		Credit float64
+	}
+	if err := s.db.Table("users").Where("id = ?", uid).Select("id, credit").Scan(&user).Error; err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	var invoice struct {
+		ID     uint
+		Amount float64
+		Status int
+	}
+	if err := s.db.Table("invoices").Where("id = ?", invoiceID).Select("id, amount, status").Scan(&invoice).Error; err != nil {
+		return nil, errors.New("invoice not found")
+	}
+
+	return map[string]interface{}{
+		"user_id":        user.ID,
+		"user_credit":    user.Credit,
+		"invoice_id":     invoice.ID,
+		"invoice_amount": invoice.Amount,
+		"invoice_status": invoice.Status,
+	}, nil
+}
+
+// ApplyCredit applies user credit to an invoice.
+func (s *ClientServiceService) ApplyCredit(uid, invoiceID uint, enough int) (map[string]interface{}, error) {
+	var user struct {
+		ID     uint
+		Credit float64
+	}
+	if err := s.db.Table("users").Where("id = ?", uid).Select("id, credit").Scan(&user).Error; err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	var invoice struct {
+		ID     uint
+		Amount float64
+		Status int
+	}
+	if err := s.db.Table("invoices").Where("id = ?", invoiceID).Select("id, amount, status").Scan(&invoice).Error; err != nil {
+		return nil, errors.New("invoice not found")
+	}
+
+	if invoice.Status == 1 {
+		return nil, errors.New("invoice already paid")
+	}
+
+	creditToUse := invoice.Amount
+	if enough == 0 && user.Credit < invoice.Amount {
+		creditToUse = user.Credit
+	}
+
+	if user.Credit < creditToUse {
+		return nil, errors.New("insufficient credit")
+	}
+
+	// Deduct credit
+	if err := s.db.Table("users").Where("id = ?", uid).Update("credit", gorm.Expr("credit - ?", creditToUse)).Error; err != nil {
+		return nil, err
+	}
+
+	// Mark invoice as paid if fully covered
+	if creditToUse >= invoice.Amount {
+		s.db.Table("invoices").Where("id = ?", invoiceID).Update("status", 1)
+	}
+
+	return map[string]interface{}{
+		"credit_used":   creditToUse,
+		"credit_remain": user.Credit - creditToUse,
+		"invoice_id":    invoiceID,
+	}, nil
+}
+
+// SearchClients searches clients by keyword.
+func (s *ClientServiceService) SearchClients(clientID string) ([]map[string]interface{}, error) {
+	var clients []map[string]interface{}
+	query := s.db.Table("users").Select("id, username, email, phone, company")
+	if clientID != "" {
+		query = query.Where("id = ? OR username LIKE ? OR email LIKE ? OR phone LIKE ?",
+			clientID, "%"+clientID+"%", "%"+clientID+"%", "%"+clientID+"%")
+	}
+	query.Limit(50).Find(&clients)
+	return clients, nil
+}
+
+// GetRefundPageData returns refund page data.
+func (s *ClientServiceService) GetRefundPageData(hid string) (map[string]interface{}, error) {
+	var host model.ClientService
+	if err := s.db.First(&host, hid).Error; err != nil {
+		return nil, errors.New("host not found")
+	}
+
+	var user struct {
+		ID       uint
+		Username string
+		Credit   float64
+	}
+	s.db.Table("users").Where("id = ?", host.UserID).Select("id, username, credit").Scan(&user)
+
+	return map[string]interface{}{
+		"host_id":    host.ID,
+		"host_name":  host.Name,
+		"user_id":    user.ID,
+		"username":   user.Username,
+		"user_credit": user.Credit,
+		"status":     host.Status,
+	}, nil
+}
+
+// ProcessRefund processes a refund for a service.
+func (s *ClientServiceService) ProcessRefund(hid uint, refundMethod, refundType string, amount float64) error {
+	var host model.ClientService
+	if err := s.db.First(&host, hid).Error; err != nil {
+		return errors.New("host not found")
+	}
+
+	var refundAmount float64
+	switch refundMethod {
+	case "full":
+		// Full refund - get original amount from invoice
+		var invoice struct {
+			Amount float64
+		}
+		s.db.Table("invoices").Where("host_id = ? AND type = ?", hid, "host").
+			Select("amount").Order("id DESC").Limit(1).Scan(&invoice)
+		refundAmount = invoice.Amount
+	case "custom":
+		refundAmount = amount
+	default:
+		return errors.New("invalid refund method")
+	}
+
+	if refundAmount <= 0 {
+		return errors.New("refund amount must be positive")
+	}
+
+	// Add credit to user
+	if refundType == "addascredit" {
+		if err := s.db.Table("users").Where("id = ?", host.UserID).
+			Update("credit", gorm.Expr("credit + ?", refundAmount)).Error; err != nil {
+			return err
+		}
+	}
+
+	// Terminate the service
+	return s.db.Model(&host).Updates(map[string]interface{}{
+		"status": model.ClientServiceTerminated,
+		"remark": fmt.Sprintf("退款 %.2f (%s)", refundAmount, refundMethod),
+	}).Error
+}
