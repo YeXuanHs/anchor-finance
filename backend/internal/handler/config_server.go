@@ -479,3 +479,14 @@ func (h *ConfigServerHandler) TestLink(c *gin.Context) {
 	}
 	response.Success(c, result)
 }
+
+// List returns all server configs.
+// GET /admin/config-servers
+func (h *ConfigServerHandler) List(c *gin.Context) {
+	servers, err := h.svc.GetAll()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, servers)
+}

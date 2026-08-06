@@ -91,3 +91,64 @@ func (h *APILogHandler) Cleanup(c *gin.Context) {
 		"older_than":    days,
 	})
 }
+
+// Delete deletes a specific API log entry.
+func (h *APILogHandler) Delete(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+
+	if err := h.svc.Delete(uint(id)); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "deleted")
+}
+
+// GetStats returns API log statistics.
+func (h *APILogHandler) GetStats(c *gin.Context) {
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "7"))
+	stats, err := h.svc.GetStats(days)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, stats)
+}
+
+// GetTopEndpoints returns top API endpoints by call count.
+func (h *APILogHandler) GetTopEndpoints(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "7"))
+	endpoints, err := h.svc.GetTopEndpoints(limit, days)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, endpoints)
+}
+
+// GetSlowRequests returns slowest API requests.
+func (h *APILogHandler) GetSlowRequests(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "7"))
+	requests, err := h.svc.GetSlowRequests(limit, days)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, requests)
+}
+
+// GetErrorRate returns API error rate statistics.
+func (h *APILogHandler) GetErrorRate(c *gin.Context) {
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "7"))
+	rates, err := h.svc.GetErrorRate(days)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, rates)
+}

@@ -711,3 +711,14 @@ func (h *ConfigOptionHandler) DelLinkAgeSub(c *gin.Context) {
 	}
 	response.SuccessMsg(c, "linkage sub deleted")
 }
+
+// List returns all config options.
+// GET /admin/config-options
+func (h *ConfigOptionHandler) List(c *gin.Context) {
+	options, err := h.svc.GetAll()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, options)
+}

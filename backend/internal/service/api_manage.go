@@ -6,17 +6,19 @@ import (
 	"time"
 
 	"anchorfinance/internal/model"
+	"anchorfinance/pkg/logger"
 
 	"gorm.io/gorm"
 )
 
 // APIManageService manages API keys for admin.
 type APIManageService struct {
-	db *gorm.DB
+	db  *gorm.DB
+	log *logger.Logger
 }
 
-func NewAPIManageService(db *gorm.DB) *APIManageService {
-	return &APIManageService{db: db}
+func NewAPIManageService(db *gorm.DB, log *logger.Logger) *APIManageService {
+	return &APIManageService{db: db, log: log}
 }
 
 func (s *APIManageService) List(page, pageSize int, keyword string, status *int16) ([]model.APIKey, int64, error) {

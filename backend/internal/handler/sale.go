@@ -473,3 +473,18 @@ func (h *SaleHandler) DelSaleLadder(c *gin.Context) {
 	}
 	response.SuccessMsg(c, "sale ladder deleted")
 }
+
+// List returns all sales.
+// GET /admin/sales
+func (h *SaleHandler) List(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	keyword := c.Query("keyword")
+
+	sales, total, err := h.saleSvc.List(page, pageSize, keyword)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.SuccessPage(c, sales, total, page, pageSize)
+}

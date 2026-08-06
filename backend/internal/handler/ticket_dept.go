@@ -381,3 +381,14 @@ func (h *TicketDeptHandler) MoveDown(c *gin.Context) {
 	}
 	response.SuccessMsg(c, "moved down")
 }
+
+// List returns all ticket departments.
+// GET /admin/ticket-departments
+func (h *TicketDeptHandler) List(c *gin.Context) {
+	depts, err := h.deptSvc.List()
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, depts)
+}
