@@ -227,7 +227,7 @@ func (s *OrderService) PayWithMethod(userID, orderID uint, paymentMethod string)
 			OrderID:   order.ID,
 			Name:      order.Product.Name,
 			NextDueDate: &expire,
-			Status:    1,
+			Status:    "Active",
 		}
 		return tx.Create(up).Error
 	})
