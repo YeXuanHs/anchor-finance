@@ -467,7 +467,7 @@ func (s *InvoiceEnhancedService) SendInvoiceEmail(invoiceID uint, email string) 
 	}
 
 	// 发送账单邮件
-	templateData := map[string]interface{}{
+	templateData := map[string]string{
 		"invoice_no": inv.InvoiceNo,
 		"amount":     fmt.Sprintf("%.2f", inv.Amount),
 		"status":     inv.Status,

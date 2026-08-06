@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"anchorfinance/internal/model"
 	"anchorfinance/pkg/logger"
 
 	"gorm.io/gorm"
@@ -28,7 +29,7 @@ func (lc *LogCleaner) CleanByDays(days int) (int64, error) {
 	}
 
 	expire := time.Now().AddDate(0, 0, -days)
-	result := lc.db.Where("created_at < ?", expire).Delete(&AuditLog{})
+	result := lc.db.Where("created_at < ?", expire).Delete(&model.AuditLog{})
 	if result.Error != nil {
 		return 0, result.Error
 	}
@@ -44,7 +45,7 @@ func (lc *LogCleaner) CleanByCount(keepCount int) (int64, error) {
 	}
 
 	var total int64
-	lc.db.Model(&AuditLog{}).Count(&total)
+	lc.db.Model(&model.AuditLog{}).Count(&total)
 
 	if total <= int64(keepCount) {
 		return 0, nil
@@ -52,14 +53,14 @@ func (lc *LogCleaner) CleanByCount(keepCount int) (int64, error) {
 
 	// 找到第 keepCount 条的 ID
 	var lastID uint
-	lc.db.Model(&AuditLog{}).
+	lc.db.Model(&model.AuditLog{}).
 		Order("id DESC").
 		Offset(keepCount - 1).
 		Limit(1).
 		Pluck("id", &lastID)
 
 	// 删除比这个 ID 更早的日志
-	result := lc.db.Where("id < ?", lastID).Delete(&AuditLog{})
+	result := lc.db.Where("id < ?", lastID).Delete(&model.AuditLog{})
 	if result.Error != nil {
 		return 0, result.Error
 	}
@@ -70,7 +71,7 @@ func (lc *LogCleaner) CleanByCount(keepCount int) (int64, error) {
 
 // CleanByModule 按模块清理日志
 func (lc *LogCleaner) CleanByModule(module string) (int64, error) {
-	result := lc.db.Where("module = ?", module).Delete(&AuditLog{})
+	result := lc.db.Where("module = ?", module).Delete(&model.AuditLog{})
 	if result.Error != nil {
 		return 0, result.Error
 	}
@@ -81,7 +82,7 @@ func (lc *LogCleaner) CleanByModule(module string) (int64, error) {
 
 // CleanByStatus 按状态清理日志
 func (lc *LogCleaner) CleanByStatus(status string) (int64, error) {
-	result := lc.db.Where("status = ?", status).Delete(&AuditLog{})
+	result := lc.db.Where("status = ?", status).Delete(&model.AuditLog{})
 	if result.Error != nil {
 		return 0, result.Error
 	}
@@ -98,7 +99,7 @@ func (lc *LogCleaner) CleanBySize(keepSizeMB int) (int64, error) {
 
 	// 估算当前日志大小
 	var count int64
-	lc.db.Model(&AuditLog{}).Count(&count)
+	lc.db.Model(&model.AuditLog{}).Count(&count)
 
 	// 假设每条日志约 1KB
 	estimatedSizeMB := count / 1024
@@ -111,13 +112,13 @@ func (lc *LogCleaner) CleanBySize(keepSizeMB int) (int64, error) {
 
 	// 找到要删除的 ID 范围
 	var lastID uint
-	lc.db.Model(&AuditLog{}).
+	lc.db.Model(&model.AuditLog{}).
 		Order("id DESC").
 		Offset(int(deleteCount) - 1).
 		Limit(1).
 		Pluck("id", &lastID)
 
-	result := lc.db.Where("id < ?", lastID).Delete(&AuditLog{})
+	result := lc.db.Where("id < ?", lastID).Delete(&model.AuditLog{})
 	if result.Error != nil {
 		return 0, result.Error
 	}
@@ -148,14 +149,14 @@ func (lc *LogCleaner) CleanExpired() (int64, error) {
 // GetLogStats 获取日志统计
 func (lc *LogCleaner) GetLogStats() map[string]interface{} {
 	var total int64
-	lc.db.Model(&AuditLog{}).Count(&total)
+	lc.db.Model(&model.AuditLog{}).Count(&total)
 
 	// 按模块统计
 	var moduleStats []struct {
 		Module string
 		Count  int64
 	}
-	lc.db.Model(&AuditLog{}).
+	lc.db.Model(&model.AuditLog{}).
 		Select("module, COUNT(*) as count").
 		Group("module").
 		Find(&moduleStats)
@@ -165,14 +166,14 @@ func (lc *LogCleaner) GetLogStats() map[string]interface{} {
 		Status string
 		Count  int64
 	}
-	lc.db.Model(&AuditLog{}).
+	lc.db.Model(&model.AuditLog{}).
 		Select("status, COUNT(*) as count").
 		Group("status").
 		Find(&statusStats)
 
 	// 最近7天的日志数量
 	var recentCount int64
-	lc.db.Model(&AuditLog{}).
+	lc.db.Model(&model.AuditLog{}).
 		Where("created_at >= ?", time.Now().AddDate(0, 0, -7)).
 		Count(&recentCount)
 

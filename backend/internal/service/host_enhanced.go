@@ -227,12 +227,13 @@ type ReinstallStatusData struct {
 
 // HostRechargeData 主机充值选项
 type HostRechargeData struct {
-	HostID        uint    `json:"host_id"`
-	Hostname      string  `json:"hostname"`
-	Balance       float64 `json:"balance"`
-	DueAmount     float64 `json:"due_amount"`
+	HostID        uint       `json:"host_id"`
+	Hostname      string     `json:"hostname"`
+	Balance       float64    `json:"balance"`
+	DueAmount     float64    `json:"due_amount"`
 	DueDate       *time.Time `json:"due_date"`
-	MinRecharge   float64 `json:"min_recharge"`
+	ExpiredAt     *time.Time `json:"expired_at"`
+	MinRecharge   float64    `json:"min_recharge"`
 }
 
 // ───────────────────────── Service ─────────────────────────
@@ -1072,13 +1073,11 @@ func (s *HostEnhancedService) BuyFlowPacket(userID, hostID, packetID uint) (*Hos
 		})
 
 		// Add traffic to host
-		currentUsed := 0.0
+		_ = 0.0
 		metadata := map[string]interface{}{}
 		if len(host.Metadata) > 0 {
 			if err := json.Unmarshal(host.Metadata, &metadata); err == nil {
-				if v, ok := metadata["traffic_used_gb"].(float64); ok {
-					currentUsed = v
-				}
+				// traffic_used_gb read for future use
 			}
 		}
 		metadata["flow_packet_added_gb"] = float64(packet.AmountGB)
