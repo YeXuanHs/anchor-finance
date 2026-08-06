@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS `product_groups` (
   `slug` varchar(100) DEFAULT NULL,
   `parent_id` bigint unsigned DEFAULT 0,
   `hidden` tinyint(1) NOT NULL DEFAULT 0,
+  `show_in_nav` tinyint(1) NOT NULL DEFAULT 1,
   `sort_order` int NOT NULL DEFAULT 0,
   `status` tinyint NOT NULL DEFAULT 1,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -581,9 +582,13 @@ CREATE TABLE IF NOT EXISTS `banners` (
   `media_url` varchar(500) DEFAULT NULL,
   `link_url` varchar(500) DEFAULT NULL,
   `button_text` varchar(50) DEFAULT NULL,
+  `open_new` tinyint(1) NOT NULL DEFAULT 0,
   `sort_order` int NOT NULL DEFAULT 0,
   `status` tinyint NOT NULL DEFAULT 1,
+  `start_time` datetime DEFAULT NULL,
+  `end_time` datetime DEFAULT NULL,
   `position` varchar(20) DEFAULT 'home',
+  `click_count` int NOT NULL DEFAULT 0,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted_at` datetime DEFAULT NULL,
@@ -819,23 +824,46 @@ CREATE TABLE IF NOT EXISTS `knowledge_base_articles` (
   KEY `idx_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 新闻分类
+CREATE TABLE IF NOT EXISTS `news_categories` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `parent_id` bigint unsigned NOT NULL DEFAULT 0,
+  `title` varchar(100) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `slug` varchar(50) DEFAULT NULL,
+  `sort_order` int NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_slug` (`slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `news_categories` (`id`, `name`, `title`, `slug`, `sort_order`) VALUES
+(1, '未分类', '未分类', 'uncategorized', 0)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+
 -- 新闻/公告
 CREATE TABLE IF NOT EXISTS `news` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `title` varchar(200) NOT NULL,
-  `content` longtext,
+  `category_id` bigint unsigned NOT NULL DEFAULT 0,
+  `title` varchar(255) NOT NULL,
+  `slug` varchar(255) DEFAULT NULL,
   `summary` varchar(500) DEFAULT NULL,
-  `cover_image` varchar(500) DEFAULT NULL,
-  `category` varchar(50) DEFAULT NULL,
-  `author` varchar(50) DEFAULT NULL,
+  `content` longtext,
+  `cover_image` varchar(255) DEFAULT NULL,
+  `keywords` varchar(255) DEFAULT NULL,
   `view_count` int NOT NULL DEFAULT 0,
-  `is_top` tinyint(1) NOT NULL DEFAULT 0,
-  `status` tinyint NOT NULL DEFAULT 1,
+  `is_published` tinyint(1) NOT NULL DEFAULT 1,
+  `is_sticky` tinyint(1) NOT NULL DEFAULT 0,
   `published_at` datetime DEFAULT NULL,
+  `admin_id` bigint unsigned DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
+  KEY `idx_category_id` (`category_id`),
+  KEY `idx_is_published` (`is_published`),
   KEY `idx_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
