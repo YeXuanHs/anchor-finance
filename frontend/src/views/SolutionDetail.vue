@@ -106,10 +106,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import {
-  VideoCamera, Trophy, ShoppingBag, Monitor, Shield, OfficeBuilding,
-  Check, Position, Cpu, Connection, DataLine, Lock
-} from '@element-plus/icons-vue'
+import { Check, ArrowRight } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'
