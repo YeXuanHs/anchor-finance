@@ -1038,3 +1038,61 @@ INSERT INTO `currencies` (`code`, `prefix`, `suffix`, `format`, `rate`, `is_defa
 ('CNY', '¥', '元', 'prefix', 1.0000, 1, 1),
 ('USD', '$', '', 'prefix', 7.2000, 0, 1)
 ON DUPLICATE KEY UPDATE `prefix` = VALUES(`prefix`);
+
+-- ============================================
+-- 补充：审计日志表（对应 model/audit_log.go）
+-- ============================================
+CREATE TABLE IF NOT EXISTS `audit_logs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` bigint unsigned DEFAULT NULL,
+  `username` varchar(100) DEFAULT '',
+  `user_type` varchar(20) DEFAULT '' COMMENT 'admin|client|system',
+  `action` varchar(100) DEFAULT '',
+  `description` varchar(500) DEFAULT '',
+  `module` varchar(50) DEFAULT '',
+  `controller` varchar(50) DEFAULT '',
+  `method` varchar(50) DEFAULT '',
+  `ip` varchar(50) DEFAULT '',
+  `user_agent` varchar(500) DEFAULT '',
+  `request_data` text,
+  `response_code` int DEFAULT 0,
+  `target_type` varchar(50) DEFAULT '',
+  `target_id` bigint unsigned DEFAULT 0,
+  `duration` bigint DEFAULT 0 COMMENT '耗时(毫秒)',
+  `status` varchar(20) DEFAULT '' COMMENT 'success|failed',
+  `remark` text,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_action` (`action`),
+  KEY `idx_target_id` (`target_id`),
+  KEY `idx_created_at` (`created_at`),
+  KEY `idx_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- 补充：上游同步日志表（对应 model/upstream.go UpstreamSyncLog）
+-- ============================================
+CREATE TABLE IF NOT EXISTS `upstream_sync_logs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `upstream_id` bigint unsigned DEFAULT NULL,
+  `action` varchar(50) DEFAULT '',
+  `status` varchar(20) DEFAULT '' COMMENT 'success|failed',
+  `message` text,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_upstream_id` (`upstream_id`),
+  KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- 修复：upstream_providers 表添加 is_active 列
+-- ============================================
+ALTER TABLE `upstream_providers` ADD COLUMN IF NOT EXISTS `is_active` tinyint(1) NOT NULL DEFAULT 1 AFTER `config`;
+
+-- ============================================
+-- 修复：upstream_products 表对齐模型定义
+-- ============================================
+ALTER TABLE `upstream_products` ADD COLUMN IF NOT EXISTS `config` json DEFAULT NULL AFTER `remote_product_id`;
