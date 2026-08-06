@@ -118,8 +118,8 @@ func (s *ProvisionService) SuspendService(userProductID uint, reason string) err
 	if err := s.db.First(&up, userProductID).Error; err != nil {
 		return fmt.Errorf("user product not found: %w", err)
 	}
-	if up.Status != 1 {
-		return fmt.Errorf("product is not active (status=%d)", up.Status)
+	if up.Status != "Active" {
+		return fmt.Errorf("product is not active (status=%s)", up.Status)
 	}
 
 	if err := s.ProvisionProduct(userProductID, "suspend"); err != nil {
@@ -139,7 +139,7 @@ func (s *ProvisionService) TerminateService(userProductID uint, reason string) e
 	if err := s.db.First(&up, userProductID).Error; err != nil {
 		return fmt.Errorf("user product not found: %w", err)
 	}
-	if up.Status == 4 {
+	if up.Status == "Terminated" {
 		return fmt.Errorf("product is already terminated")
 	}
 
@@ -161,8 +161,8 @@ func (s *ProvisionService) UnsuspendService(userProductID uint) error {
 	if err := s.db.First(&up, userProductID).Error; err != nil {
 		return fmt.Errorf("user product not found: %w", err)
 	}
-	if up.Status != 2 {
-		return fmt.Errorf("product is not suspended (status=%d)", up.Status)
+	if up.Status != "Suspended" {
+		return fmt.Errorf("product is not suspended (status=%s)", up.Status)
 	}
 
 	if err := s.ProvisionProduct(userProductID, "unsuspend"); err != nil {

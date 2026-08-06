@@ -586,7 +586,7 @@ func (s *CronService) execAutoRenewTask() (error, string) {
 			s.log.Warnf("user_product %d not found for renew cycle %d: %v", rc.UserProductID, rc.ID, err)
 			continue
 		}
-		if up.Status != 1 {
+		if up.Status != "Active" {
 			continue
 		}
 

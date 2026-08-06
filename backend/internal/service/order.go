@@ -139,7 +139,7 @@ func (s *OrderService) Pay(orderID uint) (*Order, error) {
 			OrderID:     order.ID,
 			Name:        order.Product.Name,
 			NextDueDate: &expire,
-			Status:      1,
+			Status:      "Active",
 		}
 		if err := tx.Create(up).Error; err != nil {
 			return err
@@ -713,7 +713,7 @@ func (s *OrderService) ActivateOrder(orderID uint) (*Order, error) {
 			OrderID:     order.ID,
 			Name:        order.Product.Name,
 			NextDueDate: &expire,
-			Status:      1,
+			Status:      "Active",
 		}
 		if err := tx.Create(up).Error; err != nil {
 			return err

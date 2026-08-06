@@ -80,7 +80,7 @@ func (s *UpgradeService) CreateUpgrade(userID uint, req CreateUpgradeRequest) (*
 	if up.UserID != userID {
 		return nil, errors.New("unauthorized")
 	}
-	if up.Status != 1 {
+	if up.Status != "Active" {
 		return nil, errors.New("user product is not active")
 	}
 
