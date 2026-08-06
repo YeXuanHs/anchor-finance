@@ -62,7 +62,7 @@ func (s *ProductService) GetList(page, pageSize int, category string) ([]Product
 	}
 
 	offset, limit := Paginate(page, pageSize)
-	if err := query.Offset(offset).Limit(limit).Order("sort ASC, id DESC").Find(&products).Error; err != nil {
+	if err := query.Offset(offset).Limit(limit).Order("sort_order ASC, id DESC").Find(&products).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -82,7 +82,7 @@ func (s *ProductService) GetByID(id uint) (*Product, error) {
 func (s *ProductService) GetHotProducts(limit int) ([]Product, error) {
 	var products []Product
 	if err := s.db.Where("status = ?", 1).
-		Order("sort ASC, id DESC").
+		Order("sort_order ASC, id DESC").
 		Limit(limit).
 		Find(&products).Error; err != nil {
 		return nil, err
