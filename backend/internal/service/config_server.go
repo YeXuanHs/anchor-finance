@@ -764,3 +764,12 @@ func (s *ConfigServerService) AdminTestLink(id uint) (map[string]interface{}, er
 		"msg":           "连接成功",
 	}, nil
 }
+
+// GetAll returns all server configs.
+func (s *ConfigServerService) GetAll() ([]model.ServerConfig, error) {
+	var servers []model.ServerConfig
+	if err := s.db.Order("sort_order ASC, id ASC").Find(&servers).Error; err != nil {
+		return nil, err
+	}
+	return servers, nil
+}

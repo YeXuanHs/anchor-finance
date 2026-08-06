@@ -462,3 +462,12 @@ func (s *TicketDepartmentService) MoveDown(deptID uint) error {
 		return tx.Model(&next).Update("sort_order", dept.SortOrder).Error
 	})
 }
+
+// List returns all ticket departments.
+func (s *TicketDepartmentService) List() ([]TicketDepartment, error) {
+	var depts []TicketDepartment
+	if err := s.db.Order("sort_order ASC, id ASC").Find(&depts).Error; err != nil {
+		return nil, err
+	}
+	return depts, nil
+}

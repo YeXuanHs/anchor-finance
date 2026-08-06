@@ -1393,3 +1393,12 @@ func (s *ConfigOptionService) AdminGetOS(pid uint) (map[string]interface{}, erro
 		"sub_options": subOptions,
 	}, nil
 }
+
+// GetAll returns all config options.
+func (s *ConfigOptionService) GetAll() ([]model.ConfigOption, error) {
+	var options []model.ConfigOption
+	if err := s.db.Order("sort_order ASC, id ASC").Find(&options).Error; err != nil {
+		return nil, err
+	}
+	return options, nil
+}

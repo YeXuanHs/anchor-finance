@@ -571,3 +571,20 @@ func (s *SaleService) DeleteLadder(id uint) error {
 func (s *SaleService) GetDB() *gorm.DB {
 	return s.db
 }
+
+// List returns all sales/promotions.
+func (s *SaleService) List(page, pageSize int, keyword string) ([]SalePromotion, int64, error) {
+	var promos []SalePromotion
+	var total int64
+
+	query := s.db.Model(&SalePromotion{})
+	if keyword != "" {
+		q := "%" + keyword + "%"
+		query = query.Where("name LIKE ? OR code LIKE ?", q, q)
+	}
+
+	query.Count(&total)
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&promos)
+	return promos, total, nil
+}

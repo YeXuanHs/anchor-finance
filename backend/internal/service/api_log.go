@@ -66,3 +66,78 @@ func (s *APILogService) Cleanup(days int) (int64, error) {
 	result := s.db.Where("created_at < ?", cutoff).Delete(&ApiLog{})
 	return result.RowsAffected, result.Error
 }
+
+// Delete deletes a specific API log entry.
+func (s *APILogService) Delete(id uint) error {
+	return s.db.Delete(&ApiLog{}, id).Error
+}
+
+// GetStats returns API log statistics for the given number of days.
+func (s *APILogService) GetStats(days int) (map[string]interface{}, error) {
+	cutoff := time.Now().AddDate(0, 0, -days)
+	var total int64
+	s.db.Model(&ApiLog{}).Where("created_at >= ?", cutoff).Count(&total)
+
+	var successCount int64
+	s.db.Model(&ApiLog{}).Where("created_at >= ? AND status_code >= 200 AND status_code < 300", cutoff).Count(&successCount)
+
+	var errorCount int64
+	s.db.Model(&ApiLog{}).Where("created_at >= ? AND status_code >= 400", cutoff).Count(&errorCount)
+
+	var avgResponseTime float64
+	s.db.Model(&ApiLog{}).Where("created_at >= ?", cutoff).Select("COALESCE(AVG(response_time), 0)").Scan(&avgResponseTime)
+
+	return map[string]interface{}{
+		"total":             total,
+		"success_count":     successCount,
+		"error_count":       errorCount,
+		"avg_response_time": avgResponseTime,
+	}, nil
+}
+
+// GetTopEndpoints returns top API endpoints by call count.
+func (s *APILogService) GetTopEndpoints(limit, days int) ([]map[string]interface{}, error) {
+	cutoff := time.Now().AddDate(0, 0, -days)
+	var results []map[string]interface{}
+	s.db.Model(&ApiLog{}).
+		Select("endpoint, COUNT(*) as call_count, AVG(response_time) as avg_time").
+		Where("created_at >= ?", cutoff).
+		Group("endpoint").
+		Order("call_count DESC").
+		Limit(limit).
+		Find(&results)
+	return results, nil
+}
+
+// GetSlowRequests returns slowest API requests.
+func (s *APILogService) GetSlowRequests(limit, days int) ([]ApiLog, error) {
+	cutoff := time.Now().AddDate(0, 0, -days)
+	var logs []ApiLog
+	s.db.Where("created_at >= ?", cutoff).
+		Order("response_time DESC").
+		Limit(limit).
+		Find(&logs)
+	return logs, nil
+}
+
+// GetErrorRate returns API error rate statistics.
+func (s *APILogService) GetErrorRate(days int) (map[string]interface{}, error) {
+	cutoff := time.Now().AddDate(0, 0, -days)
+
+	var total int64
+	s.db.Model(&ApiLog{}).Where("created_at >= ?", cutoff).Count(&total)
+
+	var errorCount int64
+	s.db.Model(&ApiLog{}).Where("created_at >= ? AND status_code >= 400", cutoff).Count(&errorCount)
+
+	rate := float64(0)
+	if total > 0 {
+		rate = float64(errorCount) / float64(total) * 100
+	}
+
+	return map[string]interface{}{
+		"total":       total,
+		"error_count": errorCount,
+		"error_rate":  rate,
+	}, nil
+}
