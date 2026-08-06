@@ -886,7 +886,7 @@ func (h *DcimHandler) Detail(c *gin.Context) {
 // POST /admin/dcim/refresh-all
 func (h *DcimHandler) RefreshAllStatus(c *gin.Context) {
 	var servers []model.DcimServer
-	if err := h.db.Find(&servers).Error; err != nil {
+	if err := h.dcimSvc.GetDB().Find(&servers).Error; err != nil {
 		response.ServerError(c, err.Error())
 		return
 	}

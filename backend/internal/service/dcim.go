@@ -1275,3 +1275,66 @@ func (s *DcimService) GetProductList() ([]map[string]interface{}, error) {
 	}
 	return products, nil
 }
+
+// GetFlowPacketEditData returns flow packet data for editing.
+func (s *DcimService) GetFlowPacketEditData(id uint) (map[string]interface{}, []map[string]interface{}, error) {
+	var packet map[string]interface{}
+	if err := s.db.Table("dcim_flow_packets").Where("id = ?", id).First(&packet).Error; err != nil {
+		return nil, nil, errors.New("packet not found")
+	}
+
+	products, _ := s.GetProductList()
+	return packet, products, nil
+}
+
+// UnsuspendReload unsuspends a server and triggers reload.
+func (s *DcimService) UnsuspendReload(serverID, operatorID uint) error {
+	var server model.DcimServer
+	if err := s.db.First(&server, serverID).Error; err != nil {
+		return errors.New("server not found")
+	}
+
+	// Unsuspend
+	if err := s.db.Model(&server).Update("status", 1).Error; err != nil {
+		return err
+	}
+
+	// Trigger reload via remote API
+	_, err := s.executeServerAction(&server, "reload", map[string]interface{}{
+		"operator_id": operatorID,
+	})
+	if err != nil {
+		s.log.Warn("reload failed: %v", err)
+	}
+	return nil
+}
+
+// GetServerDetail returns detailed server information.
+func (s *DcimService) GetServerDetail(serverID uint) (map[string]interface{}, error) {
+	var server model.DcimServer
+	if err := s.db.First(&server, serverID).Error; err != nil {
+		return nil, errors.New("server not found")
+	}
+
+	detail := map[string]interface{}{
+		"id":          server.ID,
+		"name":        server.Name,
+		"ip":          server.IP,
+		"status":      server.Status,
+		"cpu":         server.CPU,
+		"ram":         server.RAM,
+		"disk":        server.Disk,
+		"bandwidth":   server.Bandwidth,
+		"location":    server.Location,
+		"owner_id":    server.OwnerID,
+		"control_url": server.ControlURL,
+		"created_at":  server.CreatedAt,
+		"updated_at":  server.UpdatedAt,
+	}
+	return detail, nil
+}
+
+// GetDB returns the database instance.
+func (s *DcimService) GetDB() *gorm.DB {
+	return s.db
+}

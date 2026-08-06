@@ -189,11 +189,13 @@ func (h *EmailTemplateHandler) SwitchOperator(c *gin.Context) {
 	operator := req.EmailOperator
 	if operator != "" {
 		// 转小写
-		for i := range operator {
-			if operator[i] >= 'A' && operator[i] <= 'Z' {
-				operator[i] = operator[i] + 32
+		operatorBytes := []byte(operator)
+		for i := range operatorBytes {
+			if operatorBytes[i] >= 'A' && operatorBytes[i] <= 'Z' {
+				operatorBytes[i] = operatorBytes[i] + 32
 			}
 		}
+		operator = string(operatorBytes)
 	}
 
 	var count int64

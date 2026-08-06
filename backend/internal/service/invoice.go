@@ -299,3 +299,33 @@ func (s *InvoiceService) GetListEnhanced(page, pageSize int, status *int, userID
 	}
 	return invoices, total, nil
 }
+
+// UpdateInvoice updates invoice fields.
+func (s *InvoiceService) UpdateInvoice(id uint, updates map[string]interface{}) error {
+	if len(updates) == 0 {
+		return nil
+	}
+	return s.db.Model(&Invoice{}).Where("id = ?", id).Updates(updates).Error
+}
+
+// InvoiceUser represents a user for invoice operations.
+type InvoiceUser struct {
+	ID      uint    `json:"id"`
+	Balance float64 `json:"balance"`
+	Credit  float64 `json:"credit"`
+}
+
+// GetUser returns user info for invoice operations.
+func (s *InvoiceService) GetUser(userID uint) (*InvoiceUser, error) {
+	var user InvoiceUser
+	if err := s.db.Table("users").Where("id = ?", userID).
+		Select("id, balance, credit").Scan(&user).Error; err != nil {
+		return nil, errors.New("user not found")
+	}
+	return &user, nil
+}
+
+// GetDB returns the database instance.
+func (s *InvoiceService) GetDB() *gorm.DB {
+	return s.db
+}
