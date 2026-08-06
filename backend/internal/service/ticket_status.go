@@ -85,3 +85,8 @@ func (s *TicketStatusService) GetStatusByCode(code string) (*model.TicketStatus,
 	}
 	return &status, nil
 }
+
+// GetStatusByID returns a status by its ID (alias for GetByID).
+func (s *TicketStatusService) GetStatusByID(id uint) (*model.TicketStatus, error) {
+	return s.GetByID(id)
+}

@@ -200,3 +200,8 @@ func (s *UploadService) Delete(userID, fileID uint) error {
 func (s *UploadService) GetURL(file *UploadedFile) string {
 	return s.baseURL + "/" + file.FilePath
 }
+
+// UploadByType handles file upload with specific type validation.
+func (s *UploadService) UploadByType(userID uint, file *multipart.FileHeader, relType string, relID uint) (*UploadedFile, error) {
+	return s.Upload(userID, file, relType, relID)
+}

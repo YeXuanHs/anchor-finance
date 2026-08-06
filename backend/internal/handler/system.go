@@ -120,7 +120,6 @@ func (h *SystemHandler) GetSystemInfo(c *gin.Context) {
 	// 转换为map并添加更多系统信息
 	result := gin.H{
 		"version":       info.Version,
-		"build_time":    info.BuildTime,
 		"go_version":    "1.21",
 		"os":            "linux",
 		"arch":          "amd64",

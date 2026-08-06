@@ -91,12 +91,17 @@ func (s *TicketPrereplyService) GetAllCategories() ([]model.TicketPrereplyCatego
 	return categories, nil
 }
 
-// SearchReplies searches prereplies by keyword.
-func (s *TicketPrereplyService) SearchReplies(keyword string) ([]model.TicketPrereply, error) {
+// SearchReplies searches prereplies by title and content.
+func (s *TicketPrereplyService) SearchReplies(title, content string) ([]model.TicketPrereply, error) {
 	var replies []model.TicketPrereply
-	if err := s.db.Where("status = 1 AND (title LIKE ? OR content LIKE ?)", "%"+keyword+"%", "%"+keyword+"%").
-		Order("use_count DESC").
-		Find(&replies).Error; err != nil {
+	query := s.db.Where("status = 1")
+	if title != "" {
+		query = query.Where("title LIKE ?", "%"+title+"%")
+	}
+	if content != "" {
+		query = query.Where("content LIKE ?", "%"+content+"%")
+	}
+	if err := query.Order("use_count DESC").Find(&replies).Error; err != nil {
 		return nil, err
 	}
 	return replies, nil

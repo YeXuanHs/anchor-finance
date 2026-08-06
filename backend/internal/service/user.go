@@ -54,10 +54,13 @@ type LoginRequest struct {
 }
 
 type UpdateProfileRequest struct {
-	Nickname string `json:"nickname" binding:"omitempty,max=64"`
-	Avatar   string `json:"avatar" binding:"omitempty,max=256"`
-	Email    string `json:"email" binding:"omitempty,email"`
-	Phone    string `json:"phone" binding:"omitempty"`
+	Nickname    string `json:"nickname" binding:"omitempty,max=64"`
+	Avatar      string `json:"avatar" binding:"omitempty,max=256"`
+	Email       string `json:"email" binding:"omitempty,email"`
+	Phone       string `json:"phone" binding:"omitempty"`
+	Username    string `json:"username" binding:"omitempty,min=3,max=64"`
+	QQ          string `json:"qq" binding:"omitempty"`
+	CompanyName string `json:"company_name" binding:"omitempty"`
 }
 
 type ChangePasswordRequest struct {
