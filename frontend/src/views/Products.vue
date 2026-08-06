@@ -146,8 +146,8 @@ const route = useRoute()
 const configStore = useConfigStore()
 const loading = ref(false)
 
-const productGroups = ref([])
-const products = ref([])
+const productGroups = ref<any[]>([])
+const products = ref<any[]>([])
 const siteName = ref('')
 
 const fetchSiteName = async () => {
