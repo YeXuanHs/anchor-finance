@@ -770,10 +770,9 @@ func (s *UserManageService) DeleteCancelReason(id uint) error {
 // CreateRechargeInvoice creates a recharge invoice for a user.
 func (s *UserManageService) CreateRechargeInvoice(userID uint, amount float64, description string) (*model.Invoice, error) {
 	invoice := &model.Invoice{
-		UserID:      userID,
-		Total:       amount,
-		Status:      0,
-		Description: description,
+		UserID: userID,
+		Total:  amount,
+		Status: 0,
 	}
 	if err := s.db.Create(invoice).Error; err != nil {
 		return nil, err
@@ -811,10 +810,10 @@ func (s *UserManageService) GetCertificationFile(clientID uint) (map[string]inte
 		"user_id":        cert.UserID,
 		"type":           cert.Type,
 		"real_name":      cert.RealName,
-		"id_number":      cert.IDNumber,
+		"id_number":      cert.IDCard,
 		"front_image":    cert.FrontImage,
 		"back_image":     cert.BackImage,
-		"handheld_image": cert.HandheldImage,
+		"handheld_image": cert.HandImage,
 		"status":         cert.Status,
 		"reject_reason":  cert.RejectReason,
 		"reviewed_by":    cert.ReviewedBy,
