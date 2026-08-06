@@ -117,14 +117,18 @@ func (h *SystemHandler) GetSystemInfo(c *gin.Context) {
 		return
 	}
 
-	// 添加更多系统信息
-	info["go_version"] = "1.21"
-	info["os"] = "linux"
-	info["arch"] = "amd64"
-	info["num_cpu"] = 4
-	info["num_goroutine"] = 100
+	// 转换为map并添加更多系统信息
+	result := gin.H{
+		"version":       info.Version,
+		"build_time":    info.BuildTime,
+		"go_version":    "1.21",
+		"os":            "linux",
+		"arch":          "amd64",
+		"num_cpu":       4,
+		"num_goroutine": 100,
+	}
 
-	response.Success(c, info)
+	response.Success(c, result)
 }
 
 // GetDatabaseInfo 获取数据库信息

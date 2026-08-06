@@ -72,3 +72,32 @@ func (s *TicketPrereplyService) IncrementUseCount(id uint) error {
 	return s.db.Model(&model.TicketPrereply{}).Where("id = ?", id).
 		UpdateColumn("use_count", gorm.Expr("use_count + 1")).Error
 }
+
+// GetCategoryByID returns a single category by ID.
+func (s *TicketPrereplyService) GetCategoryByID(id uint) (*model.TicketPrereplyCategory, error) {
+	var category model.TicketPrereplyCategory
+	if err := s.db.First(&category, id).Error; err != nil {
+		return nil, err
+	}
+	return &category, nil
+}
+
+// GetAllCategories returns all categories for dropdown selection.
+func (s *TicketPrereplyService) GetAllCategories() ([]model.TicketPrereplyCategory, error) {
+	var categories []model.TicketPrereplyCategory
+	if err := s.db.Where("status = 1").Order("sort_order ASC").Find(&categories).Error; err != nil {
+		return nil, err
+	}
+	return categories, nil
+}
+
+// SearchReplies searches prereplies by keyword.
+func (s *TicketPrereplyService) SearchReplies(keyword string) ([]model.TicketPrereply, error) {
+	var replies []model.TicketPrereply
+	if err := s.db.Where("status = 1 AND (title LIKE ? OR content LIKE ?)", "%"+keyword+"%", "%"+keyword+"%").
+		Order("use_count DESC").
+		Find(&replies).Error; err != nil {
+		return nil, err
+	}
+	return replies, nil
+}

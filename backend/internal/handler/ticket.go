@@ -297,7 +297,6 @@ func (h *TicketHandler) UploadAttachment(c *gin.Context) {
 	}
 
 	// Generate unique filename to avoid collision
-	ext := filepath.Ext(file.Filename)
 	savedName := fmt.Sprintf("%d_%d%s", userID, ticketID, ext)
 	savedPath := filepath.Join(destDir, savedName)
 
