@@ -152,3 +152,14 @@ func (h *APILogHandler) GetErrorRate(c *gin.Context) {
 	}
 	response.Success(c, rates)
 }
+
+// Export exports API logs as CSV.
+func (h *APILogHandler) Export(c *gin.Context) {
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "30"))
+	logs, err := h.svc.GetSlowRequests(10000, days)
+	if err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+	response.Success(c, logs)
+}

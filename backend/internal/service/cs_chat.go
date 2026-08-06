@@ -281,3 +281,35 @@ func (s *CSChatService) GetStats() map[string]interface{} {
 		"avg_rating":  avgRating,
 	}
 }
+
+// GetOrCreateSession gets or creates a chat session for a user.
+func (s *CSChatService) GetOrCreateSession(userID uint) (*model.CSChatSession, error) {
+	var session model.CSChatSession
+	err := s.db.Where("user_id = ? AND status = ?", userID, "open").First(&session).Error
+	if err == nil {
+		return &session, nil
+	}
+
+	session = model.CSChatSession{
+		UserID: userID,
+		Status: "open",
+	}
+	if err := s.db.Create(&session).Error; err != nil {
+		return nil, err
+	}
+	return &session, nil
+}
+
+// SendMessage sends a message in a chat session.
+func (s *CSChatService) SendMessage(sessionID, senderID uint, senderType, content string) (*model.CSChatMessage, error) {
+	msg := &model.CSChatMessage{
+		SessionID:  sessionID,
+		SenderID:   senderID,
+		SenderType: senderType,
+		Content:    content,
+	}
+	if err := s.db.Create(msg).Error; err != nil {
+		return nil, err
+	}
+	return msg, nil
+}

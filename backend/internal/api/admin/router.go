@@ -2011,9 +2011,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/contracts/:id/pdf/seal", pdfHandler.GenerateContractWithSeal)
 
 		// ==================== 邮件增强 ====================
-		emailEnhancedSvc := service.NewEmailEnhancedService(deps.DB, deps.Log)
-		emailEnhancedHandler := handler.NewEmailEnhancedHandler(emailEnhancedSvc)
-		admin.POST("/email/test", emailEnhancedHandler.SendTestEmail)
+		emailEnhancedHandler2 := handler.NewEmailEnhancedHandler(emailEnhancedSvc)
+		admin.POST("/email/test", emailEnhancedHandler2.SendTestEmail)
 		admin.POST("/email/batch", emailEnhancedHandler.SendBatchEmail)
 		admin.GET("/email-logs", emailEnhancedHandler.GetEmailLogs)
 		admin.GET("/email-stats", emailEnhancedHandler.GetEmailStats)
