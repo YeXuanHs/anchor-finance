@@ -93,7 +93,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import {
-  Location, Connection, Lightning, ArrowRight, Warning
+  Location, Connection, Lightning, ArrowRight
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 

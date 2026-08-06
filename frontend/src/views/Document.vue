@@ -176,7 +176,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { API_DATA, type PageType, type ApiItem } from './document/apiData'
+import { API_DATA, type PageType, type ApiItem, type ApiPage } from './document/apiData'
 
 const route = useRoute()
 const router = useRouter()

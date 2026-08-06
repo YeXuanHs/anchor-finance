@@ -277,11 +277,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   ArrowDown, ArrowLeft, ArrowRight, User, Lightning, Position, Monitor,
-  Phone, Message, Location, TrendCharts, Shield
+  Phone, Message, Location
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { useConfigStore } from '@/stores/config'
