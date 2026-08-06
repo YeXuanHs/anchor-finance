@@ -235,52 +235,6 @@ func (s *DownloadService) UpdateSort(id uint, sortOrder int) error {
 	return s.db.Model(&model.DownloadFile{}).Where("id = ?", id).Update("sort_order", sortOrder).Error
 }
 
-// GetFileByID returns a published download file by ID.
-func (s *DownloadService) GetFileByID(id uint) (*model.DownloadFile, error) {
-	var file model.DownloadFile
-	if err := s.db.Preload("Category").Where("is_published = ?", true).First(&file, id).Error; err != nil {
-		return nil, err
-	}
-	return &file, nil
-}
-
-// IncrementDownload increments the download count for a file.
-func (s *DownloadService) IncrementDownload(id uint) error {
-	return s.db.Model(&model.DownloadFile{}).Where("id = ?", id).
-		Update("download_count", gorm.Expr("download_count + 1")).Error
-}
-
-// AdminGetFiles returns all files including unpublished (admin).
-func (s *DownloadService) AdminGetFiles(page, pageSize int, categoryID uint) ([]model.DownloadFile, int64, error) {
-	var files []model.DownloadFile
-	var total int64
-
-	query := s.db.Model(&model.DownloadFile{})
-	if categoryID > 0 {
-		query = query.Where("category_id = ?", categoryID)
-	}
-
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	offset := (page - 1) * pageSize
-	if err := query.Preload("Category").Offset(offset).Limit(pageSize).
-		Order("sort_order ASC, id DESC").Find(&files).Error; err != nil {
-		return nil, 0, err
-	}
-	return files, total, nil
-}
-
-// AdminGetFile returns a single download file by ID (admin, includes unpublished).
-func (s *DownloadService) AdminGetFile(id uint) (*model.DownloadFile, error) {
-	var file model.DownloadFile
-	if err := s.db.Preload("Category").First(&file, id).Error; err != nil {
-		return nil, err
-	}
-	return &file, nil
-}
-
 // ---------- Request DTOs ----------
 
 type CreateDownloadCategoryRequest struct {

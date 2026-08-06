@@ -3,6 +3,7 @@ package service
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -169,7 +170,7 @@ func (s *AggregateLoginService) BindAccount(userID uint, providerCode, code stri
 	}
 
 	// Create OAuth binding
-	rawDataJSON, _ := datatypes.MarshalJSON(userInfo.RawData)
+	rawDataJSON, _ := json.Marshal(userInfo.RawData)
 	oauthAccount := model.OAuthAccount{
 		UserID:   userID,
 		Provider: oauthProviderName,
@@ -258,7 +259,7 @@ func (s *AggregateLoginService) createOAuthUser(providerName string, userInfo *o
 	}
 
 	// Create OAuth account binding
-	rawDataJSON, _ := datatypes.MarshalJSON(userInfo.RawData)
+	rawDataJSON, _ := json.Marshal(userInfo.RawData)
 	oauthAccount := model.OAuthAccount{
 		UserID:   user.ID,
 		Provider: providerName,
@@ -285,7 +286,7 @@ func (s *AggregateLoginService) updateOAuthAccount(account *model.OAuthAccount, 
 		updates["email"] = userInfo.Email
 	}
 	if userInfo.RawData != nil {
-		rawDataJSON, _ := datatypes.MarshalJSON(userInfo.RawData)
+		rawDataJSON, _ := json.Marshal(userInfo.RawData)
 		updates["raw_data"] = rawDataJSON
 	}
 	s.db.Model(account).Updates(updates)

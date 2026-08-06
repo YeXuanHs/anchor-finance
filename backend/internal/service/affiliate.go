@@ -735,14 +735,14 @@ func (s *AffiliateService) ProcessAffiWithdrawSH(withdrawID uint, typ, status in
 			// Approve
 			if typ == 1 {
 				// Add to user balance
-				if err := tx.Table("users").Where("id = ?", withdraw.UserID).
+				if err := tx.Table("users").Where("id = ?", withdraw.AffiliateID).
 					Update("credit", gorm.Expr("credit + ?", withdraw.Amount)).Error; err != nil {
 					return err
 				}
 			} else if typ == 3 {
 				// Create account record
 				account := map[string]interface{}{
-					"uid":          withdraw.UserID,
+					"uid":          withdraw.AffiliateID,
 					"gateway":      payment,
 					"create_time":  time.Now().Unix(),
 					"pay_time":     time.Now().Unix(),
@@ -767,7 +767,7 @@ func (s *AffiliateService) ProcessAffiWithdrawSH(withdrawID uint, typ, status in
 
 			// Update affiliate balance
 			var aff model.Affiliate
-			if err := tx.Where("uid = ?", withdraw.UserID).First(&aff).Error; err == nil {
+			if err := tx.Where("uid = ?", withdraw.AffiliateID).First(&aff).Error; err == nil {
 				tx.Model(&aff).Updates(map[string]interface{}{
 					"withdraw_ing": gorm.Expr("withdraw_ing - ?", withdraw.Amount),
 					"withdrawn":    gorm.Expr("withdrawn + ?", withdraw.Amount),
@@ -787,7 +787,7 @@ func (s *AffiliateService) ProcessAffiWithdrawSH(withdrawID uint, typ, status in
 
 			// Return balance to affiliate
 			var aff model.Affiliate
-			if err := tx.Where("uid = ?", withdraw.UserID).First(&aff).Error; err == nil {
+			if err := tx.Where("uid = ?", withdraw.AffiliateID).First(&aff).Error; err == nil {
 				tx.Model(&aff).Updates(map[string]interface{}{
 					"balance":      gorm.Expr("balance + ?", withdraw.Amount),
 					"withdraw_ing": gorm.Expr("withdraw_ing - ?", withdraw.Amount),
