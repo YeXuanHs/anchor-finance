@@ -205,10 +205,6 @@ import {
   ThumbsUpOutline,
   TimeOutline,
   DocumentTextOutline,
-  ServerOutline,
-  ShieldCheckmarkOutline,
-  CardOutline,
-  SettingsOutline,
   HelpCircleOutline
 } from '@vicons/ionicons5'
 import { NIcon } from 'naive-ui'

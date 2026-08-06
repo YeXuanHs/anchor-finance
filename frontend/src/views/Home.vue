@@ -281,8 +281,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   ArrowDown, ArrowLeft, ArrowRight, User, Lightning, Position, Monitor,
-  Phone, Message, Location, TrendCharts, Shield, Headset, Cpu, Connection,
-  Promotion, OfficeBuilding, ShoppingBag, DataLine
+  Phone, Message, Location, TrendCharts, Shield
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { useConfigStore } from '@/stores/config'

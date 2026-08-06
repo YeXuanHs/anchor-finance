@@ -477,7 +477,7 @@ async function handlePasswordLogin() {
 
 async function handleSendSms() {
   try {
-    await smsFormRef.value?.validate(['phone', ...(captchaType.value === 'image' && showSmsCaptcha.value ? ['imageCaptcha'] : [])])
+    await smsFormRef.value?.validate()
     sendingSms.value = true
     await request.post('/api/v1/sms/send', { phone: smsForm.value.phone })
     message.success(t('login.smsSent'))

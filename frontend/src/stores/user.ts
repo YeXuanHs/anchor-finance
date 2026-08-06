@@ -59,6 +59,15 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  function setToken(newToken: string) {
+    token.value = newToken
+    localStorage.setItem('token', newToken)
+  }
+
+  function setUserInfo(userInfo: User) {
+    user.value = userInfo
+  }
+
   function logout() {
     user.value = null
     token.value = ''
@@ -73,6 +82,8 @@ export const useUserStore = defineStore('user', () => {
     login,
     register,
     fetchProfile,
+    setToken,
+    setUserInfo,
     logout
   }
 })
