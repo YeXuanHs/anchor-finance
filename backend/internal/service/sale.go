@@ -566,3 +566,8 @@ func (s *SaleService) DeleteLadder(id uint) error {
 	}
 	return s.db.Delete(&commission).Error
 }
+
+// GetDB returns the database instance.
+func (s *SaleService) GetDB() *gorm.DB {
+	return s.db
+}

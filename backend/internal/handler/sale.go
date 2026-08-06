@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"time"
 
+	"anchorfinance/internal/model"
 	"anchorfinance/internal/service"
 	"anchorfinance/pkg/logger"
 	"anchorfinance/pkg/response"
@@ -308,7 +309,7 @@ func (h *SaleHandler) GetStatistics(c *gin.Context) {
 		startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	}
 
-	query := h.db.Model(&model.Invoice{}).Where("status = ? AND created_at >= ?", 1, startTime)
+	query := h.saleSvc.GetDB().Model(&model.Invoice{}).Where("status = ? AND created_at >= ?", 1, startTime)
 	if saleID > 0 {
 		query = query.Where("sale_id = ?", saleID)
 	}
@@ -322,7 +323,7 @@ func (h *SaleHandler) GetStatistics(c *gin.Context) {
 	lastMonthStart := time.Date(now.Year(), now.Month()-1, 1, 0, 0, 0, 0, now.Location())
 	lastMonthEnd := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	var lastMonthAmount float64
-	h.db.Model(&model.Invoice{}).Where("status = ? AND created_at >= ? AND created_at < ?", 1, lastMonthStart, lastMonthEnd).
+	h.saleSvc.GetDB().Model(&model.Invoice{}).Where("status = ? AND created_at >= ? AND created_at < ?", 1, lastMonthStart, lastMonthEnd).
 		Select("COALESCE(SUM(total), 0)").Scan(&lastMonthAmount)
 
 	rate := float64(0)
@@ -347,12 +348,15 @@ func (h *SaleHandler) GetSaleRecords(c *gin.Context) {
 	username := c.Query("username")
 	productName := c.Query("product_name")
 
-	query := h.db.Model(&model.Invoice{}).Where("sale_id > 0")
+	query := h.saleSvc.GetDB().Model(&model.Invoice{}).Where("sale_id > 0")
 	if saleID > 0 {
 		query = query.Where("sale_id = ?", saleID)
 	}
 	if username != "" {
 		query = query.Joins("LEFT JOIN users ON users.id = invoices.user_id").Where("users.username LIKE ?", "%"+username+"%")
+	}
+	if productName != "" {
+		query = query.Joins("LEFT JOIN products ON products.id = invoices.product_id").Where("products.name LIKE ?", "%"+productName+"%")
 	}
 
 	var total int64
@@ -386,10 +390,10 @@ func (h *SaleHandler) GetSaleUsers(c *gin.Context) {
 	saleID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	var total int64
-	h.db.Model(&model.User{}).Where("sale_id = ?", saleID).Count(&total)
+	h.saleSvc.GetDB().Model(&model.User{}).Where("sale_id = ?", saleID).Count(&total)
 
 	var users []model.User
-	h.db.Where("sale_id = ?", saleID).Select("id, username, email, phone, created_at").
+	h.saleSvc.GetDB().Where("sale_id = ?", saleID).Select("id, username, email, phone, created_at").
 		Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&users)
 
 	response.Success(c, gin.H{"list": users, "total": total})
@@ -403,7 +407,7 @@ func (h *SaleHandler) GetAdminList(c *gin.Context) {
 		Email    string `json:"email"`
 		Status   int8   `json:"status"`
 	}
-	h.db.Model(&model.User{}).Where("is_sale = 1").
+	h.saleSvc.GetDB().Model(&model.User{}).Where("is_sale = 1").
 		Select("id, username, email, status").
 		Find(&admins)
 	response.Success(c, admins)
@@ -424,7 +428,7 @@ func (h *SaleHandler) SetSaleStatus(c *gin.Context) {
 	if req.Enabled {
 		value = "1"
 	}
-	h.db.Where("key = ?", "sale_enabled").Assign(map[string]interface{}{"key": "sale_enabled", "value": value}).
+	h.saleSvc.GetDB().Where("key = ?", "sale_enabled").Assign(map[string]interface{}{"key": "sale_enabled", "value": value}).
 		FirstOrCreate(&model.SystemConfig{})
 
 	response.Success(c, gin.H{"enabled": req.Enabled})
@@ -433,7 +437,7 @@ func (h *SaleHandler) SetSaleStatus(c *gin.Context) {
 // GetSaleStatus 获取销售启用状态
 func (h *SaleHandler) GetSaleStatus(c *gin.Context) {
 	var config model.SystemConfig
-	result := h.db.Where("key = ?", "sale_enabled").First(&config)
+	result := h.saleSvc.GetDB().Where("key = ?", "sale_enabled").First(&config)
 	enabled := result.Error == nil && config.Value == "1"
 	response.Success(c, gin.H{"enabled": enabled})
 }
