@@ -2273,7 +2273,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 			admin.GET("/common", commonHandler.Common)
 			admin.GET("/info-notice", commonHandler.InfoNotice)
 			admin.GET("/gateways", commonHandler.GetGetways)
-			admin.GET("/email-templates", commonHandler.GetEmailTem)
 			admin.GET("/sms-countries", commonHandler.GetSmsCountry)
 		}
 	}
