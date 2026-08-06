@@ -725,3 +725,100 @@ func (s *UserManageService) GetUserInvoices(userID uint, page, pageSize int, sta
 	}
 	return invoices, total, nil
 }
+
+// ==================== Cancel Reasons ====================
+
+// CancelReason represents a reason for account cancellation.
+type CancelReason struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Reason    string    `gorm:"type:varchar(256);not null" json:"reason"`
+	SortOrder int       `gorm:"default:0" json:"sort_order"`
+	Status    int8      `gorm:"default:1" json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// GetCancelReasons returns all active cancel reasons.
+func (s *UserManageService) GetCancelReasons() ([]CancelReason, error) {
+	var reasons []CancelReason
+	if err := s.db.Where("status = 1").Order("sort_order ASC").Find(&reasons).Error; err != nil {
+		return nil, err
+	}
+	return reasons, nil
+}
+
+// AddCancelReason adds a new cancel reason.
+func (s *UserManageService) AddCancelReason(reason string, sortOrder int) error {
+	r := &CancelReason{
+		Reason:    reason,
+		SortOrder: sortOrder,
+		Status:    1,
+	}
+	return s.db.Create(r).Error
+}
+
+// DeleteCancelReason deletes a cancel reason by ID.
+func (s *UserManageService) DeleteCancelReason(id uint) error {
+	result := s.db.Delete(&CancelReason{}, id)
+	if result.RowsAffected == 0 {
+		return errors.New("reason not found")
+	}
+	return result.Error
+}
+
+// ==================== Invoice Creation ====================
+
+// CreateRechargeInvoice creates a recharge invoice for a user.
+func (s *UserManageService) CreateRechargeInvoice(userID uint, amount float64, description string) (*model.Invoice, error) {
+	invoice := &model.Invoice{
+		UserID:      userID,
+		Total:       amount,
+		Status:      0,
+		Description: description,
+	}
+	if err := s.db.Create(invoice).Error; err != nil {
+		return nil, err
+	}
+	return invoice, nil
+}
+
+// CreateUserInvoice creates a general invoice for a user.
+func (s *UserManageService) CreateUserInvoice(userID uint, invoiceType string, items []map[string]interface{}) (*model.Invoice, error) {
+	invoice := &model.Invoice{
+		UserID: userID,
+		Status: 0,
+		Type:   invoiceType,
+	}
+	if err := s.db.Create(invoice).Error; err != nil {
+		return nil, err
+	}
+	return invoice, nil
+}
+
+// ==================== Certification File ====================
+
+// GetCertificationFile returns the certification file info for a client.
+func (s *UserManageService) GetCertificationFile(clientID uint) (map[string]interface{}, error) {
+	var cert model.Certification
+	err := s.db.Where("user_id = ?", clientID).First(&cert).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"id":             cert.ID,
+		"user_id":        cert.UserID,
+		"type":           cert.Type,
+		"real_name":      cert.RealName,
+		"id_number":      cert.IDNumber,
+		"front_image":    cert.FrontImage,
+		"back_image":     cert.BackImage,
+		"handheld_image": cert.HandheldImage,
+		"status":         cert.Status,
+		"reject_reason":  cert.RejectReason,
+		"reviewed_by":    cert.ReviewedBy,
+		"reviewed_at":    cert.ReviewedAt,
+		"created_at":     cert.CreatedAt,
+	}, nil
+}
