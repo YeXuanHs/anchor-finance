@@ -465,7 +465,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, shallowRef, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -770,7 +770,6 @@ function handleUpgrade() {
 }
 
 function handleCommand(command: string) {
-  const id = route.params.id
   switch (command) {
     case 'reinstall':
       reinstallForm.os = ''

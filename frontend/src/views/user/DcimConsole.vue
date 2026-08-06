@@ -649,11 +649,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Refresh, RefreshRight, VideoPlay, VideoPause, CopyDocument,
   FirstAidKit, Key, Delete, Monitor, CircleClose, TrendCharts,
-  Top, Bottom, Setting, Connection, Tickets, Cpu, Warning
+  Top, Bottom, Setting, Connection, Tickets, Cpu
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
-const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -1236,7 +1235,7 @@ function getTaskTypeText(type: string) {
 function getLogTagType(action: string) {
   const map: Record<string, 'success' | 'warning' | 'info' | 'danger'> = {
     '开机': 'success', '关机': 'danger', '重启': 'warning',
-    '密码重置': '', '救援模式': 'warning', '格式化': 'danger'
+    '密码重置': 'info', '救援模式': 'warning', '格式化': 'danger'
   }
   return map[action] || 'info'
 }

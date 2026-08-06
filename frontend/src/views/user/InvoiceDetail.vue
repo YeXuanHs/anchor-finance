@@ -68,12 +68,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
 
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n()
 const loading = ref(false)
 
 interface InvoiceItem {

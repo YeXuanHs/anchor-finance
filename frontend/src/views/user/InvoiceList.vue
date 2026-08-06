@@ -215,7 +215,7 @@ const filteredInvoices = computed(() => {
 
 function getStatusType(status: string) {
   const map: Record<string, 'success' | 'warning' | 'info' | 'danger'> = {
-    pending: 'warning', issued: 'success', shipped: '', rejected: 'danger'
+    pending: 'warning', issued: 'success', shipped: 'info', rejected: 'danger'
   }
   return map[status] || 'info'
 }

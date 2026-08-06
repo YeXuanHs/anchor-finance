@@ -329,7 +329,7 @@ const purchaseListing = ref<any>(null)
 const purchaseType = ref<'full' | 'fee_only'>('full')
 const agreedTerms = ref(false)
 const purchasing = ref(false)
-const userBalance = computed(() => userStore.userInfo?.balance || 0)
+const userBalance = computed(() => userStore.user?.balance || 0)
 
 // 卖家联系方式
 const sellerContactVisible = ref(false)
@@ -435,7 +435,7 @@ async function confirmPurchase() {
     }
 
     fetchListings()
-    userStore.fetchUserInfo()
+    userStore.fetchProfile()
   } catch (e: any) {
     ElMessage.error(e.message || '购买失败')
   } finally {

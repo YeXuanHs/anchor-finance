@@ -102,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
@@ -113,7 +113,7 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const currentUserId = computed(() => userStore.userInfo?.id)
+const currentUserId = computed(() => userStore.user?.id)
 
 const loadingSessions = ref(false)
 const loadingMessages = ref(false)
