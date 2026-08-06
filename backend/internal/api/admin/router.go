@@ -2300,7 +2300,7 @@ func RegisterPublicRoutes(r *gin.RouterGroup, db *gorm.DB, log *logger.Logger) {
 
 	// 客服聊天（前台）
 	csSvc := service.NewCSChatService(db, log)
-	csHandler := handler.NewCSChatHandler(csSvc, log)
+	_ = handler.NewCSChatHandler(csSvc, log)
 	r.POST("/cs/send", func(c *gin.Context) {
 		var req struct {
 			Content   string `json:"content" binding:"required"`
@@ -2350,7 +2350,7 @@ func RegisterPublicRoutes(r *gin.RouterGroup, db *gorm.DB, log *logger.Logger) {
 	kbSvc := service.NewAITicketCoreService(db, log)
 	r.GET("/kb/search", func(c *gin.Context) {
 		keyword := c.Query("keyword")
-		results := kbSvc.SearchKnowledge(keyword)
+		results := kbSvc.SearchKnowledge(keyword, 10)
 		c.JSON(200, gin.H{"code": 0, "data": results})
 	})
 
