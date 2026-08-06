@@ -19,14 +19,16 @@ if __name__ == "__main__":
     username = "root"
     password = "iswlBSLY8118"
     
-    # Build backend
+    # Pull and build
     build_cmd = """
-cd /opt/anchorfinance/backend
+cd /opt/anchorfinance
+git pull origin master
+cd backend
 export PATH=$PATH:/usr/local/go/bin
 CGO_ENABLED=0 go build -ldflags="-s -w" -o /opt/anchorfinance/anchorfinance .
 """
     
-    print("Building backend...")
+    print("Pulling and building...")
     out, err, code = ssh_exec(host, username, password, build_cmd)
     if out:
         print(out)
