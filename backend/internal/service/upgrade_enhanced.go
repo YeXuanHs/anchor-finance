@@ -90,7 +90,7 @@ func (s *UpgradeEnhancedService) JudgeUpgradeConfigError(hostID uint, targetProd
 		var allowed bool
 		var targetIDs []uint
 		// 解析JSON数组
-		if err := config.TargetProducts.Unmarshal(&targetIDs); err == nil {
+		if err := json.Unmarshal(config.TargetProducts, &targetIDs); err == nil {
 			for _, id := range targetIDs {
 				if id == targetProductID {
 					allowed = true
@@ -220,15 +220,6 @@ func (s *UpgradeEnhancedService) FilterConfigOptions(productID uint, currentConf
 
 // UpgradeConfigAdmin 管理员升级配置
 func (s *UpgradeEnhancedService) UpgradeConfigAdmin(hostID uint, adminID uint, data map[string]interface{}) error {
-	// 记录管理员操作
-	log := map[string]interface{}{
-		"host_id":   hostID,
-		"admin_id":  adminID,
-		"action":    "upgrade_config",
-		"data":      data,
-		"timestamp": time.Now(),
-	}
-
 	logger.Info("Admin upgrade config", "host_id", hostID, "admin_id", adminID)
 
 	// 更新主机配置
@@ -323,9 +314,9 @@ func (s *UpgradeEnhancedService) DoUpgrade(hostID uint, targetProductID uint, ne
 		order := model.Order{
 			UserID:    userID,
 			Type:      "upgrade",
-			HostID:    &hostID,
-			ProductID: &targetProductID,
+			ProductID: targetProductID,
 			Amount:    priceDiff,
+			Total:     priceDiff,
 			Status:    0, // pending
 		}
 		if err := s.db.Create(&order).Error; err != nil {

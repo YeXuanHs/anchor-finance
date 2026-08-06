@@ -35,9 +35,6 @@ func (s *TicketReplyService) PostAdminReply(ticketID uint, content string, admin
 		return fmt.Errorf("工单不存在: %w", err)
 	}
 
-	// 获取管理员显示名称
-	displayName := s.getAdminDisplayName(adminID)
-
 	// Markdown 转 HTML
 	htmlContent := MarkdownToHTML(content)
 

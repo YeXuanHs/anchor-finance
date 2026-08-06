@@ -62,7 +62,7 @@ func (s *UpgradeService) GetAvailableUpgrades(userID, userProductID uint) ([]Pro
 
 	// 查找同分组的其他产品作为升降级选项
 	var products []Product
-	err := s.db.Where("id != ? AND category = ? AND status = 1", currentProduct.ID, currentProduct.Category).
+	err := s.db.Where("id != ? AND group_id = ? AND status = 1", currentProduct.ID, currentProduct.GroupID).
 		Order("price ASC").
 		Find(&products).Error
 	if err != nil {
@@ -108,7 +108,13 @@ func (s *UpgradeService) CreateUpgrade(userID uint, req CreateUpgradeRequest) (*
 	}
 
 	// 计算差价（按剩余天数比例）
-	amount := s.calcPriceDiff(currentProduct.Price, targetProduct.Price, up.ExpireAt)
+	var expireAt time.Time
+	if up.NextDueDate != nil {
+		expireAt = *up.NextDueDate
+	} else {
+		expireAt = time.Now().AddDate(1, 0, 0) // 默认1年后
+	}
+	amount := s.calcPriceDiff(currentProduct.Price, targetProduct.Price, expireAt)
 
 	// 降级差价应为负数时按0处理
 	if amount < 0 {

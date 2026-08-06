@@ -193,7 +193,7 @@ func (s *TicketService) Reply(ticketID, userID uint, isAdmin bool, req ReplyTick
 
 		// 处理附件关联
 		if len(req.AttachmentIDs) > 0 {
-			if err := tx.Model(&Attachment{}).
+			if err := tx.Model(&model.Attachment{}).
 				Where("id IN ? AND ticket_id = ?", req.AttachmentIDs, ticketID).
 				Update("reply_id", reply.ID).Error; err != nil {
 				return err

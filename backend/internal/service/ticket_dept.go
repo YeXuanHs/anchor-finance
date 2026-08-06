@@ -13,21 +13,22 @@ import (
 
 // TicketDepartment 工单部门
 type TicketDepartment struct {
-	ID           uint           `gorm:"primaryKey" json:"id"`
-	Name         string         `gorm:"size:128;not null" json:"name"`
-	Description  string         `gorm:"type:text" json:"description"`
-	Slug         string         `gorm:"uniqueIndex;size:128" json:"slug"`
-	ParentID     *uint          `gorm:"index" json:"parent_id"`
-	ManagerIDs   datatypes.JSON `gorm:"type:json" json:"manager_ids"`
-	MemberIDs    datatypes.JSON `gorm:"type:json" json:"member_ids"`
-	SortOrder    int            `gorm:"default:0;index" json:"sort_order"`
-	Status       int            `gorm:"default:1;index" json:"status"` // 1=启用 0=禁用
-	AutoAssign   bool           `gorm:"default:false" json:"auto_assign"`
-	AssignRule   datatypes.JSON `gorm:"type:json" json:"assign_rule"`
-	EmailNotify  bool           `gorm:"default:true" json:"email_notify"`
-	SMSNotify    bool           `gorm:"default:false" json:"sms_notify"`
-	AutoReply    string         `gorm:"type:text" json:"auto_reply"`
-	TicketPrefix string         `gorm:"size:16" json:"ticket_prefix"`
+	ID           uint               `gorm:"primaryKey" json:"id"`
+	Name         string             `gorm:"size:128;not null" json:"name"`
+	Description  string             `gorm:"type:text" json:"description"`
+	Slug         string             `gorm:"uniqueIndex;size:128" json:"slug"`
+	ParentID     *uint              `gorm:"index" json:"parent_id"`
+	Children     []TicketDepartment `gorm:"foreignKey:ParentID" json:"children,omitempty"`
+	ManagerIDs   datatypes.JSON     `gorm:"type:json" json:"manager_ids"`
+	MemberIDs    datatypes.JSON     `gorm:"type:json" json:"member_ids"`
+	SortOrder    int                `gorm:"default:0;index" json:"sort_order"`
+	Status       int                `gorm:"default:1;index" json:"status"` // 1=启用 0=禁用
+	AutoAssign   bool               `gorm:"default:false" json:"auto_assign"`
+	AssignRule   datatypes.JSON     `gorm:"type:json" json:"assign_rule"`
+	EmailNotify  bool               `gorm:"default:true" json:"email_notify"`
+	SMSNotify    bool               `gorm:"default:false" json:"sms_notify"`
+	AutoReply    string             `gorm:"type:text" json:"auto_reply"`
+	TicketPrefix string             `gorm:"size:16" json:"ticket_prefix"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`

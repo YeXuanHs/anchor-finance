@@ -128,7 +128,7 @@ func (s *TicketContextService) buildUserInfo(uid uint) map[string]interface{} {
 		"email":         user.Email,
 		"phone":         phone,
 		"company":       "",
-		"credit":        user.Balance.String(),
+		"credit":        fmt.Sprintf("%.2f", user.Balance),
 		"status":        s.clientStatusLabel(user.Status),
 		"registered":    user.CreatedAt.Format("2006-01-02 15:04:05"),
 		"last_login":    lastLogin,
