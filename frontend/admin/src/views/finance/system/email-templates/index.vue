@@ -93,7 +93,7 @@
               type="info"
               effect="plain"
             >
-              {{ `{${variable}}}` }}
+              {{ '{' + variable + '}' }}
             </el-tag>
             <span v-if="!formData.variables?.length" class="empty-text">暂无可用变量</span>
           </div>
