@@ -138,6 +138,11 @@ async function handleCreateTicket() {
   if (!newTicket.title || !newTicket.description) { ElMessage.warning('请填写完整信息'); return }
   try {
     await request.post('/api/v1/tickets', {
+      title: newTicket.title,
+      department: newTicket.department,
+      priority: newTicket.priority,
+      description: newTicket.description
+    })
     showCreateDialog.value = false
     ElMessage.success('工单已提交')
     newTicket.title = ''

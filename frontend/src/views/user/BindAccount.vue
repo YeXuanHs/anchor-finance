@@ -295,6 +295,9 @@ const confirmPhone = async () => {
   submitting.value = true
   try {
     await request.post('/api/v1/user/bind-phone', {
+      phone: phoneForm.value.phone,
+      code: phoneForm.value.code
+    })
     phone.value = phoneForm.value.phone
     phoneDialogVisible.value = false
     ElMessage.success('手机绑定成功')
@@ -313,6 +316,9 @@ const confirmEmail = async () => {
   submitting.value = true
   try {
     await request.post('/api/v1/user/bind-email', {
+      email: emailForm.value.email,
+      code: emailForm.value.code
+    })
     email.value = emailForm.value.email
     emailDialogVisible.value = false
     ElMessage.success('邮箱绑定成功')
