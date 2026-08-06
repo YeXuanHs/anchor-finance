@@ -7,7 +7,7 @@
       <div class="container">
         <div class="hero-content">
           <div class="hero-icon">
-            <el-icon :size="48"><Shield /></el-icon>
+            <el-icon :size="48"><Warning /></el-icon>
           </div>
           <h1 class="hero-title">安全防护解决方案</h1>
           <p class="hero-desc">构建纵深云安全服务体系，根据客户业务场景安全诉求提供相应的安全解决方案，帮助客户保护云上的应用系统和数据，全方位守护企业数字资产。</p>
@@ -104,7 +104,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Shield, Lock, Position, Connection, OfficeBuilding, Check } from '@element-plus/icons-vue'
+import { Warning, Lock, Position, Connection, OfficeBuilding, Check } from '@element-plus/icons-vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import request from '@/utils/request'
