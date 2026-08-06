@@ -533,7 +533,7 @@ func (h *ZjmfFinanceApiHandler) PostManualHost(c *gin.Context) {
 
 	// 创建手动主机
 	host := model.UserProduct{
-		UpstreamID: id,
+		UpstreamID: uint(id),
 		Hostname:   req.Hostname,
 		IPAddress:  req.IPAddress,
 		Username:   req.Username,
