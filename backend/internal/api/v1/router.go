@@ -61,7 +61,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	contactsHandler := handler.NewContactsHandler(contactsSvc, log)
 
 	promoCodeSvc := service.NewPromoCodeService(deps.DB, deps.Log)
-	promoCodeHandler := handler.NewPromoCodeHandler(deps.DB, deps.Log)
+	_ = handler.NewPromoCodeHandler(deps.DB, deps.Log) // used for route registration if needed
 
 	announceSvc := service.NewAnnounceService(deps.DB, log)
 	announceHandler := handler.NewAnnounceHandler(announceSvc, log)
@@ -69,7 +69,7 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	newsHandler := handler.NewNewsHandler(deps.DB, log)
 
 	knowledgeSvc := service.NewKnowledgeService(deps.DB, log)
-	knowledgeHandler := handler.NewKnowledgeHandler(knowledgeSvc, log)
+	knowledgeHandler := handler.NewKnowledgeHandler(deps.DB, knowledgeSvc, log)
 
 	systemMsgSvc := service.NewSystemMessageService(deps.DB, log)
 	systemMsgHandler := handler.NewSystemMessageHandler(systemMsgSvc, log)
@@ -220,11 +220,10 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 			return
 		}
 		c.JSON(200, gin.H{"data": gin.H{
-			"id":         product.ID,
-			"name":       product.Name,
-			"price":      product.Price,
-			"period":     product.Period,
-			"period_unit": product.PeriodUnit,
+			"id":            product.ID,
+			"name":          product.Name,
+			"price":         product.Price,
+			"billing_cycle": product.BillingCycle,
 		}})
 	})
 
@@ -316,12 +315,12 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 			return
 		}
 		userID := c.GetUint("user_id")
-		promo, err := promoCodeSvc.Validate(code, userID)
+		discount, promo, err := promoCodeSvc.Validate(code, userID, 0, 0)
 		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(200, gin.H{"data": promo})
+		c.JSON(200, gin.H{"data": gin.H{"discount": discount, "promo": promo}})
 	})
 
 	// OAuth 回调（公开）
@@ -540,12 +539,12 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 				return
 			}
 			userID := c.GetUint("user_id")
-			promo, err := promoCodeSvc.Validate(req.Code, userID)
+			discount, promo, err := promoCodeSvc.Validate(req.Code, userID, 0, 0)
 			if err != nil {
 				c.JSON(400, gin.H{"error": err.Error()})
 				return
 			}
-			c.JSON(200, gin.H{"data": promo})
+			c.JSON(200, gin.H{"data": gin.H{"discount": discount, "promo": promo}})
 		})
 
 		// 支付方式

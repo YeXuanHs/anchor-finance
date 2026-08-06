@@ -401,3 +401,10 @@ func (h *AuthHandler) cleanup() {
 		middleware.CleanupExpiredEntries()
 	}
 }
+
+// Logout handles user logout.
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// In a stateless JWT system, logout is handled client-side
+	// For additional security, we could blacklist the token
+	response.SuccessMsg(c, "logged out")
+}

@@ -415,3 +415,16 @@ func (h *OAuthHandler) UnbindAggregateAccount(c *gin.Context) {
 
 	response.SuccessMsg(c, "aggregate account unbound successfully")
 }
+
+// UnbindAccount unbinds an OAuth account.
+func (h *OAuthHandler) UnbindAccount(c *gin.Context) {
+	provider := c.Param("provider")
+	userID := c.GetUint("user_id")
+
+	if err := h.oauthSvc.Unbind(userID, provider); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	response.SuccessMsg(c, "oauth account unbound successfully")
+}
