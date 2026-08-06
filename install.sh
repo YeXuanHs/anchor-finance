@@ -363,7 +363,7 @@ func main() {
     fmt.Print(string(hash))
 }
 GOEOF
-        (cd "$INSTALL_DIR/backend" && go build -o "$INSTALL_DIR/tools/bcrypt_hash" "$INSTALL_DIR/tools/bcrypt_hash.go") 2>/dev/null \
+        (cd "$INSTALL_DIR/tools" && go build -o bcrypt_hash bcrypt_hash.go) 2>/dev/null \
             || error "编译密码哈希工具失败"
     fi
     [ -f "${HASH_BIN}.exe" ] && HASH_BIN="${HASH_BIN}.exe"
