@@ -126,7 +126,7 @@ func (s *OrderService) Pay(orderID uint) (*Order, error) {
 		}
 
 		// Create invoice
-		if _, err := s.invSvc.CreateWithTx(tx, order.UserID, order.ID, order.OrderNo, order.TotalPrice); err != nil {
+		if _, err := s.invSvc.CreateWithTx(tx, order.UserID, order.ID, order.OrderNo, order.Total); err != nil {
 			return err
 		}
 
@@ -134,11 +134,12 @@ func (s *OrderService) Pay(orderID uint) (*Order, error) {
 		now := time.Now()
 		expire := calcExpire(now, order.BillingCycle)
 		up := &UserProduct{
-			UserID:    order.UserID,
-			ProductID: order.ProductID,
-			OrderID:   order.ID,
-			Name:      order.Product.Name,
-			Status:    1,
+			UserID:      order.UserID,
+			ProductID:   order.ProductID,
+			OrderID:     order.ID,
+			Name:        order.Product.Name,
+			NextDueDate: &expire,
+			Status:      1,
 		}
 		if err := tx.Create(up).Error; err != nil {
 			return err
@@ -191,18 +192,18 @@ func (s *OrderService) PayWithMethod(userID, orderID uint, paymentMethod string)
 		if err := s.db.Table("users").Where("id = ?", userID).Select("balance").First(&user).Error; err != nil {
 			return nil, errors.New("user not found")
 		}
-		if user.Balance < order.TotalPrice {
+		if user.Balance < order.Total {
 			return nil, errors.New("insufficient balance")
 		}
 		// Deduct balance
 		if err := s.db.Exec("UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?",
-			order.TotalPrice, userID, order.TotalPrice).Error; err != nil {
+			order.Total, userID, order.Total).Error; err != nil {
 			return nil, errors.New("balance deduction failed")
 		}
 		// Record transaction
 		s.db.Exec(`INSERT INTO balance_logs (user_id, type, amount, before_balance, after_balance, description, created_at)
 			VALUES (?, 'payment', ?, ?, ?, ?, ?)`,
-			userID, order.TotalPrice, user.Balance, user.Balance-order.TotalPrice,
+			userID, order.Total, user.Balance, user.Balance-order.Total,
 			"Order payment: "+order.OrderNo, time.Now().Unix())
 	}
 
@@ -215,7 +216,7 @@ func (s *OrderService) PayWithMethod(userID, orderID uint, paymentMethod string)
 		}).Error; err != nil {
 			return err
 		}
-		if _, err := s.invSvc.CreateWithTx(tx, order.UserID, order.ID, order.OrderNo, order.TotalPrice); err != nil {
+		if _, err := s.invSvc.CreateWithTx(tx, order.UserID, order.ID, order.OrderNo, order.Total); err != nil {
 			return err
 		}
 		now := time.Now()

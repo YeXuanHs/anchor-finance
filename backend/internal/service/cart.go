@@ -176,15 +176,14 @@ func (s *CartService) Checkout(userID uint, couponCode string) ([]*Order, error)
 			}
 
 			order := &Order{
-				OrderNo:    util.GenerateOrderNo(),
-				UserID:     userID,
-				ProductID:  item.ProductID,
-				Quantity:   item.Quantity,
-				TotalPrice: totalPrice,
-				Period:     item.Product.Period,
-				PeriodUnit: item.Product.PeriodUnit,
-				Status:     0,
-				Remark:     fmt.Sprintf("Cart checkout - %s", item.BillingCycle),
+				OrderNo:      util.GenerateOrderNo(),
+				UserID:       userID,
+				ProductID:    item.ProductID,
+				Quantity:     item.Quantity,
+				Total:        totalPrice,
+				BillingCycle: item.BillingCycle,
+				Status:       0,
+				AdminNotes:   fmt.Sprintf("Cart checkout - %s", item.BillingCycle),
 			}
 			if err := tx.Create(order).Error; err != nil {
 				return err
