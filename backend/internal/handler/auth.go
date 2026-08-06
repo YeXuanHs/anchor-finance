@@ -249,7 +249,7 @@ func (h *AuthHandler) SMSLogin(c *gin.Context) {
 	}
 
 	// Verify SMS code
-	if h.captchaSvc == nil || !h.captchaSvc.CheckAndConsume("captcha:sms:"+req.Phone, req.Code) {
+	if h.captchaSvc == nil || !h.captchaSvc.VerifySMS(req.Phone, req.Code) {
 		response.BadRequest(c, "验证码无效或已过期")
 		return
 	}
@@ -331,7 +331,10 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.userSvc.ChangePassword(userID, req.OldPassword, req.NewPassword); err != nil {
+	if err := h.userSvc.ChangePassword(userID, service.ChangePasswordRequest{
+		OldPassword: req.OldPassword,
+		NewPassword: req.NewPassword,
+	}); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}

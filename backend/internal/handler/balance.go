@@ -11,7 +11,6 @@ import (
 	"anchorfinance/pkg/payment"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -32,22 +31,10 @@ func NewBalanceHandler(balanceService *service.BalanceLogService, db *gorm.DB) *
 // rechargeRequest is the payload for Recharge.
 type rechargeRequest struct {
 	Amount  float64 `json:"amount" binding:"required,gt=0"`
-	Gateway string  `json:"gateway" binding:"required"` // payment gateway code: alipay/wechat/qqpay/usdt/xunhupay/epay/stripe/paypal
-}
-
-// rechargeResponse is the response for a successful recharge initiation.
-type rechargeResponse struct {
-	InvoiceNo string  `json:"invoice_no"`
-	TradeNo   string  `json:"trade_no"`
-	Amount    float64 `json:"amount"`
-	Gateway   string  `json:"gateway"`
-	PayURL    string  `json:"pay_url,omitempty"`
-	QrcodeURL string  `json:"qrcode_url,omitempty"`
-	Status    string  `json:"status"`
+	Gateway string  `json:"gateway" binding:"required"`
 }
 
 // GetBalance returns the authenticated user's current balance.
-// GET /balances
 func (h *BalanceHandler) GetBalance(c *gin.Context) {
 	userID := getUserID(c)
 	if userID == 0 {
@@ -64,7 +51,6 @@ func (h *BalanceHandler) GetBalance(c *gin.Context) {
 }
 
 // GetBalanceLogs returns the user's balance change history.
-// GET /balances/logs
 func (h *BalanceHandler) GetBalanceLogs(c *gin.Context) {
 	userID := getUserID(c)
 	if userID == 0 {
@@ -95,7 +81,6 @@ func (h *BalanceHandler) GetBalanceLogs(c *gin.Context) {
 }
 
 // Recharge creates a recharge invoice and initiates payment via the selected gateway.
-// POST /balances/recharge
 func (h *BalanceHandler) Recharge(c *gin.Context) {
 	userID := getUserID(c)
 	if userID == 0 {
@@ -135,15 +120,14 @@ func (h *BalanceHandler) Recharge(c *gin.Context) {
 
 	// 3. Create a recharge invoice record
 	invoiceNo := util.GenerateInvoiceNo()
-	amountDecimal := decimal.NewFromFloat(req.Amount)
 	invoice := model.Invoice{
 		InvoiceNo:     invoiceNo,
 		UserID:        userID,
 		Type:          "recharge",
 		Currency:      "CNY",
-		SubTotal:      amountDecimal,
-		Total:         amountDecimal,
-		Status:        0, // pending
+		SubTotal:      req.Amount,
+		Total:         req.Amount,
+		Status:        0,
 		PaymentMethod: req.Gateway,
 	}
 	if err := h.db.Create(&invoice).Error; err != nil {
@@ -178,7 +162,6 @@ func (h *BalanceHandler) Recharge(c *gin.Context) {
 
 	result, err := paymentGW.CreatePayment(c.Request.Context(), param)
 	if err != nil {
-		// Update invoice status to cancelled
 		h.db.Model(&invoice).Update("status", 3)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("payment creation failed: %s", err.Error())})
 		return
@@ -190,10 +173,10 @@ func (h *BalanceHandler) Recharge(c *gin.Context) {
 		UserID:        userID,
 		InvoiceID:     &invoice.ID,
 		Gateway:       req.Gateway,
-		Amount:        amountDecimal,
+		Amount:        req.Amount,
 		Currency:      "CNY",
 		Type:          "payment",
-		Status:        0, // pending
+		Status:        0,
 		IPAddress:     c.ClientIP(),
 	}
 	if err := h.db.Create(&transaction).Error; err != nil {
@@ -203,31 +186,23 @@ func (h *BalanceHandler) Recharge(c *gin.Context) {
 
 	// 6. Return payment details to the user
 	c.JSON(http.StatusOK, gin.H{
-		"data": rechargeResponse{
-			InvoiceNo: invoiceNo,
-			TradeNo:   result.TradeNo,
-			Amount:    req.Amount,
-			Gateway:   req.Gateway,
-			PayURL:    result.PayURL,
-			QrcodeURL: result.QrcodeURL,
-			Status:    "pending",
+		"data": gin.H{
+			"invoice_no": invoiceNo,
+			"trade_no":   result.OrderNo,
+			"amount":     req.Amount,
+			"gateway":    req.Gateway,
+			"pay_url":    result.Data,
+			"type":       result.Type,
+			"status":     "pending",
 		},
 	})
 }
 
 // RechargeNotify handles payment gateway callbacks for balance recharge.
-// POST /balances/recharge/notify/:gateway
 func (h *BalanceHandler) RechargeNotify(c *gin.Context) {
 	gatewayCode := c.Param("gateway")
 	if gatewayCode == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "gateway parameter required"})
-		return
-	}
-
-	// Read the raw body for gateway signature verification
-	body, err := c.GetRawData()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
 		return
 	}
 
@@ -238,41 +213,39 @@ func (h *BalanceHandler) RechargeNotify(c *gin.Context) {
 		return
 	}
 
-	// Create gateway instance and parse the notification
+	// Create gateway instance
 	paymentGW, err := payment.Factory(gw.Code, gw.Config)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gateway initialization failed"})
 		return
 	}
 
-	// Prefer verified webhook parsing when the gateway supports it.
-	var notify *payment.NotifyResult
-	if verifier, ok := paymentGW.(payment.WebhookVerifier); ok {
-		headers := make(map[string]string)
-		for _, key := range []string{
-			"Stripe-Signature",
-			"paypal-auth-algo", "paypal-cert-url", "paypal-transmission-id",
-			"paypal-transmission-sig", "paypal-transmission-time",
-		} {
-			if v := c.GetHeader(key); v != "" {
-				headers[key] = v
-			}
+	// Parse form/query params for notification verification
+	notifyData := make(map[string]string)
+	c.Request.ParseForm()
+	for k, v := range c.Request.PostForm {
+		if len(v) > 0 {
+			notifyData[k] = v[0]
 		}
-		notify, err = verifier.VerifyAndParseNotify(c.Request.Context(), body, headers)
-	} else {
-		notify, err = paymentGW.ParseNotify(c.Request.Context(), body)
 	}
+	for k, v := range c.Request.URL.Query() {
+		if len(v) > 0 {
+			notifyData[k] = v[0]
+		}
+	}
+
+	notify, err := paymentGW.VerifyNotification(c.Request.Context(), notifyData)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid notification: %s", err.Error())})
 		return
 	}
 
-	if notify.Status != "success" {
+	if !notify.Success {
 		c.JSON(http.StatusOK, gin.H{"status": "ignored"})
 		return
 	}
 
-	// Find the transaction by trade/order number
+	// Find the transaction by order number
 	var transaction model.Transaction
 	if err := h.db.Where("transaction_no = ? AND status = 0", notify.OrderNo).First(&transaction).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"status": "transaction not found or already processed"})
@@ -281,18 +254,16 @@ func (h *BalanceHandler) RechargeNotify(c *gin.Context) {
 
 	// Process in a database transaction
 	err = h.db.Transaction(func(tx *gorm.DB) error {
-		// Update transaction status to success
 		if err := tx.Model(&transaction).Updates(map[string]interface{}{
-			"status":       1, // success
+			"status":       1,
 			"completed_at": gorm.Expr("NOW()"),
 		}).Error; err != nil {
 			return fmt.Errorf("update transaction: %w", err)
 		}
 
-		// Update invoice status to paid
 		if transaction.InvoiceID != nil {
 			if err := tx.Model(&model.Invoice{}).Where("id = ?", *transaction.InvoiceID).Updates(map[string]interface{}{
-				"status":         1, // paid
+				"status":         1,
 				"transaction_id": notify.OrderNo,
 				"paid_at":        gorm.Expr("NOW()"),
 			}).Error; err != nil {
@@ -300,13 +271,7 @@ func (h *BalanceHandler) RechargeNotify(c *gin.Context) {
 			}
 		}
 
-		// Credit the user's balance
-		amount := notify.Amount
-		if amount <= 0 {
-			// Fallback: read amount from transaction
-			f64, _ := transaction.Amount.Float64Value()
-			amount = f64
-		}
+		amount := transaction.Amount
 		if amount > 0 {
 			desc := fmt.Sprintf("Balance recharge via %s, order: %s", gatewayCode, notify.OrderNo)
 			if err := h.balanceService.AddBalance(transaction.UserID, amount, transaction.ID, "recharge", desc); err != nil {
@@ -326,7 +291,6 @@ func (h *BalanceHandler) RechargeNotify(c *gin.Context) {
 }
 
 // GetRechargeStatus checks the status of a pending recharge invoice.
-// GET /balances/recharge/status/:invoice_no
 func (h *BalanceHandler) GetRechargeStatus(c *gin.Context) {
 	userID := getUserID(c)
 	if userID == 0 {
@@ -367,7 +331,6 @@ func (h *BalanceHandler) GetRechargeStatus(c *gin.Context) {
 }
 
 // GetEnabledGateways returns the list of enabled payment gateways for recharge.
-// GET /payments/gateways
 func (h *BalanceHandler) GetEnabledGateways(c *gin.Context) {
 	var gateways []model.PaymentGateway
 	if err := h.db.Where("is_enabled = true").
@@ -390,7 +353,6 @@ func (h *BalanceHandler) GetEnabledGateways(c *gin.Context) {
 
 	result := make([]gatewayInfo, len(gateways))
 	for i, gw := range gateways {
-		// 图标根据code自动匹配
 		icon := payment.GetGatewayIcon(gw.Code)
 		result[i] = gatewayInfo{
 			ID:        gw.ID,
@@ -416,16 +378,15 @@ func (h *BalanceHandler) Withdraw(c *gin.Context) {
 	}
 
 	var req struct {
-		Amount float64 `json:"amount" binding:"required,gt=0"`
-		Method string  `json:"method"` // bank/alipay/wechat
-		Account string `json:"account"` // withdrawal account
+		Amount  float64 `json:"amount" binding:"required,gt=0"`
+		Method  string  `json:"method"`
+		Account string  `json:"account"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Check balance
 	balance, err := h.balanceService.GetBalance(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get balance"})
@@ -436,20 +397,16 @@ func (h *BalanceHandler) Withdraw(c *gin.Context) {
 		return
 	}
 
-	// Create withdrawal request (stored as a balance log with negative amount)
 	err = h.db.Transaction(func(tx *gorm.DB) error {
-		// Deduct balance
 		result := tx.Model(&model.User{}).Where("id = ?", userID).
 			UpdateColumn("balance", gorm.Expr("balance - ?", req.Amount))
 		if result.Error != nil {
 			return result.Error
 		}
 
-		// Get new balance
 		var user model.User
 		tx.Select("balance").First(&user, userID)
 
-		// Log withdrawal
 		log := &model.BalanceLog{
 			UserID:      userID,
 			Amount:      -req.Amount,
@@ -470,7 +427,7 @@ func (h *BalanceHandler) Withdraw(c *gin.Context) {
 	}})
 }
 
-// getDomain 从请求中获取域名
+// getDomain gets the domain from the request
 func getDomain(c *gin.Context) string {
 	scheme := "http"
 	if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" {
