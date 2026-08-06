@@ -312,3 +312,37 @@ func (s *CSChatService) SendMessage(sessionID, senderID uint, senderType, conten
 	}
 	return msg, nil
 }
+
+// GetOrCreateSessionByVisitorID gets or creates a session by visitor ID (string).
+func (s *CSChatService) GetOrCreateSessionByVisitorID(visitorID string) (*model.CSChatSession, error) {
+	var session model.CSChatSession
+	err := s.db.Where("visitor_id = ? AND status = ?", visitorID, "open").First(&session).Error
+	if err == nil {
+		return &session, nil
+	}
+
+	session = model.CSChatSession{
+		VisitorID: visitorID,
+		Status:    "open",
+	}
+	if err := s.db.Create(&session).Error; err != nil {
+		return nil, err
+	}
+	return &session, nil
+}
+
+// AIReply generates an AI reply for a message.
+func (s *CSChatService) AIReply(sessionID uint, userMessage string) (string, error) {
+	// Simple auto-reply implementation
+	reply := "您好，感谢您的咨询！客服正在处理中，请稍候。"
+
+	msg := &model.CSChatMessage{
+		SessionID: sessionID,
+		Role:      "assistant",
+		Content:   reply,
+	}
+	if err := s.db.Create(msg).Error; err != nil {
+		return "", err
+	}
+	return reply, nil
+}

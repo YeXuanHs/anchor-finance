@@ -2011,8 +2011,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		admin.GET("/contracts/:id/pdf/seal", pdfHandler.GenerateContractWithSeal)
 
 		// ==================== 邮件增强 ====================
-		emailEnhancedHandler2 := handler.NewEmailEnhancedHandler(emailEnhancedSvc)
-		admin.POST("/email/test", emailEnhancedHandler2.SendTestEmail)
+		emailEnhancedHandler := handler.NewEmailEnhancedHandler(emailEnhancedSvc)
+		admin.POST("/email/test", emailEnhancedHandler.SendTestEmail)
 		admin.POST("/email/batch", emailEnhancedHandler.SendBatchEmail)
 		admin.GET("/email-logs", emailEnhancedHandler.GetEmailLogs)
 		admin.GET("/email-stats", emailEnhancedHandler.GetEmailStats)
@@ -2310,12 +2310,13 @@ func RegisterPublicRoutes(r *gin.RouterGroup, db *gorm.DB, log *logger.Logger) {
 			c.JSON(400, gin.H{"error": "消息不能为空"})
 			return
 		}
-		session, err := csSvc.GetOrCreateSession(req.VisitorID)
+		session, err := csSvc.GetOrCreateSessionByVisitorID(req.VisitorID)
 		if err != nil {
 			c.JSON(500, gin.H{"error": "会话创建失败"})
 			return
 		}
-		if err := csSvc.SendMessage(session.ID, "user", req.Content); err != nil {
+		_, err = csSvc.SendMessage(session.ID, 0, "user", req.Content)
+		if err != nil {
 			c.JSON(500, gin.H{"error": "消息发送失败"})
 			return
 		}
@@ -2332,7 +2333,7 @@ func RegisterPublicRoutes(r *gin.RouterGroup, db *gorm.DB, log *logger.Logger) {
 			c.JSON(400, gin.H{"error": "缺少visitor_id"})
 			return
 		}
-		session, err := csSvc.GetOrCreateSession(visitorID)
+		session, err := csSvc.GetOrCreateSessionByVisitorID(visitorID)
 		if err != nil {
 			c.JSON(500, gin.H{"error": "会话创建失败"})
 			return
