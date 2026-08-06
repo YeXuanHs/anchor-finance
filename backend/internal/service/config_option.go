@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"anchorfinance/internal/model"
 	"anchorfinance/pkg/logger"
@@ -1029,7 +1031,7 @@ func (s *ConfigOptionService) AdminDuplicateGroupPost(gid uint, newName string) 
 		tx.Raw("SELECT id, option_name, option_type, qty_minimum, qty_maximum, `order`, hidden, upgrade FROM product_config_options WHERE gid = ?", gid).Scan(&oldOptions)
 
 		for _, oldOpt := range oldOptions {
-			res := tx.Exec(`INSERT INTO product_config_options (gid, option_name, option_type, qty_minimum, qty_maximum, `+"`order`"+`, hidden, upgrade) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			_ = tx.Exec(`INSERT INTO product_config_options (gid, option_name, option_type, qty_minimum, qty_maximum, `+"`order`"+`, hidden, upgrade) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 				newGroupID, oldOpt.OptionName, oldOpt.OptionType, oldOpt.QtyMinimum, oldOpt.QtyMaximum, oldOpt.Order, oldOpt.Hidden, oldOpt.Upgrade)
 			var newCID struct{ ID uint }
 			tx.Raw("SELECT LAST_INSERT_ID() as id").Scan(&newCID)
@@ -1046,7 +1048,7 @@ func (s *ConfigOptionService) AdminDuplicateGroupPost(gid uint, newName string) 
 			tx.Raw("SELECT id, option_name, sort_order, hidden, qty_minimum, qty_maximum FROM product_config_options_sub WHERE config_id = ?", oldOpt.ID).Scan(&oldSubs)
 
 			for _, oldSub := range oldSubs {
-				subRes := tx.Exec(`INSERT INTO product_config_options_sub (config_id, option_name, sort_order, hidden, qty_minimum, qty_maximum) VALUES (?, ?, ?, ?, ?, ?)`,
+				_ = tx.Exec(`INSERT INTO product_config_options_sub (config_id, option_name, sort_order, hidden, qty_minimum, qty_maximum) VALUES (?, ?, ?, ?, ?, ?)`,
 					newCID.ID, oldSub.OptionName, oldSub.SortOrder, oldSub.Hidden, oldSub.QtyMin, oldSub.QtyMax)
 				var newSubID struct{ ID uint }
 				tx.Raw("SELECT LAST_INSERT_ID() as id").Scan(&newSubID)
