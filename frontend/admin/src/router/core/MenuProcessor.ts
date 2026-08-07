@@ -55,10 +55,55 @@ export class MenuProcessor {
 
   /**
    * 处理后端控制模式的菜单
+   * 将后端菜单格式 {url, name, icon} 转换为前端路由格式 {path, name, component, meta}
    */
   private async processBackendMenu(): Promise<AppRouteRecord[]> {
     const list = await fetchGetMenuList()
-    return this.filterEmptyMenus(list)
+    const converted = this.convertBackendMenus(list)
+    return this.filterEmptyMenus(converted)
+  }
+
+  /**
+   * 将后端菜单数据转换为 AppRouteRecord 格式
+   */
+  private convertBackendMenus(menus: any[]): AppRouteRecord[] {
+    return menus
+      .filter((item: any) => item.is_active !== false)
+      .map((item: any) => {
+        const path = item.url || ''
+        const hasChildren = item.children && item.children.length > 0
+
+        // 从路径生成路由名称: /finance/dashboard -> FinanceDashboard
+        const routeName = path
+          .replace(/^\//, '')
+          .split('/')
+          .filter(Boolean)
+          .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
+          .join('') || 'Home'
+
+        const route: any = {
+          path,
+          name: routeName,
+          meta: {
+            title: item.name || '',
+            icon: item.icon || '',
+            order: item.sort_order || 0,
+            isHide: item.is_visible === false
+          }
+        }
+
+        // 叶子节点需要 component，父节点由 RouteTransformer 自动包裹 Layout
+        if (!hasChildren && path) {
+          route.component = path
+        }
+
+        // 递归处理子菜单
+        if (hasChildren) {
+          route.children = this.convertBackendMenus(item.children)
+        }
+
+        return route as AppRouteRecord
+      })
   }
 
   /**
