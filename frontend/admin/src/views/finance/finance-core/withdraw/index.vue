@@ -266,7 +266,7 @@ const reviewRules: FormRules = {
 
 // 获取提现方式标签
 const getMethodTag = (method: string) => {
-  const map: Record<string, string> = {
+  const map: Record<string, any> = {
     alipay: 'primary',
     wechat: 'success',
     bank: 'warning'
@@ -286,7 +286,7 @@ const getMethodText = (method: string) => {
 
 // 获取状态标签
 const getStatusTag = (status: string) => {
-  const map: Record<string, string> = {
+  const map: Record<string, any> = {
     pending: 'warning',
     approved: 'primary',
     rejected: 'danger',

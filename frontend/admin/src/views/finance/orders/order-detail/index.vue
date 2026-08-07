@@ -245,7 +245,7 @@ const handleTerminate = async () => {
   if (!id) return
 
   try {
-    await ElMessageBox.confirm('确定要终止该服务吗？此操作不可恢复。', '终止确认', { type: 'danger' })
+    await ElMessageBox.confirm('确定要终止该服务吗？此操作不可恢复。', '终止确认', { type: 'error' })
     actionLoading.value = true
     const serviceId = order.value?.service_id
     if (!serviceId) {

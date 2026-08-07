@@ -156,7 +156,7 @@ const actionLoading = ref(false)
 const bill = ref<any>({})
 const payments = ref<any[]>([])
 
-const statusTypeMap: Record<number, string> = {
+const statusTypeMap: Record<number, any> = {
   0: 'info',
   1: 'warning',
   2: 'success',

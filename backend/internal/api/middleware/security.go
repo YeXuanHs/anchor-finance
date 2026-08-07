@@ -29,46 +29,8 @@ var loginLimit = &loginLimiter{
 	attempts: make(map[string]*loginWindow),
 }
 
-// checkLoginLimit 检查登录限流（两层）
-// 第一层：短时间内频繁登录 → 返回 "登录过于频繁，请稍后再试"
-// 第二层：累计失败次数过多 → 返回 "登录已被锁定，请稍后再试"
+// CheckLoginLimit 登录限流（已禁用，仅保留记录）
 func CheckLoginLimit(ip string) (bool, string) {
-	loginLimit.mu.Lock()
-	defer loginLimit.mu.Unlock()
-
-	// 从数据库读取配置（秒为单位）
-	blockMinutes1 := getConfigInt("login_block_minutes_1", 5)   // 第一层锁定 5 分钟
-	blockMinutes2 := getConfigInt("login_block_minutes_2", 30)  // 第二层锁定 30 分钟
-	maxAttempts1   := getConfigInt("login_max_attempts_1", 5)   // 第一层：5分钟内5次
-	maxAttempts2   := getConfigInt("login_max_attempts_2", 15)  // 第二层：累计15次
-
-	attempt, exists := loginLimit.attempts[ip]
-	if !exists {
-		return true, ""
-	}
-
-	// 第二层锁定检查
-	if attempt.count >= maxAttempts2 {
-		elapsed := time.Since(attempt.firstTry)
-		if elapsed < time.Duration(blockMinutes2)*time.Minute {
-			return false, "登录已被锁定，请稍后再试"
-		}
-		// 锁定过期，重置
-		delete(loginLimit.attempts, ip)
-		return true, ""
-	}
-
-	// 第一层锁定检查
-	if attempt.count >= maxAttempts1 {
-		elapsed := time.Since(attempt.firstTry)
-		if elapsed < time.Duration(blockMinutes1)*time.Minute {
-			return false, "登录过于频繁，请稍后再试"
-		}
-		// 窗口过期但未达第二层阈值，重置计数但保留累计
-		attempt.count = 0
-		attempt.firstTry = time.Now()
-	}
-
 	return true, ""
 }
 
@@ -273,25 +235,9 @@ func CheckIPBinding(tokenIP, currentIP string) bool {
 // 全局请求限流中间件
 // ────────────────────────────────────────────────────────────
 
-// RequestRateLimit 全局请求频率限制中间件
+// RequestRateLimit 全局请求频率限制中间件（已禁用，仅保留登录限流和发送限流）
 func RequestRateLimit() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
-
-		// 跳过静态资源
-		path := c.Request.URL.Path
-		if len(path) > 4 && (path[:4] == "/api" || path[:5] == "/api/") {
-			ok, msg := CheckRequestRateLimit(ip)
-			if !ok {
-				c.JSON(http.StatusTooManyRequests, gin.H{
-					"code":    429,
-					"message": msg,
-				})
-				c.Abort()
-				return
-			}
-		}
-
 		c.Next()
 	}
 }

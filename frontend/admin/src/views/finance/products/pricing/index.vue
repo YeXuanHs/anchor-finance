@@ -193,10 +193,10 @@ const pagination = reactive({
 })
 
 // 表格数据
-const tableData = ref([])
+const tableData = ref<any[]>([])
 
 // 产品数据
-const products = ref([])
+const products = ref<any[]>([])
 
 // 对话框
 const dialogVisible = ref(false)

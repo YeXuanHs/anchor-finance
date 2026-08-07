@@ -362,7 +362,7 @@ const isGenericConfig = computed(() => {
 
 // 类型标签样式
 const getTypeTag = (type: string) => {
-  const map: Record<string, string> = {
+  const map: Record<string, any> = {
     mail: '',
     sms: 'success',
     certification: 'warning',

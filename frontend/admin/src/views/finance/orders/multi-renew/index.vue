@@ -154,7 +154,7 @@ const logDrawerVisible = ref(false)
 const taskLogs = ref<any[]>([])
 
 const getStatusType = (status: number) => {
-  const map: Record<number, string> = { 0: 'info', 1: 'warning', 2: 'danger', 3: 'success', 4: 'info' }
+  const map: Record<number, any> = { 0: 'info', 1: 'warning', 2: 'danger', 3: 'success', 4: 'info' }
   return map[status] || 'info'
 }
 

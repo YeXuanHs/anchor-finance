@@ -35,7 +35,7 @@
                   v-model="row.status"
                   :active-value="1"
                   :inactive-value="0"
-                  @change="(val: number) => toggleLanguage(row.id, val)"
+                  @change="(val: string | number | boolean) => toggleLanguage(row.id, val as number)"
                 />
               </template>
             </el-table-column>
@@ -263,7 +263,7 @@ const importFromZjmf = async () => {
 }
 
 // 标签切换
-const handleTabChange = (tab: string) => {
+const handleTabChange = (tab: string | number) => {
   if (tab === 'languages') {
     currentLang.value = null
     loadLanguages()

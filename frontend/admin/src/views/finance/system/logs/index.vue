@@ -151,7 +151,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/http'
-const levelTypeMap: Record<string, string> = { info: 'primary', warn: 'warning', error: 'danger', debug: 'info' }
+const levelTypeMap: Record<string, any> = { info: 'primary', warn: 'warning', error: 'danger', debug: 'info' }
 const loading = ref(false)
 const detailVisible = ref(false)
 const detailData = ref<any>(null)

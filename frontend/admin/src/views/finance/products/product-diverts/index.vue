@@ -138,7 +138,7 @@ const generateFormRules: FormRules = {
 }
 
 const getRequestStatusType = (status: number) => {
-  const map: Record<number, string> = { 0: 'warning', 1: 'success', 2: 'danger' }
+  const map: Record<number, any> = { 0: 'warning', 1: 'success', 2: 'danger' }
   return map[status] || 'info'
 }
 

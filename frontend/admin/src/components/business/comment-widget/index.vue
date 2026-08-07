@@ -49,9 +49,10 @@
     id: number
     author: string
     content: string
-    date: string
+    date?: string
+    timestamp: string
     avatar?: string
-    replies?: Comment[]
+    replies: Comment[]
   }
 
   const comments = ref<Comment[]>([])

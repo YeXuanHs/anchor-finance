@@ -184,12 +184,12 @@
       })
 
       // 验证token
-      if (!token) {
+      if (!access_token) {
         throw new Error('Login failed - no token received')
       }
 
       // 存储token和用户信息
-      userStore.setToken(token, refreshToken)
+      userStore.setToken(access_token, refresh_token)
       const userInfo = await fetchGetUserInfo()
       userStore.setUserInfo(userInfo)
 

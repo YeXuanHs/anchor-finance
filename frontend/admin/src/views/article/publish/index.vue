@@ -144,7 +144,7 @@
    */
   const getArticleTypes = async () => {
     try {
-      const res = await request.get({ url: '/api/admin/news/categories' })
+      const res: any = await request.get({ url: '/api/admin/news/categories' })
       articleTypes.value = res || []
     } catch (error) {
       console.error('获取文章分类失败:', error)
@@ -158,7 +158,7 @@
   const getArticleDetail = async () => {
     try {
       const { id } = route.query
-      const res = await request.get({ url: `/api/admin/news/${id}` })
+      const res: any = await request.get({ url: `/api/admin/news/${id}` })
 
       if (res) {
         articleName.value = res.title

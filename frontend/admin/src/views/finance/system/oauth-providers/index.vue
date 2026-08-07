@@ -22,7 +22,7 @@
             <img :src="getProviderIcon(provider.name)" class="provider-icon" @error="handleIconError($event, provider.name)" />
             <div class="provider-info">
               <h3>{{ provider.title }}</h3>
-              <el-tag :type="provider.region === 'cn' ? '' : 'info'" size="small">
+              <el-tag :type="(provider.region === 'cn' ? '' : 'info') as any" size="small">
                 {{ provider.region === 'cn' ? '国内' : '海外' }}
               </el-tag>
             </div>

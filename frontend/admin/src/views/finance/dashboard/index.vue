@@ -214,7 +214,7 @@ const chartPeriod = ref('week')
 
 // 全局搜索
 const globalSearch = ref('')
-const searchTags = [
+const searchTags: { label: string; type: any; query: string }[] = [
   { label: '客户管理', type: 'primary', query: 'clients' },
   { label: '订单列表', type: 'success', query: 'orders' },
   { label: '工单列表', type: 'warning', query: 'tickets' },
@@ -371,7 +371,7 @@ const getOrderStatusText = (status: number) => {
 
 // 订单状态类型
 const getOrderStatusType = (status: number) => {
-  const map: Record<number, string> = {
+  const map: Record<number, any> = {
     0: 'warning',
     1: 'primary',
     2: 'primary',
@@ -395,7 +395,7 @@ const getPriorityText = (priority: number) => {
 
 // 优先级类型
 const getPriorityType = (priority: number) => {
-  const map: Record<number, string> = {
+  const map: Record<number, any> = {
     1: 'info',
     2: 'primary',
     3: 'warning',
@@ -417,7 +417,7 @@ const getTicketStatusText = (status: number) => {
 
 // 工单状态类型
 const getTicketStatusType = (status: number) => {
-  const map: Record<number, string> = {
+  const map: Record<number, any> = {
     0: 'warning',
     1: 'success',
     2: 'primary',

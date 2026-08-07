@@ -194,7 +194,7 @@ const typeTextMap: Record<string, string> = {
   recharge: '充值', payment: '消费', refund: '退款',
   withdraw: '提现', transfer_in: '转入', transfer_out: '转出'
 }
-const typeTagMap: Record<string, string> = {
+const typeTagMap: Record<string, any> = {
   recharge: 'success', payment: 'warning', refund: 'info',
   withdraw: 'danger', transfer_in: 'success', transfer_out: 'danger'
 }

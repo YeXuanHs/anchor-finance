@@ -214,7 +214,7 @@ const deductRules: FormRules = {
 
 // 获取类型标签
 const getTypeTag = (type: string) => {
-  const map: Record<string, string> = {
+  const map: Record<string, any> = {
     recharge: 'success',
     deduct: 'danger',
     payment: 'warning',

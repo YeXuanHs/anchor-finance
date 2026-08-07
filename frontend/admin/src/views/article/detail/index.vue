@@ -31,7 +31,7 @@
     error.value = null
 
     try {
-      const res = await request.get({ url: `/api/admin/news/${articleId.value}` })
+      const res: any = await request.get({ url: `/api/admin/news/${articleId.value}` })
 
       if (res) {
         articleTitle.value = res.title

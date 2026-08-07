@@ -205,7 +205,7 @@ const detailData = ref<any>({})
 
 // 获取任务类型标签
 const getTaskTypeTag = (type: string) => {
-  const map: Record<string, string> = {
+  const map: Record<string, any> = {
     allocate: 'primary',
     reclaim: 'warning',
     migrate: 'success',
@@ -229,7 +229,7 @@ const getTaskTypeText = (type: string) => {
 
 // 获取状态标签
 const getStatusTag = (status: string) => {
-  const map: Record<string, string> = {
+  const map: Record<string, any> = {
     pending: 'info',
     running: 'primary',
     completed: 'success',

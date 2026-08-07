@@ -317,7 +317,7 @@ async function fetchOrders() {
 }
 
 function getStatusType(status: number) {
-  const map: Record<number, string> = { 1: 'success', 2: 'info', 3: 'warning' }
+  const map: Record<number, any> = { 1: 'success', 2: 'info', 3: 'warning' }
   return map[status] || 'info'
 }
 
@@ -327,7 +327,7 @@ function getStatusText(status: number) {
 }
 
 function getOrderStatusType(status: number) {
-  const map: Record<number, string> = { 0: 'warning', 1: 'primary', 2: 'success', 3: 'success', 4: 'info', 5: 'danger' }
+  const map: Record<number, any> = { 0: 'warning', 1: 'primary', 2: 'success', 3: 'success', 4: 'info', 5: 'danger' }
   return map[status] || 'info'
 }
 
@@ -337,7 +337,7 @@ function getOrderStatusText(status: number) {
 }
 
 function getTransferStatusType(status: number) {
-  const map: Record<number, string> = { 1: 'warning', 2: 'success', 3: 'danger' }
+  const map: Record<number, any> = { 1: 'warning', 2: 'success', 3: 'danger' }
   return map[status] || 'info'
 }
 

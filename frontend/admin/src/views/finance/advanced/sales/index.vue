@@ -363,7 +363,7 @@ const fetchSalesUserTable = async () => {
 }
 
 // 标签切换
-const handleTabChange = (tab: string) => {
+const handleTabChange = (tab: string | number) => {
   if (tab === 'records') {
     fetchRecords()
   } else if (tab === 'users') {

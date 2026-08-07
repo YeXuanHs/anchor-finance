@@ -179,7 +179,7 @@ const handleSaveApi = async () => {
   }
 }
 
-const handleTabChange = (tab: string) => {
+const handleTabChange = (tab: string | number) => {
   if (tab === 'api') fetchConfig()
 }
 

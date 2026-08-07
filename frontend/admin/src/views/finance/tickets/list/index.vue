@@ -242,7 +242,7 @@ interface Department {
   name: string
 }
 
-const priorityTypeMap: Record<string, string> = {
+const priorityTypeMap: Record<string, any> = {
   low: 'info',
   medium: '',
   high: 'warning',
@@ -256,7 +256,7 @@ const priorityLabelMap: Record<string, string> = {
   urgent: '紧急'
 }
 
-const statusTypeMap: Record<string, string> = {
+const statusTypeMap: Record<string, any> = {
   open: 'warning',
   in_progress: '',
   replied: 'success',
@@ -330,7 +330,7 @@ const handleUploadSuccess = (response: any, file: UploadFile) => {
   if (response?.data) {
     // 将上传成功的信息保存到文件对象
     file.url = response.data.url
-    file.attachment_id = response.data.id
+    ;(file as any).attachment_id = response.data.id
   } else {
     ElMessage.error(response?.msg || '上传失败')
   }

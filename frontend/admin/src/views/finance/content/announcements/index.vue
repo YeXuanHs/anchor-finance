@@ -174,7 +174,7 @@ const statusText = (status: string) => {
 }
 
 const statusTagType = (status: string) => {
-  const map: Record<string, string> = { draft: 'info', published: 'success', revoked: 'warning' }
+  const map: Record<string, any> = { draft: 'info', published: 'success', revoked: 'warning' }
   return map[status] || 'info'
 }
 

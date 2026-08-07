@@ -171,7 +171,7 @@ const renewFormRules: FormRules = {
 }
 
 const getStatusType = (status: number) => {
-  const map: Record<number, string> = { 0: 'info', 1: 'success', 2: 'warning', 3: 'danger' }
+  const map: Record<number, any> = { 0: 'info', 1: 'success', 2: 'warning', 3: 'danger' }
   return map[status] || 'info'
 }
 

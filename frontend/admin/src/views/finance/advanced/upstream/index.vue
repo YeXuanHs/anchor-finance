@@ -162,7 +162,7 @@ const typeLabelMap: Record<string, string> = {
   anchor: '锚点财务'
 }
 
-const typeTagMap: Record<string, string> = {
+const typeTagMap: Record<string, any> = {
   manual: 'info',
   v10: 'warning',
   zjmf: '',

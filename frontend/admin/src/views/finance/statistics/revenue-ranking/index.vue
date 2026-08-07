@@ -23,7 +23,7 @@
             <el-table :data="clientRanking" v-loading="clientLoading" style="width: 100%" border>
               <el-table-column prop="rank" label="排名" width="70" align="center">
                 <template #default="{ row, $index }">
-                  <el-tag v-if="$index < 3" :type="['danger', 'warning', ''][$index]" size="small" round>
+                  <el-tag v-if="$index < 3" :type="(['danger', 'warning', ''] as any)[$index]" size="small" round>
                     {{ $index + 1 }}
                   </el-tag>
                   <span v-else>{{ $index + 1 }}</span>

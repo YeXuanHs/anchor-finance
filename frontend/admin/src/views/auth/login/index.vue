@@ -48,8 +48,8 @@
               />
             </ElFormItem>
 
-            <!-- 推拽验证 -->
-            <div class="relative pb-5 mt-6">
+            <!-- 拖拽验证（已禁用） -->
+            <div v-if="false" class="relative pb-5 mt-6">
               <div
                 class="relative z-[2] overflow-hidden select-none rounded-lg border border-transparent tad-300"
                 :class="{ '!border-[#FF4E4F]': !isPassing && isClickPass }"
@@ -145,7 +145,7 @@
   const userStore = useUserStore()
   const router = useRouter()
   const route = useRoute()
-  const isPassing = ref(false)
+  const isPassing = ref(true)
   const isClickPass = ref(false)
 
   const systemName = AppConfig.systemInfo.name

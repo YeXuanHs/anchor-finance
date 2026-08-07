@@ -246,9 +246,9 @@ import request from '@/utils/http'
 defineOptions({ name: 'SmsBatchManage' })
 
 const smsTypeTextMap: Record<string, string> = { marketing: '营销短信', notification: '通知短信', verification: '验证码' }
-const smsTypeTagMap: Record<string, string> = { marketing: 'warning', notification: 'primary', verification: 'success' }
+const smsTypeTagMap: Record<string, any> = { marketing: 'warning', notification: 'primary', verification: 'success' }
 const statusTextMap: Record<string, string> = { pending: '待发送', sending: '发送中', completed: '已完成', failed: '已失败', paused: '已暂停' }
-const statusTagMap: Record<string, string> = { pending: 'info', sending: 'warning', completed: 'success', failed: 'danger', paused: 'info' }
+const statusTagMap: Record<string, any> = { pending: 'info', sending: 'warning', completed: 'success', failed: 'danger', paused: 'info' }
 
 const loading = ref(false)
 const createLoading = ref(false)

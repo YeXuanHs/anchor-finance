@@ -95,7 +95,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/http'
 
-const statusTypeMap: Record<string, string> = {
+const statusTypeMap: Record<string, any> = {
   pending: 'info',
   running: 'warning',
   completed: 'success',

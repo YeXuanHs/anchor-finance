@@ -185,10 +185,10 @@ const pagination = reactive({
 })
 
 // 表格数据
-const tableData = ref([])
+const tableData = ref<any[]>([])
 
 // 客户选项
-const clientOptions = ref([])
+const clientOptions = ref<any[]>([])
 
 // 对话框
 const dialogVisible = ref(false)
@@ -248,7 +248,7 @@ const getTrackTypeText = (type: string) => {
 
 // 获取跟踪类型标签类型
 const getTrackTypeTag = (type: string) => {
-  const map: Record<string, string> = {
+  const map: Record<string, any> = {
     phone: 'primary',
     email: 'success',
     im: 'warning',

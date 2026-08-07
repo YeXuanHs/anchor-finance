@@ -89,7 +89,7 @@ import type { TableColumnCtx } from 'element-plus'
 import request from '@/utils/http'
 import { exportToCSV } from '@/utils/export'
 
-interface SummaryMethodProps<T = any> {
+interface SummaryMethodProps<T extends Record<string, any> = any> {
   columns: TableColumnCtx<T>[]
   data: T[]
 }

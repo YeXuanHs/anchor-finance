@@ -116,7 +116,7 @@ import request from '@/utils/http'
 defineOptions({ name: 'BindsManage' })
 
 const providerTextMap: Record<string, string> = { wechat: '微信', qq: 'QQ', github: 'GitHub', google: 'Google', weibo: '微博' }
-const providerTagMap: Record<string, string> = { wechat: 'success', qq: 'primary', github: 'warning', google: 'danger', weibo: 'info' }
+const providerTagMap: Record<string, any> = { wechat: 'success', qq: 'primary', github: 'warning', google: 'danger', weibo: 'info' }
 
 const loading = ref(false)
 const selectedRows = ref<any[]>([])

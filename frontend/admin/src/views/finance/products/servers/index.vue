@@ -204,7 +204,7 @@ const configForm = reactive({
 
 // 获取服务器状态标签
 const getServerStatusTag = (status: string) => {
-  const map: Record<string, string> = {
+  const map: Record<string, any> = {
     online: 'success',
     offline: 'danger',
     maintenance: 'warning'

@@ -143,7 +143,7 @@ function shouldRetry(statusCode: number) {
 }
 
 /** 请求重试逻辑 */
-async function retryRequest<T>(
+async function retryRequest<T = any>(
   config: ExtendedAxiosRequestConfig,
   retries: number = MAX_RETRIES
 ): Promise<T> {
@@ -195,19 +195,19 @@ async function request<T = any>(config: ExtendedAxiosRequestConfig): Promise<T> 
 
 /** API方法集合 */
 const api = {
-  get<T>(config: ExtendedAxiosRequestConfig) {
+  get<T = any>(config: ExtendedAxiosRequestConfig) {
     return retryRequest<T>({ ...config, method: 'GET' })
   },
-  post<T>(config: ExtendedAxiosRequestConfig) {
+  post<T = any>(config: ExtendedAxiosRequestConfig) {
     return retryRequest<T>({ ...config, method: 'POST' })
   },
-  put<T>(config: ExtendedAxiosRequestConfig) {
+  put<T = any>(config: ExtendedAxiosRequestConfig) {
     return retryRequest<T>({ ...config, method: 'PUT' })
   },
-  del<T>(config: ExtendedAxiosRequestConfig) {
+  del<T = any>(config: ExtendedAxiosRequestConfig) {
     return retryRequest<T>({ ...config, method: 'DELETE' })
   },
-  request<T>(config: ExtendedAxiosRequestConfig) {
+  request<T = any>(config: ExtendedAxiosRequestConfig) {
     return retryRequest<T>(config)
   }
 }

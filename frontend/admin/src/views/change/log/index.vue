@@ -56,6 +56,10 @@
     version: string
     date: string
     changes: string[]
+    title?: string
+    detail?: string[]
+    remark?: string
+    requireReLogin?: boolean
   }
 
   const upgradeLogList = ref<ChangeLogItem[]>([])

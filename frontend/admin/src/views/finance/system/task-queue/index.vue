@@ -166,7 +166,7 @@ const typeMap: Record<string, string> = {
   report: '报表生成'
 }
 
-const statusTypeMap: Record<string, string> = {
+const statusTypeMap: Record<string, any> = {
   pending: 'info',
   processing: 'warning',
   completed: 'success',

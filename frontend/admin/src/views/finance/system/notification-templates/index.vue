@@ -142,7 +142,7 @@ import request from '@/utils/http'
 defineOptions({ name: 'NotificationTemplatesManage' })
 
 const typeTextMap: Record<string, string> = { email: '邮件', sms: '短信', internal: '站内信', wechat: '微信' }
-const typeTagMap: Record<string, string> = { email: 'primary', sms: 'success', internal: 'info', wechat: 'warning' }
+const typeTagMap: Record<string, any> = { email: 'primary', sms: 'success', internal: 'info', wechat: 'warning' }
 
 const loading = ref(false)
 const submitLoading = ref(false)

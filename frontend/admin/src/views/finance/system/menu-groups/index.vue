@@ -229,7 +229,7 @@ import request from '@/utils/http'
 defineOptions({ name: 'MenuGroupsManage' })
 
 const typeTextMap: Record<string, string> = { member: '会员中心', header: '官网顶部', footer: '官网底部' }
-const typeTagMap: Record<string, string> = { member: 'primary', header: 'success', footer: 'warning' }
+const typeTagMap: Record<string, any> = { member: 'primary', header: 'success', footer: 'warning' }
 
 const loading = ref(false)
 const submitLoading = ref(false)

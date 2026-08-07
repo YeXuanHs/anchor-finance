@@ -164,7 +164,7 @@ const providerTextMap: Record<string, string> = {
   alipay: '支付宝', dingtalk: '钉钉', feishu: '飞书',
   apple: 'Apple', telegram: 'Telegram'
 }
-const providerTagMap: Record<string, string> = {
+const providerTagMap: Record<string, any> = {
   wechat: 'success', qq: 'primary', weibo: 'warning', github: 'info',
   google: 'danger', facebook: 'primary', twitter: 'info',
   alipay: 'primary', dingtalk: 'primary', feishu: 'primary',

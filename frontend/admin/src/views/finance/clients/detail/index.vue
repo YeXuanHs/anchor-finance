@@ -467,8 +467,8 @@ const fetchTabData = async (tab: string) => {
   if (fetchMap[tab]) fetchMap[tab]()
 }
 
-const handleTabChange = (tab: string) => {
-  fetchTabData(tab)
+const handleTabChange = (tab: string | number) => {
+  fetchTabData(tab as string)
 }
 
 const handleBack = () => {

@@ -111,7 +111,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
 import request from '@/utils/http'
 
-const statusTypeMap: Record<number, string> = {
+const statusTypeMap: Record<number, any> = {
   0: 'warning',
   1: 'success',
   2: 'danger',

@@ -161,7 +161,7 @@ import request from '@/utils/http'
 defineOptions({ name: 'SystemMessagesManage' })
 
 const typeTextMap: Record<string, string> = { system: '系统通知', activity: '活动通知', security: '安全警告', order: '订单通知' }
-const typeTagMap: Record<string, string> = { system: 'primary', activity: 'success', security: 'danger', order: 'warning' }
+const typeTagMap: Record<string, any> = { system: 'primary', activity: 'success', security: 'danger', order: 'warning' }
 
 const loading = ref(false)
 const submitLoading = ref(false)

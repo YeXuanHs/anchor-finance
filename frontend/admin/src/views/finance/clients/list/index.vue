@@ -139,10 +139,10 @@ const pagination = reactive({
 })
 
 // 表格数据
-const tableData = ref([])
+const tableData = ref<any[]>([])
 
 // 分组数据
-const groups = ref([])
+const groups = ref<any[]>([])
 
 // 对话框
 const dialogVisible = ref(false)

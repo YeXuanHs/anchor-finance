@@ -288,7 +288,7 @@ const transferForm = reactive({
   remark: ''
 })
 
-const priorityTypeMap: Record<string, string> = {
+const priorityTypeMap: Record<string, any> = {
   low: 'info',
   medium: '',
   high: 'warning',
@@ -302,7 +302,7 @@ const priorityLabelMap: Record<string, string> = {
   urgent: '紧急'
 }
 
-const statusTypeMap: Record<string, string> = {
+const statusTypeMap: Record<string, any> = {
   open: 'warning',
   in_progress: '',
   replied: 'success',

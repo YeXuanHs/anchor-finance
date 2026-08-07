@@ -149,7 +149,7 @@ const templateRules: FormRules = {
 }
 
 const getStatusType = (status: number) => {
-  const map: Record<number, string> = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
+  const map: Record<number, any> = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
   return map[status] || 'info'
 }
 
@@ -278,7 +278,7 @@ const handleDelete = async (row: any) => {
   }
 }
 
-const handleTabChange = (tab: string) => {
+const handleTabChange = (tab: string | number) => {
   if (tab === 'templates') fetchTemplates()
   if (tab === 'config') fetchConfig()
 }

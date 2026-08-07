@@ -197,7 +197,7 @@ const typeLabelMap: Record<string, string> = {
   notice: '站内信'
 }
 
-const typeTagMap: Record<string, string> = {
+const typeTagMap: Record<string, any> = {
   sms: 'warning',
   email: '',
   notice: 'success'
@@ -211,7 +211,7 @@ const statusLabelMap: Record<string, string> = {
   pending: '待发送'
 }
 
-const statusTagMap: Record<string, string> = {
+const statusTagMap: Record<string, any> = {
   sending: 'warning',
   completed: 'success',
   partial: 'warning',

@@ -139,7 +139,7 @@
         year: yearVal.value === 'All' ? '' : yearVal.value
       }
 
-      const res = await request.get({ url: '/api/admin/news', params })
+      const res: any = await request.get({ url: '/api/admin/news', params })
       articleList.value = res?.list || []
       total.value = res?.total || 0
 
