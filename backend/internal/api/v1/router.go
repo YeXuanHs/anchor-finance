@@ -135,7 +135,6 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 	{
 		auth.POST("/login", authHandler.Login)
 		auth.POST("/sms-login", authHandler.SMSLogin)
-		auth.POST("/register", authHandler.Register)
 		auth.POST("/refresh", middleware.AuthRequired(), authHandler.RefreshToken)
 		auth.POST("/logout", middleware.AuthRequired(), authHandler.Logout)
 		auth.POST("/access-token", authHandler.AccessTokenLogin)
