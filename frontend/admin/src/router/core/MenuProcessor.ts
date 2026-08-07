@@ -66,7 +66,7 @@ export class MenuProcessor {
   /**
    * 将后端菜单数据转换为 AppRouteRecord 格式
    */
-  private convertBackendMenus(menus: any[]): AppRouteRecord[] {
+  private convertBackendMenus(menus: any[], depth = 0): AppRouteRecord[] {
     return menus
       .filter((item: any) => item.is_active !== false)
       .map((item: any) => {
@@ -92,14 +92,19 @@ export class MenuProcessor {
           }
         }
 
-        // 叶子节点需要 component，父节点由 RouteTransformer 自动包裹 Layout
+        // 一级菜单有子菜单时必须指定 Layout 组件
+        if (depth === 0 && hasChildren) {
+          route.component = RoutesAlias.Layout
+        }
+
+        // 叶子节点需要 component
         if (!hasChildren && path) {
           route.component = path
         }
 
         // 递归处理子菜单
         if (hasChildren) {
-          route.children = this.convertBackendMenus(item.children)
+          route.children = this.convertBackendMenus(item.children, depth + 1)
         }
 
         return route as AppRouteRecord
