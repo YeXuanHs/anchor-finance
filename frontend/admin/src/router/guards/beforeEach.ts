@@ -152,7 +152,6 @@ async function handleRouteGuard(
   }
 
   // 1. 检查登录状态
-  console.log('[RouteGuard] to.path:', to.path, 'isLogin:', userStore.isLogin, 'routeInitFailed:', routeInitFailed)
   if (!handleLoginStatus(to, userStore, next)) {
     return
   }
@@ -268,14 +267,10 @@ async function handleDynamicRoutes(
 
   try {
     // 1. 获取用户信息
-    console.log('[RouteGuard] Fetching user info...')
     await fetchUserInfo()
-    console.log('[RouteGuard] User info fetched successfully')
 
     // 2. 获取菜单数据
-    console.log('[RouteGuard] Fetching menu list...')
     const menuList = await menuProcessor.getMenuList()
-    console.log('[RouteGuard] Menu list fetched:', menuList?.length, 'items')
 
     // 3. 验证菜单数据
     if (!menuProcessor.validateMenuList(menuList)) {

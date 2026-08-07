@@ -74,6 +74,7 @@
   import { fetchLogin } from '@/api/auth'
   import { ElNotification, type FormInstance, type FormRules } from 'element-plus'
   import { useSettingStore } from '@/store/modules/setting'
+  import { resetRouteInitState } from '@/router/guards/beforeEach'
 
   defineOptions({ name: 'Login' })
 
@@ -131,6 +132,9 @@
       // 存储 token 和登录状态
       userStore.setToken(access_token, refresh_token)
       userStore.setLoginStatus(true)
+
+      // 重置路由初始化状态，确保动态路由可以被重新加载
+      resetRouteInitState()
 
       // 登录成功处理
       showLoginSuccessNotice()

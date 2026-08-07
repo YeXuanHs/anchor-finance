@@ -5,10 +5,10 @@ import request from '@/utils/http'
  * @param params 登录参数
  * @returns 登录响应
  */
-export function fetchLogin(params: Api.Auth.LoginParams) {
+export function fetchLogin(data: Api.Auth.LoginParams) {
   return request.post<Api.Auth.LoginResponse>({
     url: '/api/v1/auth/login',
-    params
+    data
     // showSuccessMessage: true // 显示成功消息
     // showErrorMessage: false // 不显示错误消息
   })
