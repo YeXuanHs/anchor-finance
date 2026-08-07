@@ -27,7 +27,7 @@ type CreateMenuRequest struct {
 	URL        string             `json:"url"`
 	ParentID   *uint              `json:"parent_id"`
 	SortOrder  int                `json:"sort_order"`
-	Type       string             `json:"type" binding:"required,oneof=top side bottom"`
+	Type       string             `json:"type" binding:"required,oneof=admin top side bottom"`
 	IsVisible  *bool              `json:"is_visible"`
 	Permission string             `json:"permission"`
 	Target     string             `json:"target" binding:"omitempty,oneof=_self _blank"`
@@ -42,7 +42,7 @@ type UpdateMenuRequest struct {
 	URL        string             `json:"url"`
 	ParentID   *uint              `json:"parent_id"`
 	SortOrder  *int               `json:"sort_order"`
-	Type       string             `json:"type" binding:"omitempty,oneof=top side bottom"`
+	Type       string             `json:"type" binding:"omitempty,oneof=admin top side bottom"`
 	IsVisible  *bool              `json:"is_visible"`
 	Permission string             `json:"permission"`
 	Target     string             `json:"target" binding:"omitempty,oneof=_self _blank"`
@@ -242,8 +242,13 @@ func (s *MenuService) Sort(req SortMenuRequest) error {
 func buildMenuTree(menus []model.Menu, parentID *uint) []model.Menu {
 	var tree []model.Menu
 	for _, menu := range menus {
-		isRoot := parentID == nil && menu.ParentID == nil
-		isChild := parentID != nil && menu.ParentID != nil && *menu.ParentID == *parentID
+		menuParentID := uint(0)
+		if menu.ParentID != nil {
+			menuParentID = *menu.ParentID
+		}
+
+		isRoot := parentID == nil && menuParentID == 0
+		isChild := parentID != nil && menuParentID == *parentID
 		if isRoot || isChild {
 			children := buildMenuTree(menus, &menu.ID)
 			menu.Children = children

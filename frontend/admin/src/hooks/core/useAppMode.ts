@@ -18,8 +18,8 @@
 import { computed } from 'vue'
 
 export function useAppMode() {
-  // 获取访问模式配置，默认使用前端模式（路由由 finance.ts 等模块定义）
-  const accessMode = import.meta.env.VITE_ACCESS_MODE || 'frontend'
+  // 获取访问模式配置，默认使用后端模式（菜单由后端 API 返回）
+  const accessMode = import.meta.env.VITE_ACCESS_MODE || 'backend'
 
   /**
    * 是否为前端控制模式
