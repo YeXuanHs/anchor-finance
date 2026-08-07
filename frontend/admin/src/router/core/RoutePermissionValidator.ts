@@ -33,9 +33,9 @@ export class RoutePermissionValidator {
    * @returns 是否有权限访问
    */
   static hasPermission(targetPath: string, menuList: AppRouteRecord[]): boolean {
-    // 根路径不直接允许，需要重定向到首页
+    // 根路径始终允许访问
     if (targetPath === '/') {
-      return false
+      return true
     }
 
     return this.matchRoute(targetPath, menuList)

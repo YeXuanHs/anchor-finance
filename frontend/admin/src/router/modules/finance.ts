@@ -1,4 +1,5 @@
 import { AppRouteRecord } from '@/types/router'
+import { RoutesAlias } from '../routesAlias'
 
 /**
  * 财务系统路由模块
@@ -7,6 +8,7 @@ export const financeRoutes: AppRouteRecord = {
   path: '/finance',
   name: 'Finance',
   redirect: '/finance/dashboard',
+  component: RoutesAlias.Layout,
   meta: {
     title: '财务管理',
     icon: 'ep:money',

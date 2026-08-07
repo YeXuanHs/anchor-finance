@@ -303,8 +303,19 @@ async function handleDynamicRoutes(
       return
     }
 
-    // 8. 验证目标路径权限
+    // 8.5. 根路径重定向到首页
     const { homePath } = useCommon()
+    if (to.path === '/' && homePath.value && homePath.value !== '/') {
+      routeInitInProgress = false
+      closeLoading()
+      next({
+        path: homePath.value,
+        replace: true
+      })
+      return
+    }
+
+    // 9. 验证目标路径权限
     const { path: validatedPath, hasPermission } = RoutePermissionValidator.validatePath(
       to.path,
       menuList,
@@ -314,7 +325,7 @@ async function handleDynamicRoutes(
     // 初始化成功，重置进行中标记
     routeInitInProgress = false
 
-    // 9. 重新导航到目标路由
+    // 10. 重新导航到目标路由
     if (!hasPermission) {
       // 无权限访问，跳转到首页
       closeLoading()
