@@ -79,7 +79,13 @@ func (s *MenuService) GetTree(menuType string) ([]model.Menu, error) {
 	if err := query.Find(&menus).Error; err != nil {
 		return nil, err
 	}
-	return buildMenuTree(menus, nil), nil
+	s.log.Infof("GetTree: loaded %d menus", len(menus))
+	if len(menus) > 0 {
+		s.log.Infof("GetTree: first menu id=%d parent_id=%v name=%s", menus[0].ID, menus[0].ParentID, menus[0].Name)
+	}
+	tree := buildMenuTree(menus, nil)
+	s.log.Infof("GetTree: tree has %d top-level items", len(tree))
+	return tree, nil
 }
 
 // GetVisibleTree returns only visible menus in tree structure.
@@ -254,6 +260,9 @@ func buildMenuTree(menus []model.Menu, parentID *uint) []model.Menu {
 			menu.Children = children
 			tree = append(tree, menu)
 		}
+	}
+	if parentID == nil {
+		logger.Default().Infof("buildMenuTree(root): scanned %d items, found %d roots", len(menus), len(tree))
 	}
 	return tree
 }
