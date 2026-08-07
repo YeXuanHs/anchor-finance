@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue'
+  import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
   import type { FormInstance, FormRules } from 'element-plus'
   import request from '@/utils/http'
 
@@ -58,7 +58,7 @@
   const emit = defineEmits<Emits>()
 
   // 角色列表数据
-  const roleList = ref<Array<{ id: number; name: string }>>([])
+  const roleList = ref<Array<{ id: number; roleCode: string; roleName: string }>>([])
 
   const fetchRoles = async () => {
     try {

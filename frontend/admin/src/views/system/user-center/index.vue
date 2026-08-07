@@ -189,7 +189,7 @@
    */
   const fetchUserInfo = async () => {
     try {
-      const res = await request.get({ url: '/api/admin/user/profile' })
+      const res = await request.get({ url: '/api/admin/user/profile' }) as Record<string, any>
       if (res) {
         Object.assign(form, {
           realName: res.real_name || '',
