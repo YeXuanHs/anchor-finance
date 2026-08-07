@@ -40,6 +40,9 @@
               <ElCheckbox v-model="formData.rememberPassword">{{
                 $t('login.rememberPwd')
               }}</ElCheckbox>
+              <RouterLink class="text-theme" :to="{ name: 'ForgetPassword' }">{{
+                $t('login.forgetPwd')
+              }}</RouterLink>
             </div>
 
             <div style="margin-top: 30px">
