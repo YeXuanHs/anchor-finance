@@ -40,9 +40,12 @@
               <ElCheckbox v-model="formData.rememberPassword">{{
                 $t('login.rememberPwd')
               }}</ElCheckbox>
-              <RouterLink class="text-theme" :to="{ name: 'ForgetPassword' }">{{
-                $t('login.forgetPwd')
-              }}</RouterLink>
+              <ElTooltip
+                content="重置密码请修改数据库 users 表的 password 字段，使用 bcrypt 加密"
+                placement="top"
+              >
+                <span class="text-theme cursor-pointer text-sm">{{ $t('login.forgetPwd') }}</span>
+              </ElTooltip>
             </div>
 
             <div style="margin-top: 30px">

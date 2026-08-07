@@ -281,7 +281,7 @@ const userStore = useUserStore()
 
 // 上传请求头
 const uploadHeaders = computed(() => ({
-  Authorization: userStore.accessToken
+  Authorization: `Bearer ${userStore.accessToken}`
 }))
 
 const searchForm = reactive({

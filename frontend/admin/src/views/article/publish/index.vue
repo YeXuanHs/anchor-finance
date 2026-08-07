@@ -114,7 +114,7 @@
   const { accessToken } = userStore
 
   const uploadImageUrl = `${import.meta.env.VITE_API_URL || ''}/api/common/upload`
-  const uploadHeaders = { Authorization: accessToken }
+  const uploadHeaders = { Authorization: `Bearer ${accessToken}` }
 
   const pageMode = ref<PageModeEnum>(PageModeEnum.Add)
   const articleName = ref('')

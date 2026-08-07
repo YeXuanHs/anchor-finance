@@ -262,7 +262,7 @@ const transferDialogVisible = ref(false)
 const replyFormRef = ref<FormInstance>()
 
 const uploadHeaders = computed(() => ({
-  Authorization: userStore.accessToken
+  Authorization: `Bearer ${userStore.accessToken}`
 }))
 
 const getUploadUrl = computed(() => {
