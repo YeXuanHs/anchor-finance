@@ -69,9 +69,12 @@ export class MenuProcessor {
   private convertBackendMenus(menus: any[], depth = 0): AppRouteRecord[] {
     return menus
       .filter((item: any) => item.is_active !== false)
-      .map((item: any) => {
-        const path = item.url || ''
+      .map((item: any, index: number) => {
+        const rawPath = item.url || ''
         const hasChildren = item.children && item.children.length > 0
+
+        // 中间层级（有子菜单但无URL）生成唯一路径段
+        const path = rawPath || (hasChildren ? this.generateSlug(item.name || `group-${index}`) : '')
 
         // 从路径生成路由名称: /finance/dashboard -> FinanceDashboard
         const routeName = path
@@ -79,7 +82,7 @@ export class MenuProcessor {
           .split('/')
           .filter(Boolean)
           .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
-          .join('') || 'Home'
+          .join('') || `Group${depth}_${index}`
 
         const route: any = {
           path,
@@ -97,9 +100,14 @@ export class MenuProcessor {
           route.component = RoutesAlias.Layout
         }
 
+        // 中间层级（depth>0）有子菜单时指定透传组件
+        if (depth > 0 && hasChildren) {
+          route.component = '/_internal/router-view-pass'
+        }
+
         // 叶子节点需要 component
-        if (!hasChildren && path) {
-          route.component = path
+        if (!hasChildren && rawPath) {
+          route.component = rawPath
         }
 
         // 递归处理子菜单
@@ -109,6 +117,18 @@ export class MenuProcessor {
 
         return route as AppRouteRecord
       })
+  }
+
+  /**
+   * 从菜单名称生成 URL 友好的路径段
+   */
+  private generateSlug(name: string): string {
+    // 移除特殊字符，用连字符连接
+    return name
+      .replace(/[^\w\u4e00-\u9fff]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase() || 'group'
   }
 
   /**
