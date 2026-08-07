@@ -178,8 +178,8 @@
       switching.value = true
 
       // 模拟登录请求
-      const { token, refreshToken } = await fetchLogin({
-        userName: account.userName,
+      const { access_token, refresh_token } = await fetchLogin({
+        account: account.userName,
         password: account.password
       })
 
