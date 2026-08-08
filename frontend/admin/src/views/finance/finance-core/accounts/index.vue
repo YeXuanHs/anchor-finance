@@ -119,8 +119,8 @@ const formatMoney = (amount: number) => {
   return Number(amount).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-const getTypeTag = (type: string) => {
-  const map: Record<string, string> = { income: 'success', expense: 'danger', refund: 'warning' }
+const getTypeTag = (type: string): 'success' | 'danger' | 'warning' | 'info' => {
+  const map: Record<string, 'success' | 'danger' | 'warning' | 'info'> = { income: 'success', expense: 'danger', refund: 'warning' }
   return map[type] || 'info'
 }
 
