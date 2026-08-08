@@ -1,686 +1,519 @@
 <template>
-  <div class="client-detail-page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>客户详情</span>
-          <div class="header-actions">
-            <el-button @click="handleBack">
-              <el-icon><Back /></el-icon>
-              返回
-            </el-button>
-            <el-button type="primary" @click="handleEdit">
-              <el-icon><Edit /></el-icon>
-              编辑
-            </el-button>
-          </div>
-        </div>
-      </template>
-
-      <div v-loading="loading" class="loading-container">
-        <div v-if="client" class="client-content">
-          <!-- 客户基本信息摘要 -->
-          <div class="client-summary">
-            <div class="summary-left">
-              <div class="avatar">
-                <el-avatar :size="80">{{ client.username?.charAt(0) }}</el-avatar>
-              </div>
-              <div class="info">
-                <h2>{{ client.username }}</h2>
-                <p class="email">{{ client.email }}</p>
-                <p class="phone" v-if="client.phone">{{ client.phone }}</p>
-                <p class="group">
-                  <el-tag size="small">{{ client.group_name || '默认分组' }}</el-tag>
-                  <el-tag :type="client.status === 1 ? 'success' : 'danger'" size="small">
-                    {{ client.status === 1 ? '正常' : '禁用' }}
-                  </el-tag>
-                </p>
-              </div>
+  <div class="customer-detail-page">
+    <!-- 顶部客户信息卡片 -->
+    <el-card shadow="never" class="customer-info-card">
+      <el-row :gutter="20">
+        <el-col :span="6">
+          <div class="customer-basic">
+            <el-avatar :size="64" :src="customer.avatar">
+              {{ customer.username?.charAt(0) }}
+            </el-avatar>
+            <div class="customer-name">
+              <h3>{{ customer.username }}</h3>
+              <el-tag :type="getStatusType(customer.status)" size="small">
+                {{ getStatusText(customer.status) }}
+              </el-tag>
             </div>
-            <div class="summary-right">
+          </div>
+        </el-col>
+        <el-col :span="18">
+          <el-row :gutter="20">
+            <el-col :span="6">
               <div class="stat-item">
                 <div class="stat-label">余额</div>
-                <div class="stat-value">¥{{ formatAmount(client.balance) }}</div>
+                <div class="stat-value">¥{{ formatMoney(customer.balance) }}</div>
               </div>
+            </el-col>
+            <el-col :span="6">
               <div class="stat-item">
-                <div class="stat-label">信用额度</div>
-                <div class="stat-value">¥{{ formatAmount(client.credit) }}</div>
+                <div class="stat-label">信用额</div>
+                <div class="stat-value">¥{{ formatMoney(customer.credit) }}</div>
               </div>
+            </el-col>
+            <el-col :span="6">
               <div class="stat-item">
-                <div class="stat-label">注册时间</div>
-                <div class="stat-value">{{ client.created_at }}</div>
+                <div class="stat-label">订单数</div>
+                <div class="stat-value">{{ customer.orders_count || 0 }}</div>
               </div>
+            </el-col>
+            <el-col :span="6">
               <div class="stat-item">
-                <div class="stat-label">最后登录</div>
-                <div class="stat-value">{{ client.last_login_at || '未登录' }}</div>
+                <div class="stat-label">工单数</div>
+                <div class="stat-value">{{ customer.tickets_count || 0 }}</div>
               </div>
-            </div>
-          </div>
+            </el-col>
+          </el-row>
+        </el-col>
+      </el-row>
+    </el-card>
 
-          <!-- 标签页 -->
-          <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-            <!-- 资料标签页 -->
-            <el-tab-pane label="资料" name="profile">
-              <div class="tab-content">
-                <el-form :model="client" label-width="120px" class="profile-form">
-                  <el-row :gutter="20">
-                    <el-col :span="12">
-                      <el-form-item label="用户名">{{ client.username }}</el-form-item>
-                      <el-form-item label="邮箱">{{ client.email }}</el-form-item>
-                      <el-form-item label="手机号">{{ client.phone || '-' }}</el-form-item>
-                      <el-form-item label="公司">{{ client.company || '-' }}</el-form-item>
-                      <el-form-item label="职位">{{ client.position || '-' }}</el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                      <el-form-item label="姓名">{{ client.fullname || '-' }}</el-form-item>
-                      <el-form-item label="地址">{{ client.address || '-' }}</el-form-item>
-                      <el-form-item label="城市">{{ client.city || '-' }}</el-form-item>
-                      <el-form-item label="省份">{{ client.state || '-' }}</el-form-item>
-                      <el-form-item label="邮编">{{ client.postcode || '-' }}</el-form-item>
-                    </el-col>
-                  </el-row>
-                  <el-form-item label="国家">{{ client.country || '-' }}</el-form-item>
-                  <el-form-item label="时区">{{ client.timezone || '默认' }}</el-form-item>
-                  <el-form-item label="语言">{{ client.language || 'zh-CN' }}</el-form-item>
-                </el-form>
-              </div>
-            </el-tab-pane>
+    <!-- 标签页 -->
+    <el-card shadow="never" class="detail-card">
+      <el-tabs v-model="activeTab">
+        <!-- 概览 -->
+        <el-tab-pane label="概览" name="overview">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="客户ID">{{ customer.id }}</el-descriptions-item>
+            <el-descriptions-item label="用户名">{{ customer.username }}</el-descriptions-item>
+            <el-descriptions-item label="邮箱">{{ customer.email }}</el-descriptions-item>
+            <el-descriptions-item label="手机号">{{ customer.phone || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="公司">{{ customer.company || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="客户组">{{ customer.group_name || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="注册时间">{{ customer.created_at }}</el-descriptions-item>
+            <el-descriptions-item label="最后登录">{{ customer.last_login_at || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="备注" :span="2">{{ customer.notes || '-' }}</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
 
-            <!-- 服务标签页 -->
-            <el-tab-pane label="服务" name="services">
-              <div class="tab-content">
-                <el-table :data="services" v-loading="servicesLoading" style="width: 100%">
-                  <el-table-column prop="id" label="ID" width="80" />
-                  <el-table-column prop="product_name" label="产品" min-width="150" />
-                  <el-table-column prop="domain" label="域名" min-width="200" />
-                  <el-table-column prop="billing_cycle" label="周期" width="100" />
-                  <el-table-column prop="amount" label="金额" width="120">
-                    <template #default="{ row }">
-                      ¥{{ formatAmount(row.amount) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="status" label="状态" width="100">
-                    <template #default="{ row }">
-                      <el-tag :type="getServiceStatusType(row.status)" size="small">
-                        {{ getServiceStatusText(row.status) }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="created_at" label="创建时间" width="180" />
-                  <el-table-column prop="due_date" label="到期时间" width="180" />
-                </el-table>
-                <el-empty v-if="!services.length && !servicesLoading" description="暂无服务" />
-              </div>
-            </el-tab-pane>
+        <!-- 产品/服务 -->
+        <el-tab-pane label="产品/服务" name="products">
+          <el-table :data="products" border stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="product_name" label="产品名称" min-width="150" />
+            <el-table-column prop="domain" label="域名/标识" width="200" />
+            <el-table-column prop="status" label="状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getProductStatusType(row.status)" size="small">
+                  {{ getProductStatusText(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="billing_cycle" label="计费周期" width="100" />
+            <el-table-column prop="amount" label="金额" width="100" align="right">
+              <template #default="{ row }">¥{{ formatMoney(row.amount) }}</template>
+            </el-table-column>
+            <el-table-column prop="next_due_date" label="下次到期" width="120" />
+            <el-table-column label="操作" width="150">
+              <template #default="{ row }">
+                <el-button type="primary" link size="small">查看</el-button>
+                <el-button type="warning" link size="small">管理</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
 
-            <!-- 账单标签页 -->
-            <el-tab-pane label="账单" name="bills">
-              <div class="tab-content">
-                <el-table :data="bills" v-loading="billsLoading" style="width: 100%">
-                  <el-table-column prop="id" label="ID" width="80" />
-                  <el-table-column prop="bill_no" label="账单号" width="180">
-                    <template #default="{ row }">
-                      <el-button type="primary" link @click="handleViewBill(row)">
-                        {{ row.bill_no }}
-                      </el-button>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="amount" label="金额" width="120">
-                    <template #default="{ row }">
-                      ¥{{ formatAmount(row.amount) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="paid_amount" label="已付金额" width="120">
-                    <template #default="{ row }">
-                      ¥{{ formatAmount(row.paid_amount) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="status" label="状态" width="100">
-                    <template #default="{ row }">
-                      <el-tag :type="getBillStatusType(row.status)" size="small">
-                        {{ getBillStatusText(row.status) }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="created_at" label="创建时间" width="180" />
-                  <el-table-column prop="due_date" label="到期时间" width="180" />
-                  <el-table-column label="操作" width="150">
-                    <template #default="{ row }">
-                      <el-button type="primary" link @click="handleViewBill(row)">查看</el-button>
-                      <el-button
-                        v-if="row.status === 0 || row.status === 1"
-                        type="success"
-                        link
-                        @click="handleSendBill(row)"
-                      >
-                        发送
-                      </el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-                <el-empty v-if="!bills.length && !billsLoading" description="暂无账单" />
-              </div>
-            </el-tab-pane>
+        <!-- 订单 -->
+        <el-tab-pane label="订单" name="orders">
+          <el-table :data="orders" border stripe>
+            <el-table-column prop="order_no" label="订单号" width="150">
+              <template #default="{ row }">
+                <el-button type="primary" link @click="$router.push(`/order-detail/${row.id}`)">
+                  {{ row.order_no }}
+                </el-button>
+              </template>
+            </el-table-column>
+            <el-table-column prop="product_name" label="产品" min-width="150" />
+            <el-table-column prop="type" label="类型" width="80" align="center">
+              <template #default="{ row }">
+                <el-tag size="small">{{ getTypeText(row.type) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="amount" label="金额" width="100" align="right">
+              <template #default="{ row }">¥{{ formatMoney(row.amount) }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getOrderStatusType(row.status)" size="small">
+                  {{ getOrderStatusText(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="created_at" label="下单时间" width="170" />
+          </el-table>
+        </el-tab-pane>
 
-            <!-- 交易标签页 -->
-            <el-tab-pane label="交易" name="transactions">
-              <div class="tab-content">
-                <el-table :data="transactions" v-loading="transactionsLoading" style="width: 100%">
-                  <el-table-column prop="id" label="ID" width="80" />
-                  <el-table-column prop="transaction_no" label="交易号" width="200" />
-                  <el-table-column prop="type" label="类型" width="100">
-                    <template #default="{ row }">
-                      <el-tag :type="getTransactionType(row.type)" size="small">
-                        {{ getTransactionTypeText(row.type) }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="amount" label="金额" width="120">
-                    <template #default="{ row }">
-                      <span :class="row.amount >= 0 ? 'text-success' : 'text-danger'">
-                        {{ row.amount >= 0 ? '+' : '' }}¥{{ formatAmount(row.amount) }}
-                      </span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="balance" label="余额" width="120">
-                    <template #default="{ row }">
-                      ¥{{ formatAmount(row.balance) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="gateway" label="支付网关" width="120" />
-                  <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-                  <el-table-column prop="created_at" label="时间" width="180" />
-                </el-table>
-                <el-empty v-if="!transactions.length && !transactionsLoading" description="暂无交易记录" />
-              </div>
-            </el-tab-pane>
+        <!-- 工单 -->
+        <el-tab-pane label="工单" name="tickets">
+          <el-table :data="tickets" border stripe>
+            <el-table-column prop="ticket_no" label="工单号" width="130">
+              <template #default="{ row }">
+                <el-button type="primary" link @click="$router.push(`/ticket-detail/${row.id}`)">
+                  {{ row.ticket_no }}
+                </el-button>
+              </template>
+            </el-table-column>
+            <el-table-column prop="subject" label="主题" min-width="200" />
+            <el-table-column prop="priority" label="优先级" width="80" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getPriorityType(row.priority)" size="small">
+                  {{ getPriorityText(row.priority) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getTicketStatusType(row.status)" size="small">
+                  {{ getTicketStatusText(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="created_at" label="创建时间" width="170" />
+          </el-table>
+        </el-tab-pane>
 
-            <!-- 信用标签页 -->
-            <el-tab-pane label="信用" name="credit">
-              <div class="tab-content">
-                <el-card shadow="never">
-                  <template #header>
-                    <span>信用信息</span>
-                  </template>
-                  <el-form :model="client" label-width="120px">
-                    <el-row :gutter="20">
-                      <el-col :span="12">
-                        <el-form-item label="当前余额">
-                          <span class="amount-highlight">¥{{ formatAmount(client.balance) }}</span>
-                        </el-form-item>
-                        <el-form-item label="信用额度">
-                          <span class="amount-highlight">¥{{ formatAmount(client.credit) }}</span>
-                        </el-form-item>
-                        <el-form-item label="可用额度">
-                          <span class="amount-highlight">¥{{ formatAmount(client.credit - client.balance) }}</span>
-                        </el-form-item>
-                      </el-col>
-                      <el-col :span="12">
-                        <el-form-item label="总充值">
-                          <span class="amount-highlight">¥{{ formatAmount(client.total_deposit) }}</span>
-                        </el-form-item>
-                        <el-form-item label="总消费">
-                          <span class="amount-highlight">¥{{ formatAmount(client.total_spend) }}</span>
-                        </el-form-item>
-                        <el-form-item label="总退款">
-                          <span class="amount-highlight">¥{{ formatAmount(client.total_refund) }}</span>
-                        </el-form-item>
-                      </el-col>
-                    </el-row>
-                  </el-form>
-                </el-card>
+        <!-- 交易记录 -->
+        <el-tab-pane label="交易记录" name="transactions">
+          <el-table :data="transactions" border stripe>
+            <el-table-column prop="transaction_no" label="流水号" width="180" />
+            <el-table-column prop="type" label="类型" width="80" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getTransactionType(row.type)" size="small">
+                  {{ getTransactionText(row.type) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="amount" label="金额" width="120" align="right">
+              <template #default="{ row }">
+                <span :class="row.type === 'expense' ? 'text-red' : 'text-green'">
+                  {{ row.type === 'expense' ? '-' : '+' }}¥{{ formatMoney(row.amount) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="balance_after" label="余额" width="120" align="right">
+              <template #default="{ row }">¥{{ formatMoney(row.balance_after) }}</template>
+            </el-table-column>
+            <el-table-column prop="description" label="描述" min-width="200" />
+            <el-table-column prop="created_at" label="时间" width="170" />
+          </el-table>
+        </el-tab-pane>
 
-                <el-card shadow="never" style="margin-top: 16px;">
-                  <template #header>
-                    <span>信用调整</span>
-                  </template>
-                  <el-form :model="creditForm" label-width="100px">
-                    <el-form-item label="调整类型">
-                      <el-radio-group v-model="creditForm.type">
-                        <el-radio value="deposit">充值</el-radio>
-                        <el-radio value="refund">退款</el-radio>
-                        <el-radio value="deduct">扣款</el-radio>
-                      </el-radio-group>
-                    </el-form-item>
-                    <el-form-item label="金额">
-                      <el-input-number v-model="creditForm.amount" :min="0.01" :precision="2" />
-                    </el-form-item>
-                    <el-form-item label="备注">
-                      <el-input v-model="creditForm.remark" type="textarea" :rows="2" placeholder="请输入备注" />
-                    </el-form-item>
-                    <el-form-item>
-                      <el-button type="primary" @click="handleCreditAdjust" :loading="creditLoading">
-                        提交调整
-                      </el-button>
-                    </el-form-item>
-                  </el-form>
-                </el-card>
-              </div>
-            </el-tab-pane>
+        <!-- 账单 -->
+        <el-tab-pane label="账单" name="invoices">
+          <el-table :data="invoices" border stripe>
+            <el-table-column prop="invoice_no" label="账单号" width="150" />
+            <el-table-column prop="description" label="描述" min-width="200" />
+            <el-table-column prop="amount" label="金额" width="120" align="right">
+              <template #default="{ row }">¥{{ formatMoney(row.amount) }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getInvoiceStatusType(row.status)" size="small">
+                  {{ getInvoiceStatusText(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="due_date" label="到期日" width="120" />
+            <el-table-column prop="paid_at" label="付款时间" width="170" />
+          </el-table>
+        </el-tab-pane>
 
-            <!-- 工单标签页 -->
-            <el-tab-pane label="工单" name="tickets">
-              <div class="tab-content">
-                <el-table :data="tickets" v-loading="ticketsLoading" style="width: 100%">
-                  <el-table-column prop="id" label="ID" width="80" />
-                  <el-table-column prop="subject" label="标题" min-width="200" show-overflow-tooltip />
-                  <el-table-column prop="department_name" label="部门" width="120" />
-                  <el-table-column prop="priority" label="优先级" width="80">
-                    <template #default="{ row }">
-                      <el-tag :type="getPriorityType(row.priority)" size="small">
-                        {{ getPriorityText(row.priority) }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="status" label="状态" width="100">
-                    <template #default="{ row }">
-                      <el-tag :type="getTicketStatusType(row.status)" size="small">
-                        {{ getTicketStatusText(row.status) }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="created_at" label="创建时间" width="180" />
-                  <el-table-column label="操作" width="100">
-                    <template #default="{ row }">
-                      <el-button type="primary" link @click="handleViewTicket(row)">查看</el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-                <el-empty v-if="!tickets.length && !ticketsLoading" description="暂无工单" />
-              </div>
-            </el-tab-pane>
+        <!-- 操作日志 -->
+        <el-tab-pane label="操作日志" name="logs">
+          <el-timeline>
+            <el-timeline-item
+              v-for="log in logs"
+              :key="log.id"
+              :timestamp="log.created_at"
+              placement="top"
+            >
+              <el-card shadow="never">
+                <div class="log-content">
+                  <span class="log-action">{{ log.action }}</span>
+                  <span class="log-detail">{{ log.detail }}</span>
+                </div>
+                <div class="log-operator">操作人: {{ log.operator_name }}</div>
+              </el-card>
+            </el-timeline-item>
+          </el-timeline>
+        </el-tab-pane>
 
-            <!-- 日志标签页 -->
-            <el-tab-pane label="日志" name="logs">
-              <div class="tab-content">
-                <el-table :data="logs" v-loading="logsLoading" style="width: 100%">
-                  <el-table-column prop="id" label="ID" width="80" />
-                  <el-table-column prop="action" label="操作" width="120" />
-                  <el-table-column prop="description" label="描述" min-width="300" show-overflow-tooltip />
-                  <el-table-column prop="ip" label="IP地址" width="150" />
-                  <el-table-column prop="created_at" label="时间" width="180" />
-                </el-table>
-                <el-empty v-if="!logs.length && !logsLoading" description="暂无日志" />
-              </div>
-            </el-tab-pane>
+        <!-- 实名认证 -->
+        <el-tab-pane label="实名认证" name="verification">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="认证状态">
+              <el-tag :type="customer.verified ? 'success' : 'warning'" size="small">
+                {{ customer.verified ? '已认证' : '未认证' }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="真实姓名">{{ customer.real_name || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="证件类型">{{ customer.id_type || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="证件号码">{{ customer.id_number || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="认证时间">{{ customer.verified_at || '-' }}</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
 
-            <!-- 推介标签页 -->
-            <el-tab-pane label="推介" name="referrals">
-              <div class="tab-content">
-                <el-card shadow="never">
-                  <template #header>
-                    <span>推介信息</span>
-                  </template>
-                  <el-form :model="client" label-width="120px">
-                    <el-form-item label="推介码">
-                      <el-input v-model="client.referral_code" readonly>
-                        <template #append>
-                          <el-button @click="handleCopyCode">复制</el-button>
-                        </template>
-                      </el-input>
-                    </el-form-item>
-                    <el-form-item label="推介链接">
-                      <el-input :model-value="referralLink" readonly>
-                        <template #append>
-                          <el-button @click="handleCopyLink">复制</el-button>
-                        </template>
-                      </el-input>
-                    </el-form-item>
-                    <el-form-item label="推介人数">
-                      <span>{{ client.referral_count || 0 }} 人</span>
-                    </el-form-item>
-                    <el-form-item label="推介佣金">
-                      <span class="amount-highlight">¥{{ formatAmount(client.referral_commission) }}</span>
-                    </el-form-item>
-                  </el-form>
-                </el-card>
-
-                <el-card shadow="never" style="margin-top: 16px;">
-                  <template #header>
-                    <span>推介记录</span>
-                  </template>
-                  <el-table :data="referrals" v-loading="referralsLoading" style="width: 100%">
-                    <el-table-column prop="id" label="ID" width="80" />
-                    <el-table-column prop="referred_username" label="被推介用户" width="150" />
-                    <el-table-column prop="commission" label="佣金" width="120">
-                      <template #default="{ row }">
-                        ¥{{ formatAmount(row.commission) }}
-                      </template>
-                    </el-table-column>
-                    <el-table-column prop="status" label="状态" width="100">
-                      <template #default="{ row }">
-                        <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
-                          {{ row.status === 1 ? '已结算' : '待结算' }}
-                        </el-tag>
-                      </template>
-                    </el-table-column>
-                    <el-table-column prop="created_at" label="时间" width="180" />
-                  </el-table>
-                  <el-empty v-if="!referrals.length && !referralsLoading" description="暂无推介记录" />
-                </el-card>
-              </div>
-            </el-tab-pane>
-          </el-tabs>
-        </div>
-      </div>
+        <!-- 自定义字段 -->
+        <el-tab-pane label="自定义字段" name="custom_fields">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item
+              v-for="field in customFields"
+              :key="field.id"
+              :label="field.name"
+            >
+              {{ field.value || '-' }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { Back, Edit } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import request from '@/utils/http'
 
 const route = useRoute()
-const router = useRouter()
+const customerId = route.params.id
+const activeTab = ref('overview')
 
-const loading = ref(false)
-const activeTab = ref('profile')
-const client = ref<any>({})
+// 客户信息
+const customer = ref<any>({})
+const products = ref([])
+const orders = ref([])
+const tickets = ref([])
+const transactions = ref([])
+const invoices = ref([])
+const logs = ref([])
+const customFields = ref([])
 
-const services = ref<any[]>([])
-const bills = ref<any[]>([])
-const transactions = ref<any[]>([])
-const tickets = ref<any[]>([])
-const logs = ref<any[]>([])
-const referrals = ref<any[]>([])
-
-const servicesLoading = ref(false)
-const billsLoading = ref(false)
-const transactionsLoading = ref(false)
-const ticketsLoading = ref(false)
-const logsLoading = ref(false)
-const referralsLoading = ref(false)
-const creditLoading = ref(false)
-
-const creditForm = reactive({
-  type: 'deposit',
-  amount: 0,
-  remark: ''
-})
-
-const referralLink = computed(() => {
-  return `${window.location.origin}/register?ref=${client.value?.referral_code || ''}`
-})
-
-const fetchClient = async () => {
-  const id = route.params.id
-  if (!id) return
-  loading.value = true
-  try {
-    const data = await request.get({ url: `/api/admin/users/${id}` })
-    client.value = data
-  } catch (error) {
-    console.error('获取客户详情失败:', error)
-    ElMessage.error('获取客户详情失败')
-  } finally {
-    loading.value = false
-  }
+// 格式化金额
+const formatMoney = (amount: number) => {
+  if (!amount) return '0.00'
+  return Number(amount).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-const fetchTabData = async (tab: string) => {
-  const id = route.params.id
-  if (!id) return
-
-  const fetchMap: Record<string, () => void> = {
-    services: async () => {
-      servicesLoading.value = true
-      try {
-        services.value = await request.get({ url: `/api/admin/client-services?user_id=${id}` }) || []
-      } finally { servicesLoading.value = false }
-    },
-    bills: async () => {
-      billsLoading.value = true
-      try {
-        bills.value = await request.get({ url: `/api/admin/invoices?user_id=${id}` }) || []
-      } finally { billsLoading.value = false }
-    },
-    transactions: async () => {
-      transactionsLoading.value = true
-      try {
-        transactions.value = await request.get({ url: `/api/admin/accounts?user_id=${id}` }) || []
-      } finally { transactionsLoading.value = false }
-    },
-    tickets: async () => {
-      ticketsLoading.value = true
-      try {
-        tickets.value = await request.get({ url: `/api/admin/tickets?user_id=${id}` }) || []
-      } finally { ticketsLoading.value = false }
-    },
-    logs: async () => {
-      logsLoading.value = true
-      try {
-        logs.value = await request.get({ url: `/api/admin/log-records?user_id=${id}` }) || []
-      } finally { logsLoading.value = false }
-    },
-    referrals: async () => {
-      referralsLoading.value = true
-      try {
-        referrals.value = await request.get({ url: `/api/admin/affiliate?user_id=${id}` }) || []
-      } finally { referralsLoading.value = false }
-    }
-  }
-
-  if (fetchMap[tab]) fetchMap[tab]()
+// 状态类型
+const getStatusType = (status: string) => {
+  const map: Record<string, string> = { active: 'success', disabled: 'danger', pending: 'warning' }
+  return map[status] || 'info'
 }
 
-const handleTabChange = (tab: string | number) => {
-  fetchTabData(tab as string)
-}
-
-const handleBack = () => {
-  router.back()
-}
-
-const handleEdit = () => {
-  router.push(`/finance/clients/list?edit=${route.params.id}`)
-}
-
-const handleViewBill = (row: any) => {
-  router.push(`/finance/orders/invoice-detail/${row.id}`)
-}
-
-const handleSendBill = async (row: any) => {
-  try {
-    await request.post({ url: `/api/admin/invoices/${row.id}/email` })
-    ElMessage.success('账单发送成功')
-    fetchTabData('bills')
-  } catch (error) {
-    ElMessage.error('发送失败')
-  }
-}
-
-const handleViewTicket = (row: any) => {
-  router.push(`/finance/tickets/detail/${row.id}`)
-}
-
-const handleCreditAdjust = async () => {
-  const id = route.params.id
-  if (!id) return
-  if (creditForm.amount <= 0) {
-    ElMessage.error('请输入正确的金额')
-    return
-  }
-  creditLoading.value = true
-  try {
-    await request.post({ url: `/api/admin/credit/users/${id}/adjust`, params: creditForm })
-    ElMessage.success('信用调整成功')
-    fetchClient()
-    creditForm.amount = 0
-    creditForm.remark = ''
-  } catch (error) {
-    ElMessage.error('调整失败')
-  } finally {
-    creditLoading.value = false
-  }
-}
-
-const handleCopyCode = () => {
-  if (client.value?.referral_code) {
-    navigator.clipboard.writeText(client.value.referral_code)
-    ElMessage.success('推介码已复制')
-  }
-}
-
-const handleCopyLink = () => {
-  navigator.clipboard.writeText(referralLink.value)
-  ElMessage.success('推介链接已复制')
-}
-
-const formatAmount = (amount: number | undefined) => {
-  return amount?.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'
-}
-
-const getServiceStatusType = (status: string) => {
-  const map: Record<string, string> = { active: 'success', suspended: 'warning', terminated: 'danger', pending: 'info' }
-  return (map[status] || 'info') as any
-}
-
-const getServiceStatusText = (status: string) => {
-  const map: Record<string, string> = { active: '活跃', suspended: '暂停', terminated: '已终止', pending: '待处理' }
-  return map[status] || status
-}
-
-const getBillStatusType = (status: number) => {
-  const map: Record<number, string> = { 0: 'info', 1: 'warning', 2: 'success', 3: 'success', 4: 'danger' }
-  return (map[status] || 'info') as any
-}
-
-const getBillStatusText = (status: number) => {
-  const map: Record<number, string> = { 0: '待支付', 1: '已发送', 2: '已支付', 3: '部分支付', 4: '已取消' }
+// 状态文本
+const getStatusText = (status: string) => {
+  const map: Record<string, string> = { active: '正常', disabled: '禁用', pending: '待验证' }
   return map[status] || '未知'
 }
 
-const getTransactionType = (type: string) => {
-  const map: Record<string, string> = { deposit: 'success', payment: 'warning', refund: 'info', deduction: 'danger' }
-  return (map[type] || 'info') as any
+// 产品状态
+const getProductStatusType = (status: string) => {
+  const map: Record<string, string> = { active: 'success', suspended: 'danger', pending: 'warning', terminated: 'info' }
+  return map[status] || 'info'
 }
 
-const getTransactionTypeText = (type: string) => {
-  const map: Record<string, string> = { deposit: '充值', payment: '支付', refund: '退款', deduction: '扣款' }
-  return map[type] || type
+const getProductStatusText = (status: string) => {
+  const map: Record<string, string> = { active: '正常', suspended: '暂停', pending: '待开通', terminated: '已终止' }
+  return map[status] || '未知'
 }
 
-const getPriorityType = (priority: string) => {
-  const map: Record<string, string> = { low: 'info', medium: '', high: 'warning', urgent: 'danger' }
-  return (map[priority] || 'info') as any
+// 订单类型
+const getTypeText = (type: string) => {
+  const map: Record<string, string> = { new: '新购', renewal: '续费', upgrade: '升级', refund: '退款' }
+  return map[type] || '未知'
 }
 
-const getPriorityText = (priority: string) => {
-  const map: Record<string, string> = { low: '低', medium: '中', high: '高', urgent: '紧急' }
-  return map[priority] || priority
+// 订单状态
+const getOrderStatusType = (status: string) => {
+  const map: Record<string, string> = { pending_payment: 'warning', pending_activation: 'primary', active: 'success', completed: 'success', cancelled: 'info', refunded: 'danger' }
+  return map[status] || 'info'
 }
 
+const getOrderStatusText = (status: string) => {
+  const map: Record<string, string> = { pending_payment: '待付款', pending_activation: '待开通', active: '进行中', completed: '已完成', cancelled: '已取消', refunded: '已退款' }
+  return map[status] || '未知'
+}
+
+// 工单优先级
+const getPriorityType = (priority: number) => {
+  const map: Record<number, string> = { 1: 'info', 2: 'primary', 3: 'warning', 4: 'danger' }
+  return map[priority] || 'info'
+}
+
+const getPriorityText = (priority: number) => {
+  const map: Record<number, string> = { 1: '低', 2: '普通', 3: '高', 4: '紧急' }
+  return map[priority] || '未知'
+}
+
+// 工单状态
 const getTicketStatusType = (status: string) => {
-  const map: Record<string, string> = { open: 'warning', in_progress: '', replied: 'success', closed: 'info' }
-  return (map[status] || 'info') as any
+  const map: Record<string, string> = { open: 'warning', in_progress: 'primary', replied: 'success', closed: 'info' }
+  return map[status] || 'info'
 }
 
 const getTicketStatusText = (status: string) => {
   const map: Record<string, string> = { open: '待处理', in_progress: '处理中', replied: '已回复', closed: '已关闭' }
-  return map[status] || status
+  return map[status] || '未知'
+}
+
+// 交易类型
+const getTransactionType = (type: string) => {
+  const map: Record<string, string> = { income: 'success', expense: 'danger', refund: 'warning', recharge: 'primary' }
+  return map[type] || 'info'
+}
+
+const getTransactionText = (type: string) => {
+  const map: Record<string, string> = { income: '收入', expense: '支出', refund: '退款', recharge: '充值' }
+  return map[type] || '未知'
+}
+
+// 账单状态
+const getInvoiceStatusType = (status: string) => {
+  const map: Record<string, string> = { unpaid: 'warning', paid: 'success', cancelled: 'info', refunded: 'danger' }
+  return map[status] || 'info'
+}
+
+const getInvoiceStatusText = (status: string) => {
+  const map: Record<string, string> = { unpaid: '待付款', paid: '已付款', cancelled: '已取消', refunded: '已退款' }
+  return map[status] || '未知'
+}
+
+// 获取客户详情
+const fetchCustomer = async () => {
+  try {
+    const data = await request.get({ url: `/api/admin/clients/${customerId}` })
+    customer.value = data
+  } catch (error) {
+    console.error('获取客户详情失败:', error)
+  }
+}
+
+// 获取产品列表
+const fetchProducts = async () => {
+  try {
+    const data = await request.get({ url: `/api/admin/clients/${customerId}/products` })
+    products.value = data || []
+  } catch (error) {
+    console.error('获取产品列表失败:', error)
+  }
+}
+
+// 获取订单列表
+const fetchOrders = async () => {
+  try {
+    const data = await request.get({ url: `/api/admin/clients/${customerId}/orders` })
+    orders.value = data || []
+  } catch (error) {
+    console.error('获取订单列表失败:', error)
+  }
+}
+
+// 获取工单列表
+const fetchTickets = async () => {
+  try {
+    const data = await request.get({ url: `/api/admin/clients/${customerId}/tickets` })
+    tickets.value = data || []
+  } catch (error) {
+    console.error('获取工单列表失败:', error)
+  }
+}
+
+// 获取交易记录
+const fetchTransactions = async () => {
+  try {
+    const data = await request.get({ url: `/api/admin/clients/${customerId}/transactions` })
+    transactions.value = data || []
+  } catch (error) {
+    console.error('获取交易记录失败:', error)
+  }
+}
+
+// 获取账单
+const fetchInvoices = async () => {
+  try {
+    const data = await request.get({ url: `/api/admin/clients/${customerId}/invoices` })
+    invoices.value = data || []
+  } catch (error) {
+    console.error('获取账单失败:', error)
+  }
+}
+
+// 获取操作日志
+const fetchLogs = async () => {
+  try {
+    const data = await request.get({ url: `/api/admin/clients/${customerId}/logs` })
+    logs.value = data || []
+  } catch (error) {
+    console.error('获取操作日志失败:', error)
+  }
+}
+
+// 获取自定义字段
+const fetchCustomFields = async () => {
+  try {
+    const data = await request.get({ url: `/api/admin/clients/${customerId}/custom-fields` })
+    customFields.value = data || []
+  } catch (error) {
+    console.error('获取自定义字段失败:', error)
+  }
 }
 
 onMounted(() => {
-  fetchClient()
+  fetchCustomer()
+  fetchProducts()
+  fetchOrders()
+  fetchTickets()
+  fetchTransactions()
+  fetchInvoices()
+  fetchLogs()
+  fetchCustomFields()
 })
 </script>
 
 <style scoped lang="scss">
-.client-detail-page {
-  padding: 20px;
+.customer-detail-page {
+  padding: 16px;
 }
 
-.card-header {
+.customer-info-card {
+  margin-bottom: 16px;
+}
+
+.customer-basic {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
 
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.loading-container {
-  min-height: 400px;
-}
-
-.client-summary {
-  display: flex;
-  justify-content: space-between;
-  padding: 20px;
-  background: var(--el-fill-color-lighter);
-  border-radius: 8px;
-  margin-bottom: 20px;
-
-  .summary-left {
-    display: flex;
-    gap: 20px;
-
-    .info {
-      h2 {
-        margin: 0 0 8px;
-        font-size: 24px;
-      }
-
-      .email, .phone {
-        margin: 0 0 4px;
-        color: var(--el-text-color-secondary);
-      }
-
-      .group {
-        margin: 8px 0 0;
-        display: flex;
-        gap: 8px;
-      }
-    }
-  }
-
-  .summary-right {
-    display: flex;
-    gap: 40px;
-
-    .stat-item {
-      text-align: center;
-
-      .stat-label {
-        color: var(--el-text-color-secondary);
-        font-size: 14px;
-        margin-bottom: 4px;
-      }
-
-      .stat-value {
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--el-text-color-primary);
-      }
-    }
+.customer-name {
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
   }
 }
 
-.tab-content {
-  padding: 20px 0;
+.stat-item {
+  text-align: center;
+  padding: 10px 0;
 }
 
-.profile-form {
-  max-width: 800px;
+.stat-label {
+  font-size: 14px;
+  color: #86909C;
+  margin-bottom: 8px;
 }
 
-.amount-highlight {
-  font-size: 18px;
+.stat-value {
+  font-size: 24px;
   font-weight: 600;
-  color: var(--el-color-primary);
+  color: #1D2129;
 }
 
-.text-success {
-  color: var(--el-color-success);
+.detail-card {
+  :deep(.el-tabs__content) {
+    padding: 20px 0;
+  }
 }
 
-.text-danger {
-  color: var(--el-color-danger);
+.log-content {
+  display: flex;
+  gap: 8px;
 }
+
+.log-action {
+  font-weight: 500;
+}
+
+.log-detail {
+  color: #86909C;
+}
+
+.log-operator {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #86909C;
+}
+
+.text-green { color: #36D391; }
+.text-red { color: #EF4444; }
 </style>

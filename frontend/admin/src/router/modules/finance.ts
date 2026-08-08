@@ -7,7 +7,7 @@ import { RoutesAlias } from '../routesAlias'
 export const financeRoutes: AppRouteRecord = {
   path: '/finance',
   name: 'Finance',
-  redirect: '/finance/dashboard',
+  redirect: '/dashboard',
   component: RoutesAlias.Layout,
   meta: {
     title: '财务管理',
@@ -28,7 +28,7 @@ export const financeRoutes: AppRouteRecord = {
     {
       path: 'clients',
       name: 'Clients',
-      redirect: '/finance/clients/list',
+      redirect: '/customer-list',
       meta: {
         title: '客户管理',
         icon: 'ep:user'
@@ -257,7 +257,7 @@ export const financeRoutes: AppRouteRecord = {
     {
       path: 'products',
       name: 'Products',
-      redirect: '/finance/products/list',
+      redirect: '/product-server',
       meta: {
         title: '产品管理',
         icon: 'ep:goods'
@@ -385,7 +385,7 @@ export const financeRoutes: AppRouteRecord = {
     {
       path: 'orders',
       name: 'Orders',
-      redirect: '/finance/orders/list',
+      redirect: '/order-list',
       meta: {
         title: '订单管理',
         icon: 'ep:document'
@@ -517,7 +517,7 @@ export const financeRoutes: AppRouteRecord = {
     {
       path: 'tickets',
       name: 'Tickets',
-      redirect: '/finance/tickets/list',
+      redirect: '/support-ticket',
       meta: {
         title: '工单系统',
         icon: 'ep:chat-dot-round'
@@ -834,7 +834,7 @@ export const financeRoutes: AppRouteRecord = {
     {
       path: 'system',
       name: 'System',
-      redirect: '/finance/system/general',
+      redirect: '/general-settings/general',
       meta: {
         title: '系统设置',
         icon: 'ep:setting'

@@ -269,7 +269,7 @@ const fetchRefundDetail = async () => {
 // 查看原订单
 const handleViewOrder = () => {
   if (orderData.value.id) {
-    router.push(`/finance/orders/order-detail/${orderData.value.id}`)
+    router.push(`/order-detail/${orderData.value.id}`)
   }
 }
 

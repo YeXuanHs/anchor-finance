@@ -1,530 +1,184 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
 
-	"anchorfinance/internal/model"
-	"anchorfinance/pkg/logger"
-
-	"gorm.io/gorm"
+	"github.com/anchorfinance/backend/internal/model"
+	"github.com/anchorfinance/backend/internal/repository"
 )
 
-// PluginService 插件服务
 type PluginService struct {
-	db  *gorm.DB
-	log *logger.Logger
+	pluginRepo *repository.PluginRepository
 }
 
-// NewPluginService 创建插件服务
-func NewPluginService(db *gorm.DB, log *logger.Logger) *PluginService {
-	return &PluginService{db: db, log: log}
+func NewPluginService() *PluginService {
+	return &PluginService{
+		pluginRepo: repository.NewPluginRepository(),
+	}
 }
 
-// CreatePluginRequest 创建插件请求
-type CreatePluginRequest struct {
-	Name        string `json:"name" binding:"required,max=64"`
-	Title       string `json:"title" binding:"required,max=64"`
-	Type        string `json:"type" binding:"required,oneof=mail sms certification gateway oauth server addon"`
-	Description string `json:"description"`
-	Author      string `json:"author"`
-	Version     string `json:"version"`
-	HelpURL     string `json:"help_url"`
-	Config      string `json:"config"`
-	Module      string `json:"module"`
-	IsSystem    bool   `json:"is_system"`
-	IsEnabled   bool   `json:"is_enabled"`
-	SortOrder   int    `json:"sort_order"`
-}
-
-// UpdatePluginRequest 更新插件请求
-type UpdatePluginRequest struct {
-	Title       *string `json:"title"`
-	Description *string `json:"description"`
-	Author      *string `json:"author"`
-	Version     *string `json:"version"`
-	HelpURL     *string `json:"help_url"`
-	Config      *string `json:"config"`
-	IsEnabled   *bool   `json:"is_enabled"`
-	SortOrder   *int    `json:"sort_order"`
-}
-
-// Create 创建插件
-func (s *PluginService) Create(req CreatePluginRequest) (*model.Plugin, error) {
-	var count int64
-	s.db.Model(&model.Plugin{}).Where("name = ?", req.Name).Count(&count)
-	if count > 0 {
-		return nil, errors.New("插件标识名已存在")
+// GetPlugins 获取插件列表
+func (s *PluginService) GetPlugins(params *model.PluginQueryParams) (*model.PluginListResponse, error) {
+	if params.Page < 1 {
+		params.Page = 1
+	}
+	if params.PageSize < 1 || params.PageSize > 100 {
+		params.PageSize = 100
 	}
 
-	plugin := model.Plugin{
-		Name:        req.Name,
-		Title:       req.Title,
-		Type:        req.Type,
-		Description: req.Description,
-		Author:      req.Author,
-		Version:     req.Version,
-		HelpURL:     req.HelpURL,
-		Config:      req.Config,
-		Module:      req.Module,
-		IsSystem:    req.IsSystem,
-		IsEnabled:   req.IsEnabled,
-		SortOrder:   req.SortOrder,
-	}
-
-	if err := s.db.Create(&plugin).Error; err != nil {
+	plugins, total, err := s.pluginRepo.List(params)
+	if err != nil {
 		return nil, err
 	}
 
-	s.log.Infof("插件创建成功: id=%d name=%s", plugin.ID, plugin.Name)
-	return &plugin, nil
+	return &model.PluginListResponse{
+		List:  plugins,
+		Total: total,
+	}, nil
 }
 
-// Update 更新插件
-func (s *PluginService) Update(id uint, req UpdatePluginRequest) (*model.Plugin, error) {
-	var plugin model.Plugin
-	if err := s.db.First(&plugin, id).Error; err != nil {
-		return nil, err
+// GetPluginByID 根据ID获取插件
+func (s *PluginService) GetPluginByID(id uint) (*model.Plugin, error) {
+	return s.pluginRepo.FindByID(id)
+}
+
+// TogglePlugin 切换插件状态
+func (s *PluginService) TogglePlugin(id uint, enabled bool) error {
+	plugin, err := s.pluginRepo.FindByID(id)
+	if err != nil {
+		return errors.New("插件不存在")
 	}
 
-	updates := map[string]interface{}{}
-	if req.Title != nil {
-		updates["title"] = *req.Title
-	}
-	if req.Description != nil {
-		updates["description"] = *req.Description
-	}
-	if req.Author != nil {
-		updates["author"] = *req.Author
-	}
-	if req.Version != nil {
-		updates["version"] = *req.Version
-	}
-	if req.HelpURL != nil {
-		updates["help_url"] = *req.HelpURL
-	}
-	if req.Config != nil {
-		updates["config"] = *req.Config
-	}
-	if req.IsEnabled != nil {
-		updates["is_enabled"] = *req.IsEnabled
-	}
-	if req.SortOrder != nil {
-		updates["sort_order"] = *req.SortOrder
+	plugin.Enabled = enabled
+	return s.pluginRepo.Update(plugin)
+}
+
+// GetPluginConfig 获取插件配置
+func (s *PluginService) GetPluginConfig(id uint) (map[string]interface{}, error) {
+	plugin, err := s.pluginRepo.FindByID(id)
+	if err != nil {
+		return nil, errors.New("插件不存在")
 	}
 
-	if len(updates) > 0 {
-		if err := s.db.Model(&plugin).Updates(updates).Error; err != nil {
-			return nil, err
+	// 解析当前配置
+	config := make(map[string]interface{})
+	if plugin.Config != "" {
+		json.Unmarshal([]byte(plugin.Config), &config)
+	}
+
+	// 解析配置字段定义
+	var configFields []model.PluginConfig
+	if plugin.ConfigFields != "" {
+		json.Unmarshal([]byte(plugin.ConfigFields), &configFields)
+	}
+
+	return map[string]interface{}{
+		"config":        config,
+		"config_fields": configFields,
+	}, nil
+}
+
+// UpdatePluginConfig 更新插件配置
+func (s *PluginService) UpdatePluginConfig(id uint, config map[string]interface{}) error {
+	plugin, err := s.pluginRepo.FindByID(id)
+	if err != nil {
+		return errors.New("插件不存在")
+	}
+
+	// 验证必填字段
+	var configFields []model.PluginConfig
+	if plugin.ConfigFields != "" {
+		json.Unmarshal([]byte(plugin.ConfigFields), &configFields)
+	}
+
+	for _, field := range configFields {
+		if field.Required {
+			if val, ok := config[field.Key]; !ok || val == nil || val == "" {
+				return errors.New(field.Label + "不能为空")
+			}
 		}
 	}
 
-	if err := s.db.First(&plugin, id).Error; err != nil {
-		return nil, err
-	}
-
-	s.log.Infof("插件更新成功: id=%d", id)
-	return &plugin, nil
-}
-
-// Delete 删除插件
-func (s *PluginService) Delete(id uint) error {
-	var plugin model.Plugin
-	if err := s.db.First(&plugin, id).Error; err != nil {
-		return errors.New("插件不存在")
-	}
-	if plugin.IsSystem {
-		return errors.New("系统内置插件不能删除")
-	}
-
-	result := s.db.Delete(&model.Plugin{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("插件不存在")
-	}
-	s.log.Infof("插件删除成功: id=%d", id)
-	return nil
-}
-
-// GetByID 根据ID获取插件
-func (s *PluginService) GetByID(id uint) (*model.Plugin, error) {
-	var plugin model.Plugin
-	if err := s.db.First(&plugin, id).Error; err != nil {
-		return nil, err
-	}
-	return &plugin, nil
-}
-
-// GetByName 根据名称获取插件
-func (s *PluginService) GetByName(name string) (*model.Plugin, error) {
-	var plugin model.Plugin
-	if err := s.db.Where("name = ?", name).First(&plugin).Error; err != nil {
-		return nil, err
-	}
-	return &plugin, nil
-}
-
-// GetList 获取插件列表
-func (s *PluginService) GetList(pluginType string, isEnabled *bool) ([]model.Plugin, error) {
-	var plugins []model.Plugin
-	query := s.db.Model(&model.Plugin{})
-
-	if pluginType != "" {
-		query = query.Where("type = ?", pluginType)
-	}
-	if isEnabled != nil {
-		query = query.Where("is_enabled = ?", *isEnabled)
-	}
-
-	if err := query.Order("sort_order ASC, id ASC").Find(&plugins).Error; err != nil {
-		return nil, err
-	}
-	return plugins, nil
-}
-
-// SetEnabled 设置启用状态（启用时自动建表）
-func (s *PluginService) SetEnabled(id uint, enabled bool) error {
-	var plugin model.Plugin
-	if err := s.db.First(&plugin, id).Error; err != nil {
-		return errors.New("插件不存在")
-	}
-
-	// 启用插件时自动建表
-	if enabled && !plugin.IsEnabled {
-		if err := s.createPluginTables(plugin.Name); err != nil {
-			s.log.Errorf("插件 %s 建表失败: %v", plugin.Name, err)
-			return fmt.Errorf("启用失败: 建表出错 - %v", err)
-		}
-		s.log.Infof("插件 %s 表结构已创建", plugin.Name)
-	}
-
-	result := s.db.Model(&plugin).Update("is_enabled", enabled)
-	if result.Error != nil {
-		return result.Error
-	}
-	s.log.Infof("插件状态更新: id=%d name=%s enabled=%v", id, plugin.Name, enabled)
-	return nil
-}
-
-// ToggleStatus 切换启用状态（带建表逻辑）
-func (s *PluginService) ToggleStatus(id uint) error {
-	var plugin model.Plugin
-	if err := s.db.First(&plugin, id).Error; err != nil {
+	// 保存配置
+	configJSON, err := json.Marshal(config)
+	if err != nil {
 		return err
 	}
-	return s.SetEnabled(id, !plugin.IsEnabled)
+
+	plugin.Config = string(configJSON)
+	return s.pluginRepo.Update(plugin)
 }
 
-// createPluginTables 根据插件名称创建对应的表
-func (s *PluginService) createPluginTables(pluginName string) error {
-	pluginTableMap := map[string][]interface{}{
-		// 客服聊天系统
-		"cs_chat": {
-			&model.CSChatSession{},
-			&model.CSChatMessage{},
-			&model.CSChatConfig{},
-			&model.CSChatQuickReply{},
+// InitDefaultPlugins 初始化默认插件
+func (s *PluginService) InitDefaultPlugins() error {
+	defaultPlugins := []model.Plugin{
+		// OAuth插件
+		{
+			Name:        "微信登录",
+			Code:        "wechat_login",
+			Description: "支持微信扫码登录",
+			Version:     "1.0.0",
+			Author:      "AnchorFinance",
+			Category:    "oauth",
+			ConfigFields: `[{"key":"app_id","label":"App ID","type":"text","required":true},{"key":"app_secret","label":"App Secret","type":"password","required":true}]`,
 		},
-		// AI工单自动回复（含 Agent Function Calling）
-		"ai_ticket": {
-			&model.AITicketKnowledge{},
-			&model.AITicketRule{},
-			&model.AITicketQueue{},
-			&model.AITicketProcessLog{},
-			&model.AITicketNotifyLog{},
-			&model.AITicketMode{},
-			&model.AITicketConfig{},
-			&model.AIToolConfig{},
-			&model.AIToolExecutionLog{},
+		{
+			Name:        "QQ登录",
+			Code:        "qq_login",
+			Description: "支持QQ账号登录",
+			Version:     "1.0.0",
+			Author:      "AnchorFinance",
+			Category:    "oauth",
+			ConfigFields: `[{"key":"app_id","label":"App ID","type":"text","required":true},{"key":"app_secret","label":"App Secret","type":"password","required":true}]`,
 		},
-		// AI购物助手
-		"ai_shopping": {
-			&model.AIShoppingConfig{},
-			&model.AIShoppingChatLog{},
-			&model.ProductCatalogTool{},
+		// 支付插件
+		{
+			Name:        "支付宝",
+			Code:        "alipay",
+			Description: "支付宝在线支付",
+			Version:     "1.0.0",
+			Author:      "AnchorFinance",
+			Category:    "payment",
+			ConfigFields: `[{"key":"app_id","label":"应用ID","type":"text","required":true},{"key":"private_key","label":"应用私钥","type":"textarea","required":true},{"key":"public_key","label":"支付宝公钥","type":"textarea","required":true}]`,
 		},
-		// 邮箱后缀白名单
-		"email_suffix_whitelist": {
-			&model.EmailSuffixWhitelist{},
+		{
+			Name:        "微信支付",
+			Code:        "wechat_pay",
+			Description: "微信在线支付",
+			Version:     "1.0.0",
+			Author:      "AnchorFinance",
+			Category:    "payment",
+			ConfigFields: `[{"key":"mch_id","label":"商户号","type":"text","required":true},{"key":"api_key","label":"API密钥","type":"password","required":true},{"key":"cert_path","label":"证书路径","type":"text"}]`,
 		},
-		// anchor_cloud_finance_pro 插件模块
-		"acfp": {
-			&model.ACFPFailNotifyEvent{},
-			&model.ACFPUpstreamCache{},
-			&model.ACFPIPHistory{},
-			&model.ACFPLimitedSale{},
-			&model.ACFPPriceLock{},
-			&model.ACFPLog{},
-			&model.ACFPCronStatus{},
-			&model.ACFPCertProConfig{},
-			&model.ACFPCertMinor{},
-			&model.ACFPBatchTask{},
+		// 实名认证插件
+		{
+			Name:        "阿里云实名认证",
+			Code:        "aliyun_verification",
+			Description: "阿里云实名认证服务",
+			Version:     "1.0.0",
+			Author:      "AnchorFinance",
+			Category:    "verification",
+			ConfigFields: `[{"key":"access_key","label":"AccessKey","type":"text","required":true},{"key":"access_secret","label":"AccessSecret","type":"password","required":true}]`,
+		},
+		// 其他插件
+		{
+			Name:        "阿里云短信",
+			Code:        "aliyun_sms",
+			Description: "阿里云短信服务",
+			Version:     "1.0.0",
+			Author:      "AnchorFinance",
+			Category:    "other",
+			ConfigFields: `[{"key":"access_key","label":"AccessKey","type":"text","required":true},{"key":"access_secret","label":"AccessSecret","type":"password","required":true},{"key":"sign_name","label":"签名","type":"text","required":true}]`,
 		},
 	}
 
-	models, ok := pluginTableMap[pluginName]
-	if !ok {
-		// 没有专属表的插件（如smtp、oauth等）直接跳过
-		return nil
-	}
-
-	for _, m := range models {
-		if err := s.db.AutoMigrate(m); err != nil {
-			return fmt.Errorf("建表失败 %T: %w", m, err)
+	for _, plugin := range defaultPlugins {
+		existing, _ := s.pluginRepo.FindByCode(plugin.Code)
+		if existing == nil {
+			s.pluginRepo.Create(&plugin)
 		}
 	}
+
 	return nil
-}
-
-// UpdateConfig 更新插件配置
-func (s *PluginService) UpdateConfig(id uint, config string) error {
-	result := s.db.Model(&model.Plugin{}).Where("id = ?", id).Update("config", config)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("插件不存在")
-	}
-	s.log.Infof("插件配置更新: id=%d", id)
-	return nil
-}
-
-// GetEnabledByType 获取指定类型的启用插件
-func (s *PluginService) GetEnabledByType(pluginType string) (*model.Plugin, error) {
-	var plugin model.Plugin
-	if err := s.db.Where("type = ? AND is_enabled = true", pluginType).
-		Order("sort_order ASC").
-		First(&plugin).Error; err != nil {
-		return nil, fmt.Errorf("没有启用的%s插件", pluginType)
-	}
-	return &plugin, nil
-}
-
-// GetEnabledList 获取指定类型的启用插件列表
-func (s *PluginService) GetEnabledList(pluginType string) ([]model.Plugin, error) {
-	var plugins []model.Plugin
-	if err := s.db.Where("type = ? AND is_enabled = true", pluginType).
-		Order("sort_order ASC").
-		Find(&plugins).Error; err != nil {
-		return nil, err
-	}
-	return plugins, nil
-}
-
-// InitDefaults 初始化默认插件
-func (s *PluginService) InitDefaults() {
-	var count int64
-	s.db.Model(&model.Plugin{}).Count(&count)
-	if count > 0 {
-		return
-	}
-
-	defaults := []model.Plugin{
-		// 邮件插件
-		{Name: "Smtp", Title: "SMTP邮件", Type: "mail", Description: "SMTP邮件发送", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
-		{Name: "Subemail", Title: "赛邮邮件", Type: "mail", Description: "赛邮邮件服务", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
-		{Name: "Alimail", Title: "阿里云邮件", Type: "mail", Description: "阿里云邮件推送", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 3},
-
-		// 短信插件
-		{Name: "Submail", Title: "赛邮短信", Type: "sms", Description: "赛邮短信服务", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
-		{Name: "Smsbao", Title: "短信宝", Type: "sms", Description: "短信宝短信服务", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
-
-		// 实名认证插件
-		{Name: "Wechat", Title: "微信实名认证", Type: "certification", Description: "腾讯云人脸核身", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
-		{Name: "Idcsmartali", Title: "阿里云实名认证", Type: "certification", Description: "阿里云实人认证", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
-
-		// OAuth登录插件
-		{Name: "Weixin", Title: "微信登录", Type: "oauth", Description: "微信扫码登录", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
-		{Name: "QQ", Title: "QQ登录", Type: "oauth", Description: "QQ互联登录", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
-		{Name: "Alipay", Title: "支付宝登录", Type: "oauth", Description: "支付宝登录", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 3},
-		{Name: "Weibo", Title: "微博登录", Type: "oauth", Description: "微博登录", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 4},
-
-		// 服务器模块（自动开通）
-		{Name: "ProxmoxVE", Title: "ProxmoxVE", Type: "server", Description: "ProxmoxVE虚拟化", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
-		{Name: "NoKVM", Title: "NoKVM", Type: "server", Description: "NoKVM虚拟化", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
-		{Name: "BtHosts", Title: "宝塔主机", Type: "server", Description: "宝塔主机管理", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 3},
-		{Name: "WlKanglePro", Title: "WlKanglePro", Type: "server", Description: "Kangle主机", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 4},
-
-		// 扩展插件
-		{Name: "ExportExcel", Title: "导出Excel", Type: "addon", Description: "数据导出为Excel", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 1},
-		{Name: "ProductDivert", Title: "产品转移", Type: "addon", Description: "产品转移功能", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 2},
-		{Name: "ExpiredIpLog", Title: "过期IP日志", Type: "addon", Description: "过期IP记录", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 3},
-		{Name: "ClientCare", Title: "客户关怀", Type: "addon", Description: "客户关怀系统", Author: "锚点财务", Version: "1.0", IsSystem: true, IsEnabled: false, SortOrder: 4},
-	}
-
-	for _, d := range defaults {
-		s.db.Create(&d)
-	}
-
-	s.log.Info("默认插件初始化完成")
-}
-
-// ==================== 服务器模块管理 ====================
-
-// CreateServerModule 创建服务器模块
-func (s *PluginService) CreateServerModule(req model.ServerModule) (*model.ServerModule, error) {
-	var count int64
-	s.db.Model(&model.ServerModule{}).Where("name = ?", req.Name).Count(&count)
-	if count > 0 {
-		return nil, errors.New("服务器模块标识名已存在")
-	}
-
-	if err := s.db.Create(&req).Error; err != nil {
-		return nil, err
-	}
-
-	s.log.Infof("服务器模块创建成功: id=%d name=%s", req.ID, req.Name)
-	return &req, nil
-}
-
-// UpdateServerModule 更新服务器模块
-func (s *PluginService) UpdateServerModule(id uint, updates map[string]interface{}) error {
-	result := s.db.Model(&model.ServerModule{}).Where("id = ?", id).Updates(updates)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("服务器模块不存在")
-	}
-	return nil
-}
-
-// DeleteServerModule 删除服务器模块
-func (s *PluginService) DeleteServerModule(id uint) error {
-	result := s.db.Delete(&model.ServerModule{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("服务器模块不存在")
-	}
-	return nil
-}
-
-// GetServerModuleByID 根据ID获取服务器模块
-func (s *PluginService) GetServerModuleByID(id uint) (*model.ServerModule, error) {
-	var module model.ServerModule
-	if err := s.db.First(&module, id).Error; err != nil {
-		return nil, err
-	}
-	return &module, nil
-}
-
-// GetServerModuleList 获取服务器模块列表
-func (s *PluginService) GetServerModuleList(moduleType string) ([]model.ServerModule, error) {
-	var modules []model.ServerModule
-	query := s.db.Model(&model.ServerModule{})
-
-	if moduleType != "" {
-		query = query.Where("module = ?", moduleType)
-	}
-
-	if err := query.Order("sort_order ASC, id ASC").Find(&modules).Error; err != nil {
-		return nil, err
-	}
-	return modules, nil
-}
-
-// ==================== 服务器分组管理 ====================
-
-// CreateServerGroup 创建服务器分组
-func (s *PluginService) CreateServerGroup(req model.ServerGroup) (*model.ServerGroup, error) {
-	var count int64
-	s.db.Model(&model.ServerGroup{}).Where("name = ?", req.Name).Count(&count)
-	if count > 0 {
-		return nil, errors.New("分组名称已存在")
-	}
-
-	if err := s.db.Create(&req).Error; err != nil {
-		return nil, err
-	}
-
-	return &req, nil
-}
-
-// UpdateServerGroup 更新服务器分组
-func (s *PluginService) UpdateServerGroup(id uint, updates map[string]interface{}) error {
-	result := s.db.Model(&model.ServerGroup{}).Where("id = ?", id).Updates(updates)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("分组不存在")
-	}
-	return nil
-}
-
-// DeleteServerGroup 删除服务器分组
-func (s *PluginService) DeleteServerGroup(id uint) error {
-	result := s.db.Delete(&model.ServerGroup{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("分组不存在")
-	}
-	return nil
-}
-
-// GetServerGroupList 获取服务器分组列表
-func (s *PluginService) GetServerGroupList() ([]model.ServerGroup, error) {
-	var groups []model.ServerGroup
-	if err := s.db.Order("sort_order ASC, id ASC").Find(&groups).Error; err != nil {
-		return nil, err
-	}
-	return groups, nil
-}
-
-// ==================== OAuth提供商管理 ====================
-
-// GetOAuthProviderList 获取OAuth提供商列表
-func (s *PluginService) GetOAuthProviderList() ([]model.OAuthProvider, error) {
-	var items []model.OAuthProvider
-	if err := s.db.Order("sort_order ASC, id ASC").Find(&items).Error; err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-// CreateOAuthProvider 创建OAuth提供商
-func (s *PluginService) CreateOAuthProvider(req model.OAuthProvider) (*model.OAuthProvider, error) {
-	if err := s.db.Create(&req).Error; err != nil {
-		return nil, err
-	}
-	return &req, nil
-}
-
-// UpdateOAuthProvider 更新OAuth提供商
-func (s *PluginService) UpdateOAuthProvider(id uint, updates map[string]interface{}) error {
-	result := s.db.Model(&model.OAuthProvider{}).Where("id = ?", id).Updates(updates)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("OAuth提供商不存在")
-	}
-	return nil
-}
-
-// DeleteOAuthProvider 删除OAuth提供商
-func (s *PluginService) DeleteOAuthProvider(id uint) error {
-	result := s.db.Delete(&model.OAuthProvider{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("OAuth提供商不存在")
-	}
-	return nil
-}
-
-// GetEnabledOAuthProviders 获取启用的OAuth提供商
-func (s *PluginService) GetEnabledOAuthProviders() ([]model.OAuthProvider, error) {
-	var items []model.OAuthProvider
-	if err := s.db.Where("is_enabled = ?", true).Order("sort_order ASC").Find(&items).Error; err != nil {
-		return nil, err
-	}
-	return items, nil
 }

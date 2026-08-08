@@ -4,290 +4,168 @@
       <template #header>
         <div class="card-header">
           <span>创建订单</span>
-          <el-button @click="handleBack">
-            <el-icon><Back /></el-icon>
-            返回
-          </el-button>
+          <el-button @click="$router.back()">返回</el-button>
         </div>
       </template>
 
-      <el-steps :active="currentStep" finish-status="success" align-center class="steps-bar">
-        <el-step title="选择客户" />
-        <el-step title="选择产品" />
-        <el-step title="配置参数" />
-        <el-step title="确认创建" />
-      </el-steps>
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="120px" size="default">
+        <!-- 客户选择 -->
+        <el-divider content-position="left">客户信息</el-divider>
 
-      <!-- 步骤1: 选择客户 -->
-      <div v-show="currentStep === 0" class="step-content">
-        <el-form :model="orderForm" ref="step1FormRef" :rules="step1Rules" label-width="120px">
-          <el-form-item label="选择客户" prop="client_id">
-            <el-select
-              v-model="orderForm.client_id"
-              filterable
-              remote
-              :remote-method="searchClients"
-              :loading="clientSearching"
-              placeholder="请输入用户名或邮箱搜索"
-              style="width: 100%"
-              @change="handleClientChange"
-            >
-              <el-option
-                v-for="item in clientOptions"
-                :key="item.id"
-                :label="item.username + ' (' + item.email + ')'"
-                :value="item.id"
-              >
-                <div class="client-option">
-                  <span class="client-name">{{ item.username }}</span>
-                  <span class="client-email">{{ item.email }}</span>
-                </div>
-              </el-option>
-            </el-select>
-          </el-form-item>
-        </el-form>
-
-        <!-- 选中的客户信息 -->
-        <el-card v-if="selectedClient" shadow="never" class="selected-info">
-          <template #header>
-            <span>客户信息</span>
-          </template>
-          <el-descriptions :column="2" size="small">
-            <el-descriptions-item label="用户名">{{ selectedClient.username }}</el-descriptions-item>
-            <el-descriptions-item label="邮箱">{{ selectedClient.email }}</el-descriptions-item>
-            <el-descriptions-item label="手机号">{{ selectedClient.phone || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="余额">¥{{ formatAmount(selectedClient.balance) }}</el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </div>
-
-      <!-- 步骤2: 选择产品 -->
-      <div v-show="currentStep === 1" class="step-content">
-        <el-form :model="orderForm" ref="step2FormRef" :rules="step2Rules" label-width="120px">
-          <el-form-item label="产品分组" prop="group_id">
-            <el-select v-model="orderForm.group_id" placeholder="请选择分组" @change="handleGroupChange">
-              <el-option v-for="group in productGroups" :key="group.id" :label="group.name" :value="group.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="选择产品" prop="product_id">
-            <el-select
-              v-model="orderForm.product_id"
-              placeholder="请选择产品"
-              :disabled="!orderForm.group_id"
-              @change="handleProductChange"
-            >
-              <el-option
-                v-for="product in filteredProducts"
-                :key="product.id"
-                :label="product.name"
-                :value="product.id"
-              />
-            </el-select>
-          </el-form-item>
-        </el-form>
+        <el-form-item label="客户" prop="client_id">
+          <el-select
+            v-model="formData.client_id"
+            filterable
+            remote
+            :remote-method="searchClients"
+            :loading="clientSearching"
+            placeholder="请输入客户名搜索"
+            style="width: 400px"
+          >
+            <el-option
+              v-for="client in clientOptions"
+              :key="client.id"
+              :label="`${client.username} (${client.email})`"
+              :value="client.id"
+            />
+          </el-select>
+        </el-form-item>
 
         <!-- 产品信息 -->
-        <el-card v-if="selectedProduct" shadow="never" class="selected-info">
-          <template #header>
-            <span>产品信息</span>
-          </template>
-          <el-descriptions :column="2" size="small">
-            <el-descriptions-item label="产品名称">{{ selectedProduct.name }}</el-descriptions-item>
-            <el-descriptions-item label="产品类型">{{ selectedProduct.type }}</el-descriptions-item>
-            <el-descriptions-item label="计费周期">{{ selectedProduct.billing_cycle }}</el-descriptions-item>
-            <el-descriptions-item label="价格">¥{{ formatAmount(selectedProduct.price) }} / {{ selectedProduct.billing_cycle }}</el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </div>
+        <el-divider content-position="left">产品信息</el-divider>
 
-      <!-- 步骤3: 配置参数 -->
-      <div v-show="currentStep === 2" class="step-content">
-        <el-form :model="orderForm" ref="step3FormRef" :rules="step3Rules" label-width="120px">
-          <el-form-item label="周期" prop="billing_cycle">
-            <el-radio-group v-model="orderForm.billing_cycle">
-              <el-radio-button
-                v-for="cycle in billingCycles"
-                :key="cycle.value"
-                :value="cycle.value"
-              >
-                {{ cycle.label }} ¥{{ formatAmount(cycle.price) }}
-              </el-radio-button>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="数量" prop="quantity">
-            <el-input-number v-model="orderForm.quantity" :min="1" :max="999" />
-          </el-form-item>
-          <el-form-item label="自定义价格">
-            <el-input-number v-model="orderForm.custom_price" :min="0" :precision="2" :step="10" />
-            <span class="form-tip">留空则使用产品默认价格</span>
-          </el-form-item>
-          <el-form-item label="折扣">
-            <el-input-number v-model="orderForm.discount" :min="0" :max="100" :precision="0" />
-            <span class="form-tip">百分比，如 10 表示打9折</span>
-          </el-form-item>
+        <el-form-item label="产品类型" prop="product_type">
+          <el-radio-group v-model="formData.product_type">
+            <el-radio value="existing">现有产品</el-radio>
+            <el-radio value="custom">自定义产品</el-radio>
+          </el-radio-group>
+        </el-form-item>
 
-          <!-- 产品配置选项 -->
-          <el-divider content-position="left">产品配置</el-divider>
-          <el-form-item label="域名">
-            <el-input v-model="orderForm.domain" placeholder="如: example.com" />
-          </el-form-item>
-          <el-form-item label="IP地址">
-            <el-input v-model="orderForm.ip" placeholder="如: 1.2.3.4" />
-          </el-form-item>
-          <el-form-item label="配置参数">
-            <el-input v-model="orderForm.config" type="textarea" :rows="3" placeholder="JSON格式配置参数" />
-          </el-form-item>
-          <el-form-item label="备注">
-            <el-input v-model="orderForm.remark" type="textarea" :rows="2" placeholder="订单备注" />
-          </el-form-item>
-        </el-form>
+        <el-form-item v-if="formData.product_type === 'existing'" label="产品" prop="product_id">
+          <el-select v-model="formData.product_id" placeholder="请选择产品" style="width: 400px" @change="handleProductChange">
+            <el-option
+              v-for="product in products"
+              :key="product.id"
+              :label="product.name"
+              :value="product.id"
+            />
+          </el-select>
+        </el-form-item>
 
-        <!-- 价格预览 -->
-        <el-card shadow="never" class="selected-info">
-          <template #header>
-            <span>价格预览</span>
-          </template>
-          <el-descriptions :column="1" size="small">
-            <el-descriptions-item label="单价">¥{{ formatAmount(currentPrice) }}</el-descriptions-item>
-            <el-descriptions-item label="数量">{{ orderForm.quantity }}</el-descriptions-item>
-            <el-descriptions-item label="小计">¥{{ formatAmount(currentPrice * orderForm.quantity) }}</el-descriptions-item>
-            <el-descriptions-item label="折扣">{{ orderForm.discount }}%</el-descriptions-item>
-            <el-descriptions-item label="折后金额">
-              <span class="amount-highlight">¥{{ formatAmount(finalPrice) }}</span>
-            </el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </div>
+        <el-form-item v-if="formData.product_type === 'custom'" label="产品名称" prop="custom_product_name">
+          <el-input v-model="formData.custom_product_name" placeholder="请输入产品名称" style="width: 400px" />
+        </el-form-item>
 
-      <!-- 步骤4: 确认创建 -->
-      <div v-show="currentStep === 3" class="step-content">
-        <el-card shadow="never">
-          <template #header>
-            <span>订单确认</span>
-          </template>
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="客户">
-              {{ selectedClient?.username }} ({{ selectedClient?.email }})
-            </el-descriptions-item>
-            <el-descriptions-item label="产品">{{ selectedProduct?.name }}</el-descriptions-item>
-            <el-descriptions-item label="周期">{{ orderForm.billing_cycle }}</el-descriptions-item>
-            <el-descriptions-item label="数量">{{ orderForm.quantity }}</el-descriptions-item>
-            <el-descriptions-item label="单价">¥{{ formatAmount(currentPrice) }}</el-descriptions-item>
-            <el-descriptions-item label="折扣">{{ orderForm.discount }}%</el-descriptions-item>
-            <el-descriptions-item label="订单金额">
-              <span class="amount-highlight" style="font-size: 18px;">¥{{ formatAmount(finalPrice) }}</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="域名">{{ orderForm.domain || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="备注" :span="2">{{ orderForm.remark || '无' }}</el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </div>
+        <el-form-item label="计费周期" prop="billing_cycle">
+          <el-select v-model="formData.billing_cycle" placeholder="请选择计费周期" style="width: 200px">
+            <el-option label="月付" value="monthly" />
+            <el-option label="季付" value="quarterly" />
+            <el-option label="半年付" value="semi_annually" />
+            <el-option label="年付" value="annually" />
+            <el-option label="一次性" value="onetime" />
+          </el-select>
+        </el-form-item>
 
-      <!-- 底部按钮 -->
-      <div class="step-actions">
-        <el-button v-if="currentStep > 0" @click="currentStep--">上一步</el-button>
-        <el-button v-if="currentStep < 3" type="primary" @click="handleNext">下一步</el-button>
-        <el-button v-if="currentStep === 3" type="primary" @click="handleSubmit" :loading="submitLoading">
-          确认创建
-        </el-button>
-      </div>
+        <el-form-item label="数量" prop="quantity">
+          <el-input-number v-model="formData.quantity" :min="1" :max="999" />
+        </el-form-item>
+
+        <!-- 价格信息 -->
+        <el-divider content-position="left">价格信息</el-divider>
+
+        <el-form-item label="单价" prop="unit_price">
+          <el-input-number v-model="formData.unit_price" :min="0" :precision="2" :step="10" />
+          <span class="form-tip">元</span>
+        </el-form-item>
+
+        <el-form-item label="优惠金额" prop="discount">
+          <el-input-number v-model="formData.discount" :min="0" :precision="2" :step="10" />
+          <span class="form-tip">元</span>
+        </el-form-item>
+
+        <el-form-item label="订单金额">
+          <span class="order-amount">¥{{ formatMoney(totalAmount) }}</span>
+        </el-form-item>
+
+        <!-- 支付信息 -->
+        <el-divider content-position="left">支付信息</el-divider>
+
+        <el-form-item label="支付方式" prop="payment_method">
+          <el-select v-model="formData.payment_method" placeholder="请选择支付方式" style="width: 200px">
+            <el-option label="余额支付" value="balance" />
+            <el-option label="线下支付" value="offline" />
+            <el-option label="免费" value="free" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="备注" prop="notes">
+          <el-input v-model="formData.notes" type="textarea" :rows="3" placeholder="请输入备注" style="width: 400px" />
+        </el-form-item>
+
+        <el-form-item>
+          <el-button type="primary" :loading="submitting" @click="handleSubmit">创建订单</el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { Back } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/http'
 
-const route = useRoute()
 const router = useRouter()
-
-const currentStep = ref(0)
-const submitLoading = ref(false)
+const formRef = ref<FormInstance>()
+const submitting = ref(false)
 const clientSearching = ref(false)
-
-const step1FormRef = ref<FormInstance>()
-const step2FormRef = ref<FormInstance>()
-const step3FormRef = ref<FormInstance>()
-
-// 客户搜索
 const clientOptions = ref<any[]>([])
-const selectedClient = ref<any>(null)
-
-// 产品
-const productGroups = ref<any[]>([])
 const products = ref<any[]>([])
-const selectedProduct = ref<any>(null)
 
-const billingCycles = ref<any[]>([])
-
-const orderForm = reactive({
-  client_id: undefined as number | undefined,
-  group_id: undefined as number | undefined,
-  product_id: undefined as number | undefined,
+// 表单数据
+const formData = reactive({
+  client_id: null as number | null,
+  product_type: 'existing',
+  product_id: null as number | null,
+  custom_product_name: '',
   billing_cycle: 'monthly',
   quantity: 1,
-  custom_price: undefined as number | undefined,
+  unit_price: 0,
   discount: 0,
-  domain: '',
-  ip: '',
-  config: '',
-  remark: ''
+  payment_method: 'balance',
+  notes: ''
 })
 
-const step1Rules: FormRules = {
-  client_id: [{ required: true, message: '请选择客户', trigger: 'change' }]
-}
-
-const step2Rules: FormRules = {
-  group_id: [{ required: true, message: '请选择产品分组', trigger: 'change' }],
-  product_id: [{ required: true, message: '请选择产品', trigger: 'change' }]
-}
-
-const step3Rules: FormRules = {
+// 表单验证规则
+const rules: FormRules = {
+  client_id: [{ required: true, message: '请选择客户', trigger: 'change' }],
   billing_cycle: [{ required: true, message: '请选择计费周期', trigger: 'change' }],
-  quantity: [{ required: true, message: '请输入数量', trigger: 'blur' }]
+  quantity: [{ required: true, message: '请输入数量', trigger: 'blur' }],
+  unit_price: [{ required: true, message: '请输入单价', trigger: 'blur' }],
+  payment_method: [{ required: true, message: '请选择支付方式', trigger: 'change' }]
 }
 
-const filteredProducts = computed(() => {
-  if (!orderForm.group_id) return products.value
-  return products.value.filter(p => p.group_id === orderForm.group_id)
+// 订单总金额
+const totalAmount = computed(() => {
+  return (formData.unit_price * formData.quantity) - formData.discount
 })
 
-const currentPrice = computed(() => {
-  if (orderForm.custom_price !== undefined && orderForm.custom_price > 0) {
-    return orderForm.custom_price
-  }
-  const cyclePrice = billingCycles.value.find(c => c.value === orderForm.billing_cycle)
-  return cyclePrice?.price || selectedProduct.value?.price || 0
-})
-
-const finalPrice = computed(() => {
-  const subtotal = currentPrice.value * orderForm.quantity
-  const discountAmount = subtotal * (orderForm.discount / 100)
-  return subtotal - discountAmount
-})
-
-const formatAmount = (amount: number | undefined) => {
-  return amount?.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'
+// 格式化金额
+const formatMoney = (amount: number) => {
+  if (!amount) return '0.00'
+  return Number(amount).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// 搜索客户
 const searchClients = async (query: string) => {
-  if (!query) {
-    clientOptions.value = []
-    return
-  }
+  if (!query) return
   clientSearching.value = true
   try {
-    const data = await request.get({
-      url: '/api/admin/users',
-      params: { keyword: query, page_size: 20 }
-    })
-    clientOptions.value = data.list || []
+    const data = await request.get({ url: '/api/admin/clients', params: { keyword: query, page_size: 20 } })
+    clientOptions.value = data?.list || []
   } catch (error) {
     console.error('搜索客户失败:', error)
   } finally {
@@ -295,101 +173,53 @@ const searchClients = async (query: string) => {
   }
 }
 
-const handleClientChange = async (clientId: number) => {
-  try {
-    selectedClient.value = await request.get({ url: `/api/admin/users/${clientId}` })
-  } catch (error) {
-    console.error('获取客户信息失败:', error)
-  }
-}
-
-const handleGroupChange = () => {
-  orderForm.product_id = undefined
-  selectedProduct.value = null
-}
-
-const handleProductChange = async (productId: number) => {
-  try {
-    const data = await request.get({ url: `/api/admin/products/${productId}` })
-    selectedProduct.value = data
-    billingCycles.value = data.billing_cycles || []
-    if (billingCycles.value.length > 0) {
-      orderForm.billing_cycle = billingCycles.value[0].value
-    }
-  } catch (error) {
-    console.error('获取产品信息失败:', error)
-  }
-}
-
-const fetchProductGroups = async () => {
-  try {
-    productGroups.value = await request.get({ url: '/api/admin/product-groups' }) || []
-  } catch (error) {
-    console.error('获取产品分组失败:', error)
-  }
-}
-
+// 获取产品列表
 const fetchProducts = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/products', params: { page_size: 1000 } })
-    products.value = data.list || []
+    const data = await request.get({ url: '/api/admin/products' })
+    products.value = data || []
   } catch (error) {
     console.error('获取产品列表失败:', error)
   }
 }
 
-const handleNext = async () => {
-  const formRefs: Record<number, FormInstance | undefined> = {
-    0: step1FormRef.value,
-    1: step2FormRef.value,
-    2: step3FormRef.value
+// 产品变化
+const handleProductChange = (productId: number) => {
+  const product = products.value.find((p) => p.id === productId)
+  if (product) {
+    formData.unit_price = product.price || 0
   }
-
-  const formRef = formRefs[currentStep.value]
-  if (formRef) {
-    const valid = await formRef.validate().catch(() => false)
-    if (!valid) return
-  }
-
-  currentStep.value++
 }
 
+// 提交表单
 const handleSubmit = async () => {
-  submitLoading.value = true
+  if (!formRef.value) return
   try {
-    await request.post({
-      url: '/api/admin/orders',
-      params: orderForm
-    })
+    await formRef.value.validate()
+    submitting.value = true
+    await request.post({ url: '/api/admin/orders', data: { ...formData, amount: totalAmount.value } })
     ElMessage.success('订单创建成功')
-    router.push('/finance/orders/list')
+    router.push('/order-list')
   } catch (error) {
-    ElMessage.error('创建失败')
+    console.error('创建订单失败:', error)
   } finally {
-    submitLoading.value = false
+    submitting.value = false
   }
 }
 
-const handleBack = () => {
-  router.back()
+// 重置表单
+const handleReset = () => {
+  formRef.value?.resetFields()
 }
 
 onMounted(() => {
-  fetchProductGroups()
   fetchProducts()
-
-  // 如果URL带了client_id参数，自动选中
-  const clientId = route.query.client_id
-  if (clientId) {
-    orderForm.client_id = Number(clientId)
-    handleClientChange(Number(clientId))
-  }
 })
 </script>
 
 <style scoped lang="scss">
 .create-order-page {
-  padding: 20px;
+  padding: 16px;
 }
 
 .card-header {
@@ -398,46 +228,20 @@ onMounted(() => {
   align-items: center;
 }
 
-.steps-bar {
-  margin: 20px 0 32px;
-}
-
-.step-content {
-  min-height: 300px;
-  padding: 20px 0;
-}
-
-.selected-info {
-  margin-top: 20px;
-}
-
-.client-option {
-  display: flex;
-  justify-content: space-between;
-
-  .client-email {
-    color: var(--el-text-color-secondary);
-    font-size: 12px;
-  }
-}
-
 .form-tip {
-  margin-left: 12px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
+  margin-left: 10px;
+  font-size: 12px;
+  color: #86909C;
 }
 
-.amount-highlight {
+.order-amount {
+  font-size: 24px;
   font-weight: 600;
-  color: var(--el-color-primary);
+  color: #F59E0B;
 }
 
-.step-actions {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid var(--el-border-color-lighter);
+:deep(.el-divider__text) {
+  font-weight: 600;
+  color: #1D2129;
 }
 </style>

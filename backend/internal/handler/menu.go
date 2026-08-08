@@ -1,140 +1,148 @@
 package handler
 
 import (
+	"net/http"
 	"strconv"
 
-	"anchorfinance/internal/service"
-	"anchorfinance/pkg/logger"
-	"anchorfinance/pkg/response"
-
 	"github.com/gin-gonic/gin"
+	"github.com/anchorfinance/backend/internal/service"
 )
 
 type MenuHandler struct {
-	menuSvc *service.MenuService
-	log     *logger.Logger
+	menuService *service.MenuService
 }
 
-func NewMenuHandler(menuSvc *service.MenuService, log *logger.Logger) *MenuHandler {
-	return &MenuHandler{menuSvc: menuSvc, log: log}
-}
-
-// List returns all menus as a flat list.
-func (h *MenuHandler) List(c *gin.Context) {
-	menuType := c.Query("type")
-
-	menus, err := h.menuSvc.List(menuType)
-	if err != nil {
-		response.ServerError(c, err.Error())
-		return
+func NewMenuHandler() *MenuHandler {
+	return &MenuHandler{
+		menuService: service.NewMenuService(),
 	}
-	response.Success(c, menus)
 }
 
-// GetTree returns menus in tree structure.
-func (h *MenuHandler) GetTree(c *gin.Context) {
-	menuType := c.Query("type")
-
-	tree, err := h.menuSvc.GetTree(menuType)
-	if err != nil {
-		response.ServerError(c, err.Error())
-		return
-	}
-	response.Success(c, tree)
-}
-
-// GetVisibleTree returns only visible menus in tree structure (public).
-func (h *MenuHandler) GetVisibleTree(c *gin.Context) {
-	menuType := c.Query("type")
-
-	tree, err := h.menuSvc.GetVisibleTree(menuType)
-	if err != nil {
-		response.ServerError(c, err.Error())
-		return
-	}
-	response.Success(c, tree)
-}
-
-// GetDetail returns a single menu by ID.
-func (h *MenuHandler) GetDetail(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		response.BadRequest(c, "invalid menu id")
+// GetMenuTree 获取菜单树
+func (h *MenuHandler) GetMenuTree(c *gin.Context) {
+	// 获取当前管理员ID
+	adminID, exists := c.Get("admin_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "未登录"})
 		return
 	}
 
-	menu, err := h.menuSvc.GetByID(uint(id))
+	menuTree, err := h.menuService.GetMenuTree(adminID.(uint))
 	if err != nil {
-		response.NotFound(c, "menu not found")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	response.Success(c, menu)
+
+	c.JSON(http.StatusOK, menuTree)
 }
 
-// Create creates a new menu item.
-func (h *MenuHandler) Create(c *gin.Context) {
-	var req service.CreateMenuRequest
+// GetMenus 获取菜单列表（扁平）
+func (h *MenuHandler) GetMenus(c *gin.Context) {
+	menus, err := h.menuService.GetAllMenus()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, menus)
+}
+
+// CreateMenu 创建菜单
+func (h *MenuHandler) CreateMenu(c *gin.Context) {
+	var req struct {
+		Name      string `json:"name" binding:"required"`
+		ParentID  uint   `json:"parent_id"`
+		URL       string `json:"url"`
+		Icon      string `json:"icon"`
+		SortOrder int    `json:"sort_order"`
+		IsVisible bool   `json:"is_visible"`
+		IsSystem  bool   `json:"is_system"`
+	}
+
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	menu, err := h.menuSvc.Create(req)
+	menu, err := h.menuService.CreateMenu(&service.CreateMenuRequest{
+		Name:      req.Name,
+		ParentID:  req.ParentID,
+		URL:       req.URL,
+		Icon:      req.Icon,
+		SortOrder: req.SortOrder,
+		IsVisible: req.IsVisible,
+		IsSystem:  req.IsSystem,
+	})
 	if err != nil {
-		response.ServerError(c, err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	response.Success(c, menu)
+
+	c.JSON(http.StatusCreated, menu)
 }
 
-// Update updates a menu item.
-func (h *MenuHandler) Update(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+// UpdateMenu 更新菜单
+func (h *MenuHandler) UpdateMenu(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		response.BadRequest(c, "invalid menu id")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的ID"})
 		return
 	}
 
-	var req service.UpdateMenuRequest
+	var req struct {
+		Name      string `json:"name"`
+		ParentID  uint   `json:"parent_id"`
+		URL       string `json:"url"`
+		Icon      string `json:"icon"`
+		SortOrder int    `json:"sort_order"`
+		IsVisible *bool  `json:"is_visible"`
+	}
+
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	menu, err := h.menuSvc.Update(uint(id), req)
+	menu, err := h.menuService.UpdateMenu(uint(id), &service.UpdateMenuRequest{
+		Name:      req.Name,
+		ParentID:  req.ParentID,
+		URL:       req.URL,
+		Icon:      req.Icon,
+		SortOrder: req.SortOrder,
+		IsVisible: req.IsVisible,
+	})
 	if err != nil {
-		response.ServerError(c, err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	response.Success(c, menu)
+
+	c.JSON(http.StatusOK, menu)
 }
 
-// Delete deletes a menu and its children.
-func (h *MenuHandler) Delete(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+// DeleteMenu 删除菜单
+func (h *MenuHandler) DeleteMenu(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		response.BadRequest(c, "invalid menu id")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的ID"})
 		return
 	}
 
-	if err := h.menuSvc.Delete(uint(id)); err != nil {
-		response.ServerError(c, err.Error())
+	if err := h.menuService.DeleteMenu(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	response.SuccessMsg(c, "menu deleted")
+
+	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
 }
 
-// Sort updates sort order for multiple menus.
-func (h *MenuHandler) Sort(c *gin.Context) {
-	var req service.SortMenuRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
-		return
+// RegisterRoutes 注册路由
+func (h *MenuHandler) RegisterRoutes(r *gin.RouterGroup) {
+	menu := r.Group("/menus")
+	{
+		menu.GET("/tree", h.GetMenuTree)
+		menu.GET("", h.GetMenus)
+		menu.POST("", h.CreateMenu)
+		menu.PUT("/:id", h.UpdateMenu)
+		menu.DELETE("/:id", h.DeleteMenu)
 	}
-
-	if err := h.menuSvc.Sort(req); err != nil {
-		response.ServerError(c, err.Error())
-		return
-	}
-	response.SuccessMsg(c, "menu sorted")
 }

@@ -80,28 +80,28 @@
         <h3>详细统计</h3>
         <el-row :gutter="20">
           <el-col :span="6">
-            <el-card shadow="hover" class="link-card" @click="router.push('/finance/statistics/revenue-ranking')">
+            <el-card shadow="hover" class="link-card" @click="router.push('/revenue-ranking')">
               <el-icon :size="32"><Trophy /></el-icon>
               <div class="link-text">收入排行</div>
               <div class="link-desc">客户和产品收入排行</div>
             </el-card>
           </el-col>
           <el-col :span="6">
-            <el-card shadow="hover" class="link-card" @click="router.push('/finance/statistics/annual')">
+            <el-card shadow="hover" class="link-card" @click="router.push('/annual-statistics')">
               <el-icon :size="32"><Calendar /></el-icon>
               <div class="link-text">年度统计</div>
               <div class="link-desc">年度收入支出分析</div>
             </el-card>
           </el-col>
           <el-col :span="6">
-            <el-card shadow="hover" class="link-card" @click="router.push('/finance/statistics/product-revenue')">
+            <el-card shadow="hover" class="link-card" @click="router.push('/product-revenue')">
               <el-icon :size="32"><Goods /></el-icon>
               <div class="link-text">产品收入</div>
               <div class="link-desc">产品收入趋势分析</div>
             </el-card>
           </el-col>
           <el-col :span="6">
-            <el-card shadow="hover" class="link-card" @click="router.push('/finance/statistics/new-customers')">
+            <el-card shadow="hover" class="link-card" @click="router.push('/new-customer')">
               <el-icon :size="32"><UserFilled /></el-icon>
               <div class="link-text">新客户统计</div>
               <div class="link-desc">新增客户趋势分析</div>

@@ -1,532 +1,214 @@
 <template>
   <div class="invoice-list-page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>账单管理</span>
-          <el-button type="primary" @click="handleExport">
-            <el-icon><Download /></el-icon>
-            导出
-          </el-button>
-        </div>
-      </template>
+    <!-- 标签页 -->
+    <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+      <el-tab-pane label="全部" name="all" />
+      <el-tab-pane label="未付" name="unpaid" />
+      <el-tab-pane label="已付" name="paid" />
+      <el-tab-pane label="已取消" name="cancelled" />
+      <el-tab-pane label="已退款" name="refunded" />
+    </el-tabs>
 
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="发票号">
-          <el-input v-model="searchForm.invoice_no" placeholder="请输入发票号" clearable />
-        </el-form-item>
-        <el-form-item label="客户">
-          <el-input v-model="searchForm.client_name" placeholder="请输入客户名" clearable />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
-            <el-option label="待审核" :value="0" />
-            <el-option label="审核通过" :value="1" />
-            <el-option label="已开票" :value="2" />
-            <el-option label="已驳回" :value="3" />
-            <el-option label="已作废" :value="4" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="发票类型">
-          <el-select v-model="searchForm.invoice_type" placeholder="全部" clearable>
-            <el-option label="增值税普通发票" :value="1" />
-            <el-option label="增值税专用发票" :value="2" />
-            <el-option label="电子发票" :value="3" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="日期范围">
-          <el-date-picker
-            v-model="searchForm.date_range"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
-          />
+    <!-- 搜索筛选 -->
+    <el-card shadow="never" class="search-card">
+      <el-form :model="searchForm" inline>
+        <el-form-item label="关键词">
+          <el-input v-model="searchForm.keyword" placeholder="发票号/客户名" clearable style="width: 200px" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button type="primary" @click="handleSearch"><el-icon><Search /></el-icon>搜索</el-button>
+          <el-button @click="handleReset"><el-icon><Refresh /></el-icon>重置</el-button>
         </el-form-item>
       </el-form>
+    </el-card>
 
-      <!-- 数据表格 -->
-      <el-table :data="tableData" v-loading="loading" style="width: 100%" border>
-        <el-table-column prop="id" label="ID" width="70" align="center" />
-        <el-table-column prop="invoice_no" label="发票号" width="180">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleViewDetail(row)">
-              {{ row.invoice_no }}
-            </el-button>
-          </template>
-        </el-table-column>
-        <el-table-column prop="order_no" label="关联订单" width="170" />
-        <el-table-column prop="client_name" label="客户" width="120" />
-        <el-table-column prop="invoice_type" label="发票类型" width="140" align="center">
-          <template #default="{ row }">
-            {{ getInvoiceTypeText(row.invoice_type) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="amount" label="金额" width="110" align="right">
-          <template #default="{ row }">
-            <span class="amount-text">¥{{ formatAmount(row.amount) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="tax_amount" label="税额" width="100" align="right">
-          <template #default="{ row }">
-            ¥{{ formatAmount(row.tax_amount) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getInvoiceStatusType(row.status)" size="small">
-              {{ getInvoiceStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="申请时间" width="170" />
-        <el-table-column label="操作" width="200" fixed="right" align="center">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleViewDetail(row)">详情</el-button>
-            <el-button
-              v-if="row.status === 0"
-              type="success"
-              link
-              @click="handleAudit(row, 1)"
-            >
-              通过
-            </el-button>
-            <el-button
-              v-if="row.status === 0"
-              type="danger"
-              link
-              @click="handleAudit(row, 3)"
-            >
-              驳回
-            </el-button>
-            <el-button
-              v-if="row.status === 1"
-              type="primary"
-              link
-              @click="handleIssue(row)"
-            >
-              开票
-            </el-button>
-            <el-popconfirm
-              v-if="row.status === 2"
-              title="确定作废该发票吗？"
-              @confirm="handleVoid(row)"
-            >
-              <template #reference>
-                <el-button type="danger" link>作废</el-button>
-              </template>
-            </el-popconfirm>
-          </template>
-        </el-table-column>
-      </el-table>
+    <!-- 汇总 -->
+    <el-card shadow="never" class="summary-card">
+      <el-row :gutter="20">
+        <el-col :span="6"><div class="summary-item"><div class="label">总金额</div><div class="value">¥{{ formatMoney(summary.total) }}</div></div></el-col>
+        <el-col :span="6"><div class="summary-item"><div class="label">已付</div><div class="value text-green">¥{{ formatMoney(summary.paid) }}</div></div></el-col>
+        <el-col :span="6"><div class="summary-item"><div class="label">未付</div><div class="value text-orange">¥{{ formatMoney(summary.unpaid) }}</div></div></el-col>
+        <el-col :span="6"><div class="summary-item"><div class="label">已退款</div><div class="value text-red">¥{{ formatMoney(summary.refunded) }}</div></div></el-col>
+      </el-row>
+    </el-card>
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.page_size"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-        />
+    <!-- 操作栏 -->
+    <el-card shadow="never" class="action-card">
+      <div class="action-bar">
+        <div class="action-left">
+          <el-button type="danger" :disabled="selectedIds.length === 0" @click="handleBatchCancel">批量取消</el-button>
+          <el-button type="success" :disabled="selectedIds.length === 0" @click="handleBatchPay">批量确认付款</el-button>
+          <el-button @click="handleExport"><el-icon><Download /></el-icon>导出</el-button>
+        </div>
+        <div class="action-right">
+          <el-button circle @click="fetchList"><el-icon><Refresh /></el-icon></el-button>
+        </div>
       </div>
     </el-card>
 
-    <!-- 发票详情对话框 -->
-    <el-dialog v-model="detailVisible" title="发票详情" width="800px" destroy-on-close>
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="发票号">{{ detailData.invoice_no }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="getInvoiceStatusType(detailData.status)" size="small">
-            {{ getInvoiceStatusText(detailData.status) }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="关联订单">{{ detailData.order_no }}</el-descriptions-item>
-        <el-descriptions-item label="客户名称">{{ detailData.client_name }}</el-descriptions-item>
-        <el-descriptions-item label="发票类型">{{ getInvoiceTypeText(detailData.invoice_type) }}</el-descriptions-item>
-        <el-descriptions-item label="纳税人识别号">{{ detailData.tax_no || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="开票金额">
-          <span class="amount-text">¥{{ formatAmount(detailData.amount) }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="税额">¥{{ formatAmount(detailData.tax_amount) }}</el-descriptions-item>
-        <el-descriptions-item label="价税合计">
-          <span class="amount-text total-amount">¥{{ formatAmount((detailData.amount || 0) + (detailData.tax_amount || 0)) }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="开票日期">{{ detailData.issue_date || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="申请时间" :span="2">{{ detailData.created_at }}</el-descriptions-item>
-        <el-descriptions-item label="公司名称" :span="2">{{ detailData.company_name || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="注册地址">{{ detailData.company_address || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="注册电话">{{ detailData.company_phone || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="开户银行">{{ detailData.bank_name || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="银行账号">{{ detailData.bank_account || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="备注" :span="2">{{ detailData.remark || '无' }}</el-descriptions-item>
-      </el-descriptions>
-
-      <!-- 审核区域 -->
-      <div v-if="detailData.status === 0" class="audit-section">
-        <el-divider content-position="left">审核操作</el-divider>
-        <el-input
-          v-model="auditRemark"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入审核备注（可选）"
-        />
-        <div class="audit-actions">
-          <el-button type="success" @click="handleAuditFromDetail(1)" :loading="auditLoading">
-            审核通过
-          </el-button>
-          <el-button type="danger" @click="handleAuditFromDetail(3)" :loading="auditLoading">
-            审核驳回
-          </el-button>
-        </div>
+    <!-- 数据表格 -->
+    <el-card shadow="never" class="table-card">
+      <el-table v-loading="loading" :data="tableData" border stripe @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="50" />
+        <el-table-column prop="id" label="ID" width="80" align="center" />
+        <el-table-column prop="invoice_no" label="发票号" width="150">
+          <template #default="{ row }">
+            <el-button type="primary" link @click="handleView(row)">{{ row.invoice_no }}</el-button>
+          </template>
+        </el-table-column>
+        <el-table-column prop="client_name" label="客户" width="120">
+          <template #default="{ row }">
+            <el-button type="primary" link @click="$router.push(`/customer-view/${row.client_id}`)">{{ row.client_name }}</el-button>
+          </template>
+        </el-table-column>
+        <el-table-column prop="amount" label="金额" width="120" align="right">
+          <template #default="{ row }">¥{{ formatMoney(row.amount) }}</template>
+        </el-table-column>
+        <el-table-column prop="paid_amount" label="已付" width="120" align="right">
+          <template #default="{ row }">¥{{ formatMoney(row.paid_amount) }}</template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status)" size="small">{{ getStatusText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="due_date" label="到期日期" width="120" />
+        <el-table-column prop="created_at" label="创建时间" width="170" />
+        <el-table-column label="操作" width="150" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="handleView(row)">查看</el-button>
+            <el-button v-if="row.status === 'unpaid'" type="success" link size="small" @click="handleMarkPaid(row)">标记已付</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="pagination-wrapper">
+        <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.page_size" :page-sizes="[10,20,50,100]" :total="pagination.total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="handlePageChange" />
       </div>
-
-      <!-- 开票确认区域 -->
-      <div v-if="detailData.status === 1" class="audit-section">
-        <el-divider content-position="left">开票操作</el-divider>
-        <el-form label-width="100px">
-          <el-form-item label="发票号码">
-            <el-input v-model="issueForm.invoice_number" placeholder="请输入实际发票号码" />
-          </el-form-item>
-          <el-form-item label="开票日期">
-            <el-date-picker
-              v-model="issueForm.issue_date"
-              type="date"
-              placeholder="选择开票日期"
-              value-format="YYYY-MM-DD"
-            />
-          </el-form-item>
-        </el-form>
-        <div class="audit-actions">
-          <el-button type="primary" @click="handleIssueFromDetail" :loading="auditLoading">
-            确认开票
-          </el-button>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Download } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Download } from '@element-plus/icons-vue'
 import request from '@/utils/http'
-import { exportToCSV } from '@/utils/export'
 
-// 加载状态
+const router = useRouter()
 const loading = ref(false)
-const auditLoading = ref(false)
+const tableData = ref([])
+const activeTab = ref('all')
+const selectedIds = ref<number[]>([])
+const searchForm = reactive({ keyword: '' })
+const pagination = reactive({ page: 1, page_size: 20, total: 0 })
+const summary = ref<any>({ total: 0, paid: 0, unpaid: 0, refunded: 0 })
 
-// 搜索表单
-const searchForm = reactive({
-  invoice_no: '',
-  client_name: '',
-  status: undefined as number | undefined,
-  invoice_type: undefined as number | undefined,
-  date_range: [] as string[]
-})
-
-// 分页
-const pagination = reactive({
-  page: 1,
-  page_size: 20,
-  total: 0
-})
-
-// 表格数据
-const tableData = ref<any[]>([])
-
-// 详情对话框
-const detailVisible = ref(false)
-const detailData = ref<any>({})
-const auditRemark = ref('')
-
-// 开票表单
-const issueForm = reactive({
-  invoice_number: '',
-  issue_date: ''
-})
-
-// 发票类型映射
-const INVOICE_TYPE_MAP: Record<number, string> = {
-  1: '增值税普通发票',
-  2: '增值税专用发票',
-  3: '电子发票'
+const formatMoney = (amount: number) => {
+  if (!amount) return '0.00'
+  return Number(amount).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// 发票状态映射
-const INVOICE_STATUS_MAP: Record<number, { text: string; type: string }> = {
-  0: { text: '待审核', type: 'warning' },
-  1: { text: '审核通过', type: 'primary' },
-  2: { text: '已开票', type: 'success' },
-  3: { text: '已驳回', type: 'danger' },
-  4: { text: '已作废', type: 'info' }
+const getStatusType = (status: string) => {
+  const map: Record<string, string> = { unpaid: 'warning', paid: 'success', cancelled: 'info', refunded: 'danger' }
+  return map[status] || 'info'
 }
 
-// 获取发票类型文本
-const getInvoiceTypeText = (type: number) => {
-  return INVOICE_TYPE_MAP[type] || '未知'
+const getStatusText = (status: string) => {
+  const map: Record<string, string> = { unpaid: '未付', paid: '已付', cancelled: '已取消', refunded: '已退款' }
+  return map[status] || '未知'
 }
 
-// 获取发票状态文本
-const getInvoiceStatusText = (status: number) => {
-  return INVOICE_STATUS_MAP[status]?.text || '未知'
-}
+const handleTabChange = () => { pagination.page = 1; fetchList() }
+const handleSearch = () => { pagination.page = 1; fetchList() }
+const handleReset = () => { searchForm.keyword = ''; pagination.page = 1; fetchList() }
+const handleSizeChange = (size: number) => { pagination.page_size = size; pagination.page = 1; fetchList() }
+const handlePageChange = (page: number) => { pagination.page = page; fetchList() }
+const handleSelectionChange = (rows: any[]) => { selectedIds.value = rows.map((r) => r.id) }
 
-// 获取发票状态类型
-const getInvoiceStatusType = (status: number) => {
-  return (INVOICE_STATUS_MAP[status]?.type || 'info') as any
-}
-
-// 格式化金额
-const formatAmount = (amount: number | undefined) => {
-  return amount?.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'
-}
-
-// 获取发票列表
-const fetchInvoices = async () => {
+const fetchList = async () => {
   loading.value = true
   try {
-    const params: any = {
-      page: pagination.page,
-      page_size: pagination.page_size,
-      invoice_no: searchForm.invoice_no || undefined,
-      client_name: searchForm.client_name || undefined,
-      status: searchForm.status,
-      invoice_type: searchForm.invoice_type
-    }
-    if (searchForm.date_range?.length === 2) {
-      params.start_date = searchForm.date_range[0]
-      params.end_date = searchForm.date_range[1]
-    }
-    const data = await request.get({
-      url: '/api/admin/invoices',
-      params
-    })
-    tableData.value = data.list || []
-    pagination.total = data.total || 0
+    const params: any = { page: pagination.page, page_size: pagination.page_size }
+    if (activeTab.value !== 'all') params.status = activeTab.value
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+    const data = await request.get({ url: '/api/admin/invoices', params })
+    tableData.value = data?.list || []
+    pagination.total = data?.total || 0
+    if (data?.summary) summary.value = data.summary
   } catch (error) {
     console.error('获取发票列表失败:', error)
-    ElMessage.error('获取发票列表失败')
   } finally {
     loading.value = false
   }
 }
 
-// 搜索
-const handleSearch = () => {
-  pagination.page = 1
-  fetchInvoices()
-}
+const handleView = (row: any) => { router.push(`/invoice-detail/${row.id}`) }
 
-// 重置
-const handleReset = () => {
-  searchForm.invoice_no = ''
-  searchForm.client_name = ''
-  searchForm.status = undefined
-  searchForm.invoice_type = undefined
-  searchForm.date_range = []
-  handleSearch()
-}
-
-// 查看详情
-const handleViewDetail = (row: any) => {
-  detailData.value = { ...row }
-  auditRemark.value = ''
-  issueForm.invoice_number = ''
-  issueForm.issue_date = ''
-  detailVisible.value = true
-}
-
-// 快速审核
-const handleAudit = async (row: any, targetStatus: number) => {
-  const action = targetStatus === 1 ? '通过' : '驳回'
+const handleMarkPaid = async (row: any) => {
   try {
-    await ElMessageBox.confirm(`确定要${action}该发票申请吗？`, '审核确认', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    await request.get({
-      url: `/api/admin/invoices/status/${targetStatus}`,
-      params: { id: row.id }
-    })
-    ElMessage.success(`发票${action}成功`)
-    fetchInvoices()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(`发票${action}失败`)
-    }
-  }
-}
-
-// 从详情页审核
-const handleAuditFromDetail = async (targetStatus: number) => {
-  const action = targetStatus === 1 ? '通过' : '驳回'
-  auditLoading.value = true
-  try {
-    await request.get({
-      url: `/api/admin/invoices/status/${targetStatus}`,
-      params: {
-        id: detailData.value.id,
-        remark: auditRemark.value || undefined
-      }
-    })
-    ElMessage.success(`发票${action}成功`)
-    detailVisible.value = false
-    fetchInvoices()
+    await ElMessageBox.confirm(`确定要标记发票 ${row.invoice_no} 为已付吗？`, '确认操作', { type: 'warning' })
+    await request.post({ url: `/api/admin/invoices/${row.id}/mark-paid` })
+    ElMessage.success('操作成功')
+    fetchList()
   } catch (error) {
-    ElMessage.error(`发票${action}失败`)
-  } finally {
-    auditLoading.value = false
+    if (error !== 'cancel') console.error('操作失败:', error)
   }
 }
 
-// 快速开票
-const handleIssue = async (row: any) => {
+const handleBatchCancel = async () => {
   try {
-    await ElMessageBox.confirm('确定要对该发票进行开票操作吗？', '开票确认', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    await request.get({
-      url: '/api/admin/invoices/status/2',
-      params: { id: row.id }
-    })
-    ElMessage.success('开票成功')
-    fetchInvoices()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error('开票失败')
-    }
-  }
-}
-
-// 从详情页开票
-const handleIssueFromDetail = async () => {
-  if (!issueForm.invoice_number) {
-    ElMessage.warning('请输入发票号码')
-    return
-  }
-  auditLoading.value = true
-  try {
-    await request.get({
-      url: '/api/admin/invoices/status/2',
-      params: {
-        id: detailData.value.id,
-        invoice_number: issueForm.invoice_number,
-        issue_date: issueForm.issue_date || undefined
-      }
-    })
-    ElMessage.success('开票成功')
-    detailVisible.value = false
-    fetchInvoices()
+    await ElMessageBox.confirm(`确定要批量取消选中的 ${selectedIds.value.length} 张发票吗？`, '确认操作', { type: 'warning' })
+    await request.post({ url: '/api/admin/invoices/batch-cancel', data: { ids: selectedIds.value } })
+    ElMessage.success('操作成功')
+    fetchList()
   } catch (error) {
-    ElMessage.error('开票失败')
-  } finally {
-    auditLoading.value = false
+    if (error !== 'cancel') console.error('操作失败:', error)
   }
 }
 
-// 作废发票
-const handleVoid = async (row: any) => {
+const handleBatchPay = async () => {
   try {
-    await request.get({
-      url: '/api/admin/invoices/status/4',
-      params: { id: row.id }
-    })
-    ElMessage.success('发票已作废')
-    fetchInvoices()
+    await ElMessageBox.confirm(`确定要批量确认选中的 ${selectedIds.value.length} 张发票已付款吗？`, '确认操作', { type: 'warning' })
+    await request.post({ url: '/api/admin/invoices/batch-pay', data: { ids: selectedIds.value } })
+    ElMessage.success('操作成功')
+    fetchList()
   } catch (error) {
-    ElMessage.error('作废失败')
+    if (error !== 'cancel') console.error('操作失败:', error)
   }
 }
 
-// 导出
 const handleExport = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/invoices', params: { page: 1, page_size: 9999 } })
-    const list = data.list || data || []
-    exportToCSV(list, [
-      { key: 'id', title: 'ID' },
-      { key: 'invoice_no', title: '发票号' },
-      { key: 'user_id', title: '用户ID' },
-      { key: 'total', title: '金额' },
-      { key: 'status', title: '状态' },
-      { key: 'created_at', title: '创建时间' }
-    ], '发票列表')
-    ElMessage.success('导出成功')
-  } catch { ElMessage.error('导出失败') }
+    const response = await request.get({ url: '/api/admin/invoices/export', responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `发票列表_${new Date().toISOString().split('T')[0]}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('导出失败:', error)
+  }
 }
 
-// 分页大小变化
-const handleSizeChange = () => {
-  pagination.page = 1
-  fetchInvoices()
-}
-
-// 页码变化
-const handlePageChange = () => {
-  fetchInvoices()
-}
-
-onMounted(() => {
-  fetchInvoices()
-})
+onMounted(() => { fetchList() })
 </script>
 
 <style scoped lang="scss">
-.invoice-list-page {
-  padding: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.search-form {
-  margin-bottom: 20px;
-}
-
-.amount-text {
-  font-weight: 600;
-  color: #f56c6c;
-}
-
-.total-amount {
-  font-size: 15px;
-}
-
-.pagination-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.audit-section {
-  margin-top: 16px;
-
-  .audit-actions {
-    margin-top: 12px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-  }
-}
+.invoice-list-page { padding: 16px; }
+.search-card { margin-bottom: 16px; :deep(.el-card__body) { padding-bottom: 0; } }
+.summary-card { margin-bottom: 16px; }
+.summary-item { text-align: center; padding: 10px 0; }
+.label { font-size: 14px; color: #86909C; margin-bottom: 8px; }
+.value { font-size: 24px; font-weight: 600; }
+.text-green { color: #36D391; }
+.text-orange { color: #F59E0B; }
+.text-red { color: #EF4444; }
+.action-card { margin-bottom: 16px; }
+.action-bar { display: flex; justify-content: space-between; align-items: center; }
+.table-card { :deep(.el-card__body) { padding: 0; } }
+.pagination-wrapper { display: flex; justify-content: flex-end; padding: 16px; }
 </style>

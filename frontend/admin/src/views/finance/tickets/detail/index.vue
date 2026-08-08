@@ -386,7 +386,7 @@ const handleBack = () => {
 
 const handleViewClient = () => {
   if (ticket.value?.client_id) {
-    router.push(`/finance/clients/detail/${ticket.value.client_id}`)
+    router.push(`/customer-view/${ticket.value.client_id}`)
   }
 }
 

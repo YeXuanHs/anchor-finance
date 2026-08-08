@@ -248,7 +248,7 @@ const handleSummary = async (row: any) => {
 }
 
 const handleViewOrders = (row: any) => {
-  router.push({ path: '/finance/orders/list', query: { zjmf_api_id: row.id } })
+  router.push({ path: '/order-list', query: { zjmf_api_id: row.id } })
 }
 
 const handleDelete = async (row: any) => {

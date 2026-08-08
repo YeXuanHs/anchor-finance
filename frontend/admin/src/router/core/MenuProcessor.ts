@@ -16,8 +16,11 @@ import { RoutesAlias } from '../routesAlias'
 import { formatMenuTitle } from '@/utils'
 
 export class MenuProcessor {
+  // 存储原始菜单树（用于侧边栏渲染）
+  private rawMenuTree: any[] = []
+
   /**
-   * 获取菜单数据
+   * 获取菜单数据（扁平路由，用于路由器注册）
    */
   async getMenuList(): Promise<AppRouteRecord[]> {
     const { isFrontendMode } = useAppMode()
@@ -34,6 +37,13 @@ export class MenuProcessor {
 
     // 规范化路径（将相对路径转换为完整路径）
     return this.normalizeMenuPaths(menuList)
+  }
+
+  /**
+   * 获取菜单树（层级结构，用于侧边栏渲染）
+   */
+  getMenuTree(): any[] {
+    return this.rawMenuTree
   }
 
   /**
@@ -56,11 +66,72 @@ export class MenuProcessor {
   /**
    * 处理后端控制模式的菜单
    * 将后端菜单格式 {url, name, icon} 转换为前端路由格式 {path, name, component, meta}
+   * 生成扁平路由结构，所有叶子节点直接挂在 Layout 下
    */
   private async processBackendMenu(): Promise<AppRouteRecord[]> {
     const list = await fetchGetMenuList()
-    const converted = this.convertBackendMenus(list)
-    return this.filterEmptyMenus(converted)
+
+    // 保存原始菜单树（用于侧边栏渲染）
+    this.rawMenuTree = list
+
+    // 提取所有叶子节点（有 URL 的菜单项）作为扁平路由
+    const leafRoutes = this.extractLeafRoutes(list)
+
+    // 将叶子节点包装在 Layout 下，形成扁平结构
+    const layoutRoute: AppRouteRecord = {
+      path: '/',
+      name: 'Layout',
+      component: '/index/index' as any,
+      meta: { title: '', icon: '' },
+      children: leafRoutes
+    }
+
+    return this.filterEmptyMenus([layoutRoute])
+  }
+
+  /**
+   * 从菜单树中提取所有叶子节点（有 URL 的菜单项）
+   */
+  private extractLeafRoutes(menus: any[]): AppRouteRecord[] {
+    const routes: AppRouteRecord[] = []
+
+    for (const item of menus) {
+      if (!item.is_active && item.is_active !== undefined) continue
+
+      if (item.url && (!item.children || item.children.length === 0)) {
+        // 叶子节点：创建路由
+        const routeName = this.generateRouteName(item.url)
+        routes.push({
+          path: item.url,
+          name: routeName,
+          component: item.url as any,
+          meta: {
+            title: item.name || '',
+            icon: item.icon || '',
+            order: item.sort_order || 0,
+            isHide: item.is_visible === false
+          }
+        })
+      } else if (item.children && item.children.length > 0) {
+        // 有子节点：递归提取
+        routes.push(...this.extractLeafRoutes(item.children))
+      }
+    }
+
+    return routes
+  }
+
+  /**
+   * 从 URL 生成路由名称
+   * /customer-list -> CustomerList
+   */
+  private generateRouteName(url: string): string {
+    return url
+      .replace(/^\//, '')
+      .split('/')
+      .filter(Boolean)
+      .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
+      .join('')
   }
 
   /**

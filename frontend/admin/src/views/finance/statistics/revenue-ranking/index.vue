@@ -196,7 +196,7 @@ const handlePeriodChange = () => {
 }
 
 const handleViewClient = (row: any) => {
-  router.push(`/finance/clients/detail/${row.client_id}`)
+  router.push(`/customer-view/${row.client_id}`)
 }
 
 onMounted(() => {

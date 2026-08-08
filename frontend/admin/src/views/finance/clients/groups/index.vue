@@ -1,96 +1,45 @@
 <template>
-  <div class="client-groups-page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>客户分组</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
-            添加分组
-          </el-button>
-        </div>
-      </template>
-
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="分组名称" clearable />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-
-      <!-- 数据表格 -->
-      <el-table :data="tableData" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="分组名称" min-width="150" />
-        <el-table-column prop="description" label="描述" min-width="200" />
-        <el-table-column prop="client_count" label="客户数量" width="100" align="center" />
-        <el-table-column prop="color" label="颜色" width="100" align="center">
-          <template #default="{ row }">
-            <div class="color-dot" :style="{ backgroundColor: row.color || '#4080FF' }" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="sort" label="排序" width="80" align="center" />
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="primary" link @click="handleViewClients(row)">查看客户</el-button>
-            <el-popconfirm title="确定删除该分组吗？" @confirm="handleDelete(row)">
-              <template #reference>
-                <el-button type="danger" link>删除</el-button>
-              </template>
-            </el-popconfirm>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.page_size"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-        />
+  <div class="customer-groups-page">
+    <el-card shadow="never" class="action-card">
+      <div class="action-bar">
+        <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon>添加客户组</el-button>
       </div>
     </el-card>
 
-    <!-- 添加/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
-      <el-form :model="formData" :rules="formRules" ref="formRef" label-width="100px">
-        <el-form-item label="分组名称" prop="name">
-          <el-input v-model="formData.name" placeholder="请输入分组名称" />
+    <el-card shadow="never" class="table-card">
+      <el-table v-loading="loading" :data="tableData" border stripe>
+        <el-table-column prop="id" label="ID" width="80" align="center" />
+        <el-table-column prop="name" label="组名" min-width="150" />
+        <el-table-column prop="description" label="描述" min-width="200" />
+        <el-table-column prop="clients_count" label="客户数" width="100" align="center" />
+        <el-table-column prop="discount" label="折扣" width="100" align="center">
+          <template #default="{ row }">{{ row.discount ? `${row.discount}%` : '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="created_at" label="创建时间" width="170" />
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" @close="formRef?.resetFields()">
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
+        <el-form-item label="组名" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入组名" />
         </el-form-item>
         <el-form-item label="描述" prop="description">
-          <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入分组描述" />
+          <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入描述" />
         </el-form-item>
-        <el-form-item label="颜色" prop="color">
-          <el-color-picker v-model="formData.color" />
-        </el-form-item>
-        <el-form-item label="排序" prop="sort">
-          <el-input-number v-model="formData.sort" :min="0" :max="9999" />
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-switch v-model="formData.status" :active-value="1" :inactive-value="0" />
+        <el-form-item label="折扣(%)" prop="discount">
+          <el-input-number v-model="formData.discount" :min="0" :max="100" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -98,201 +47,91 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
-import { useRouter } from 'vue-router'
+import type { FormInstance } from 'element-plus'
 import request from '@/utils/http'
 
-const router = useRouter()
-
-// 加载状态
 const loading = ref(false)
-const submitLoading = ref(false)
-
-// 搜索表单
-const searchForm = reactive({
-  keyword: ''
-})
-
-// 分页
-const pagination = reactive({
-  page: 1,
-  page_size: 20,
-  total: 0
-})
-
-// 表格数据
 const tableData = ref([])
-
-// 对话框
 const dialogVisible = ref(false)
-const dialogTitle = ref('添加分组')
+const dialogTitle = ref('添加客户组')
+const isEdit = ref(false)
+const submitting = ref(false)
 const formRef = ref<FormInstance>()
+const editingId = ref<number | null>(null)
 
-// 表单数据
-const formData = reactive({
-  id: undefined as number | undefined,
-  name: '',
-  description: '',
-  color: '#4080FF',
-  sort: 0,
-  status: 1
-})
+const formData = reactive({ name: '', description: '', discount: 0 })
+const rules = { name: [{ required: true, message: '请输入组名', trigger: 'blur' }] }
 
-// 表单验证规则
-const formRules: FormRules = {
-  name: [
-    { required: true, message: '请输入分组名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
-  ]
-}
-
-// 获取分组列表
-const fetchGroups = async () => {
+const fetchList = async () => {
   loading.value = true
   try {
-    const data = await request.get({
-      url: '/api/admin/client-groups',
-      params: {
-        page: pagination.page,
-        page_size: pagination.page_size,
-        ...searchForm
-      }
-    })
-    tableData.value = data.list || []
-    pagination.total = data.total || 0
+    const data = await request.get({ url: '/api/admin/client-groups' })
+    tableData.value = data || []
   } catch (error) {
-    console.error('获取分组列表失败:', error)
-    ElMessage.error('获取分组列表失败')
+    console.error('获取客户组列表失败:', error)
   } finally {
     loading.value = false
   }
 }
 
-// 搜索
-const handleSearch = () => {
-  pagination.page = 1
-  fetchGroups()
-}
-
-// 重置
-const handleReset = () => {
-  searchForm.keyword = ''
-  handleSearch()
-}
-
-// 添加
 const handleAdd = () => {
-  dialogTitle.value = '添加分组'
-  formData.id = undefined
+  isEdit.value = false
+  dialogTitle.value = '添加客户组'
+  editingId.value = null
   formData.name = ''
   formData.description = ''
-  formData.color = '#4080FF'
-  formData.sort = 0
-  formData.status = 1
+  formData.discount = 0
   dialogVisible.value = true
 }
 
-// 编辑
 const handleEdit = (row: any) => {
-  dialogTitle.value = '编辑分组'
-  Object.assign(formData, row)
+  isEdit.value = true
+  dialogTitle.value = '编辑客户组'
+  editingId.value = row.id
+  Object.assign(formData, { name: row.name, description: row.description || '', discount: row.discount || 0 })
   dialogVisible.value = true
 }
 
-// 查看客户
-const handleViewClients = (row: any) => {
-  router.push({
-    path: '/finance/clients/list',
-    query: { group_id: row.id }
-  })
-}
-
-// 删除
 const handleDelete = async (row: any) => {
   try {
-    await request.del({
-      url: `/api/admin/client-groups/${row.id}`
-    })
+    await ElMessageBox.confirm(`确定要删除客户组 "${row.name}" 吗？`, '确认删除', { type: 'warning' })
+    await request.delete({ url: `/api/admin/client-groups/${row.id}` })
     ElMessage.success('删除成功')
-    fetchGroups()
+    fetchList()
   } catch (error) {
-    ElMessage.error('删除失败')
+    if (error !== 'cancel') console.error('删除失败:', error)
   }
 }
 
-// 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return
-
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-
-    submitLoading.value = true
-    try {
-      const url = formData.id ? `/api/admin/client-groups/${formData.id}` : '/api/admin/client-groups'
-
-      if (formData.id) {
-        await request.put({ url, params: formData })
-      } else {
-        await request.post({ url, params: formData })
-      }
-
-      ElMessage.success(formData.id ? '更新成功' : '添加成功')
-      dialogVisible.value = false
-      fetchGroups()
-    } catch (error) {
-      ElMessage.error('操作失败')
-    } finally {
-      submitLoading.value = false
+  try {
+    await formRef.value.validate()
+    submitting.value = true
+    if (isEdit.value && editingId.value) {
+      await request.put({ url: `/api/admin/client-groups/${editingId.value}`, data: formData })
+      ElMessage.success('更新成功')
+    } else {
+      await request.post({ url: '/api/admin/client-groups', data: formData })
+      ElMessage.success('添加成功')
     }
-  })
+    dialogVisible.value = false
+    fetchList()
+  } catch (error) {
+    console.error('提交失败:', error)
+  } finally {
+    submitting.value = false
+  }
 }
 
-// 分页大小变化
-const handleSizeChange = () => {
-  pagination.page = 1
-  fetchGroups()
-}
-
-// 页码变化
-const handlePageChange = () => {
-  fetchGroups()
-}
-
-onMounted(() => {
-  fetchGroups()
-})
+onMounted(() => { fetchList() })
 </script>
 
 <style scoped lang="scss">
-.client-groups-page {
-  padding: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.search-form {
-  margin-bottom: 20px;
-}
-
-.pagination-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.color-dot {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  margin: 0 auto;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 1px #dcdfe6;
-}
+.customer-groups-page { padding: 16px; }
+.action-card { margin-bottom: 16px; }
+.action-bar { display: flex; justify-content: space-between; align-items: center; }
+.table-card { :deep(.el-card__body) { padding: 0; } }
 </style>

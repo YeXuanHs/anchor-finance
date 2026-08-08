@@ -1,62 +1,29 @@
 <template>
-  <div class="login-logs-page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>登录日志</span>
-          <div class="header-actions">
-            <el-button type="danger" size="small" @click="handleClearOld">
-              <el-icon><Delete /></el-icon>
-              清理日志
-            </el-button>
-            <el-button type="success" size="small" @click="handleExport">
-              <el-icon><Download /></el-icon>
-              导出
-            </el-button>
-          </div>
-        </div>
-      </template>
-
-      <!-- 统计卡片 -->
-      <el-row :gutter="16" class="stats-row">
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-label">今日登录</div>
-            <div class="stat-value">{{ stats.today_total || 0 }}</div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-label">今日成功</div>
-            <div class="stat-value success">{{ stats.today_success || 0 }}</div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-label">今日失败</div>
-            <div class="stat-value danger">{{ stats.today_failed || 0 }}</div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-label">失败IP数</div>
-            <div class="stat-value warning">{{ stats.failed_ips || 0 }}</div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
+  <div class="login-log-page">
+    <!-- 搜索筛选区域 -->
+    <el-card shadow="never" class="search-card">
+      <el-form :model="searchForm" inline>
         <el-form-item label="用户名">
-          <el-input v-model="searchForm.username" placeholder="用户名" clearable />
+          <el-input
+            v-model="searchForm.username"
+            placeholder="用户名"
+            clearable
+            style="width: 150px"
+            @keyup.enter="handleSearch"
+          />
         </el-form-item>
         <el-form-item label="IP地址">
-          <el-input v-model="searchForm.ip" placeholder="IP地址" clearable />
+          <el-input
+            v-model="searchForm.ip"
+            placeholder="IP地址"
+            clearable
+            style="width: 150px"
+          />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
+          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 100px">
             <el-option label="成功" value="success" />
-            <el-option label="失败" value="failed" />
+            <el-option label="失败" value="failure" />
           </el-select>
         </el-form-item>
         <el-form-item label="时间范围">
@@ -66,22 +33,30 @@
             range-separator="至"
             start-placeholder="开始日期"
             end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
+            style="width: 240px"
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
+    </el-card>
 
-      <!-- 数据表格 -->
-      <el-table :data="tableData" v-loading="loading" style="width: 100%" border>
+    <!-- 数据表格 -->
+    <el-card shadow="never" class="table-card">
+      <el-table v-loading="loading" :data="tableData" border stripe>
         <el-table-column prop="id" label="ID" width="80" align="center" />
         <el-table-column prop="username" label="用户名" width="120" />
-        <el-table-column prop="ip" label="IP地址" width="140" />
-        <el-table-column prop="location" label="登录地点" width="150" show-overflow-tooltip />
-        <el-table-column prop="user_agent" label="浏览器" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="ip" label="IP地址" width="130" />
+        <el-table-column prop="location" label="登录地点" width="150" />
+        <el-table-column prop="user_agent" label="浏览器/设备" min-width="200" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">
@@ -89,12 +64,12 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="fail_reason" label="失败原因" width="150" show-overflow-tooltip />
-        <el-table-column prop="created_at" label="登录时间" width="180" />
+        <el-table-column prop="failure_reason" label="失败原因" width="150" show-overflow-tooltip />
+        <el-table-column prop="created_at" label="登录时间" width="170" />
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-container">
+      <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.page_size"
@@ -111,165 +86,110 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Delete, Download } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh } from '@element-plus/icons-vue'
 import request from '@/utils/http'
 
-defineOptions({ name: 'LoginLogsManage' })
-
 const loading = ref(false)
+const tableData = ref([])
 
-const stats = reactive({
-  today_total: 0,
-  today_success: 0,
-  today_failed: 0,
-  failed_ips: 0
-})
-
+// 搜索表单
 const searchForm = reactive({
   username: '',
   ip: '',
   status: '',
-  date_range: [] as string[]
+  date_range: null as [Date, Date] | null
 })
 
+// 分页
 const pagination = reactive({
   page: 1,
   page_size: 20,
   total: 0
 })
 
-const tableData = ref<any[]>([])
-
-const fetchStats = async () => {
-  try {
-    const data = await request.get({ url: '/api/admin/login-logs/stats' })
-    Object.assign(stats, data)
-  } catch (error) {
-    console.error('获取统计数据失败:', error)
-  }
-}
-
-const fetchData = async () => {
+// 获取列表数据
+const fetchList = async () => {
   loading.value = true
   try {
     const params: any = {
       page: pagination.page,
-      page_size: pagination.page_size,
-      username: searchForm.username || undefined,
-      ip: searchForm.ip || undefined,
-      status: searchForm.status || undefined
+      page_size: pagination.page_size
     }
-    if (searchForm.date_range?.length === 2) {
-      params.start_date = searchForm.date_range[0]
-      params.end_date = searchForm.date_range[1]
+
+    if (searchForm.username) params.username = searchForm.username
+    if (searchForm.ip) params.ip = searchForm.ip
+    if (searchForm.status) params.status = searchForm.status
+    if (searchForm.date_range) {
+      params.start_date = searchForm.date_range[0].toISOString().split('T')[0]
+      params.end_date = searchForm.date_range[1].toISOString().split('T')[0]
     }
+
     const data = await request.get({ url: '/api/admin/login-logs', params })
     tableData.value = data.list || []
     pagination.total = data.total || 0
   } catch (error) {
-    ElMessage.error('获取登录日志失败')
+    console.error('获取登录日志失败:', error)
   } finally {
     loading.value = false
   }
 }
 
+// 搜索
 const handleSearch = () => {
   pagination.page = 1
-  fetchData()
+  fetchList()
 }
 
+// 重置
 const handleReset = () => {
   searchForm.username = ''
   searchForm.ip = ''
   searchForm.status = ''
-  searchForm.date_range = []
-  handleSearch()
-}
-
-const handleClearOld = async () => {
-  try {
-    await ElMessageBox.confirm('确定清理30天前的登录日志吗？', '清理确认', { type: 'warning' })
-    await request.post({ url: '/api/admin/login-logs/clean', params: { days: 30 } })
-    ElMessage.success('清理完成')
-    fetchData()
-    fetchStats()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error('清理失败')
-  }
-}
-
-const handleExport = async () => {
-  try {
-    await request.get({ url: '/api/admin/login-logs/export', params: { ...searchForm } })
-    ElMessage.success('导出成功')
-  } catch (error) {
-    ElMessage.error('导出失败')
-  }
-}
-
-const handleSizeChange = () => {
+  searchForm.date_range = null
   pagination.page = 1
-  fetchData()
+  fetchList()
 }
 
-const handlePageChange = () => {
-  fetchData()
+// 分页大小变化
+const handleSizeChange = (size: number) => {
+  pagination.page_size = size
+  pagination.page = 1
+  fetchList()
+}
+
+// 页码变化
+const handlePageChange = (page: number) => {
+  pagination.page = page
+  fetchList()
 }
 
 onMounted(() => {
-  fetchStats()
-  fetchData()
+  fetchList()
 })
 </script>
 
 <style scoped lang="scss">
-.login-logs-page {
-  padding: 20px;
+.login-log-page {
+  padding: 16px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+.search-card {
+  margin-bottom: 16px;
 
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.stats-row {
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  text-align: center;
-
-  .stat-label {
-    font-size: 13px;
-    color: var(--el-text-color-secondary);
-    margin-bottom: 8px;
-  }
-
-  .stat-value {
-    font-size: 28px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-
-    &.success { color: var(--el-color-success); }
-    &.danger { color: var(--el-color-danger); }
-    &.warning { color: var(--el-color-warning); }
+  :deep(.el-card__body) {
+    padding-bottom: 0;
   }
 }
 
-.search-form {
-  margin-bottom: 20px;
+.table-card {
+  :deep(.el-card__body) {
+    padding: 0;
+  }
 }
 
-.pagination-container {
+.pagination-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  padding: 16px;
 }
 </style>

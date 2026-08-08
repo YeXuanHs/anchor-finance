@@ -1,93 +1,109 @@
 <template>
-  <div class="admins-page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>管理员管理</span>
+  <div class="admin-list-page">
+    <!-- 操作栏 -->
+    <el-card shadow="never" class="action-card">
+      <div class="action-bar">
+        <div class="action-left">
           <el-button type="primary" @click="handleAdd">
             <el-icon><Plus /></el-icon>
             添加管理员
           </el-button>
         </div>
-      </template>
+        <div class="action-right">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索管理员"
+            clearable
+            style="width: 200px"
+            @keyup.enter="fetchList"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          <el-button circle @click="fetchList">
+            <el-icon><Refresh /></el-icon>
+          </el-button>
+        </div>
+      </div>
+    </el-card>
 
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="用户名/邮箱" clearable />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
-            <el-option label="正常" :value="1" />
-            <el-option label="禁用" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-
-      <!-- 数据表格 -->
-      <el-table :data="tableData" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
+    <!-- 数据表格 -->
+    <el-card shadow="never" class="table-card">
+      <el-table v-loading="loading" :data="tableData" border stripe>
+        <el-table-column prop="id" label="ID" width="80" align="center" />
         <el-table-column prop="username" label="用户名" width="120" />
-        <el-table-column prop="email" label="邮箱" min-width="180" />
+        <el-table-column prop="email" label="邮箱" min-width="200" />
         <el-table-column prop="role_name" label="角色" width="120">
           <template #default="{ row }">
             <el-tag type="primary" size="small">{{ row.role_name || '未分配' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="80">
+        <el-table-column prop="status" label="状态" width="80" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ row.status === 1 ? '正常' : '禁用' }}
+            <el-tag :type="row.status === 'active' ? 'success' : 'danger'" size="small">
+              {{ row.status === 'active' ? '正常' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="last_login_at" label="最后登录" width="180" />
-        <el-table-column prop="last_login_ip" label="最后登录IP" width="140" />
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column prop="last_login_at" label="最后登录" width="170" />
+        <el-table-column prop="created_at" label="创建时间" width="170" />
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-popconfirm title="确定删除该管理员吗？" @confirm="handleDelete(row)">
-              <template #reference>
-                <el-button type="danger" link>删除</el-button>
-              </template>
-            </el-popconfirm>
+            <el-button type="primary" link size="small" @click="handleEdit(row)">
+              编辑
+            </el-button>
+            <el-button
+              :type="row.status === 'active' ? 'warning' : 'success'"
+              link
+              size="small"
+              @click="handleToggleStatus(row)"
+            >
+              {{ row.status === 'active' ? '禁用' : '启用' }}
+            </el-button>
+            <el-button type="info" link size="small" @click="handleResetPassword(row)">
+              重置密码
+            </el-button>
+            <el-button type="danger" link size="small" @click="handleDelete(row)">
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-container">
+      <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.page_size"
-          :page-sizes="[10, 20, 50, 100]"
+          :page-sizes="[10, 20, 50]"
           :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="total, sizes, prev, pager, next"
           @size-change="handleSizeChange"
           @current-change="handlePageChange"
         />
       </div>
     </el-card>
 
-    <!-- 添加/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
-      <el-form :model="formData" :rules="formRules" ref="formRef" label-width="100px">
+    <!-- 添加/编辑弹窗 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="500px"
+      @close="handleDialogClose"
+    >
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="formData.username" placeholder="请输入用户名" :disabled="!!formData.id" />
+          <el-input v-model="formData.username" placeholder="请输入用户名" :disabled="isEdit" />
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="formData.email" placeholder="请输入邮箱" />
         </el-form-item>
-        <el-form-item label="密码" prop="password" v-if="!formData.id">
+        <el-form-item label="密码" prop="password" v-if="!isEdit">
           <el-input v-model="formData.password" type="password" placeholder="请输入密码" show-password />
         </el-form-item>
-        <el-form-item label="新密码" prop="password" v-else>
-          <el-input v-model="formData.password" type="password" placeholder="留空则不修改密码" show-password />
+        <el-form-item label="确认密码" prop="confirm_password" v-if="!isEdit">
+          <el-input v-model="formData.confirm_password" type="password" placeholder="请再次输入密码" show-password />
         </el-form-item>
         <el-form-item label="角色" prop="role_id">
           <el-select v-model="formData.role_id" placeholder="请选择角色" style="width: 100%">
@@ -95,12 +111,15 @@
           </el-select>
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-switch v-model="formData.status" :active-value="1" :inactive-value="0" />
+          <el-radio-group v-model="formData.status">
+            <el-radio value="active">正常</el-radio>
+            <el-radio value="disabled">禁用</el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -108,92 +127,88 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Search, Refresh } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/http'
 
-interface Admin {
-  id: number
-  username: string
-  email: string
-  role_id: number
-  role_name: string
-  status: number
-  last_login_at: string
-  last_login_ip: string
-  created_at: string
-}
-
-interface Role {
-  id: number
-  name: string
-}
-
 const loading = ref(false)
-const submitLoading = ref(false)
-const dialogVisible = ref(false)
-const dialogTitle = ref('添加管理员')
-const formRef = ref<FormInstance>()
+const tableData = ref([])
+const searchKeyword = ref('')
+const roles = ref<{ id: number; name: string }[]>([])
 
-const searchForm = reactive({
-  keyword: '',
-  status: undefined as number | undefined
-})
-
+// 分页
 const pagination = reactive({
   page: 1,
   page_size: 20,
   total: 0
 })
 
-const tableData = ref<Admin[]>([])
-const roles = ref<Role[]>([])
+// 弹窗
+const dialogVisible = ref(false)
+const dialogTitle = ref('添加管理员')
+const isEdit = ref(false)
+const submitting = ref(false)
+const formRef = ref<FormInstance>()
+const editingId = ref<number | null>(null)
 
+// 表单数据
 const formData = reactive({
-  id: undefined as number | undefined,
   username: '',
   email: '',
   password: '',
-  role_id: undefined as number | undefined,
-  status: 1
+  confirm_password: '',
+  role_id: null as number | null,
+  status: 'active'
 })
 
-const formRules: FormRules = {
+// 表单验证规则
+const rules: FormRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度在 3 到 50 个字符', trigger: 'blur' }
+    { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' }
   ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于 6 位', trigger: 'blur' }
+    { min: 6, message: '密码长度不能少于 6 个字符', trigger: 'blur' }
+  ],
+  confirm_password: [
+    { required: true, message: '请再次输入密码', trigger: 'blur' },
+    {
+      validator: (rule: any, value: string, callback: Function) => {
+        if (value !== formData.password) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ],
   role_id: [
     { required: true, message: '请选择角色', trigger: 'change' }
   ]
 }
 
-// 获取管理员列表
-const fetchAdmins = async () => {
+// 获取列表数据
+const fetchList = async () => {
   loading.value = true
   try {
-    const data = await request.get({
-      url: '/api/admin/users',
-      params: {
-        page: pagination.page,
-        page_size: pagination.page_size,
-        ...searchForm
-      }
-    })
+    const params: any = {
+      page: pagination.page,
+      page_size: pagination.page_size
+    }
+    if (searchKeyword.value) params.keyword = searchKeyword.value
+
+    const data = await request.get({ url: '/api/admin/admins', params })
     tableData.value = data.list || []
     pagination.total = data.total || 0
   } catch (error) {
     console.error('获取管理员列表失败:', error)
-    ElMessage.error('获取管理员列表失败')
   } finally {
     loading.value = false
   }
@@ -202,62 +217,111 @@ const fetchAdmins = async () => {
 // 获取角色列表
 const fetchRoles = async () => {
   try {
-    const data = await request.get({
-      url: '/api/admin/rbac/roles'
-    })
-    roles.value = data.list || data || []
+    const data = await request.get({ url: '/api/admin/roles' })
+    roles.value = data || []
   } catch (error) {
     console.error('获取角色列表失败:', error)
   }
 }
 
-// 搜索
-const handleSearch = () => {
+// 分页大小变化
+const handleSizeChange = (size: number) => {
+  pagination.page_size = size
   pagination.page = 1
-  fetchAdmins()
+  fetchList()
 }
 
-// 重置
-const handleReset = () => {
-  searchForm.keyword = ''
-  searchForm.status = undefined
-  handleSearch()
+// 页码变化
+const handlePageChange = (page: number) => {
+  pagination.page = page
+  fetchList()
 }
 
-// 添加
+// 添加管理员
 const handleAdd = () => {
+  isEdit.value = false
   dialogTitle.value = '添加管理员'
-  formData.id = undefined
-  formData.username = ''
-  formData.email = ''
-  formData.password = ''
-  formData.role_id = undefined
-  formData.status = 1
+  editingId.value = null
+  resetForm()
   dialogVisible.value = true
 }
 
-// 编辑
-const handleEdit = (row: Admin) => {
+// 编辑管理员
+const handleEdit = (row: any) => {
+  isEdit.value = true
   dialogTitle.value = '编辑管理员'
-  formData.id = row.id
-  formData.username = row.username
-  formData.email = row.email
-  formData.password = ''
-  formData.role_id = row.role_id
-  formData.status = row.status
+  editingId.value = row.id
+  Object.assign(formData, {
+    username: row.username,
+    email: row.email,
+    password: '',
+    confirm_password: '',
+    role_id: row.role_id,
+    status: row.status
+  })
   dialogVisible.value = true
 }
 
-// 删除
-const handleDelete = async (row: Admin) => {
+// 切换状态
+const handleToggleStatus = async (row: any) => {
+  const newStatus = row.status === 'active' ? 'disabled' : 'active'
+  const statusText = newStatus === 'active' ? '启用' : '禁用'
+
   try {
-    await request.del({
-      url: `/api/admin/users/${row.id}`
+    await ElMessageBox.confirm(`确定要${statusText}管理员 "${row.username}" 吗？`, '确认操作', {
+      type: 'warning'
     })
-    ElMessage.success('删除成功')
-    fetchAdmins()
+    await request.post({ url: `/api/admin/admins/${row.id}/status`, data: { status: newStatus } })
+    ElMessage.success(`${statusText}成功`)
+    fetchList()
   } catch (error) {
-    ElMessage.error('删除失败')
+    if (error !== 'cancel') {
+      console.error(`${statusText}失败:`, error)
+    }
+  }
+}
+
+// 重置密码
+const handleResetPassword = async (row: any) => {
+  try {
+    const { value: newPassword } = await ElMessageBox.prompt(
+      `请输入管理员 "${row.username}" 的新密码`,
+      '重置密码',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputType: 'password',
+        inputValidator: (value) => {
+          if (!value || value.length < 6) {
+            return '密码长度不能少于 6 个字符'
+          }
+          return true
+        }
+      }
+    )
+
+    await request.post({ url: `/api/admin/admins/${row.id}/reset-password`, data: { password: newPassword } })
+    ElMessage.success('密码重置成功')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('重置密码失败:', error)
+    }
+  }
+}
+
+// 删除管理员
+const handleDelete = async (row: any) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除管理员 "${row.username}" 吗？此操作不可恢复。`, '确认删除', {
+      type: 'warning'
+    })
+    await request.delete({ url: `/api/admin/admins/${row.id}` })
+    ElMessage.success('删除成功')
+    fetchList()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+    }
   }
 }
 
@@ -265,81 +329,77 @@ const handleDelete = async (row: Admin) => {
 const handleSubmit = async () => {
   if (!formRef.value) return
 
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await formRef.value.validate()
+    submitting.value = true
 
-    submitLoading.value = true
-    try {
-      const submitData: Record<string, any> = {
-        username: formData.username,
-        email: formData.email,
-        role_id: formData.role_id,
-        status: formData.status
-      }
-      if (formData.password) {
-        submitData.password = formData.password
-      }
-
-      if (formData.id) {
-        await request.put({
-          url: `/api/admin/users/${formData.id}`,
-          params: submitData,
-          showSuccessMessage: true
-        })
-      } else {
-        await request.post({
-          url: '/api/admin/users',
-          params: submitData,
-          showSuccessMessage: true
-        })
-      }
-
-      ElMessage.success(formData.id ? '更新成功' : '添加成功')
-      dialogVisible.value = false
-      fetchAdmins()
-    } catch (error) {
-      ElMessage.error('操作失败')
-    } finally {
-      submitLoading.value = false
+    if (isEdit.value && editingId.value) {
+      await request.put({ url: `/api/admin/admins/${editingId.value}`, data: formData })
+      ElMessage.success('更新成功')
+    } else {
+      await request.post({ url: '/api/admin/admins', data: formData })
+      ElMessage.success('添加成功')
     }
-  })
+
+    dialogVisible.value = false
+    fetchList()
+  } catch (error) {
+    console.error('提交失败:', error)
+  } finally {
+    submitting.value = false
+  }
 }
 
-// 分页大小变化
-const handleSizeChange = () => {
-  pagination.page = 1
-  fetchAdmins()
+// 重置表单
+const resetForm = () => {
+  formData.username = ''
+  formData.email = ''
+  formData.password = ''
+  formData.confirm_password = ''
+  formData.role_id = null
+  formData.status = 'active'
 }
 
-// 页码变化
-const handlePageChange = () => {
-  fetchAdmins()
+// 弹窗关闭
+const handleDialogClose = () => {
+  formRef.value?.resetFields()
 }
 
 onMounted(() => {
-  fetchAdmins()
+  fetchList()
   fetchRoles()
 })
 </script>
 
 <style scoped lang="scss">
-.admins-page {
-  padding: 20px;
+.admin-list-page {
+  padding: 16px;
 }
 
-.card-header {
+.action-card {
+  margin-bottom: 16px;
+}
+
+.action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.search-form {
-  margin-bottom: 20px;
+.action-right {
+  display: flex;
+  gap: 8px;
 }
 
-.pagination-container {
+.table-card {
+  :deep(.el-card__body) {
+    padding: 0;
+  }
+}
+
+.pagination-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  padding: 16px;
 }
 </style>

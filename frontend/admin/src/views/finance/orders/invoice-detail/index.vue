@@ -213,7 +213,7 @@ const handleBack = () => {
 
 const handleViewClient = () => {
   if (bill.value?.client_id) {
-    router.push(`/finance/clients/detail/${bill.value.client_id}`)
+    router.push(`/customer-view/${bill.value.client_id}`)
   }
 }
 

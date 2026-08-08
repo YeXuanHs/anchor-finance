@@ -194,7 +194,7 @@ const handleSizeChange = () => { pagination.page = 1; fetchData() }
 const handlePageChange = () => { fetchData() }
 
 const goToOrder = (id: string | number) => {
-  router.push({ path: `/finance/orders/order-detail/${id}` })
+  router.push({ path: `/order-detail/${id}` })
 }
 
 const handleDetail = (row: any) => {

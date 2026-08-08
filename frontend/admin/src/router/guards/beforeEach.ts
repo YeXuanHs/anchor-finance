@@ -269,7 +269,7 @@ async function handleDynamicRoutes(
     // 1. 获取用户信息
     await fetchUserInfo()
 
-    // 2. 获取菜单数据
+    // 2. 获取菜单数据（扁平路由，用于路由器注册）
     const menuList = await menuProcessor.getMenuList()
 
     // 3. 验证菜单数据
@@ -280,9 +280,10 @@ async function handleDynamicRoutes(
     // 4. 注册动态路由
     routeRegistry?.register(menuList)
 
-    // 5. 保存菜单数据到 store
+    // 5. 保存菜单数据到 store（使用层级树用于侧边栏渲染）
     const menuStore = useMenuStore()
-    menuStore.setMenuList(menuList)
+    const menuTree = menuProcessor.getMenuTree()
+    menuStore.setMenuList(menuTree.length > 0 ? menuTree : menuList)
     menuStore.addRemoveRouteFns(routeRegistry?.getRemoveRouteFns() || [])
 
     // 6. 保存 iframe 路由

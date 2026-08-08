@@ -1098,3 +1098,185 @@ ALTER TABLE `upstream_providers` ADD COLUMN `is_active` tinyint(1) NOT NULL DEFA
 -- 修复：upstream_products 表对齐模型定义
 -- ============================================
 ALTER TABLE `upstream_products` ADD COLUMN `config` json DEFAULT NULL AFTER `remote_product_id`;
+
+-- ============================================
+-- 后台菜单表 (对齐 zjmf 7 个顶级菜单，4 级层级)
+-- ============================================
+CREATE TABLE IF NOT EXISTS `menus` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(64) NOT NULL COMMENT '菜单名称',
+  `icon` varchar(128) DEFAULT '' COMMENT '图标',
+  `url` varchar(256) DEFAULT '' COMMENT '跳转链接',
+  `parent_id` bigint unsigned DEFAULT NULL COMMENT '父级ID',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序',
+  `type` varchar(16) NOT NULL DEFAULT 'admin' COMMENT 'admin/client/top/side/bottom',
+  `is_visible` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否显示',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用',
+  `permission` varchar(128) DEFAULT '' COMMENT '权限标识',
+  `target` varchar(16) DEFAULT '_self' COMMENT '_self/_blank',
+  `badge` varchar(32) DEFAULT '' COMMENT '角标文字',
+  `badge_type` varchar(16) DEFAULT '' COMMENT 'dot/number/text',
+  `language_map` json DEFAULT NULL COMMENT '多语言 {"CN":"客户","HK":"客戶","US":"Customer"}',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_parent_id` (`parent_id`),
+  KEY `idx_type` (`type`),
+  KEY `idx_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='后台菜单表';
+
+-- ============================================
+-- 菜单默认数据 (对齐 zjmf 7 个顶级菜单)
+-- ============================================
+
+-- 1. 客户 (Customer)
+INSERT INTO `menus` (`id`, `name`, `icon`, `url`, `parent_id`, `sort_order`, `type`, `is_visible`, `is_active`, `language_map`) VALUES
+(1, '客户', 'ep:User', '/customer-list', NULL, 1, 'admin', 1, 1, '{"CN":"客户","HK":"客戶","US":"Customer"}'),
+(2, '客户管理', '', '', 1, 1, 'admin', 1, 1, '{"CN":"客户管理","HK":"客戶管理","US":"Customer Management"}'),
+(3, '客户列表', '', '/customer-list', 2, 1, 'admin', 1, 1, '{"CN":"客户列表","HK":"客戶列表","US":"Customer List"}'),
+(4, '实名认证', '', '/customer-authentication', 2, 2, 'admin', 1, 1, '{"CN":"实名认证","HK":"實名認證","US":"Real-name Authentication"}'),
+(5, '客户资源池', '', '/customer-resources', 2, 3, 'admin', 1, 1, '{"CN":"客户资源池","HK":"客戶資源池","US":"Customer Resource Pool"}'),
+(6, '我的业绩', '', '/sales-statistics', 1, 2, 'admin', 1, 1, '{"CN":"我的业绩","HK":"我的業績","US":"My Performance"}'),
+(7, '运营管理', '', '', 1, 3, 'admin', 1, 1, '{"CN":"运营管理","HK":"運營管理","US":"Operation Management"}'),
+(8, '推介计划', '', '/customer-promotionplan', 7, 1, 'admin', 1, 1, '{"CN":"推介计划","HK":"推介計劃","US":"Recommendation Plan"}'),
+(9, '营销推送', '', '/marketing-push', 7, 2, 'admin', 1, 1, '{"CN":"营销推送","HK":"營銷推送","US":"Marketing Push"}');
+
+-- 2. 业务 (Business)
+INSERT INTO `menus` (`id`, `name`, `icon`, `url`, `parent_id`, `sort_order`, `type`, `is_visible`, `is_active`, `language_map`) VALUES
+(10, '业务', 'ep:ShoppingCart', '/order-list', NULL, 2, 'admin', 1, 1, '{"CN":"业务","HK":"業務","US":"Business"}'),
+(11, '订单', '', '', 10, 1, 'admin', 1, 1, '{"CN":"订单","HK":"訂單","US":"Order"}'),
+(12, '产品订单', '', '/order-list', 11, 1, 'admin', 1, 1, '{"CN":"产品订单","HK":"產品訂單","US":"Product Order"}'),
+(13, '续费订单', '', '/renewal-order', 11, 2, 'admin', 1, 1, '{"CN":"续费订单","HK":"續費訂單","US":"Renewal Order"}'),
+(14, '流量包订单', '', '/dcim-traffic-log', 11, 3, 'admin', 1, 1, '{"CN":"流量包订单","HK":"流量包訂單","US":"Traffic Package Order"}'),
+(15, '业务', '', '', 10, 2, 'admin', 1, 1, '{"CN":"业务","HK":"業務","US":"Business"}'),
+(16, '业务列表', '', '/customer-product', 15, 1, 'admin', 1, 1, '{"CN":"业务列表","HK":"業務列表","US":"Business List"}'),
+(17, '产品暂停请求', '', '/customer-cancelreq', 15, 2, 'admin', 1, 1, '{"CN":"产品暂停请求","HK":"產品暫停請求","US":"Product Pause Request"}');
+
+-- 3. 财务 (Finance)
+INSERT INTO `menus` (`id`, `name`, `icon`, `url`, `parent_id`, `sort_order`, `type`, `is_visible`, `is_active`, `language_map`) VALUES
+(18, '财务', 'ep:Money', '/business-statement', NULL, 3, 'admin', 1, 1, '{"CN":"财务","HK":"財務","US":"Finance"}'),
+(19, '财务记录', '', '', 18, 1, 'admin', 1, 1, '{"CN":"财务记录","HK":"財務記錄","US":"Financial Records"}'),
+(20, '交易流水', '', '/business-statement', 19, 1, 'admin', 1, 1, '{"CN":"交易流水","HK":"交易流水","US":"Trading Flow"}'),
+(21, '账单管理', '', '/bill-management', 19, 2, 'admin', 1, 1, '{"CN":"账单管理","HK":"賬單管理","US":"Bill Management"}'),
+(22, '信用额管理', '', '/credit-management', 19, 3, 'admin', 1, 1, '{"CN":"信用额管理","HK":"信用額管理","US":"Credit Management"}'),
+(23, '审核管理', '', '', 18, 2, 'admin', 1, 1, '{"CN":"审核管理","HK":"審核管理","US":"Audit Management"}'),
+(24, '提现审核', '', '/customer-withdrawal', 23, 1, 'admin', 1, 1, '{"CN":"提现审核","HK":"提現審核","US":"Withdrawal Review"}'),
+(25, '发票和合同', '', '', 18, 3, 'admin', 1, 1, '{"CN":"发票和合同","HK":"發票和合同","US":"Invoices and Contracts"}'),
+(26, '发票列表', '', '/invoice-audit', 25, 1, 'admin', 1, 1, '{"CN":"发票列表","HK":"發票列表","US":"Invoice List"}'),
+(27, '合同列表', '', '/contracts_audit', 25, 2, 'admin', 1, 1, '{"CN":"合同列表","HK":"合同列表","US":"Contracts List"}');
+
+-- 4. 工单 (Ticket)
+INSERT INTO `menus` (`id`, `name`, `icon`, `url`, `parent_id`, `sort_order`, `type`, `is_visible`, `is_active`, `language_map`) VALUES
+(28, '工单', 'ep:Tickets', '/support-ticket', NULL, 4, 'admin', 1, 1, '{"CN":"工单","HK":"工單","US":"Ticket"}'),
+(29, '工单', '', '', 28, 1, 'admin', 1, 1, '{"CN":"工单","HK":"工單","US":"Ticket"}'),
+(30, '工单列表', '', '/support-ticket', 29, 1, 'admin', 1, 1, '{"CN":"工单列表","HK":"工單列表","US":"Ticket List"}'),
+(31, '工单统计', '', '/support-statistics', 29, 2, 'admin', 1, 1, '{"CN":"工单统计","HK":"工單統計","US":"Ticket Statistics"}');
+
+-- 5. 功能 (Function)
+INSERT INTO `menus` (`id`, `name`, `icon`, `url`, `parent_id`, `sort_order`, `type`, `is_visible`, `is_active`, `language_map`) VALUES
+(32, '功能', 'ep:DataAnalysis', '/timing-results', NULL, 5, 'admin', 1, 1, '{"CN":"功能","HK":"功能","US":"Function"}'),
+(33, '插件', '', '', 32, 1, 'admin', 1, 1, '{"CN":"插件","HK":"插件","US":"Plugin"}'),
+(34, '插件列表', '', '/plugins', 33, 1, 'admin', 1, 1, '{"CN":"插件列表","HK":"插件列表","US":"Plugin List"}'),
+(35, '系统状态', '', '', 32, 2, 'admin', 1, 1, '{"CN":"系统状态","HK":"系統狀態","US":"System Status"}'),
+(36, '数据库状态', '', '/database-message', 35, 1, 'admin', 1, 1, '{"CN":"数据库状态","HK":"數據庫狀態","US":"Database Status"}'),
+(37, '任务队列', '', '/statistics-taskQueue', 35, 2, 'admin', 1, 1, '{"CN":"任务队列","HK":"任務隊列","US":"Task Queue"}'),
+(38, '定时任务状态', '', '/timing-results', 35, 3, 'admin', 1, 1, '{"CN":"定时任务状态","HK":"定時任務狀態","US":"Timed Task Status"}'),
+(39, '统计', '', '', 32, 3, 'admin', 1, 1, '{"CN":"统计","HK":"統計","US":"Statistics"}'),
+(40, '年度收入统计', '', '/annual-statistics', 39, 1, 'admin', 1, 1, '{"CN":"年度收入统计","HK":"年度收入統計","US":"Annual Income Statistics"}'),
+(41, '新客户', '', '/new-customer', 39, 2, 'admin', 1, 1, '{"CN":"新客户","HK":"新客戶","US":"New Customer"}'),
+(42, '产品收入', '', '/product-revenue', 39, 3, 'admin', 1, 1, '{"CN":"产品收入","HK":"產品收入","US":"Product Revenue"}'),
+(43, '收入排名', '', '/revenue-ranking', 39, 4, 'admin', 1, 1, '{"CN":"收入排名","HK":"收入排名","US":"Revenue Ranking"}');
+
+-- 6. 资源与商店 (Resources And Stores)
+INSERT INTO `menus` (`id`, `name`, `icon`, `url`, `parent_id`, `sort_order`, `type`, `is_visible`, `is_active`, `language_map`) VALUES
+(44, '资源与商店', 'ep:Shop', '/app-store', NULL, 6, 'admin', 1, 1, '{"CN":"资源与商店","HK":"資源與商店","US":"Resources And Stores"}'),
+(45, '应用商店', '', '', 44, 1, 'admin', 1, 1, '{"CN":"应用商店","HK":"應用商店","US":"App Store"}'),
+(46, '我的应用', '', '/app-store', 45, 1, 'admin', 1, 1, '{"CN":"我的应用","HK":"我的應用","US":"My Application"}'),
+(47, '上下游', '', '', 44, 2, 'admin', 1, 1, '{"CN":"上下游","HK":"上下游","US":"Upstream And Downstream"}'),
+(48, '下游管理', '', '', 47, 1, 'admin', 1, 1, '{"CN":"下游管理","HK":"下游管理","US":"Downstream Management"}'),
+(49, 'API设置', '', '/api-setup', 48, 1, 'admin', 1, 1, '{"CN":"API设置","HK":"API設置","US":"API Settings"}'),
+(50, '任务队列', '', '/task-queue', 48, 2, 'admin', 1, 1, '{"CN":"任务队列","HK":"任務隊列","US":"Task Queue"}'),
+(51, '上游资源', '', '', 47, 2, 'admin', 1, 1, '{"CN":"上游资源","HK":"上游資源","US":"Upstream Resources"}'),
+(52, '服务器列表', '', '/munual-resource', 51, 1, 'admin', 1, 1, '{"CN":"服务器列表","HK":"服務器列表","US":"Server List"}'),
+(53, '供应商管理', '', '/zjmf-api', 51, 2, 'admin', 1, 1, '{"CN":"供应商管理","HK":"供應商管理","US":"Supplier Management"}'),
+(54, '商品管理', '', '/commodity-list', 51, 3, 'admin', 1, 1, '{"CN":"商品管理","HK":"商品管理","US":"Commodity Management"}'),
+(55, '产品管理', '', '/commodity-product', 51, 4, 'admin', 1, 1, '{"CN":"产品管理","HK":"產品管理","US":"Product Management"}'),
+(56, '任务队列', '', '/commodity-taskQueue', 51, 5, 'admin', 1, 1, '{"CN":"任务队列","HK":"任務隊列","US":"Task Queue"}'),
+(57, '订单列表', '', '/supplier-order-list', 51, 6, 'admin', 1, 1, '{"CN":"订单列表","HK":"訂單列表","US":"Order List"}'),
+(58, '续费订单', '', '/supplier-renewal-order', 51, 7, 'admin', 1, 1, '{"CN":"续费订单","HK":"續費訂單","US":"Renewal Order"}');
+
+-- 7. 设置 (Settings) - 4 级菜单结构
+INSERT INTO `menus` (`id`, `name`, `icon`, `url`, `parent_id`, `sort_order`, `type`, `is_visible`, `is_active`, `language_map`) VALUES
+(59, '设置', 'ep:Setting', '/set', NULL, 7, 'admin', 1, 1, '{"CN":"设置","HK":"設置","US":"Settings"}'),
+-- 7.1 商品设置
+(60, '商品设置', '', '', 59, 1, 'admin', 1, 1, '{"CN":"商品设置","HK":"商品設置","US":"Commodity Settings"}'),
+(61, '商品配置', '', '', 60, 1, 'admin', 1, 1, '{"CN":"商品配置","HK":"商品配置","US":"Commodity Configuration"}'),
+(62, '商品管理', '', '/product-server', 61, 1, 'admin', 1, 1, '{"CN":"商品管理","HK":"商品管理","US":"Commodity Management"}'),
+(63, '流量包管理', '', '/dcim-traffic', 61, 2, 'admin', 1, 1, '{"CN":"流量包管理","HK":"流量包管理","US":"Traffic Package Management"}'),
+(64, '自动化接口', '', '', 60, 2, 'admin', 1, 1, '{"CN":"自动化接口","HK":"自動化接口","US":"Automation Interface"}'),
+(65, '通用接口', '', '/server-settings', 64, 1, 'admin', 1, 1, '{"CN":"通用接口","HK":"通用接口","US":"Universal Interface"}'),
+(66, '魔方DCIM', '', '/dcim', 64, 2, 'admin', 1, 1, '{"CN":"魔方DCIM","HK":"魔方DCIM","US":"Cube DCIM"}'),
+(67, '魔方云', '', '/zjmfcloud', 64, 3, 'admin', 1, 1, '{"CN":"魔方云","HK":"魔方雲","US":"Magic Cube Cloud"}'),
+(68, '设置', '', '', 60, 3, 'admin', 1, 1, '{"CN":"设置","HK":"設置","US":"Settings"}'),
+(69, '全局可配置项', '', '/configurable-option', 68, 1, 'admin', 1, 1, '{"CN":"全局可配置项","HK":"全局可配置項","US":"Globally Configurable Items"}'),
+(70, '商品订购设置', '', '/order-product', 68, 2, 'admin', 1, 1, '{"CN":"商品订购设置","HK":"商品訂購設置","US":"Product Order Setting"}'),
+-- 7.2 基础设置
+(71, '基础设置', '', '', 59, 2, 'admin', 1, 1, '{"CN":"基础设置","HK":"基礎設置","US":"Basic Settings"}'),
+(72, '工单设置', '', '', 71, 1, 'admin', 1, 1, '{"CN":"工单设置","HK":"工單設置","US":"Ticket Settings"}'),
+(73, '工单部门', '', '/work-order-dept', 72, 1, 'admin', 1, 1, '{"CN":"工单部门","HK":"工單部門","US":"Ticket Department"}'),
+(74, '工单状态', '', '/work-order-status', 72, 2, 'admin', 1, 1, '{"CN":"工单状态","HK":"工單狀態","US":"Ticket Status"}'),
+(75, '工单传递', '', '/work-order-rules', 72, 3, 'admin', 1, 1, '{"CN":"工单传递","HK":"工單傳遞","US":"Ticket Transfer"}'),
+(76, '客户设置', '', '', 71, 2, 'admin', 1, 1, '{"CN":"客户设置","HK":"客戶設置","US":"Customer Settings"}'),
+(77, '客户分组与折扣', '', '/customer-group', 76, 1, 'admin', 1, 1, '{"CN":"客户分组与折扣","HK":"客戶分組與折扣","US":"Customer Grouping and Discount"}'),
+(78, '实名设置', '', '/authentication-setting', 76, 2, 'admin', 1, 1, '{"CN":"实名设置","HK":"實名設置","US":"Identity Verification"}'),
+(79, '自定义客户字段', '', '/customer-custom', 76, 3, 'admin', 1, 1, '{"CN":"自定义客户字段","HK":"自定義客戶字段","US":"Custom Customer Field"}'),
+(80, '推介设置', '', '/promotion_plan', 76, 4, 'admin', 1, 1, '{"CN":"推介设置","HK":"推介設置","US":"Recommendation Settings"}'),
+(81, '客户等级', '', '/customer-level', 76, 5, 'admin', 1, 1, '{"CN":"客户等级","HK":"客戶等級","US":"Customer Level"}'),
+(82, '财务设置', '', '', 71, 3, 'admin', 1, 1, '{"CN":"财务设置","HK":"財務設置","US":"Financial Settings"}'),
+(83, '支付接口', '', '/payment-interface', 82, 1, 'admin', 1, 1, '{"CN":"支付接口","HK":"支付接口","US":"Payment Interface"}'),
+(84, '优惠码', '', '/promo-code', 82, 2, 'admin', 1, 1, '{"CN":"优惠码","HK":"優惠碼","US":"Promotion Code"}'),
+(85, '货币配置', '', '/currency-settings', 82, 3, 'admin', 1, 1, '{"CN":"货币配置","HK":"貨幣配置","US":"Currency Configuration"}'),
+(86, '充值与财务', '', '/general-settings/finance', 82, 4, 'admin', 1, 1, '{"CN":"充值与财务","HK":"充值與財務","US":"Recharge and Finance"}'),
+(87, '发票设置', '', '/voucher-setting', 82, 5, 'admin', 1, 1, '{"CN":"发票设置","HK":"發票設置","US":"Invoice Settings"}'),
+(88, '信用额设置', '', '/credit-setting', 82, 6, 'admin', 1, 1, '{"CN":"信用额设置","HK":"信用額設定","US":"Credit Limit Setting"}'),
+(89, '合同设置', '', '/contracts_setting', 82, 7, 'admin', 1, 1, '{"CN":"合同设置","HK":"合同設置","US":"Contracts Settings"}'),
+-- 7.3 站务设置
+(90, '站务设置', '', '', 59, 3, 'admin', 1, 1, '{"CN":"站务设置","HK":"站務設置","US":"Station Service Settings"}'),
+(91, '显示设置', '', '/base-info', 90, 1, 'admin', 1, 1, '{"CN":"显示设置","HK":"顯示設置","US":"Display Settings"}'),
+(92, '文件下载', '', '/service-support', 90, 2, 'admin', 1, 1, '{"CN":"文件下载","HK":"文件下載","US":"File Download"}'),
+(93, '新闻中心', '', '/news-center', 90, 3, 'admin', 1, 1, '{"CN":"新闻中心","HK":"新聞中心","US":"News Center"}'),
+(94, '帮助中心', '', '/help-center', 90, 4, 'admin', 1, 1, '{"CN":"帮助中心","HK":"幫助中心","US":"Help Center"}'),
+-- 7.4 系统设置
+(95, '系统设置', '', '', 59, 4, 'admin', 1, 1, '{"CN":"系统设置","HK":"系統設置","US":"System Settings"}'),
+(96, '基础设置', '', '', 95, 1, 'admin', 1, 1, '{"CN":"基础设置","HK":"基礎設置","US":"Basic Settings"}'),
+(97, '常规设置', '', '/general-settings/general', 96, 1, 'admin', 1, 1, '{"CN":"常规设置","HK":"常規設置","US":"General Settings"}'),
+(98, '定时任务', '', '/automatic-tasks', 96, 2, 'admin', 1, 1, '{"CN":"定时任务","HK":"定時任務","US":"Timed Task"}'),
+(99, '注册登录', '', '/login-register', 96, 3, 'admin', 1, 1, '{"CN":"注册登录","HK":"註冊登錄","US":"Register and Login"}'),
+(100, '第三方登录', '', '/third-login', 96, 4, 'admin', 1, 1, '{"CN":"第三方登录","HK":"第三方登錄","US":"Third Party Login"}'),
+(101, '人员管理', '', '', 95, 2, 'admin', 1, 1, '{"CN":"人员管理","HK":"人員管理","US":"Personnel Management"}'),
+(102, '员工管理', '', '/admin-management', 101, 1, 'admin', 1, 1, '{"CN":"员工管理","HK":"員工管理","US":"Staff Management"}'),
+(103, '分组权限', '', '/permissions-managment', 101, 2, 'admin', 1, 1, '{"CN":"分组权限","HK":"分組權限","US":"Group Permission"}'),
+(104, '销售设置', '', '/sales-management', 101, 3, 'admin', 1, 1, '{"CN":"销售设置","HK":"銷售設置","US":"Sales Settings"}'),
+(105, '短信邮件设置', '', '', 95, 3, 'admin', 1, 1, '{"CN":"短信邮件设置","HK":"短信郵件設置","US":"SMS Mail Settings"}'),
+(106, '接口设置', '', '/sms-template/sms', 105, 1, 'admin', 1, 1, '{"CN":"接口设置","HK":"接口設置","US":"Interface Settings"}'),
+(107, '邮件模板', '', '/email-list', 105, 2, 'admin', 1, 1, '{"CN":"邮件模板","HK":"郵件模板","US":"Mail Template"}'),
+(108, '短信模板', '', '/sms-template-index', 105, 3, 'admin', 1, 1, '{"CN":"短信模板","HK":"短信模板","US":"SMS Template"}'),
+(109, '发送设置', '', '/sms-send-settings', 105, 4, 'admin', 1, 1, '{"CN":"发送设置","HK":"發送設置","US":"Send Settings"}'),
+(110, '安全相关', '', '', 95, 4, 'admin', 1, 1, '{"CN":"安全相关","HK":"安全相關","US":"Security Related"}'),
+(111, '黑名单列表', '', '/black-list', 110, 1, 'admin', 1, 1, '{"CN":"黑名单列表","HK":"黑名單列表","US":"Blacklist List"}'),
+(112, '验证码设置', '', '/general-settings/captcha', 110, 2, 'admin', 1, 1, '{"CN":"验证码设置","HK":"驗證碼設置","US":"Verification Code Settings"}'),
+(113, '二次验证', '', '/twice-confirm', 110, 3, 'admin', 1, 1, '{"CN":"二次验证","HK":"二次驗證","US":"Secondary Verification"}'),
+(114, '系统相关', '', '', 95, 5, 'admin', 1, 1, '{"CN":"系统相关","HK":"系統相關","US":"System Related"}'),
+(115, '系统升级', '', '/system-message', 114, 1, 'admin', 1, 1, '{"CN":"系统升级","HK":"系統升級","US":"System Upgrade"}'),
+(116, '关于', '', '/about', 114, 2, 'admin', 1, 1, '{"CN":"关于","HK":"關於","US":"About"}'),
+(117, '日志', '', '', 95, 6, 'admin', 1, 1, '{"CN":"日志","HK":"日誌","US":"Log"}'),
+(118, '系统日志', '', '/system-log', 117, 1, 'admin', 1, 1, '{"CN":"系统日志","HK":"系統日誌","US":"System Log"}'),
+(119, '管理员登录日志', '', '/system-admin-log', 117, 2, 'admin', 1, 1, '{"CN":"管理员登录日志","HK":"管理員登錄日誌","US":"Administrator Login Log"}'),
+(120, '邮件日志', '', '/email-log', 117, 3, 'admin', 1, 1, '{"CN":"邮件日志","HK":"郵件日誌","US":"Mail Log"}'),
+(121, '短信日志', '', '/sms-log', 117, 4, 'admin', 1, 1, '{"CN":"短信日志","HK":"短信日誌","US":"SMS Log"}'),
+(122, '站内信日志', '', '/station-letter-log', 117, 5, 'admin', 1, 1, '{"CN":"站内信日志","HK":"站內信日誌","US":"Site Message Log"}'),
+(123, '定时任务日志', '', '/automatic-task-log', 117, 6, 'admin', 1, 1, '{"CN":"定时任务日志","HK":"定時任務日誌","US":"Timed Task Log"}'),
+(124, 'API日志', '', '/api-log', 117, 7, 'admin', 1, 1, '{"CN":"API日志","HK":"API日誌","US":"API Log"}'),
+(125, '日志清理', '', '/log-cleanup', 117, 8, 'admin', 1, 1, '{"CN":"日志清理","HK":"日誌清理","US":"Log Cleanup"}')
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);

@@ -1,86 +1,189 @@
 <template>
   <div class="ticket-list-page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>工单列表</span>
-        </div>
-      </template>
+    <!-- 标签页切换 -->
+    <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+      <el-tab-pane name="all">
+        <template #label>
+          <span>全部工单</span>
+        </template>
+      </el-tab-pane>
+      <el-tab-pane name="open">
+        <template #label>
+          <span :class="{ 'has-unread': unreadCounts.open > 0 }">
+            待处理
+            <el-badge v-if="unreadCounts.open > 0" :value="unreadCounts.open" class="unread-badge" />
+          </span>
+        </template>
+      </el-tab-pane>
+      <el-tab-pane name="in_progress">
+        <template #label>
+          <span :class="{ 'has-unread': unreadCounts.in_progress > 0 }">
+            处理中
+            <el-badge v-if="unreadCounts.in_progress > 0" :value="unreadCounts.in_progress" class="unread-badge" />
+          </span>
+        </template>
+      </el-tab-pane>
+      <el-tab-pane name="replied">
+        <template #label>
+          <span :class="{ 'has-unread': unreadCounts.replied > 0 }">
+            已回复
+            <el-badge v-if="unreadCounts.replied > 0" :value="unreadCounts.replied" class="unread-badge" />
+          </span>
+        </template>
+      </el-tab-pane>
+      <el-tab-pane name="closed">
+        <template #label>
+          <span>已关闭</span>
+        </template>
+      </el-tab-pane>
+    </el-tabs>
 
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
+    <!-- 搜索筛选区域 -->
+    <el-card shadow="never" class="search-card">
+      <el-form :model="searchForm" inline>
         <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="工单标题/内容/用户名" clearable />
+          <el-input
+            v-model="searchForm.keyword"
+            placeholder="工单号/主题/客户名"
+            clearable
+            style="width: 200px"
+            @keyup.enter="handleSearch"
+          />
         </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
-            <el-option label="待处理" value="open" />
-            <el-option label="处理中" value="in_progress" />
-            <el-option label="已回复" value="replied" />
-            <el-option label="已关闭" value="closed" />
+        <el-form-item label="优先级">
+          <el-select v-model="searchForm.priority" placeholder="全部" clearable style="width: 100px">
+            <el-option label="低" :value="1" />
+            <el-option label="普通" :value="2" />
+            <el-option label="高" :value="3" />
+            <el-option label="紧急" :value="4" />
           </el-select>
         </el-form-item>
         <el-form-item label="部门">
-          <el-select v-model="searchForm.department_id" placeholder="全部" clearable>
+          <el-select v-model="searchForm.department_id" placeholder="全部" clearable style="width: 120px">
             <el-option v-for="dept in departments" :key="dept.id" :label="dept.name" :value="dept.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="优先级">
-          <el-select v-model="searchForm.priority" placeholder="全部" clearable>
-            <el-option label="低" value="low" />
-            <el-option label="中" value="medium" />
-            <el-option label="高" value="high" />
-            <el-option label="紧急" value="urgent" />
-          </el-select>
+        <el-form-item label="创建时间">
+          <el-date-picker
+            v-model="searchForm.date_range"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            style="width: 240px"
+          />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
+    </el-card>
 
-      <!-- 数据表格 -->
-      <el-table :data="tableData" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="subject" label="工单标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="client_username" label="客户" width="120" />
-        <el-table-column prop="department_name" label="部门" width="120" />
-        <el-table-column prop="priority" label="优先级" width="80">
+    <!-- 操作栏 -->
+    <el-card shadow="never" class="action-card">
+      <div class="action-bar">
+        <div class="action-left">
+          <el-button type="primary" @click="handleAdd">
+            <el-icon><Plus /></el-icon>
+            新建工单
+          </el-button>
+          <el-button @click="handleExport">
+            <el-icon><Download /></el-icon>
+            导出
+          </el-button>
+        </div>
+        <div class="action-right">
+          <el-button circle @click="fetchList">
+            <el-icon><Refresh /></el-icon>
+          </el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 数据表格 -->
+    <el-card shadow="never" class="table-card">
+      <el-table
+        v-loading="loading"
+        :data="tableData"
+        border
+        stripe
+        :row-class-name="getRowClassName"
+        @sort-change="handleSortChange"
+      >
+        <el-table-column prop="id" label="ID" width="80" sortable="custom" align="center" />
+        <el-table-column prop="ticket_no" label="工单号" width="130">
           <template #default="{ row }">
-            <el-tag :type="priorityTypeMap[row.priority]" size="small">
-              {{ priorityLabelMap[row.priority] }}
+            <el-button type="primary" link @click="handleView(row)" :class="{ 'font-bold': row.is_unread }">
+              {{ row.ticket_no }}
+            </el-button>
+            <span v-if="row.is_unread" class="new-badge">new</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="subject" label="主题" min-width="200">
+          <template #default="{ row }">
+            <span :class="{ 'font-bold': row.is_unread }">{{ row.subject }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="client_name" label="客户" width="120">
+          <template #default="{ row }">
+            <el-button type="primary" link @click="handleViewClient(row)">
+              {{ row.client_name }}
+            </el-button>
+          </template>
+        </el-table-column>
+        <el-table-column prop="department_name" label="部门" width="100" />
+        <el-table-column prop="priority" label="优先级" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getPriorityType(row.priority)" size="small">
+              {{ getPriorityText(row.priority) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="statusTypeMap[row.status]" size="small">
-              {{ statusLabelMap[row.status] }}
+            <el-tag :type="getStatusType(row.status)" size="small">
+              {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="reply_count" label="回复数" width="80" align="center" />
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column prop="updated_at" label="最后更新" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column prop="last_reply_at" label="最后回复" width="170" sortable="custom" />
+        <el-table-column prop="created_at" label="创建时间" width="170" sortable="custom" />
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleView(row)">查看</el-button>
-            <el-button type="primary" link @click="handleReply(row)">回复</el-button>
-            <el-popconfirm
+            <el-button type="primary" link size="small" @click="handleView(row)">
+              查看
+            </el-button>
+            <el-button
               v-if="row.status !== 'closed'"
-              title="确定关闭该工单吗？"
-              @confirm="handleClose(row)"
+              type="warning"
+              link
+              size="small"
+              @click="handleClose(row)"
             >
-              <template #reference>
-                <el-button type="warning" link>关闭</el-button>
-              </template>
-            </el-popconfirm>
+              关闭
+            </el-button>
+            <el-button
+              v-if="row.status === 'closed'"
+              type="success"
+              link
+              size="small"
+              @click="handleReopen(row)"
+            >
+              重新打开
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-container">
+      <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.page_size"
@@ -92,539 +195,370 @@
         />
       </div>
     </el-card>
-
-    <!-- 工单详情/回复对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="800px" top="5vh">
-      <div class="ticket-detail" v-if="currentTicket">
-        <!-- 工单信息 -->
-        <div class="ticket-info">
-          <h3>{{ currentTicket.subject }}</h3>
-          <div class="ticket-meta">
-            <span>客户: {{ currentTicket.client_username }}</span>
-            <span>部门: {{ currentTicket.department_name }}</span>
-            <span>优先级: {{ priorityLabelMap[currentTicket.priority] }}</span>
-            <span>状态: {{ statusLabelMap[currentTicket.status] }}</span>
-          </div>
-          <div class="ticket-content">{{ currentTicket.content }}</div>
-          <!-- 工单附件 -->
-          <div class="ticket-attachments" v-if="currentTicket.attachments && currentTicket.attachments.length">
-            <div class="attachment-title">附件：</div>
-            <div class="attachment-list">
-              <div v-for="(file, index) in currentTicket.attachments" :key="index" class="attachment-item">
-                <el-link type="primary" :href="file.url" target="_blank">
-                  <el-icon><Document /></el-icon>
-                  {{ file.file_name }}
-                  <span class="file-size">({{ formatFileSize(file.file_size) }})</span>
-                </el-link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 回复列表 -->
-        <div class="reply-list" v-if="currentTicket.replies && currentTicket.replies.length">
-          <div
-            class="reply-item"
-            v-for="reply in currentTicket.replies"
-            :key="reply.id"
-            :class="{ 'is-admin': reply.is_admin }"
-          >
-            <div class="reply-header">
-              <span class="reply-user">{{ reply.is_admin ? '管理员' : '客户' }}: {{ reply.username }}</span>
-              <span class="reply-time">{{ reply.created_at }}</span>
-            </div>
-            <div class="reply-content">{{ reply.content }}</div>
-            <!-- 回复附件 -->
-            <div class="reply-attachments" v-if="reply.attachments && reply.attachments.length">
-              <div class="attachment-list">
-                <div v-for="(file, index) in reply.attachments" :key="index" class="attachment-item">
-                  <el-link type="primary" :href="file.url" target="_blank">
-                    <el-icon><Document /></el-icon>
-                    {{ file.file_name }}
-                    <span class="file-size">({{ formatFileSize(file.file_size) }})</span>
-                  </el-link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 回复表单 -->
-        <div class="reply-form" v-if="showReplyForm">
-          <el-divider>回复</el-divider>
-          <el-form :model="replyForm" ref="replyFormRef">
-            <el-form-item prop="content" :rules="[{ required: true, message: '请输入回复内容', trigger: 'blur' }]">
-              <el-input
-                v-model="replyForm.content"
-                type="textarea"
-                :rows="4"
-                placeholder="请输入回复内容"
-              />
-            </el-form-item>
-            <!-- 附件上传 -->
-            <el-form-item label="附件">
-              <el-upload
-                v-model:file-list="replyForm.attachments"
-                :action="getUploadUrl"
-                :headers="uploadHeaders"
-                :on-success="handleUploadSuccess"
-                :on-error="handleUploadError"
-                :before-upload="beforeUpload"
-                multiple
-                :limit="5"
-                :on-exceed="handleExceed"
-              >
-                <el-button type="primary" plain>
-                  <el-icon><Upload /></el-icon>
-                  选择文件
-                </el-button>
-                <template #tip>
-                  <div class="el-upload__tip">
-                    支持上传图片、文档、压缩包等文件，单个文件不超过 10MB，最多 5 个
-                  </div>
-                </template>
-              </el-upload>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="handleSubmitReply" :loading="submitLoading">提交回复</el-button>
-              <el-button @click="showReplyForm = false">取消</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Document, Upload } from '@element-plus/icons-vue'
-import type { FormInstance, UploadFile, UploadProps } from 'element-plus'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Plus, Download } from '@element-plus/icons-vue'
 import request from '@/utils/http'
-import { useUserStore } from '@/store/modules/user'
 
-interface Ticket {
-  id: number
-  subject: string
-  content: string
-  client_username: string
-  department_id: number
-  department_name: string
-  priority: string
-  status: string
-  reply_count: number
-  created_at: string
-  updated_at: string
-  attachments?: Attachment[]
-  replies?: TicketReply[]
-}
-
-interface TicketReply {
-  id: number
-  content: string
-  username: string
-  is_admin: boolean
-  created_at: string
-  attachments?: Attachment[]
-}
-
-interface Attachment {
-  id: number
-  file_name: string
-  file_path: string
-  file_size: number
-  url: string
-}
-
-interface Department {
-  id: number
-  name: string
-}
-
-const priorityTypeMap: Record<string, any> = {
-  low: 'info',
-  medium: '',
-  high: 'warning',
-  urgent: 'danger'
-}
-
-const priorityLabelMap: Record<string, string> = {
-  low: '低',
-  medium: '中',
-  high: '高',
-  urgent: '紧急'
-}
-
-const statusTypeMap: Record<string, any> = {
-  open: 'warning',
-  in_progress: '',
-  replied: 'success',
-  closed: 'info'
-}
-
-const statusLabelMap: Record<string, string> = {
-  open: '待处理',
-  in_progress: '处理中',
-  replied: '已回复',
-  closed: '已关闭'
-}
-
+const router = useRouter()
 const loading = ref(false)
-const submitLoading = ref(false)
-const showReplyForm = ref(false)
-const dialogVisible = ref(false)
-const dialogTitle = ref('工单详情')
-const replyFormRef = ref<FormInstance>()
+const tableData = ref([])
+const activeTab = ref('all')
+const departments = ref<{ id: number; name: string }[]>([])
 
-const userStore = useUserStore()
-
-// 上传请求头
-const uploadHeaders = computed(() => ({
-  Authorization: `Bearer ${userStore.accessToken}`
-}))
-
-const searchForm = reactive({
-  keyword: '',
-  status: '',
-  department_id: undefined as number | undefined,
-  priority: ''
+// 未读计数
+const unreadCounts = reactive({
+  open: 0,
+  in_progress: 0,
+  replied: 0
 })
 
+// 搜索表单
+const searchForm = reactive({
+  keyword: '',
+  priority: null as number | null,
+  department_id: null as number | null,
+  date_range: null as [Date, Date] | null
+})
+
+// 分页
 const pagination = reactive({
   page: 1,
   page_size: 20,
   total: 0
 })
 
-const tableData = ref<Ticket[]>([])
-const departments = ref<Department[]>([])
-const currentTicket = ref<Ticket | null>(null)
-
-const replyForm = reactive({
-  content: '',
-  attachments: [] as UploadFile[]
+// 排序
+const sortParams = reactive({
+  sort: 'created_at',
+  order: 'desc'
 })
 
-// 格式化文件大小
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+// 提示音
+let notificationSound: HTMLAudioElement | null = null
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+// 初始化提示音
+const initNotificationSound = () => {
+  notificationSound = new Audio('/notification.mp3')
+  notificationSound.volume = 0.5
 }
 
-// 上传前校验
-const beforeUpload: UploadProps['beforeUpload'] = (file) => {
-  const isLt10M = file.size / 1024 / 1024 < 10
-  if (!isLt10M) {
-    ElMessage.error('文件大小不能超过 10MB!')
-    return false
-  }
-  return true
-}
-
-// 上传成功
-const handleUploadSuccess = (response: any, file: UploadFile) => {
-  if (response?.data) {
-    // 将上传成功的信息保存到文件对象
-    file.url = response.data.url
-    ;(file as any).attachment_id = response.data.id
-  } else {
-    ElMessage.error(response?.msg || '上传失败')
+// 播放提示音
+const playNotificationSound = () => {
+  if (notificationSound) {
+    notificationSound.currentTime = 0
+    notificationSound.play().catch(() => {})
   }
 }
 
-// 上传失败
-const handleUploadError = () => {
-  ElMessage.error('文件上传失败')
+// 行样式
+const getRowClassName = ({ row }: { row: any }) => {
+  return row.is_unread ? 'unread-row' : ''
 }
 
-// 超出限制
-const handleExceed = () => {
-  ElMessage.warning('最多只能上传 5 个文件')
+// 优先级类型
+const getPriorityType = (priority: number) => {
+  const map: Record<number, string> = { 1: 'info', 2: 'primary', 3: 'warning', 4: 'danger' }
+  return map[priority] || 'info'
 }
 
-// 获取上传接口地址（根据当前工单ID动态生成）
-const getUploadUrl = computed(() => {
-  if (currentTicket.value) {
-    return `/api/admin/tickets/${currentTicket.value.id}/attachments`
+// 优先级文本
+const getPriorityText = (priority: number) => {
+  const map: Record<number, string> = { 1: '低', 2: '普通', 3: '高', 4: '紧急' }
+  return map[priority] || '未知'
+}
+
+// 状态类型
+const getStatusType = (status: string) => {
+  const map: Record<string, string> = {
+    open: 'warning',
+    in_progress: 'primary',
+    replied: 'success',
+    closed: 'info'
   }
-  return ''
-})
+  return map[status] || 'info'
+}
 
-const fetchTickets = async () => {
+// 状态文本
+const getStatusText = (status: string) => {
+  const map: Record<string, string> = {
+    open: '待处理',
+    in_progress: '处理中',
+    replied: '已回复',
+    closed: '已关闭'
+  }
+  return map[status] || '未知'
+}
+
+// 标签页切换
+const handleTabChange = (tab: string) => {
+  pagination.page = 1
+  fetchList()
+}
+
+// 获取列表数据
+const fetchList = async () => {
   loading.value = true
   try {
-    const data = await request.get({
-      url: '/api/admin/tickets',
-      params: {
-        page: pagination.page,
-        page_size: pagination.page_size,
-        ...searchForm
-      }
-    })
+    const params: any = {
+      page: pagination.page,
+      page_size: pagination.page_size,
+      sort: sortParams.sort,
+      order: sortParams.order
+    }
+
+    if (activeTab.value !== 'all') params.status = activeTab.value
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+    if (searchForm.priority) params.priority = searchForm.priority
+    if (searchForm.department_id) params.department_id = searchForm.department_id
+    if (searchForm.date_range) {
+      params.start_date = searchForm.date_range[0].toISOString().split('T')[0]
+      params.end_date = searchForm.date_range[1].toISOString().split('T')[0]
+    }
+
+    const data = await request.get({ url: '/api/admin/tickets', params })
     tableData.value = data.list || []
     pagination.total = data.total || 0
   } catch (error) {
     console.error('获取工单列表失败:', error)
-    ElMessage.error('获取工单列表失败')
   } finally {
     loading.value = false
   }
 }
 
+// 获取未读计数
+const fetchUnreadCounts = async () => {
+  try {
+    const data = await request.get({ url: '/api/admin/tickets/unread-counts' })
+    const oldTotal = unreadCounts.open + unreadCounts.in_progress + unreadCounts.replied
+    unreadCounts.open = data.open || 0
+    unreadCounts.in_progress = data.in_progress || 0
+    unreadCounts.replied = data.replied || 0
+    const newTotal = unreadCounts.open + unreadCounts.in_progress + unreadCounts.replied
+    if (newTotal > oldTotal && oldTotal > 0) {
+      playNotificationSound()
+    }
+  } catch (error) {
+    console.error('获取未读计数失败:', error)
+  }
+}
+
+// 获取部门
 const fetchDepartments = async () => {
   try {
-    const data = await request.get({
-      url: '/api/admin/ticket-depts'
-    })
+    const data = await request.get({ url: '/api/admin/ticket-departments' })
     departments.value = data || []
   } catch (error) {
-    console.error('获取部门列表失败:', error)
+    console.error('获取部门失败:', error)
   }
 }
 
+// 搜索
 const handleSearch = () => {
   pagination.page = 1
-  fetchTickets()
+  fetchList()
 }
 
+// 重置
 const handleReset = () => {
   searchForm.keyword = ''
-  searchForm.status = ''
-  searchForm.department_id = undefined
-  searchForm.priority = ''
-  handleSearch()
-}
-
-const handleView = async (row: Ticket) => {
-  dialogTitle.value = '工单详情'
-  showReplyForm.value = false
-  try {
-    const data = await request.get({
-      url: `/api/admin/tickets/${row.id}`
-    })
-    // 合并工单信息和附件
-    currentTicket.value = {
-      ...data.ticket,
-      attachments: data.attachments || [],
-      replies: data.replies || []
-    }
-    dialogVisible.value = true
-  } catch (error) {
-    ElMessage.error('获取工单详情失败')
-  }
-}
-
-const handleReply = async (row: Ticket) => {
-  dialogTitle.value = '回复工单'
-  showReplyForm.value = true
-  replyForm.content = ''
-  replyForm.attachments = []
-  try {
-    const data = await request.get({
-      url: `/api/admin/tickets/${row.id}`
-    })
-    // 合并工单信息和附件
-    currentTicket.value = {
-      ...data.ticket,
-      attachments: data.attachments || [],
-      replies: data.replies || []
-    }
-    dialogVisible.value = true
-  } catch (error) {
-    ElMessage.error('获取工单详情失败')
-  }
-}
-
-const handleSubmitReply = async () => {
-  if (!replyFormRef.value) return
-
-  await replyFormRef.value.validate(async (valid) => {
-    if (!valid || !currentTicket.value) return
-
-    submitLoading.value = true
-    try {
-      // 收集附件ID
-      const attachmentIds = replyForm.attachments
-        .filter(file => file.attachment_id)
-        .map(file => file.attachment_id)
-
-      await request.post({
-        url: `/api/admin/tickets/${currentTicket.value.id}/reply`,
-        params: {
-          content: replyForm.content,
-          attachment_ids: attachmentIds
-        }
-      })
-      ElMessage.success('回复成功')
-      showReplyForm.value = false
-      handleView(currentTicket.value)
-      fetchTickets()
-    } catch (error) {
-      ElMessage.error('回复失败')
-    } finally {
-      submitLoading.value = false
-    }
-  })
-}
-
-const handleClose = async (row: Ticket) => {
-  try {
-    await request.post({
-      url: `/api/admin/tickets/${row.id}/close`
-    })
-    ElMessage.success('工单已关闭')
-    fetchTickets()
-  } catch (error) {
-    ElMessage.error('关闭失败')
-  }
-}
-
-const handleSizeChange = () => {
+  searchForm.priority = null
+  searchForm.department_id = null
+  searchForm.date_range = null
   pagination.page = 1
-  fetchTickets()
+  fetchList()
 }
 
-const handlePageChange = () => {
-  fetchTickets()
+// 排序变化
+const handleSortChange = ({ prop, order }: any) => {
+  sortParams.sort = prop || 'created_at'
+  sortParams.order = order === 'ascending' ? 'asc' : 'desc'
+  fetchList()
+}
+
+// 分页大小变化
+const handleSizeChange = (size: number) => {
+  pagination.page_size = size
+  pagination.page = 1
+  fetchList()
+}
+
+// 页码变化
+const handlePageChange = (page: number) => {
+  pagination.page = page
+  fetchList()
+}
+
+// 新建工单
+const handleAdd = () => {
+  router.push('/add-support-ticket')
+}
+
+// 查看工单
+const handleView = (row: any) => {
+  router.push(`/ticket-detail/${row.id}`)
+}
+
+// 查看客户
+const handleViewClient = (row: any) => {
+  router.push(`/customer-view/${row.client_id}`)
+}
+
+// 关闭工单
+const handleClose = async (row: any) => {
+  try {
+    await ElMessageBox.confirm(`确定要关闭工单 "${row.ticket_no}" 吗？`, '确认关闭', {
+      type: 'warning'
+    })
+    await request.post({ url: `/api/admin/tickets/${row.id}/close` })
+    ElMessage.success('工单已关闭')
+    fetchList()
+    fetchUnreadCounts()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('关闭工单失败:', error)
+    }
+  }
+}
+
+// 重新打开工单
+const handleReopen = async (row: any) => {
+  try {
+    await ElMessageBox.confirm(`确定要重新打开工单 "${row.ticket_no}" 吗？`, '确认重新打开', {
+      type: 'warning'
+    })
+    await request.post({ url: `/api/admin/tickets/${row.id}/reopen` })
+    ElMessage.success('工单已重新打开')
+    fetchList()
+    fetchUnreadCounts()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('重新打开工单失败:', error)
+    }
+  }
+}
+
+// 导出
+const handleExport = async () => {
+  try {
+    const params: any = {}
+    if (activeTab.value !== 'all') params.status = activeTab.value
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+
+    const response = await request.get({
+      url: '/api/admin/tickets/export',
+      params,
+      responseType: 'blob'
+    })
+
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `工单列表_${new Date().toISOString().split('T')[0]}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('导出失败:', error)
+  }
 }
 
 onMounted(() => {
-  fetchTickets()
+  initNotificationSound()
+  fetchList()
   fetchDepartments()
+  fetchUnreadCounts()
+  // 每30秒轮询未读计数
+  pollTimer = setInterval(fetchUnreadCounts, 30000)
+})
+
+onUnmounted(() => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+  }
 })
 </script>
 
 <style scoped lang="scss">
 .ticket-list-page {
-  padding: 20px;
+  padding: 16px;
 }
 
-.card-header {
+.search-card {
+  margin-bottom: 16px;
+
+  :deep(.el-card__body) {
+    padding-bottom: 0;
+  }
+}
+
+.action-card {
+  margin-bottom: 16px;
+}
+
+.action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.search-form {
-  margin-bottom: 20px;
+.action-left {
+  display: flex;
+  gap: 8px;
 }
 
-.pagination-container {
+.table-card {
+  :deep(.el-card__body) {
+    padding: 0;
+  }
+}
+
+.pagination-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  padding: 16px;
 }
 
-.ticket-detail {
-  .ticket-info {
-    h3 {
-      margin: 0 0 12px;
-      font-size: 18px;
-    }
+.has-unread {
+  font-weight: bold;
+  color: var(--el-color-primary);
+}
 
-    .ticket-meta {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 16px;
-      color: var(--el-text-color-secondary);
-      font-size: 14px;
-    }
+.unread-badge {
+  margin-left: 4px;
 
-    .ticket-content {
-      padding: 16px;
-      background: var(--el-fill-color-lighter);
-      border-radius: 4px;
-      line-height: 1.6;
-      white-space: pre-wrap;
-    }
-
-    .ticket-attachments {
-      margin-top: 12px;
-      padding: 12px;
-      background: var(--el-fill-color-lighter);
-      border-radius: 4px;
-
-      .attachment-title {
-        font-weight: 500;
-        margin-bottom: 8px;
-      }
-
-      .attachment-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-      }
-
-      .attachment-item {
-        .file-size {
-          color: var(--el-text-color-secondary);
-          font-size: 12px;
-        }
-      }
-    }
+  :deep(.el-badge__content) {
+    font-size: 10px;
   }
+}
 
-  .reply-list {
-    margin-top: 24px;
+.new-badge {
+  display: inline-block;
+  padding: 0 4px;
+  margin-left: 4px;
+  font-size: 10px;
+  color: #fff;
+  background: #F59E0B;
+  border-radius: 2px;
+  vertical-align: middle;
+}
 
-    .reply-item {
-      padding: 16px;
-      margin-bottom: 12px;
-      border: 1px solid var(--el-border-color-lighter);
-      border-radius: 4px;
+.font-bold {
+  font-weight: bold;
+}
 
-      &.is-admin {
-        background: var(--el-color-primary-light-9);
-        border-color: var(--el-color-primary-light-7);
-      }
+:deep(.unread-row) {
+  background-color: #FFF7ED !important;
 
-      .reply-header {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-
-        .reply-user {
-          font-weight: 500;
-        }
-
-        .reply-time {
-          color: var(--el-text-color-secondary);
-          font-size: 13px;
-        }
-      }
-
-      .reply-content {
-        line-height: 1.6;
-        white-space: pre-wrap;
-      }
-
-      .reply-attachments {
-        margin-top: 12px;
-        padding-top: 12px;
-        border-top: 1px dashed var(--el-border-color-lighter);
-
-        .attachment-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-
-        .attachment-item {
-          .file-size {
-            color: var(--el-text-color-secondary);
-            font-size: 12px;
-          }
-        }
-      }
-    }
-  }
-
-  .reply-form {
-    margin-top: 16px;
+  &:hover > td {
+    background-color: #FFEDD5 !important;
   }
 }
 </style>

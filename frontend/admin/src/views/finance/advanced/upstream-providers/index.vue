@@ -1,285 +1,360 @@
 <template>
-  <div class="upstream-providers-page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>上游供应商管理</span>
+  <div class="supplier-list-page">
+    <!-- 操作栏 -->
+    <el-card shadow="never" class="action-card">
+      <div class="action-bar">
+        <div class="action-left">
           <el-button type="primary" @click="handleAdd">
             <el-icon><Plus /></el-icon>
-            新增供应商
+            添加供应商
           </el-button>
         </div>
-      </template>
-
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="名称">
-          <el-input v-model="searchForm.name" placeholder="供应商名称" clearable />
-        </el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="searchForm.type" placeholder="全部" clearable>
-            <el-option label="ProxmoxVE" value="pve" />
-            <el-option label="VMware" value="vmware" />
-            <el-option label="HyperV" value="hyperv" />
-            <el-option label="自定义" value="custom" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.is_enabled" placeholder="全部" clearable>
-            <el-option label="启用" :value="1" />
-            <el-option label="禁用" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-
-      <el-table :data="tableData" v-loading="loading" style="width: 100%" border>
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="name" label="供应商名称" min-width="150" />
-        <el-table-column prop="type" label="类型" width="120">
-          <template #default="{ row }">
-            <el-tag size="small">{{ getTypeLabel(row.type) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="url" label="API地址" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="products_count" label="产品数" width="80" align="center" />
-        <el-table-column label="状态" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.is_enabled ? 'success' : 'info'" size="small">{{ row.is_enabled ? '启用' : '禁用' }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="last_sync" label="最后同步" width="180" />
-        <el-table-column label="操作" width="280" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="success" link @click="handleTest(row)">测试连接</el-button>
-            <el-button type="warning" link @click="handleSync(row)">同步</el-button>
-            <el-button type="info" link @click="handleViewLog(row)">日志</el-button>
-            <el-popconfirm title="确定删除该供应商吗？" @confirm="handleDelete(row)">
-              <template #reference><el-button type="danger" link>删除</el-button></template>
-            </el-popconfirm>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="pagination-container">
-        <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.page_size"
-          :page-sizes="[10, 20, 50, 100]" :total="pagination.total" layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange" @current-change="handlePageChange" />
+        <div class="action-right">
+          <el-button circle @click="fetchList">
+            <el-icon><Refresh /></el-icon>
+          </el-button>
+        </div>
       </div>
     </el-card>
 
-    <!-- 新增/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
-      <el-form :model="formData" :rules="formRules" ref="formRef" label-width="120px">
+    <!-- 数据表格 -->
+    <el-card shadow="never" class="table-card">
+      <el-table v-loading="loading" :data="tableData" border stripe>
+        <el-table-column prop="id" label="ID" width="80" align="center" />
+        <el-table-column prop="name" label="供应商名称" min-width="150" />
+        <el-table-column prop="api_type" label="API类型" width="120" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getApiTypeTag(row.api_type)" size="small">
+              {{ getApiTypeText(row.api_type) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="api_url" label="API地址" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="status" label="状态" width="80" align="center">
+          <template #default="{ row }">
+            <el-switch
+              v-model="row.status"
+              :active-value="'active'"
+              :inactive-value="'disabled'"
+              @change="handleToggleStatus(row)"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column prop="products_count" label="产品数" width="80" align="center" />
+        <el-table-column prop="last_sync_at" label="最后同步" width="170" />
+        <el-table-column label="操作" width="250" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="handleEdit(row)">
+              编辑
+            </el-button>
+            <el-button type="success" link size="small" @click="handleTest(row)">
+              测试连接
+            </el-button>
+            <el-button type="warning" link size="small" @click="handleSync(row)">
+              同步产品
+            </el-button>
+            <el-button type="info" link size="small" @click="handleViewProducts(row)">
+              产品列表
+            </el-button>
+            <el-button type="danger" link size="small" @click="handleDelete(row)">
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 添加/编辑弹窗 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="600px"
+      @close="handleDialogClose"
+    >
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="120px">
         <el-form-item label="供应商名称" prop="name">
           <el-input v-model="formData.name" placeholder="请输入供应商名称" />
         </el-form-item>
-        <el-form-item label="类型" prop="type">
-          <el-select v-model="formData.type" placeholder="请选择类型" style="width: 100%">
-            <el-option label="ProxmoxVE" value="pve" />
-            <el-option label="VMware" value="vmware" />
-            <el-option label="HyperV" value="hyperv" />
-            <el-option label="自定义" value="custom" />
+
+        <el-form-item label="API类型" prop="api_type">
+          <el-select v-model="formData.api_type" placeholder="请选择API类型" @change="handleApiTypeChange">
+            <el-option label="手动管理" value="manual" />
+            <el-option label="智简魔方(zjmf)" value="zjmf" />
+            <el-option label="v10" value="v10" />
+            <el-option label="锚点财务" value="anchor" />
           </el-select>
         </el-form-item>
-        <el-form-item label="API地址" prop="url">
-          <el-input v-model="formData.url" placeholder="https://example.com:8006/api2/json" />
+
+        <template v-if="formData.api_type !== 'manual'">
+          <el-form-item label="API地址" prop="api_url">
+            <el-input v-model="formData.api_url" placeholder="https://api.example.com" />
+          </el-form-item>
+
+          <el-form-item label="API密钥" prop="api_key">
+            <el-input v-model="formData.api_key" placeholder="请输入API密钥" show-password />
+          </el-form-item>
+
+          <el-form-item label="API密码" prop="api_password" v-if="formData.api_type === 'zjmf' || formData.api_type === 'v10'">
+            <el-input v-model="formData.api_password" placeholder="请输入API密码" show-password />
+          </el-form-item>
+        </template>
+
+        <el-form-item label="描述" prop="description">
+          <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入描述" />
         </el-form-item>
-        <el-form-item label="端口">
-          <el-input-number v-model="formData.port" :min="1" :max="65535" />
-        </el-form-item>
-        <el-form-item label="用户名">
-          <el-input v-model="formData.username" placeholder="API用户名" />
-        </el-form-item>
-        <el-form-item label="密码">
-          <el-input v-model="formData.password" type="password" show-password placeholder="API密码" />
-        </el-form-item>
-        <el-form-item label="API密钥">
-          <el-input v-model="formData.api_key" type="password" show-password placeholder="API密钥（可选）" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="formData.is_enabled" :active-value="1" :inactive-value="0" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="formData.remark" type="textarea" :rows="2" placeholder="备注信息" />
+
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="formData.status">
+            <el-radio value="active">启用</el-radio>
+            <el-radio value="disabled">禁用</el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
-    </el-dialog>
-
-    <!-- 日志对话框 -->
-    <el-dialog v-model="logDialogVisible" title="同步日志" width="800px">
-      <el-table :data="logData" v-loading="logLoading" border size="small">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="action" label="操作" width="120">
-          <template #default="{ row }">
-            <el-tag :type="getLogActionType(row.action)" size="small">{{ row.action }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="message" label="消息" min-width="300" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">{{ row.status === 'success' ? '成功' : '失败' }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="时间" width="180" />
-      </el-table>
-      <div class="pagination-container">
-        <el-pagination v-model:current-page="logPagination.page" v-model:page-size="logPagination.page_size"
-          :total="logPagination.total" layout="total, prev, pager, next" small
-          @current-change="fetchProviderLog" />
-      </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Refresh } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/http'
 
-const typeLabels: Record<string, string> = { pve: 'ProxmoxVE', vmware: 'VMware', hyperv: 'HyperV', custom: '自定义' }
-const getTypeLabel = (type: string) => typeLabels[type] || type
-const getLogActionType = (action: string) => {
-  const map: Record<string, string> = { sync: 'primary', test: 'success', error: 'danger' }
-  return (map[action] || 'info') as any
-}
-
+const router = useRouter()
 const loading = ref(false)
-const submitLoading = ref(false)
-const logLoading = ref(false)
+const tableData = ref([])
 
-const searchForm = reactive({ name: '', type: '', is_enabled: undefined as number | undefined })
-const pagination = reactive({ page: 1, page_size: 20, total: 0 })
-const tableData = ref<any[]>([])
-
+// 弹窗
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增供应商')
+const dialogTitle = ref('添加供应商')
+const isEdit = ref(false)
+const submitting = ref(false)
 const formRef = ref<FormInstance>()
+const editingId = ref<number | null>(null)
+
+// 表单数据
 const formData = reactive({
-  id: null as number | null,
   name: '',
-  type: 'pve',
-  url: '',
-  port: 8006,
-  username: '',
-  password: '',
+  api_type: 'manual',
+  api_url: '',
   api_key: '',
-  is_enabled: 1,
-  remark: ''
+  api_password: '',
+  description: '',
+  status: 'active'
 })
 
-const formRules: FormRules = {
-  name: [{ required: true, message: '请输入供应商名称', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择类型', trigger: 'change' }],
-  url: [{ required: true, message: '请输入API地址', trigger: 'blur' }]
+// 表单验证规则
+const rules: FormRules = {
+  name: [
+    { required: true, message: '请输入供应商名称', trigger: 'blur' }
+  ],
+  api_type: [
+    { required: true, message: '请选择API类型', trigger: 'change' }
+  ]
 }
 
-const logDialogVisible = ref(false)
-const logData = ref<any[]>([])
-const logProviderId = ref(0)
-const logPagination = reactive({ page: 1, page_size: 20, total: 0 })
+// API类型标签
+const getApiTypeTag = (type: string) => {
+  const map: Record<string, string> = {
+    manual: 'info',
+    zjmf: 'primary',
+    v10: 'success',
+    anchor: 'warning'
+  }
+  return map[type] || 'info'
+}
 
-const fetchData = async () => {
+// API类型文本
+const getApiTypeText = (type: string) => {
+  const map: Record<string, string> = {
+    manual: '手动管理',
+    zjmf: '智简魔方',
+    v10: 'v10',
+    anchor: '锚点财务'
+  }
+  return map[type] || '未知'
+}
+
+// 获取列表数据
+const fetchList = async () => {
   loading.value = true
   try {
-    const params: any = { page: pagination.page, page_size: pagination.page_size }
-    if (searchForm.name) params.name = searchForm.name
-    if (searchForm.type) params.type = searchForm.type
-    if (searchForm.is_enabled !== undefined) params.is_enabled = searchForm.is_enabled
-    const res = await request.get({ url: '/api/admin/upstream/providers', params })
-    tableData.value = res.data || res.list || res || []
-    pagination.total = res.total || 0
-  } catch { ElMessage.error('获取供应商列表失败') } finally { loading.value = false }
+    const data = await request.get({ url: '/api/admin/suppliers' })
+    tableData.value = data || []
+  } catch (error) {
+    console.error('获取供应商列表失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
-const handleSearch = () => { pagination.page = 1; fetchData() }
-const handleReset = () => { searchForm.name = ''; searchForm.type = ''; searchForm.is_enabled = undefined; handleSearch() }
-const handleSizeChange = () => { pagination.page = 1; fetchData() }
-const handlePageChange = () => { fetchData() }
+// API类型变化
+const handleApiTypeChange = (type: string) => {
+  if (type === 'manual') {
+    formData.api_url = ''
+    formData.api_key = ''
+    formData.api_password = ''
+  }
+}
 
+// 添加供应商
 const handleAdd = () => {
-  dialogTitle.value = '新增供应商'
-  Object.assign(formData, { id: null, name: '', type: 'pve', url: '', port: 8006, username: '', password: '', api_key: '', is_enabled: 1, remark: '' })
+  isEdit.value = false
+  dialogTitle.value = '添加供应商'
+  editingId.value = null
+  resetForm()
   dialogVisible.value = true
 }
 
+// 编辑供应商
 const handleEdit = (row: any) => {
+  isEdit.value = true
   dialogTitle.value = '编辑供应商'
-  Object.assign(formData, { id: row.id, name: row.name, type: row.type, url: row.url, port: row.port || 8006, username: row.username || '', password: '', api_key: '', is_enabled: row.is_enabled, remark: row.remark || '' })
+  editingId.value = row.id
+  Object.assign(formData, {
+    name: row.name,
+    api_type: row.api_type,
+    api_url: row.api_url || '',
+    api_key: row.api_key || '',
+    api_password: '',
+    description: row.description || '',
+    status: row.status
+  })
   dialogVisible.value = true
 }
 
-const handleSubmit = async () => {
-  if (!formRef.value) return
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-    submitLoading.value = true
-    try {
-      if (formData.id) {
-        await request.put({ url: `/api/admin/upstream/providers/${formData.id}`, data: formData, showSuccessMessage: true })
-      } else {
-        await request.post({ url: '/api/admin/upstream/providers', data: formData, showSuccessMessage: true })
-      }
-      dialogVisible.value = false; fetchData()
-    } catch { ElMessage.error('操作失败') } finally { submitLoading.value = false }
-  })
-}
-
+// 测试连接
 const handleTest = async (row: any) => {
   try {
-    const res = await request.post({ url: `/api/admin/upstream/providers/${row.id}/test` })
-    ElMessage.success(res?.message || '连接测试成功')
-  } catch { ElMessage.error('连接测试失败') }
+    const data = await request.post({ url: `/api/admin/suppliers/${row.id}/test` })
+    if (data.success) {
+      ElMessage.success('连接测试成功')
+    } else {
+      ElMessage.error(`连接测试失败: ${data.message}`)
+    }
+  } catch (error) {
+    console.error('测试连接失败:', error)
+  }
 }
 
+// 同步产品
 const handleSync = async (row: any) => {
   try {
-    await ElMessageBox.confirm(`确定同步供应商 "${row.name}" 的数据吗？`, '同步确认')
-    const res = await request.post({ url: `/api/admin/upstream/providers/${row.id}/sync` })
-    ElMessage.success(res?.message || '同步任务已提交')
-    fetchData()
-  } catch (e: any) { if (e !== 'cancel') ElMessage.error('同步失败') }
+    await ElMessageBox.confirm(`确定要同步供应商 "${row.name}" 的产品吗？`, '确认同步', {
+      type: 'warning'
+    })
+    const data = await request.post({ url: `/api/admin/suppliers/${row.id}/sync` })
+    ElMessage.success(`同步完成，共同步 ${data.synced_count || 0} 个产品`)
+    fetchList()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('同步产品失败:', error)
+    }
+  }
 }
 
-const handleViewLog = async (row: any) => {
-  logProviderId.value = row.id
-  logPagination.page = 1
-  logDialogVisible.value = true
-  fetchProviderLog()
+// 查看产品
+const handleViewProducts = (row: any) => {
+  router.push(`/product-server?supplier_id=${row.id}`)
 }
 
-const fetchProviderLog = async () => {
-  logLoading.value = true
+// 切换状态
+const handleToggleStatus = async (row: any) => {
   try {
-    const data = await request.get({ url: `/api/admin/upstream/providers/${logProviderId.value}/logs`, params: { page: logPagination.page, page_size: logPagination.page_size } })
-    logData.value = data.list || data || []
-    logPagination.total = data.total || 0
-  } catch { ElMessage.error('获取日志失败') } finally { logLoading.value = false }
+    await request.post({ url: `/api/admin/suppliers/${row.id}/status`, data: { status: row.status } })
+    ElMessage.success('状态更新成功')
+  } catch (error) {
+    console.error('更新状态失败:', error)
+    fetchList()
+  }
 }
 
+// 删除供应商
 const handleDelete = async (row: any) => {
   try {
-    await request.del({ url: `/api/admin/upstream/providers/${row.id}` })
-    ElMessage.success('删除成功'); fetchData()
-  } catch { ElMessage.error('删除失败') }
+    await ElMessageBox.confirm(`确定要删除供应商 "${row.name}" 吗？此操作不可恢复。`, '确认删除', {
+      type: 'warning'
+    })
+    await request.delete({ url: `/api/admin/suppliers/${row.id}` })
+    ElMessage.success('删除成功')
+    fetchList()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+    }
+  }
 }
 
-onMounted(() => { fetchData() })
+// 提交表单
+const handleSubmit = async () => {
+  if (!formRef.value) return
+
+  try {
+    await formRef.value.validate()
+    submitting.value = true
+
+    if (isEdit.value && editingId.value) {
+      await request.put({ url: `/api/admin/suppliers/${editingId.value}`, data: formData })
+      ElMessage.success('更新成功')
+    } else {
+      await request.post({ url: '/api/admin/suppliers', data: formData })
+      ElMessage.success('添加成功')
+    }
+
+    dialogVisible.value = false
+    fetchList()
+  } catch (error) {
+    console.error('提交失败:', error)
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 重置表单
+const resetForm = () => {
+  formData.name = ''
+  formData.api_type = 'manual'
+  formData.api_url = ''
+  formData.api_key = ''
+  formData.api_password = ''
+  formData.description = ''
+  formData.status = 'active'
+}
+
+// 弹窗关闭
+const handleDialogClose = () => {
+  formRef.value?.resetFields()
+}
+
+onMounted(() => {
+  fetchList()
+})
 </script>
 
 <style scoped lang="scss">
-.upstream-providers-page { padding: 20px; }
-.card-header { display: flex; justify-content: space-between; align-items: center; }
-.search-form { margin-bottom: 16px; .el-form-item { margin-bottom: 0; } }
-.pagination-container { display: flex; justify-content: flex-end; margin-top: 20px; }
+.supplier-list-page {
+  padding: 16px;
+}
+
+.action-card {
+  margin-bottom: 16px;
+}
+
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.table-card {
+  :deep(.el-card__body) {
+    padding: 0;
+  }
+}
 </style>

@@ -41,7 +41,7 @@
   const router = useRouter()
 
   const handleMore = (): void => {
-    router.push('/finance/orders/list')
+    router.push('/order-list')
   }
 
   onMounted(() => {

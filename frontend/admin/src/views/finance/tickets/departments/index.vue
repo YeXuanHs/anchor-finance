@@ -1,87 +1,82 @@
 <template>
-  <div class="ticket-departments-page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>工单部门管理</span>
+  <div class="department-page">
+    <!-- 操作栏 -->
+    <el-card shadow="never" class="action-card">
+      <div class="action-bar">
+        <div class="action-left">
           <el-button type="primary" @click="handleAdd">
             <el-icon><Plus /></el-icon>
             添加部门
           </el-button>
         </div>
-      </template>
-
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="部门名称" clearable />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-
-      <!-- 数据表格 -->
-      <el-table :data="tableData" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="部门名称" min-width="150" />
-        <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="sort_order" label="排序" width="80" align="center" />
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="ticket_count" label="工单数" width="80" align="center" />
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="160" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-popconfirm title="确定删除该部门吗？" @confirm="handleDelete(row)">
-              <template #reference>
-                <el-button type="danger" link>删除</el-button>
-              </template>
-            </el-popconfirm>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.page_size"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-        />
       </div>
     </el-card>
 
-    <!-- 添加/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
-      <el-form :model="formData" :rules="formRules" ref="formRef" label-width="100px">
+    <!-- 数据表格 -->
+    <el-card shadow="never" class="table-card">
+      <el-table v-loading="loading" :data="tableData" border stripe>
+        <el-table-column prop="id" label="ID" width="80" align="center" />
+        <el-table-column prop="name" label="部门名称" min-width="150" />
+        <el-table-column prop="description" label="描述" min-width="200" />
+        <el-table-column prop="admins_count" label="管理员数" width="100" align="center" />
+        <el-table-column prop="tickets_count" label="工单数" width="100" align="center" />
+        <el-table-column prop="sort_order" label="排序" width="80" align="center" />
+        <el-table-column prop="status" label="状态" width="80" align="center">
+          <template #default="{ row }">
+            <el-switch
+              v-model="row.status"
+              :active-value="'active'"
+              :inactive-value="'disabled'"
+              @change="handleToggleStatus(row)"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button type="warning" link size="small" @click="handleAssignAdmin(row)">分配管理员</el-button>
+            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 添加/编辑弹窗 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" @close="handleDialogClose">
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
         <el-form-item label="部门名称" prop="name">
           <el-input v-model="formData.name" placeholder="请输入部门名称" />
         </el-form-item>
         <el-form-item label="描述" prop="description">
-          <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入部门描述" />
+          <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入描述" />
         </el-form-item>
         <el-form-item label="排序" prop="sort_order">
           <el-input-number v-model="formData.sort_order" :min="0" :max="999" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-switch v-model="formData.status" :active-value="1" :inactive-value="0" />
+          <el-radio-group v-model="formData.status">
+            <el-radio value="active">启用</el-radio>
+            <el-radio value="disabled">禁用</el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 分配管理员弹窗 -->
+    <el-dialog v-model="assignDialogVisible" title="分配管理员" width="500px">
+      <el-transfer
+        v-model="selectedAdminIds"
+        :data="allAdmins"
+        :titles="['可选管理员', '已分配']"
+        :props="{ key: 'id', label: 'username' }"
+      />
+      <template #footer>
+        <el-button @click="assignDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="assigning" @click="handleSaveAssign">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -89,176 +84,189 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import type { FormInstance } from 'element-plus'
 import request from '@/utils/http'
 
-interface Department {
-  id: number
-  name: string
-  description: string
-  sort_order: number
-  status: number
-  ticket_count: number
-  created_at: string
-}
-
 const loading = ref(false)
-const submitLoading = ref(false)
+const tableData = ref([])
+
+// 弹窗
 const dialogVisible = ref(false)
 const dialogTitle = ref('添加部门')
+const isEdit = ref(false)
+const submitting = ref(false)
 const formRef = ref<FormInstance>()
+const editingId = ref<number | null>(null)
 
-const searchForm = reactive({
-  keyword: ''
-})
+// 分配管理员弹窗
+const assignDialogVisible = ref(false)
+const assigning = ref(false)
+const currentDeptId = ref<number | null>(null)
+const allAdmins = ref<any[]>([])
+const selectedAdminIds = ref<number[]>([])
 
-const pagination = reactive({
-  page: 1,
-  page_size: 20,
-  total: 0
-})
-
-const tableData = ref<Department[]>([])
-
+// 表单数据
 const formData = reactive({
-  id: undefined as number | undefined,
   name: '',
   description: '',
   sort_order: 0,
-  status: 1
+  status: 'active'
 })
 
-const formRules: FormRules = {
-  name: [
-    { required: true, message: '请输入部门名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
-  ]
+// 表单验证规则
+const rules = {
+  name: [{ required: true, message: '请输入部门名称', trigger: 'blur' }]
 }
 
-const fetchDepartments = async () => {
+// 获取列表数据
+const fetchList = async () => {
   loading.value = true
   try {
-    const data = await request.get({
-      url: '/api/admin/ticket-depts',
-      params: {
-        page: pagination.page,
-        page_size: pagination.page_size,
-        ...searchForm
-      }
-    })
-    tableData.value = data.list || []
-    pagination.total = data.total || 0
+    const data = await request.get({ url: '/api/admin/ticket-departments' })
+    tableData.value = data || []
   } catch (error) {
     console.error('获取部门列表失败:', error)
-    ElMessage.error('获取部门列表失败')
   } finally {
     loading.value = false
   }
 }
 
-const handleSearch = () => {
-  pagination.page = 1
-  fetchDepartments()
-}
-
-const handleReset = () => {
-  searchForm.keyword = ''
-  handleSearch()
-}
-
+// 添加部门
 const handleAdd = () => {
+  isEdit.value = false
   dialogTitle.value = '添加部门'
-  formData.id = undefined
+  editingId.value = null
   formData.name = ''
   formData.description = ''
   formData.sort_order = 0
-  formData.status = 1
+  formData.status = 'active'
   dialogVisible.value = true
 }
 
-const handleEdit = (row: Department) => {
+// 编辑部门
+const handleEdit = (row: any) => {
+  isEdit.value = true
   dialogTitle.value = '编辑部门'
-  Object.assign(formData, row)
+  editingId.value = row.id
+  formData.name = row.name
+  formData.description = row.description || ''
+  formData.sort_order = row.sort_order || 0
+  formData.status = row.status
   dialogVisible.value = true
 }
 
-const handleDelete = async (row: Department) => {
+// 切换状态
+const handleToggleStatus = async (row: any) => {
   try {
-    await request.del({
-      url: `/api/admin/ticket-depts/${row.id}`
-    })
-    ElMessage.success('删除成功')
-    fetchDepartments()
+    await request.post({ url: `/api/admin/ticket-departments/${row.id}/status`, data: { status: row.status } })
+    ElMessage.success('状态更新成功')
   } catch (error) {
-    ElMessage.error('删除失败')
+    console.error('更新状态失败:', error)
+    fetchList()
   }
 }
 
+// 删除部门
+const handleDelete = async (row: any) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除部门 "${row.name}" 吗？`, '确认删除', { type: 'warning' })
+    await request.delete({ url: `/api/admin/ticket-departments/${row.id}` })
+    ElMessage.success('删除成功')
+    fetchList()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+    }
+  }
+}
+
+// 分配管理员
+const handleAssignAdmin = async (row: any) => {
+  currentDeptId.value = row.id
+  try {
+    const [adminsData, deptData] = await Promise.all([
+      request.get({ url: '/api/admin/admins' }),
+      request.get({ url: `/api/admin/ticket-departments/${row.id}/admins` })
+    ])
+    allAdmins.value = adminsData?.list || adminsData || []
+    selectedAdminIds.value = deptData?.admin_ids || []
+  } catch (error) {
+    console.error('获取管理员数据失败:', error)
+  }
+  assignDialogVisible.value = true
+}
+
+// 保存分配
+const handleSaveAssign = async () => {
+  if (!currentDeptId.value) return
+  assigning.value = true
+  try {
+    await request.post({
+      url: `/api/admin/ticket-departments/${currentDeptId.value}/admins`,
+      data: { admin_ids: selectedAdminIds.value }
+    })
+    ElMessage.success('分配成功')
+    assignDialogVisible.value = false
+    fetchList()
+  } catch (error) {
+    console.error('分配失败:', error)
+  } finally {
+    assigning.value = false
+  }
+}
+
+// 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return
-
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-
-    submitLoading.value = true
-    try {
-      if (formData.id) {
-        await request.put({
-          url: `/api/admin/ticket-depts/${formData.id}`,
-          params: formData
-        })
-      } else {
-        await request.post({
-          url: '/api/admin/ticket-depts',
-          params: formData
-        })
-      }
-
-      ElMessage.success(formData.id ? '更新成功' : '添加成功')
-      dialogVisible.value = false
-      fetchDepartments()
-    } catch (error) {
-      ElMessage.error('操作失败')
-    } finally {
-      submitLoading.value = false
+  try {
+    await formRef.value.validate()
+    submitting.value = true
+    if (isEdit.value && editingId.value) {
+      await request.put({ url: `/api/admin/ticket-departments/${editingId.value}`, data: formData })
+      ElMessage.success('更新成功')
+    } else {
+      await request.post({ url: '/api/admin/ticket-departments', data: formData })
+      ElMessage.success('添加成功')
     }
-  })
+    dialogVisible.value = false
+    fetchList()
+  } catch (error) {
+    console.error('提交失败:', error)
+  } finally {
+    submitting.value = false
+  }
 }
 
-const handleSizeChange = () => {
-  pagination.page = 1
-  fetchDepartments()
-}
-
-const handlePageChange = () => {
-  fetchDepartments()
+// 弹窗关闭
+const handleDialogClose = () => {
+  formRef.value?.resetFields()
 }
 
 onMounted(() => {
-  fetchDepartments()
+  fetchList()
 })
 </script>
 
 <style scoped lang="scss">
-.ticket-departments-page {
-  padding: 20px;
+.department-page {
+  padding: 16px;
 }
 
-.card-header {
+.action-card {
+  margin-bottom: 16px;
+}
+
+.action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.search-form {
-  margin-bottom: 20px;
-}
-
-.pagination-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
+.table-card {
+  :deep(.el-card__body) {
+    padding: 0;
+  }
 }
 </style>

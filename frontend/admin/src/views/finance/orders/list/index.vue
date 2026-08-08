@@ -1,115 +1,160 @@
 <template>
   <div class="order-list-page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>订单列表</span>
-          <el-button type="primary" @click="handleExport">
-            <el-icon><Download /></el-icon>
-            导出
-          </el-button>
-        </div>
-      </template>
+    <!-- 标签页切换 -->
+    <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+      <el-tab-pane label="全部订单" name="all" />
+      <el-tab-pane label="待付款" name="pending_payment" />
+      <el-tab-pane label="待开通" name="pending_activation" />
+      <el-tab-pane label="进行中" name="active" />
+      <el-tab-pane label="已完成" name="completed" />
+      <el-tab-pane label="已取消" name="cancelled" />
+      <el-tab-pane label="已退款" name="refunded" />
+    </el-tabs>
 
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="订单号">
-          <el-input v-model="searchForm.order_no" placeholder="请输入订单号" clearable />
+    <!-- 搜索筛选区域 -->
+    <el-card shadow="never" class="search-card">
+      <el-form :model="searchForm" inline>
+        <el-form-item label="关键词">
+          <el-input
+            v-model="searchForm.keyword"
+            placeholder="订单号/客户名/产品名"
+            clearable
+            style="width: 200px"
+            @keyup.enter="handleSearch"
+          />
         </el-form-item>
-        <el-form-item label="客户">
-          <el-input v-model="searchForm.client_name" placeholder="请输入客户名" clearable />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
-            <el-option label="待付款" :value="0" />
-            <el-option label="待审核" :value="1" />
-            <el-option label="审核通过" :value="2" />
-            <el-option label="已开通" :value="3" />
-            <el-option label="已完成" :value="4" />
-            <el-option label="已取消" :value="5" />
-            <el-option label="已退款" :value="6" />
+        <el-form-item label="订单类型">
+          <el-select v-model="searchForm.type" placeholder="全部" clearable style="width: 120px">
+            <el-option label="新购" value="new" />
+            <el-option label="续费" value="renewal" />
+            <el-option label="升级" value="upgrade" />
+            <el-option label="退款" value="refund" />
           </el-select>
         </el-form-item>
-        <el-form-item label="日期范围">
+        <el-form-item label="支付方式">
+          <el-select v-model="searchForm.payment_method" placeholder="全部" clearable style="width: 120px">
+            <el-option v-for="method in paymentMethods" :key="method.id" :label="method.name" :value="method.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="下单时间">
           <el-date-picker
             v-model="searchForm.date_range"
             type="daterange"
             range-separator="至"
             start-placeholder="开始日期"
             end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
+            style="width: 240px"
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
+    </el-card>
 
-      <!-- 数据表格 -->
-      <el-table :data="tableData" v-loading="loading" style="width: 100%" border>
-        <el-table-column prop="id" label="ID" width="70" align="center" />
-        <el-table-column prop="order_no" label="订单号" width="170">
+    <!-- 操作栏 -->
+    <el-card shadow="never" class="action-card">
+      <div class="action-bar">
+        <div class="action-left">
+          <el-button type="primary" @click="handleAdd">
+            <el-icon><Plus /></el-icon>
+            添加订单
+          </el-button>
+          <el-button @click="handleExport">
+            <el-icon><Download /></el-icon>
+            导出
+          </el-button>
+        </div>
+        <div class="action-right">
+          <el-button circle @click="fetchList">
+            <el-icon><Refresh /></el-icon>
+          </el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 数据表格 -->
+    <el-card shadow="never" class="table-card">
+      <el-table
+        v-loading="loading"
+        :data="tableData"
+        border
+        stripe
+        @sort-change="handleSortChange"
+      >
+        <el-table-column prop="id" label="ID" width="80" sortable="custom" align="center" />
+        <el-table-column prop="order_no" label="订单号" width="150">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleViewDetail(row)">
+            <el-button type="primary" link @click="handleView(row)">
               {{ row.order_no }}
             </el-button>
           </template>
         </el-table-column>
-        <el-table-column prop="client_name" label="客户" width="120" />
-        <el-table-column prop="product_name" label="产品/服务" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="amount" label="金额" width="110" align="right">
+        <el-table-column prop="client_name" label="客户" min-width="120">
           <template #default="{ row }">
-            <span class="amount-text">¥{{ formatAmount(row.amount) }}</span>
+            <el-button type="primary" link @click="handleViewClient(row)">
+              {{ row.client_name }}
+            </el-button>
           </template>
         </el-table-column>
-        <el-table-column prop="pay_method" label="支付方式" width="100" align="center">
+        <el-table-column prop="product_name" label="产品" min-width="150" />
+        <el-table-column prop="type" label="类型" width="80" align="center">
           <template #default="{ row }">
-            {{ row.pay_method || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getOrderStatusType(row.status)" size="small">
-              {{ getOrderStatusText(row.status) }}
+            <el-tag :type="getTypeTagType(row.type)" size="small">
+              {{ getTypeText(row.type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="下单时间" width="170" />
-        <el-table-column label="操作" width="180" fixed="right" align="center">
+        <el-table-column prop="amount" label="金额" width="100" align="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleViewDetail(row)">详情</el-button>
+            ¥{{ formatMoney(row.amount) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="payment_method" label="支付方式" width="100" />
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status)" size="small">
+              {{ getStatusText(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" label="下单时间" width="170" sortable="custom" />
+        <el-table-column label="操作" width="150" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="handleView(row)">
+              查看
+            </el-button>
             <el-button
-              v-if="row.status === 1"
+              v-if="row.status === 'pending_payment'"
               type="success"
               link
-              @click="handleAudit(row, 2)"
+              size="small"
+              @click="handleConfirmPayment(row)"
             >
-              通过
+              确认付款
             </el-button>
             <el-button
-              v-if="row.status === 1"
-              type="danger"
+              v-if="row.status === 'pending_activation'"
+              type="warning"
               link
-              @click="handleAudit(row, 5)"
+              size="small"
+              @click="handleActivate(row)"
             >
-              驳回
+              开通
             </el-button>
-            <el-popconfirm
-              v-if="row.status === 0"
-              title="确定取消该订单吗？"
-              @confirm="handleAudit(row, 5)"
-            >
-              <template #reference>
-                <el-button type="danger" link>取消</el-button>
-              </template>
-            </el-popconfirm>
           </template>
         </el-table-column>
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-container">
+      <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.page_size"
@@ -121,71 +166,28 @@
         />
       </div>
     </el-card>
-
-    <!-- 订单详情对话框 -->
-    <el-dialog v-model="detailVisible" title="订单详情" width="750px" destroy-on-close>
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="订单号">{{ detailData.order_no }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="getOrderStatusType(detailData.status)" size="small">
-            {{ getOrderStatusText(detailData.status) }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="客户名称">{{ detailData.client_name }}</el-descriptions-item>
-        <el-descriptions-item label="客户邮箱">{{ detailData.client_email || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="产品/服务" :span="2">{{ detailData.product_name }}</el-descriptions-item>
-        <el-descriptions-item label="金额">
-          <span class="amount-text">¥{{ formatAmount(detailData.amount) }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="支付方式">{{ detailData.pay_method || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="下单时间">{{ detailData.created_at }}</el-descriptions-item>
-        <el-descriptions-item label="更新时间">{{ detailData.updated_at || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="备注" :span="2">{{ detailData.remark || '无' }}</el-descriptions-item>
-      </el-descriptions>
-
-      <!-- 审核区域 -->
-      <div v-if="detailData.status === 1" class="audit-section">
-        <el-divider content-position="left">审核操作</el-divider>
-        <el-input
-          v-model="auditRemark"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入审核备注（可选）"
-        />
-        <div class="audit-actions">
-          <el-button type="success" @click="handleAuditFromDetail(2)" :loading="auditLoading">
-            审核通过
-          </el-button>
-          <el-button type="danger" @click="handleAuditFromDetail(5)" :loading="auditLoading">
-            审核驳回
-          </el-button>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Download } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Plus, Download } from '@element-plus/icons-vue'
 import request from '@/utils/http'
-import { exportToCSV } from '@/utils/export'
 
-// 加载状态
+const router = useRouter()
 const loading = ref(false)
-const auditLoading = ref(false)
+const tableData = ref([])
+const activeTab = ref('all')
+const paymentMethods = ref<{ id: number; name: string }[]>([])
 
 // 搜索表单
 const searchForm = reactive({
-  order_no: '',
-  client_name: '',
-  status: undefined as number | undefined,
-  date_range: [] as string[]
+  keyword: '',
+  type: '',
+  payment_method: '',
+  date_range: null as [Date, Date] | null
 })
 
 // 分页
@@ -195,64 +197,98 @@ const pagination = reactive({
   total: 0
 })
 
-// 表格数据
-const tableData = ref<any[]>([])
-
-// 详情对话框
-const detailVisible = ref(false)
-const detailData = ref<any>({})
-const auditRemark = ref('')
-
-// 订单状态映射
-const ORDER_STATUS_MAP: Record<number, { text: string; type: string }> = {
-  0: { text: '待付款', type: 'warning' },
-  1: { text: '待审核', type: 'primary' },
-  2: { text: '审核通过', type: 'success' },
-  3: { text: '已开通', type: 'success' },
-  4: { text: '已完成', type: 'info' },
-  5: { text: '已取消', type: 'info' },
-  6: { text: '已退款', type: 'danger' }
-}
-
-// 获取订单状态文本
-const getOrderStatusText = (status: number) => {
-  return ORDER_STATUS_MAP[status]?.text || '未知'
-}
-
-// 获取订单状态类型
-const getOrderStatusType = (status: number) => {
-  return (ORDER_STATUS_MAP[status]?.type || 'info') as any
-}
+// 排序
+const sortParams = reactive({
+  sort: 'created_at',
+  order: 'desc'
+})
 
 // 格式化金额
-const formatAmount = (amount: number | undefined) => {
-  return amount?.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'
+const formatMoney = (amount: number) => {
+  if (!amount) return '0.00'
+  return Number(amount).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// 获取订单列表
-const fetchOrders = async () => {
+// 类型标签
+const getTypeTagType = (type: string) => {
+  const map: Record<string, string> = {
+    new: 'primary',
+    renewal: 'success',
+    upgrade: 'warning',
+    refund: 'danger'
+  }
+  return map[type] || 'info'
+}
+
+// 类型文本
+const getTypeText = (type: string) => {
+  const map: Record<string, string> = {
+    new: '新购',
+    renewal: '续费',
+    upgrade: '升级',
+    refund: '退款'
+  }
+  return map[type] || '未知'
+}
+
+// 状态类型
+const getStatusType = (status: string) => {
+  const map: Record<string, string> = {
+    pending_payment: 'warning',
+    pending_activation: 'primary',
+    active: 'success',
+    completed: 'success',
+    cancelled: 'info',
+    refunded: 'danger'
+  }
+  return map[status] || 'info'
+}
+
+// 状态文本
+const getStatusText = (status: string) => {
+  const map: Record<string, string> = {
+    pending_payment: '待付款',
+    pending_activation: '待开通',
+    active: '进行中',
+    completed: '已完成',
+    cancelled: '已取消',
+    refunded: '已退款'
+  }
+  return map[status] || '未知'
+}
+
+// 标签页切换
+const handleTabChange = (tab: string) => {
+  searchForm.type = ''
+  pagination.page = 1
+  fetchList()
+}
+
+// 获取列表数据
+const fetchList = async () => {
   loading.value = true
   try {
     const params: any = {
       page: pagination.page,
       page_size: pagination.page_size,
-      order_no: searchForm.order_no || undefined,
-      client_name: searchForm.client_name || undefined,
-      status: searchForm.status
+      sort: sortParams.sort,
+      order: sortParams.order
     }
-    if (searchForm.date_range?.length === 2) {
-      params.start_date = searchForm.date_range[0]
-      params.end_date = searchForm.date_range[1]
+
+    if (activeTab.value !== 'all') params.status = activeTab.value
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+    if (searchForm.type) params.type = searchForm.type
+    if (searchForm.payment_method) params.payment_method = searchForm.payment_method
+    if (searchForm.date_range) {
+      params.start_date = searchForm.date_range[0].toISOString().split('T')[0]
+      params.end_date = searchForm.date_range[1].toISOString().split('T')[0]
     }
-    const data = await request.get({
-      url: '/api/admin/orders',
-      params
-    })
+
+    const data = await request.get({ url: '/api/admin/orders', params })
     tableData.value = data.list || []
     pagination.total = data.total || 0
   } catch (error) {
     console.error('获取订单列表失败:', error)
-    ElMessage.error('获取订单列表失败')
   } finally {
     loading.value = false
   }
@@ -261,137 +297,155 @@ const fetchOrders = async () => {
 // 搜索
 const handleSearch = () => {
   pagination.page = 1
-  fetchOrders()
+  fetchList()
 }
 
 // 重置
 const handleReset = () => {
-  searchForm.order_no = ''
-  searchForm.client_name = ''
-  searchForm.status = undefined
-  searchForm.date_range = []
-  handleSearch()
+  searchForm.keyword = ''
+  searchForm.type = ''
+  searchForm.payment_method = ''
+  searchForm.date_range = null
+  pagination.page = 1
+  fetchList()
 }
 
-// 查看详情
-const handleViewDetail = (row: any) => {
-  detailData.value = { ...row }
-  auditRemark.value = ''
-  detailVisible.value = true
+// 排序变化
+const handleSortChange = ({ prop, order }: any) => {
+  sortParams.sort = prop || 'created_at'
+  sortParams.order = order === 'ascending' ? 'asc' : 'desc'
+  fetchList()
 }
 
-// 快速审核
-const handleAudit = async (row: any, targetStatus: number) => {
-  const action = targetStatus === 2 ? '通过' : '驳回'
+// 分页大小变化
+const handleSizeChange = (size: number) => {
+  pagination.page_size = size
+  pagination.page = 1
+  fetchList()
+}
+
+// 页码变化
+const handlePageChange = (page: number) => {
+  pagination.page = page
+  fetchList()
+}
+
+// 添加订单
+const handleAdd = () => {
+  router.push('/add-order')
+}
+
+// 查看订单
+const handleView = (row: any) => {
+  router.push(`/order-detail/${row.id}`)
+}
+
+// 查看客户
+const handleViewClient = (row: any) => {
+  router.push(`/customer-view/${row.client_id}`)
+}
+
+// 确认付款
+const handleConfirmPayment = async (row: any) => {
   try {
-    await ElMessageBox.confirm(`确定要${action}该订单吗？`, '审核确认', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(`确定要确认订单 "${row.order_no}" 已付款吗？`, '确认付款', {
       type: 'warning'
     })
-    await request.post({
-      url: `/api/admin/orders/${row.id}/status`,
-      params: { status: targetStatus }
-    })
-    ElMessage.success(`订单${action}成功`)
-    fetchOrders()
-  } catch (error: any) {
+    await request.post({ url: `/api/admin/orders/${row.id}/confirm-payment` })
+    ElMessage.success('确认付款成功')
+    fetchList()
+  } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error(`订单${action}失败`)
+      console.error('确认付款失败:', error)
     }
   }
 }
 
-// 从详情页审核
-const handleAuditFromDetail = async (targetStatus: number) => {
-  const action = targetStatus === 2 ? '通过' : '驳回'
-  auditLoading.value = true
+// 开通订单
+const handleActivate = async (row: any) => {
   try {
-    await request.post({
-      url: `/api/admin/orders/${detailData.value.id}/status`,
-      params: {
-        status: targetStatus,
-        remark: auditRemark.value || undefined
-      }
+    await ElMessageBox.confirm(`确定要开通订单 "${row.order_no}" 吗？`, '确认开通', {
+      type: 'warning'
     })
-    ElMessage.success(`订单${action}成功`)
-    detailVisible.value = false
-    fetchOrders()
+    await request.post({ url: `/api/admin/orders/${row.id}/activate` })
+    ElMessage.success('开通成功')
+    fetchList()
   } catch (error) {
-    ElMessage.error(`订单${action}失败`)
-  } finally {
-    auditLoading.value = false
+    if (error !== 'cancel') {
+      console.error('开通失败:', error)
+    }
   }
 }
 
 // 导出
 const handleExport = async () => {
   try {
-    const data = await request.get({ url: '/api/admin/orders', params: { page: 1, page_size: 9999, ...searchForm } })
-    const list = data.list || data || []
-    exportToCSV(list, [
-      { key: 'id', title: 'ID' },
-      { key: 'order_no', title: '订单号' },
-      { key: 'user_id', title: '用户ID' },
-      { key: 'product_name', title: '产品' },
-      { key: 'total_price', title: '金额' },
-      { key: 'status', title: '状态' },
-      { key: 'created_at', title: '创建时间' }
-    ], '订单列表')
-    ElMessage.success('导出成功')
-  } catch { ElMessage.error('导出失败') }
-}
+    const params: any = {}
+    if (activeTab.value !== 'all') params.status = activeTab.value
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+    if (searchForm.type) params.type = searchForm.type
 
-// 分页大小变化
-const handleSizeChange = () => {
-  pagination.page = 1
-  fetchOrders()
-}
+    const response = await request.get({
+      url: '/api/admin/orders/export',
+      params,
+      responseType: 'blob'
+    })
 
-// 页码变化
-const handlePageChange = () => {
-  fetchOrders()
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `订单列表_${new Date().toISOString().split('T')[0]}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('导出失败:', error)
+  }
 }
 
 onMounted(() => {
-  fetchOrders()
+  fetchList()
 })
 </script>
 
 <style scoped lang="scss">
 .order-list-page {
-  padding: 20px;
+  padding: 16px;
 }
 
-.card-header {
+.search-card {
+  margin-bottom: 16px;
+
+  :deep(.el-card__body) {
+    padding-bottom: 0;
+  }
+}
+
+.action-card {
+  margin-bottom: 16px;
+}
+
+.action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.search-form {
-  margin-bottom: 20px;
+.action-left {
+  display: flex;
+  gap: 8px;
 }
 
-.amount-text {
-  font-weight: 600;
-  color: #f56c6c;
+.table-card {
+  :deep(.el-card__body) {
+    padding: 0;
+  }
 }
 
-.pagination-container {
+.pagination-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.audit-section {
-  margin-top: 16px;
-
-  .audit-actions {
-    margin-top: 12px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-  }
+  padding: 16px;
 }
 </style>

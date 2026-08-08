@@ -1,81 +1,81 @@
 <template>
   <div class="product-list-page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>产品列表</span>
+    <!-- 标签页 -->
+    <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+      <el-tab-pane label="全部产品" name="all" />
+      <el-tab-pane label="独立服务器" name="server" />
+      <el-tab-pane label="云服务器" name="cloud" />
+      <el-tab-pane label="虚拟主机" name="hosting" />
+      <el-tab-pane label="域名" name="domain" />
+      <el-tab-pane label="SSL证书" name="ssl" />
+      <el-tab-pane label="其他" name="other" />
+    </el-tabs>
+
+    <!-- 操作栏 -->
+    <el-card shadow="never" class="action-card">
+      <div class="action-bar">
+        <div class="action-left">
           <el-button type="primary" @click="handleAdd">
             <el-icon><Plus /></el-icon>
             添加产品
           </el-button>
+          <el-button @click="handleExport">
+            <el-icon><Download /></el-icon>
+            导出
+          </el-button>
         </div>
-      </template>
+        <div class="action-right">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索产品名称"
+            clearable
+            style="width: 200px"
+            @keyup.enter="fetchList"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          <el-button circle @click="fetchList">
+            <el-icon><Refresh /></el-icon>
+          </el-button>
+        </div>
+      </div>
+    </el-card>
 
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="产品名称/描述" clearable />
-        </el-form-item>
-        <el-form-item label="分组">
-          <el-select v-model="searchForm.group_id" placeholder="全部" clearable>
-            <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
-            <el-option label="上架" :value="1" />
-            <el-option label="下架" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-
-      <!-- 数据表格 -->
-      <el-table :data="tableData" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="产品名称" min-width="180" />
-        <el-table-column prop="group_name" label="所属分组" width="120" />
-        <el-table-column prop="price" label="价格" width="120">
+    <!-- 数据表格 -->
+    <el-card shadow="never" class="table-card">
+      <el-table v-loading="loading" :data="tableData" border stripe>
+        <el-table-column prop="id" label="ID" width="80" align="center" />
+        <el-table-column prop="name" label="产品名称" min-width="200" />
+        <el-table-column prop="category" label="分类" width="100" />
+        <el-table-column prop="price" label="价格" width="120" align="right">
+          <template #default="{ row }">¥{{ formatMoney(row.price) }}</template>
+        </el-table-column>
+        <el-table-column prop="billing_cycle" label="计费周期" width="100" />
+        <el-table-column prop="stock" label="库存" width="80" align="center" />
+        <el-table-column prop="sales" label="销量" width="80" align="center" />
+        <el-table-column prop="status" label="状态" width="80" align="center">
           <template #default="{ row }">
-            ¥{{ row.price?.toFixed(2) || '0.00' }}
+            <el-switch
+              v-model="row.status"
+              :active-value="'active'"
+              :inactive-value="'disabled'"
+              @change="handleToggleStatus(row)"
+            />
           </template>
         </el-table-column>
-        <el-table-column prop="billing_cycle" label="计费周期" width="100">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            {{ getBillingCycleText(row.billing_cycle) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="stock" label="库存" width="80" />
-        <el-table-column prop="sales" label="销量" width="80" />
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
-              {{ row.status === 1 ? '上架' : '下架' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="sort" label="排序" width="80" />
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="250" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-button :type="row.status === 1 ? 'warning' : 'success'" link @click="handleToggleStatus(row)">
-              {{ row.status === 1 ? '下架' : '上架' }}
-            </el-button>
-            <el-popconfirm title="确定删除该产品吗？" @confirm="handleDelete(row)">
-              <template #reference>
-                <el-button type="danger" link>删除</el-button>
-              </template>
-            </el-popconfirm>
+            <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button type="warning" link size="small" @click="handlePricing(row)">定价</el-button>
+            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-container">
+      <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.page_size"
@@ -87,309 +87,134 @@
         />
       </div>
     </el-card>
-
-    <!-- 添加/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="700px">
-      <el-form :model="formData" :rules="formRules" ref="formRef" label-width="100px">
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="产品名称" prop="name">
-              <el-input v-model="formData.name" placeholder="请输入产品名称" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="所属分组" prop="group_id">
-              <el-select v-model="formData.group_id" placeholder="请选择分组" style="width: 100%">
-                <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="价格" prop="price">
-              <el-input-number v-model="formData.price" :min="0" :precision="2" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="计费周期" prop="billing_cycle">
-              <el-select v-model="formData.billing_cycle" placeholder="请选择计费周期" style="width: 100%">
-                <el-option label="月付" value="monthly" />
-                <el-option label="季付" value="quarterly" />
-                <el-option label="半年付" value="semi_annually" />
-                <el-option label="年付" value="annually" />
-                <el-option label="一次性" value="onetime" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="库存" prop="stock">
-              <el-input-number v-model="formData.stock" :min="-1" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="排序" prop="sort">
-              <el-input-number v-model="formData.sort" :min="0" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="产品描述" prop="description">
-          <el-input v-model="formData.description" type="textarea" :rows="4" placeholder="请输入产品描述" />
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-switch v-model="formData.status" :active-value="1" :inactive-value="0" active-text="上架" inactive-text="下架" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Search, Refresh, Download } from '@element-plus/icons-vue'
 import request from '@/utils/http'
 
-defineOptions({ name: 'ProductList' })
-
-// 加载状态
+const router = useRouter()
 const loading = ref(false)
-const submitLoading = ref(false)
-
-// 搜索表单
-const searchForm = reactive({
-  keyword: '',
-  group_id: undefined as number | undefined,
-  status: undefined as number | undefined
-})
+const tableData = ref([])
+const activeTab = ref('all')
+const searchKeyword = ref('')
 
 // 分页
-const pagination = reactive({
-  page: 1,
-  page_size: 20,
-  total: 0
-})
+const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
-// 表格数据
-const tableData = ref<any[]>([])
-
-// 分组数据
-const groups = ref<any[]>([])
-
-// 对话框
-const dialogVisible = ref(false)
-const dialogTitle = ref('添加产品')
-const formRef = ref<FormInstance>()
-
-// 表单数据
-const formData = reactive({
-  id: undefined as number | undefined,
-  name: '',
-  group_id: undefined as number | undefined,
-  price: 0,
-  billing_cycle: 'monthly',
-  stock: -1,
-  sort: 0,
-  description: '',
-  status: 1
-})
-
-// 表单验证规则
-const formRules: FormRules = {
-  name: [
-    { required: true, message: '请输入产品名称', trigger: 'blur' },
-    { min: 2, max: 100, message: '长度在 2 到 100 个字符', trigger: 'blur' }
-  ],
-  group_id: [
-    { required: true, message: '请选择所属分组', trigger: 'change' }
-  ],
-  price: [
-    { required: true, message: '请输入价格', trigger: 'blur' }
-  ],
-  billing_cycle: [
-    { required: true, message: '请选择计费周期', trigger: 'change' }
-  ]
+// 格式化金额
+const formatMoney = (amount: number) => {
+  if (!amount) return '0.00'
+  return Number(amount).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// 获取计费周期文本
-const getBillingCycleText = (cycle: string) => {
-  const map: Record<string, string> = {
-    monthly: '月付',
-    quarterly: '季付',
-    semi_annually: '半年付',
-    annually: '年付',
-    onetime: '一次性'
-  }
-  return map[cycle] || cycle
-}
+// 标签页切换
+const handleTabChange = () => { pagination.page = 1; fetchList() }
 
-// 获取产品列表
-const fetchProducts = async () => {
+// 获取列表数据
+const fetchList = async () => {
   loading.value = true
   try {
-    const data = await request.get({
-      url: '/api/admin/products',
-      params: {
-        page: pagination.page,
-        page_size: pagination.page_size,
-        ...searchForm
-      }
-    })
-    tableData.value = data.list || []
-    pagination.total = data.total || 0
+    const params: any = { page: pagination.page, page_size: pagination.page_size }
+    if (activeTab.value !== 'all') params.category = activeTab.value
+    if (searchKeyword.value) params.keyword = searchKeyword.value
+    const data = await request.get({ url: '/api/admin/products', params })
+    tableData.value = data?.list || []
+    pagination.total = data?.total || 0
   } catch (error) {
     console.error('获取产品列表失败:', error)
-    ElMessage.error('获取产品列表失败')
   } finally {
     loading.value = false
   }
 }
 
-// 获取分组列表
-const fetchGroups = async () => {
-  try {
-    const data = await request.get({
-      url: '/api/admin/product-groups'
-    })
-    groups.value = data || []
-  } catch (error) {
-    console.error('获取分组列表失败:', error)
-  }
-}
+// 分页
+const handleSizeChange = (size: number) => { pagination.page_size = size; pagination.page = 1; fetchList() }
+const handlePageChange = (page: number) => { pagination.page = page; fetchList() }
 
-// 搜索
-const handleSearch = () => {
-  pagination.page = 1
-  fetchProducts()
-}
+// 添加产品
+const handleAdd = () => { router.push('/product-add') }
 
-// 重置
-const handleReset = () => {
-  searchForm.keyword = ''
-  searchForm.group_id = undefined
-  searchForm.status = undefined
-  handleSearch()
-}
+// 编辑产品
+const handleEdit = (row: any) => { router.push(`/product-edit/${row.id}`) }
 
-// 添加
-const handleAdd = () => {
-  dialogTitle.value = '添加产品'
-  formData.id = undefined
-  formData.name = ''
-  formData.group_id = undefined
-  formData.price = 0
-  formData.billing_cycle = 'monthly'
-  formData.stock = -1
-  formData.sort = 0
-  formData.description = ''
-  formData.status = 1
-  dialogVisible.value = true
-}
+// 定价
+const handlePricing = (row: any) => { router.push(`/product-pricing/${row.id}`) }
 
-// 编辑
-const handleEdit = (row: any) => {
-  dialogTitle.value = '编辑产品'
-  Object.assign(formData, row)
-  dialogVisible.value = true
-}
-
-// 切换上下架状态
+// 切换状态
 const handleToggleStatus = async (row: any) => {
   try {
-    await request.put({
-      url: `/api/admin/products/${row.id}`,
-      params: { status: row.status === 1 ? 0 : 1 }
-    })
-    ElMessage.success(row.status === 1 ? '下架成功' : '上架成功')
-    fetchProducts()
+    await request.post({ url: `/api/admin/products/${row.id}/status`, data: { status: row.status } })
+    ElMessage.success('状态更新成功')
   } catch (error) {
-    ElMessage.error('操作失败')
+    console.error('更新状态失败:', error)
+    fetchList()
   }
 }
 
-// 删除
+// 删除产品
 const handleDelete = async (row: any) => {
   try {
-    await request.del({
-      url: `/api/admin/products/${row.id}`
-    })
+    await ElMessageBox.confirm(`确定要删除产品 "${row.name}" 吗？`, '确认删除', { type: 'warning' })
+    await request.delete({ url: `/api/admin/products/${row.id}` })
     ElMessage.success('删除成功')
-    fetchProducts()
+    fetchList()
   } catch (error) {
-    ElMessage.error('删除失败')
+    if (error !== 'cancel') console.error('删除失败:', error)
   }
 }
 
-// 提交表单
-const handleSubmit = async () => {
-  if (!formRef.value) return
-
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-
-    submitLoading.value = true
-    try {
-      const url = formData.id ? `/api/admin/products/${formData.id}` : '/api/admin/products'
-
-      if (formData.id) {
-        await request.put({ url, params: formData })
-      } else {
-        await request.post({ url, params: formData })
-      }
-
-      ElMessage.success(formData.id ? '更新成功' : '添加成功')
-      dialogVisible.value = false
-      fetchProducts()
-    } catch (error) {
-      ElMessage.error('操作失败')
-    } finally {
-      submitLoading.value = false
-    }
-  })
+// 导出
+const handleExport = async () => {
+  try {
+    const response = await request.get({ url: '/api/admin/products/export', responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `产品列表_${new Date().toISOString().split('T')[0]}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('导出失败:', error)
+  }
 }
 
-// 分页大小变化
-const handleSizeChange = () => {
-  pagination.page = 1
-  fetchProducts()
-}
-
-// 页码变化
-const handlePageChange = () => {
-  fetchProducts()
-}
-
-onMounted(() => {
-  fetchProducts()
-  fetchGroups()
-})
+onMounted(() => { fetchList() })
 </script>
 
 <style scoped lang="scss">
 .product-list-page {
-  padding: 20px;
+  padding: 16px;
 }
 
-.card-header {
+.action-card {
+  margin-bottom: 16px;
+}
+
+.action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.search-form {
-  margin-bottom: 20px;
+.action-right {
+  display: flex;
+  gap: 8px;
 }
 
-.pagination-container {
+.table-card {
+  :deep(.el-card__body) { padding: 0; }
+}
+
+.pagination-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  padding: 16px;
 }
 </style>

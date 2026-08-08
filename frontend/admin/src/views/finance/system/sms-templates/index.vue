@@ -1,106 +1,58 @@
 <template>
   <div class="sms-templates-page">
-    <art-card title="短信模板管理" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>短信模板管理</span>
-          <el-button type="primary" @click="showCreateDialog">
-            <el-icon><Plus /></el-icon>
-            创建模板
-          </el-button>
-        </div>
-      </template>
+    <!-- 操作栏 -->
+    <el-card shadow="never" class="action-card">
+      <div class="action-bar">
+        <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon>添加模板</el-button>
+      </div>
+    </el-card>
 
-      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-        <!-- 短信配置 -->
-        <el-tab-pane label="短信配置" name="config">
-          <el-form :model="smsConfig" label-width="140px" style="max-width: 600px" v-loading="configLoading">
-            <el-form-item label="启用国内短信">
-              <el-switch v-model="smsConfig.shd_allow_sms_send" :active-value="1" :inactive-value="0" />
-            </el-form-item>
-            <el-form-item label="国内短信供应商">
-              <el-select v-model="smsConfig.sms_operator" placeholder="选择供应商">
-                <el-option v-for="item in smsConfig.sms_operator_list" :key="item.label" :label="item.value" :value="item.label" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="启用国际短信">
-              <el-switch v-model="smsConfig.shd_allow_sms_send_global" :active-value="1" :inactive-value="0" />
-            </el-form-item>
-            <el-form-item label="国际短信供应商">
-              <el-select v-model="smsConfig.sms_operator_global" placeholder="选择供应商">
-                <el-option v-for="item in smsConfig.sms_operator_list" :key="item.label" :label="item.value" :value="item.label" />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="handleSaveConfig">保存配置</el-button>
-              <el-button @click="handleTestSms">测试发送</el-button>
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
+    <!-- 数据表格 -->
+    <el-card shadow="never" class="table-card">
+      <el-table v-loading="loading" :data="tableData" border stripe>
+        <el-table-column prop="id" label="ID" width="80" align="center" />
+        <el-table-column prop="name" label="模板名称" min-width="150" />
+        <el-table-column prop="code" label="模板编码" width="150" />
+        <el-table-column prop="content" label="内容" min-width="300" show-overflow-tooltip />
+        <el-table-column prop="status" label="状态" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">
+              {{ row.status === 'active' ? '启用' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
-        <!-- 模板列表 -->
-        <el-tab-pane label="短信模板" name="templates">
-          <div class="search-bar">
-            <el-input v-model="searchForm.template_id" placeholder="模板ID" clearable style="width: 200px" />
-            <el-input v-model="searchForm.title" placeholder="模板标题" clearable style="width: 200px" />
-            <el-button type="primary" @click="fetchTemplates">搜索</el-button>
-            <el-button @click="handleCheckStatus">刷新审核状态</el-button>
-          </div>
-
-          <el-table :data="templateList" v-loading="templateLoading" stripe border>
-            <el-table-column prop="id" label="编号" width="80" />
-            <el-table-column prop="template_id" label="模板ID" width="150" />
-            <el-table-column prop="type" label="类型" width="120" />
-            <el-table-column prop="title" label="模板标题" />
-            <el-table-column prop="content" label="模板内容" show-overflow-tooltip />
-            <el-table-column label="审核状态" width="120">
-              <template #default="{ row }">
-                <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="200" fixed="right">
-              <template #default="{ row }">
-                <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-                <el-button size="small" @click="handleSubmitCheck(row)">提交审核</el-button>
-                <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-
-          <el-pagination
-            v-model:current-page="pagination.page"
-            v-model:page-size="pagination.limit"
-            :total="pagination.total"
-            layout="total, sizes, prev, pager, next"
-            style="margin-top: 16px; justify-content: flex-end"
-            @size-change="fetchTemplates"
-            @current-change="fetchTemplates"
-          />
-        </el-tab-pane>
-      </el-tabs>
-    </art-card>
-
-    <!-- 创建/编辑模板对话框 -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑模板' : '创建模板'" width="600px">
-      <el-form :model="templateForm" :rules="templateRules" ref="templateFormRef" label-width="100px">
-        <el-form-item label="短信供应商" prop="sms_operator">
-          <el-select v-model="templateForm.sms_operator" placeholder="选择供应商">
-            <el-option v-for="item in smsConfig.sms_operator_list" :key="item.label" :label="item.value" :value="item.label" />
-          </el-select>
+    <!-- 添加/编辑弹窗 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" @close="formRef?.resetFields()">
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
+        <el-form-item label="模板名称" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入模板名称" />
         </el-form-item>
-        <el-form-item label="模板标题" prop="title">
-          <el-input v-model="templateForm.title" placeholder="请输入模板标题" />
+        <el-form-item label="模板编码" prop="code">
+          <el-input v-model="formData.code" placeholder="请输入模板编码" :disabled="isEdit" />
         </el-form-item>
-        <el-form-item label="模板内容" prop="content">
-          <el-input v-model="templateForm.content" type="textarea" :rows="4" placeholder="请输入模板内容，变量用{变量名}表示" />
+        <el-form-item label="短信内容" prop="content">
+          <el-input v-model="formData.content" type="textarea" :rows="5" placeholder="请输入短信内容，使用 {变量名} 作为占位符" />
+          <div class="form-tip">可用变量: {username}, {code}, {product}, {amount}, {date}</div>
         </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="templateForm.remark" placeholder="可选备注" />
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="formData.status">
+            <el-radio value="active">启用</el-radio>
+            <el-radio value="disabled">禁用</el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveTemplate" :loading="saveLoading">确定</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -108,196 +60,94 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
+import type { FormInstance } from 'element-plus'
 import request from '@/utils/http'
 
-const activeTab = ref('config')
-const configLoading = ref(false)
-const templateLoading = ref(false)
-const saveLoading = ref(false)
+const loading = ref(false)
+const tableData = ref([])
 const dialogVisible = ref(false)
+const dialogTitle = ref('添加模板')
 const isEdit = ref(false)
+const submitting = ref(false)
+const formRef = ref<FormInstance>()
 const editingId = ref<number | null>(null)
-const templateFormRef = ref<FormInstance>()
 
-const smsConfig = reactive({
-  shd_allow_sms_send: 0,
-  shd_allow_sms_send_global: 0,
-  sms_operator: '',
-  sms_operator_global: '',
-  sms_operator_list: [] as Array<{ label: string; value: string }>
-})
-
-const searchForm = reactive({ template_id: '', title: '' })
-const pagination = reactive({ page: 1, limit: 10, total: 0 })
-const templateList = ref<any[]>([])
-
-const templateForm = reactive({
-  sms_operator: '',
-  title: '',
-  content: '',
-  remark: '',
-  range_type: 0
-})
-
-const templateRules: FormRules = {
-  sms_operator: [{ required: true, message: '请选择供应商', trigger: 'change' }],
-  title: [{ required: true, message: '请输入模板标题', trigger: 'blur' }],
-  content: [{ required: true, message: '请输入模板内容', trigger: 'blur' }]
+const formData = reactive({ name: '', code: '', content: '', status: 'active' })
+const rules = {
+  name: [{ required: true, message: '请输入模板名称', trigger: 'blur' }],
+  code: [{ required: true, message: '请输入模板编码', trigger: 'blur' }],
+  content: [{ required: true, message: '请输入短信内容', trigger: 'blur' }]
 }
 
-const getStatusType = (status: number) => {
-  const map: Record<number, any> = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
-  return map[status] || 'info'
-}
-
-const getStatusText = (status: number) => {
-  const map: Record<number, string> = { 0: '未提交', 1: '审核中', 2: '已通过', 3: '未通过' }
-  return map[status] || '未知'
-}
-
-const fetchConfig = async () => {
-  configLoading.value = true
+const fetchList = async () => {
+  loading.value = true
   try {
-    const res = await request.get({ url: '/api/admin/config/messages/mobile' })
-    if (res?.msg_config) Object.assign(smsConfig, res.msg_config)
+    const data = await request.get({ url: '/api/admin/sms-templates' })
+    tableData.value = data || []
   } catch (error) {
-    console.error(error)
+    console.error('获取模板列表失败:', error)
   } finally {
-    configLoading.value = false
+    loading.value = false
   }
 }
 
-const handleSaveConfig = async () => {
-  try {
-    await request.put({ url: '/api/admin/config/messages/mobile', data: smsConfig, showSuccessMessage: true })
-  } catch (error) {
-    ElMessage.error('保存失败')
-  }
-}
-
-const handleTestSms = async () => {
-  try {
-    const { value } = await ElMessageBox.prompt('请输入测试手机号', '测试短信')
-    await request.post({ url: '/api/admin/config/messages/mobile/test', data: { phone: value } })
-    ElMessage.success('测试短信已发送')
-  } catch (error) {
-    if (error !== 'cancel') ElMessage.error('发送失败')
-  }
-}
-
-const fetchTemplates = async () => {
-  templateLoading.value = true
-  try {
-    const res = await request.get({
-      url: '/api/admin/sms/templates',
-      params: { ...searchForm, page: pagination.page, limit: pagination.limit }
-    })
-    if (res) {
-      templateList.value = res.templates || []
-      pagination.total = res.total || 0
-    }
-  } catch (error) {
-    console.error(error)
-  } finally {
-    templateLoading.value = false
-  }
-}
-
-const handleCheckStatus = async () => {
-  try {
-    await request.get({ url: '/api/admin/sms/templates' })
-    ElMessage.success('审核状态已刷新')
-    fetchTemplates()
-  } catch (error) {
-    ElMessage.error('刷新失败')
-  }
-}
-
-const showCreateDialog = async () => {
+const handleAdd = () => {
   isEdit.value = false
+  dialogTitle.value = '添加模板'
   editingId.value = null
-  templateForm.sms_operator = smsConfig.sms_operator
-  templateForm.title = ''
-  templateForm.content = ''
-  templateForm.remark = ''
+  Object.assign(formData, { name: '', code: '', content: '', status: 'active' })
   dialogVisible.value = true
 }
 
 const handleEdit = (row: any) => {
   isEdit.value = true
+  dialogTitle.value = '编辑模板'
   editingId.value = row.id
-  templateForm.sms_operator = row.sms_operator
-  templateForm.title = row.title
-  templateForm.content = row.content
-  templateForm.remark = ''
+  Object.assign(formData, { name: row.name, code: row.code, content: row.content, status: row.status })
   dialogVisible.value = true
-}
-
-const handleSaveTemplate = async () => {
-  if (!templateFormRef.value) return
-  await templateFormRef.value.validate(async (valid) => {
-    if (!valid) return
-    saveLoading.value = true
-    try {
-      if (isEdit.value && editingId.value) {
-        await request.put({ url: `/api/admin/sms/templates/${editingId.value}`, data: templateForm, showSuccessMessage: true })
-      } else {
-        await request.post({ url: '/api/admin/sms/templates', data: templateForm, showSuccessMessage: true })
-      }
-      dialogVisible.value = false
-      fetchTemplates()
-    } catch (error) {
-      ElMessage.error('操作失败')
-    } finally {
-      saveLoading.value = false
-    }
-  })
-}
-
-const handleSubmitCheck = async (row: any) => {
-  try {
-    await ElMessageBox.confirm(`确定提交模板 "${row.title}" 进行审核吗？`, '提示')
-    await request.post({ url: '/api/admin/sms/send', data: { template_id: row.id } })
-    ElMessage.success('已提交审核')
-    fetchTemplates()
-  } catch (error) {
-    if (error !== 'cancel') ElMessage.error('提交失败')
-  }
 }
 
 const handleDelete = async (row: any) => {
   try {
-    await ElMessageBox.confirm(`确定删除模板 "${row.title}" 吗？`, '提示')
-    await request.del({ url: `/api/admin/sms/templates/${row.id}`, showSuccessMessage: true })
-    fetchTemplates()
+    await ElMessageBox.confirm(`确定要删除模板 "${row.name}" 吗？`, '确认删除', { type: 'warning' })
+    await request.delete({ url: `/api/admin/sms-templates/${row.id}` })
+    ElMessage.success('删除成功')
+    fetchList()
   } catch (error) {
-    if (error !== 'cancel') ElMessage.error('删除失败')
+    if (error !== 'cancel') console.error('删除失败:', error)
   }
 }
 
-const handleTabChange = (tab: string | number) => {
-  if (tab === 'templates') fetchTemplates()
-  if (tab === 'config') fetchConfig()
+const handleSubmit = async () => {
+  if (!formRef.value) return
+  try {
+    await formRef.value.validate()
+    submitting.value = true
+    if (isEdit.value && editingId.value) {
+      await request.put({ url: `/api/admin/sms-templates/${editingId.value}`, data: formData })
+      ElMessage.success('更新成功')
+    } else {
+      await request.post({ url: '/api/admin/sms-templates', data: formData })
+      ElMessage.success('添加成功')
+    }
+    dialogVisible.value = false
+    fetchList()
+  } catch (error) {
+    console.error('提交失败:', error)
+  } finally {
+    submitting.value = false
+  }
 }
 
-onMounted(() => fetchConfig())
+onMounted(() => { fetchList() })
 </script>
 
 <style scoped lang="scss">
-.sms-templates-page {
-  padding: 20px;
-}
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.search-bar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
+.sms-templates-page { padding: 16px; }
+.action-card { margin-bottom: 16px; }
+.action-bar { display: flex; justify-content: space-between; align-items: center; }
+.table-card { :deep(.el-card__body) { padding: 0; } }
+.form-tip { font-size: 12px; color: #86909C; margin-top: 4px; }
 </style>

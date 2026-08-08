@@ -8,6 +8,7 @@
  */
 
 import { h } from 'vue'
+import { urlComponentMap } from './urlComponentMap'
 
 export class ComponentLoader {
   private modules: Record<string, () => Promise<any>>
@@ -25,16 +26,19 @@ export class ComponentLoader {
       return this.createEmptyComponent()
     }
 
+    // 先检查 URL 映射表（将 zjmf 风格 URL 映射到实际组件路径）
+    const mappedPath = urlComponentMap[componentPath] || componentPath
+
     // 构建可能的路径
-    const fullPath = `../../views${componentPath}.vue`
-    const fullPathWithIndex = `../../views${componentPath}/index.vue`
+    const fullPath = `../../views${mappedPath}.vue`
+    const fullPathWithIndex = `../../views${mappedPath}/index.vue`
 
     // 先尝试直接路径，再尝试添加/index的路径
     const module = this.modules[fullPath] || this.modules[fullPathWithIndex]
 
     if (!module) {
       console.error(
-        `[ComponentLoader] 未找到组件: ${componentPath}，尝试过的路径: ${fullPath} 和 ${fullPathWithIndex}`
+        `[ComponentLoader] 未找到组件: ${componentPath} (映射: ${mappedPath})，尝试过的路径: ${fullPath} 和 ${fullPathWithIndex}`
       )
       return this.createErrorComponent(componentPath)
     }
