@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="order-list-page">
     <!-- 标签页切换 -->
     <el-tabs v-model="activeTab" @tab-change="handleTabChange">
@@ -210,8 +210,8 @@ const formatMoney = (amount: number) => {
 }
 
 // 类型标签
-const getTypeTagType = (type: string) => {
-  const map: Record<string, string> = {
+const getTypeTagType = (type: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     new: 'primary',
     renewal: 'success',
     upgrade: 'warning',
@@ -232,8 +232,8 @@ const getTypeText = (type: string) => {
 }
 
 // 状态类型
-const getStatusType = (status: string) => {
-  const map: Record<string, string> = {
+const getStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     pending_payment: 'warning',
     pending_activation: 'primary',
     active: 'success',
@@ -258,7 +258,7 @@ const getStatusText = (status: string) => {
 }
 
 // 标签页切换
-const handleTabChange = (tab: string) => {
+const handleTabChange = (tab: string | number) => {
   searchForm.type = ''
   pagination.page = 1
   fetchList()

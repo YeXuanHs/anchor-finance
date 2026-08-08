@@ -306,10 +306,10 @@ const recentTickets = ref([])
 const recentLogs = ref([])
 
 // 在线管理员
-const onlineAdmins = ref([])
+const onlineAdmins = ref<any[]>([])
 
 // 即将到期产品
-const expiringProducts = ref([])
+const expiringProducts = ref<any[]>([])
 
 // 图表引用
 const incomeChartRef = ref<HTMLElement>()

@@ -74,8 +74,8 @@ const formatMoney = (amount: number) => {
   return Number(amount).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-const getStatusType = (status: string) => {
-  const map: Record<string, string> = { active: 'success', suspended: 'danger', pending: 'warning', expired: 'info' }
+const getStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { active: 'success', suspended: 'danger', pending: 'warning', expired: 'info' }
   return map[status] || 'info'
 }
 

@@ -155,7 +155,8 @@ const handleUploadSuccess = (response: any, file: UploadFile) => {
 
 // 移除文件
 const handleRemoveFile = (file: UploadFile) => {
-  const index = formData.attachments.findIndex((url) => url === file.response?.url)
+  const response = file.response as any
+  const index = formData.attachments.findIndex((url) => url === response?.url)
   if (index > -1) {
     formData.attachments.splice(index, 1)
   }

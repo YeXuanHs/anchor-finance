@@ -113,7 +113,7 @@ const handleEdit = (row: any) => {
 const handleDelete = async (row: any) => {
   try {
     await ElMessageBox.confirm(`确定要删除模板 "${row.name}" 吗？`, '确认删除', { type: 'warning' })
-    await request.delete({ url: `/api/admin/email-templates/${row.id}` })
+    await request.del({ url: `/api/admin/email-templates/${row.id}` })
     ElMessage.success('删除成功')
     fetchList()
   } catch (error) {

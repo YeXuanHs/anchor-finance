@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="ticket-list-page">
     <!-- 标签页切换 -->
     <el-tabs v-model="activeTab" @tab-change="handleTabChange">
@@ -263,8 +263,8 @@ const getRowClassName = ({ row }: { row: any }) => {
 }
 
 // 优先级类型
-const getPriorityType = (priority: number) => {
-  const map: Record<number, string> = { 1: 'info', 2: 'primary', 3: 'warning', 4: 'danger' }
+const getPriorityType = (priority: number): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<number, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { 1: 'info', 2: 'primary', 3: 'warning', 4: 'danger' }
   return map[priority] || 'info'
 }
 
@@ -275,8 +275,8 @@ const getPriorityText = (priority: number) => {
 }
 
 // 状态类型
-const getStatusType = (status: string) => {
-  const map: Record<string, string> = {
+const getStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     open: 'warning',
     in_progress: 'primary',
     replied: 'success',
@@ -297,7 +297,7 @@ const getStatusText = (status: string) => {
 }
 
 // 标签页切换
-const handleTabChange = (tab: string) => {
+const handleTabChange = (tab: string | number) => {
   pagination.page = 1
   fetchList()
 }

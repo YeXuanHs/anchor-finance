@@ -315,7 +315,7 @@ const handleDelete = async (row: any) => {
     await ElMessageBox.confirm(`确定要删除管理员 "${row.username}" 吗？此操作不可恢复。`, '确认删除', {
       type: 'warning'
     })
-    await request.delete({ url: `/api/admin/admins/${row.id}` })
+    await request.del({ url: `/api/admin/admins/${row.id}` })
     ElMessage.success('删除成功')
     fetchList()
   } catch (error) {

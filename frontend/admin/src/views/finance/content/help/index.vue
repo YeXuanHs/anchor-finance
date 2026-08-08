@@ -58,7 +58,7 @@ const handleEdit = (row: any) => { console.log('编辑:', row.id) }
 const handleDelete = async (row: any) => {
   try {
     await ElMessageBox.confirm(`确定要删除 "${row.title}" 吗？`, '确认删除', { type: 'warning' })
-    await request.delete({ url: `/api/admin/help/${row.id}` })
+    await request.del({ url: `/api/admin/help/${row.id}` })
     ElMessage.success('删除成功')
     fetchList()
   } catch (error) {

@@ -281,7 +281,7 @@ const handleDelete = async (row: any) => {
     await ElMessageBox.confirm(`确定要删除供应商 "${row.name}" 吗？此操作不可恢复。`, '确认删除', {
       type: 'warning'
     })
-    await request.delete({ url: `/api/admin/suppliers/${row.id}` })
+    await request.del({ url: `/api/admin/suppliers/${row.id}` })
     ElMessage.success('删除成功')
     fetchList()
   } catch (error) {

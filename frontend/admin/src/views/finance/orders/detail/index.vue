@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="order-detail-page">
     <!-- 订单信息卡片 -->
     <el-card shadow="never" class="order-info-card">
@@ -167,8 +167,8 @@ const getTypeText = (type: string) => {
 }
 
 // 订单状态
-const getStatusType = (status: string) => {
-  const map: Record<string, string> = {
+const getStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     pending_payment: 'warning',
     pending_activation: 'primary',
     active: 'success',
@@ -192,8 +192,8 @@ const getStatusText = (status: string) => {
 }
 
 // 项目状态
-const getItemStatusType = (status: string) => {
-  const map: Record<string, string> = { pending: 'warning', active: 'success', suspended: 'danger', terminated: 'info' }
+const getItemStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { pending: 'warning', active: 'success', suspended: 'danger', terminated: 'info' }
   return map[status] || 'info'
 }
 
@@ -203,8 +203,8 @@ const getItemStatusText = (status: string) => {
 }
 
 // 服务状态
-const getServiceStatusType = (status: string) => {
-  const map: Record<string, string> = { active: 'success', suspended: 'danger', pending: 'warning', terminated: 'info' }
+const getServiceStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { active: 'success', suspended: 'danger', pending: 'warning', terminated: 'info' }
   return map[status] || 'info'
 }
 

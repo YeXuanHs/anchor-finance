@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="refund-detail-page">
     <!-- 退款申请信息 -->
     <el-card shadow="never" class="detail-card">
@@ -178,8 +178,8 @@ const approveRules: FormRules = {
 }
 
 // 获取退款状态标签
-const getStatusTag = (status: string) => {
-  const map: Record<string, string> = {
+const getStatusTag = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     pending: 'warning',
     approved: 'primary',
     processing: 'primary',
@@ -204,8 +204,8 @@ const getStatusText = (status: string) => {
 }
 
 // 获取退款类型标签
-const getRefundTypeTag = (type: string) => {
-  const map: Record<string, string> = {
+const getRefundTypeTag = (type: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     full: 'danger',
     partial: 'warning',
     cancellation: 'info'
@@ -224,8 +224,8 @@ const getRefundTypeText = (type: string) => {
 }
 
 // 获取订单状态标签
-const getOrderStatusTag = (status: string) => {
-  const map: Record<string, string> = {
+const getOrderStatusTag = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     pending: 'warning',
     paid: 'success',
     cancelled: 'info',

@@ -108,8 +108,8 @@ const formatMoney = (amount: number) => {
 }
 
 // 状态类型
-const getStatusType = (status: string) => {
-  const map: Record<string, string> = { pending: 'warning', approved: 'primary', rejected: 'danger', completed: 'success' }
+const getStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { pending: 'warning', approved: 'primary', rejected: 'danger', completed: 'success' }
   return map[status] || 'info'
 }
 

@@ -94,7 +94,7 @@ const handleAdd = () => {
 const handleDelete = async (row: any) => {
   try {
     await ElMessageBox.confirm('确定要删除此黑名单记录吗？', '确认删除', { type: 'warning' })
-    await request.delete({ url: `/api/admin/blacklist/${row.id}` })
+    await request.del({ url: `/api/admin/blacklist/${row.id}` })
     ElMessage.success('删除成功')
     fetchList()
   } catch (error) {
