@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="ticket-list-page">
     <!-- 标签页切换 -->
     <el-tabs v-model="activeTab" @tab-change="handleTabChange">
