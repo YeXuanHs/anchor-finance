@@ -265,8 +265,8 @@ const orders = ref([])
 const tickets = ref([])
 const transactions = ref([])
 const invoices = ref([])
-const logs = ref([])
-const customFields = ref([])
+const logs = ref<any[]>([])
+const customFields = ref<any[]>([])
 
 // 格式化金额
 const formatMoney = (amount: number) => {
@@ -275,8 +275,8 @@ const formatMoney = (amount: number) => {
 }
 
 // 状态类型
-const getStatusType = (status: string) => {
-  const map: Record<string, string> = { active: 'success', disabled: 'danger', pending: 'warning' }
+const getStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { active: 'success', disabled: 'danger', pending: 'warning' }
   return map[status] || 'info'
 }
 
@@ -287,8 +287,8 @@ const getStatusText = (status: string) => {
 }
 
 // 产品状态
-const getProductStatusType = (status: string) => {
-  const map: Record<string, string> = { active: 'success', suspended: 'danger', pending: 'warning', terminated: 'info' }
+const getProductStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { active: 'success', suspended: 'danger', pending: 'warning', terminated: 'info' }
   return map[status] || 'info'
 }
 
@@ -304,8 +304,8 @@ const getTypeText = (type: string) => {
 }
 
 // 订单状态
-const getOrderStatusType = (status: string) => {
-  const map: Record<string, string> = { pending_payment: 'warning', pending_activation: 'primary', active: 'success', completed: 'success', cancelled: 'info', refunded: 'danger' }
+const getOrderStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { pending_payment: 'warning', pending_activation: 'primary', active: 'success', completed: 'success', cancelled: 'info', refunded: 'danger' }
   return map[status] || 'info'
 }
 
@@ -315,8 +315,8 @@ const getOrderStatusText = (status: string) => {
 }
 
 // 工单优先级
-const getPriorityType = (priority: number) => {
-  const map: Record<number, string> = { 1: 'info', 2: 'primary', 3: 'warning', 4: 'danger' }
+const getPriorityType = (priority: number): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<number, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { 1: 'info', 2: 'primary', 3: 'warning', 4: 'danger' }
   return map[priority] || 'info'
 }
 
@@ -326,8 +326,8 @@ const getPriorityText = (priority: number) => {
 }
 
 // 工单状态
-const getTicketStatusType = (status: string) => {
-  const map: Record<string, string> = { open: 'warning', in_progress: 'primary', replied: 'success', closed: 'info' }
+const getTicketStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { open: 'warning', in_progress: 'primary', replied: 'success', closed: 'info' }
   return map[status] || 'info'
 }
 
@@ -337,8 +337,8 @@ const getTicketStatusText = (status: string) => {
 }
 
 // 交易类型
-const getTransactionType = (type: string) => {
-  const map: Record<string, string> = { income: 'success', expense: 'danger', refund: 'warning', recharge: 'primary' }
+const getTransactionType = (type: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { income: 'success', expense: 'danger', refund: 'warning', recharge: 'primary' }
   return map[type] || 'info'
 }
 
@@ -348,8 +348,8 @@ const getTransactionText = (type: string) => {
 }
 
 // 账单状态
-const getInvoiceStatusType = (status: string) => {
-  const map: Record<string, string> = { unpaid: 'warning', paid: 'success', cancelled: 'info', refunded: 'danger' }
+const getInvoiceStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { unpaid: 'warning', paid: 'success', cancelled: 'info', refunded: 'danger' }
   return map[status] || 'info'
 }
 

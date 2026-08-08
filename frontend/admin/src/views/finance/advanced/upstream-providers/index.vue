@@ -160,8 +160,8 @@ const rules: FormRules = {
 }
 
 // API类型标签
-const getApiTypeTag = (type: string) => {
-  const map: Record<string, string> = {
+const getApiTypeTag = (type: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     manual: 'info',
     zjmf: 'primary',
     v10: 'success',
