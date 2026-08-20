@@ -31,7 +31,7 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 
 	database := db.GetDB()
 	if database == nil {
-		c.JSON(http.StatusOK, gin.H{"list": []interface{}{}, "total": 0})
+		response.SuccessPage(c, []interface{}{}, 0, page, pageSize)
 		return
 	}
 

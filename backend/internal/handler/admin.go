@@ -19,7 +19,7 @@ func NewAdminHandler() *AdminHandler {
 func (h *AdminHandler) GetAdmins(c *gin.Context) {
 	database := db.GetDB()
 	if database == nil {
-		c.JSON(http.StatusOK, gin.H{"list": []interface{}{}, "total": 0})
+		response.SuccessPage(c, []interface{}{}, 0, page, pageSize)
 		return
 	}
 
@@ -40,7 +40,7 @@ func (h *AdminHandler) GetAdmins(c *gin.Context) {
 		Where("is_admin = ?", true).
 		Find(&admins)
 
-	c.JSON(http.StatusOK, gin.H{"list": admins, "total": len(admins)})
+	response.SuccessPage(c, admins, int64(len(admins)), page, pageSize)
 }
 
 // GetAdmin 获取单个管理员

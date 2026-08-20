@@ -27,7 +27,7 @@ func (h *MenuEnhancedHandler) GetWebNavs(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": navs})
+	response.Success(c, navs)
 }
 
 // CreateWebNav 创建网站导航
