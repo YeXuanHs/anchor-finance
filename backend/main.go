@@ -1,0 +1,181 @@
+package main
+
+import (
+	crand "crypto/rand"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
+	"time"
+
+	"anchorfinance/internal/api"
+	"anchorfinance/internal/config"
+	"anchorfinance/internal/job"
+	"anchorfinance/internal/model"
+	"anchorfinance/internal/service"
+	"anchorfinance/pkg/auth"
+	"anchorfinance/pkg/db"
+	"anchorfinance/pkg/logger"
+
+	"gorm.io/gorm"
+)
+
+func main() {
+	// 检查是否已安装（.env 是否存在）
+	envPath := ".env"
+	if !fileExists(envPath) {
+		envPath = "../.env"
+	}
+	if !fileExists(envPath) {
+		fmt.Println("========================================")
+		fmt.Println("  锚点财务 - 未检测到配置文件")
+		fmt.Println("  请先运行安装脚本: bash install.sh")
+		fmt.Println("========================================")
+		os.Exit(1)
+	}
+
+	// 已安装：正常启动
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("加载配置失败: %v", err)
+	}
+
+	// 连接数据库（MySQL）
+	if _, err := db.InitDB(db.Config{
+		Host:         cfg.Database.Host,
+		Port:         cfg.Database.Port,
+		User:         cfg.Database.User,
+		Password:     cfg.Database.Password,
+		DBName:       cfg.Database.DBName,
+		Charset:      cfg.Database.Charset,
+		MaxIdleConns: cfg.Database.MaxIdleConns,
+		MaxOpenConns: cfg.Database.MaxOpenConns,
+	}); err != nil {
+		log.Fatalf("数据库初始化失败: %v", err)
+	}
+
+	// Auto-migrate: 仅核心表，插件表在启用时动态创建
+	// 核心表结构由 scripts/init.sql 管理
+
+	// 从数据库读取日志配置并初始化
+	logLevel := db.GetSystemSetting("log_level")
+	if logLevel == "" {
+		logLevel = "info"
+	}
+	logFormat := db.GetSystemSetting("log_format")
+	if logFormat == "" {
+		logFormat = "text"
+	}
+	logger.Init(logger.Config{
+		Level:  logLevel,
+		Format: logFormat,
+		Output: "stdout",
+	})
+
+	// JWT 配置从数据库读取
+	jwtSecret := db.GetSystemSetting("jwt_secret")
+	if jwtSecret == "" {
+		// 首次启动：生成随机密钥并持久化到数据库
+		jwtSecret = generateRandomSecret(64)
+		if err := db.SetSystemSetting("jwt_secret", jwtSecret, "jwt", "JWT 签名密钥（自动生成）"); err != nil {
+			log.Fatalf("无法保存 JWT 密钥: %v", err)
+		}
+		logger.Warnf("已自动生成 JWT 密钥并保存到数据库")
+	}
+	jwtExpireStr := db.GetSystemSetting("jwt_expire_hours")
+	jwtExpire := 72
+	if v, err := strconv.Atoi(jwtExpireStr); err == nil && v > 0 {
+		jwtExpire = v
+	}
+	jwtMgr := auth.NewJWTManager(jwtSecret, jwtExpire)
+
+	// Redis 可选：从数据库读取配置，如果启用了再初始化
+	redisEnabled := db.GetSystemSetting("redis_enabled")
+	if redisEnabled == "true" {
+		if err := db.InitRedisFromDB(); err != nil {
+			logger.Warnf("Redis 初始化失败（非致命）: %v", err)
+		}
+	}
+
+	// 自动迁移插件表
+	if err := db.GetDB().AutoMigrate(
+		&model.MarketplaceListing{},
+		&model.MarketplaceOrder{},
+		&model.MarketplaceChat{},
+		&model.MarketplaceChatSession{},
+		&model.MarketplaceConfig{},
+		&model.Nav{},
+		&model.MenuActive{},
+	); err != nil {
+		logger.Warnf("表迁移失败: %v", err)
+	}
+
+	// 插入默认菜单数据（如果表为空）
+	initDefaultMenus(db.GetDB())
+
+	// 启动定时任务
+	go job.Start()
+
+	// 创建并启动 HTTP 服务（通过 api.NewServer 注册所有路由和中间件）
+	srv := api.NewServer(cfg, jwtMgr)
+	go func() {
+		host := cfg.Server.Host
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		addr := fmt.Sprintf("%s:%d", host, cfg.Server.Port)
+		logger.Infof("锚点财务服务启动: http://%s", addr)
+		if err := srv.Run(addr); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("服务启动失败: %v", err)
+		}
+	}()
+
+	// 优雅关闭
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// 启动上游产品库存、价格和可配置选项自动同步（默认15分钟）
+	upstreamSyncInterval := getUpstreamSyncInterval()
+	upstreamSvc := service.NewUpstreamService(db.GetDB(), logger.Default())
+	go upstreamSvc.StartAutoSync(upstreamSyncInterval)
+
+	<-quit
+	logger.Info("服务正在关闭...")
+	job.StopAll()
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func generateRandomSecret(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+	b := make([]byte, n)
+	crand.Read(b)
+	for i := range b {
+		b[i] = letters[int(b[i])%len(letters)]
+	}
+	return string(b)
+}
+
+// initDefaultMenus 初始化默认菜单数据（已迁移到 scripts/init.sql）
+func initDefaultMenus(db *gorm.DB) {
+	// 所有默认数据通过 init.sql 导入，不再硬编码
+}
+
+// getUpstreamSyncInterval 从数据库读取上游同步间隔（分钟），默认15分钟
+func getUpstreamSyncInterval() time.Duration {
+	intervalStr := db.GetSystemSetting("upstream_sync_interval")
+	if intervalStr == "" {
+		return 15 * time.Minute
+	}
+	minutes, err := strconv.Atoi(intervalStr)
+	if err != nil || minutes <= 0 {
+		return 15 * time.Minute
+	}
+	return time.Duration(minutes) * time.Minute
+}

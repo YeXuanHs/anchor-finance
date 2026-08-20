@@ -1,0 +1,136 @@
+package model
+
+import (
+	"time"
+
+	"gorm.io/datatypes"
+	"gorm.io/gorm"
+)
+
+// JSON 自定义JSON类型，映射PostgreSQL jsonb
+type JSON map[string]interface{}
+
+// ProductFirstGroup 一级分组
+type ProductFirstGroup struct {
+	gorm.Model
+	Name     string `gorm:"type:varchar(128);not null" json:"name"`
+	Hidden   bool   `gorm:"default:false" json:"hidden"`
+	SortOrder int   `gorm:"default:0;index;column:sort_order" json:"sort_order"`
+	UpstreamID *uint `json:"upstream_id"`
+}
+
+func (ProductFirstGroup) TableName() string { return "product_first_groups" }
+
+// ProductGroup 商品分组（二级分组）
+type ProductGroup struct {
+	gorm.Model
+	Name        string    `gorm:"type:varchar(128);not null" json:"name"`
+	Description string    `gorm:"type:text" json:"description"`
+	Slug        string    `gorm:"type:varchar(128);uniqueIndex" json:"slug"`
+	Alias       string    `gorm:"type:varchar(128);index" json:"alias"`
+	FirstGroupID *uint    `gorm:"index" json:"first_group_id"` // 关联一级分组
+	ParentID    *uint     `gorm:"index" json:"parent_id"`
+	Parent      *ProductGroup `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
+	Children    []ProductGroup `gorm:"foreignKey:ParentID" json:"children,omitempty"`
+	Icon        string    `gorm:"type:varchar(512)" json:"icon"`
+	SortOrder   int       `gorm:"default:0;index" json:"sort_order"`
+	Status      int16     `gorm:"type:smallint;default:1;not null;index" json:"status"` // 1=显示 0=隐藏
+	Products    []Product `gorm:"foreignKey:GroupID" json:"products,omitempty"`
+}
+
+// Product 商品
+type Product struct {
+	gorm.Model
+	GroupID       uint           `gorm:"index;not null" json:"group_id"`
+	Group         ProductGroup   `gorm:"foreignKey:GroupID" json:"group,omitempty"`
+	Name          string         `gorm:"type:varchar(256);not null" json:"name"`
+	Slug          string         `gorm:"type:varchar(256);uniqueIndex" json:"slug"`
+	Description   string         `gorm:"type:text" json:"description"`
+	Content       string         `gorm:"type:text" json:"content"`
+	Price         float64 `gorm:"type:decimal(20,4);not null" json:"price"`
+	OriginalPrice float64 `gorm:"type:decimal(20,4)" json:"original_price"`
+	Currency      string         `gorm:"type:varchar(8);default:'CNY';not null" json:"currency"`
+	BillingCycle  string         `gorm:"type:varchar(32)" json:"billing_cycle"` // monthly/quarterly/semi-annually/annually/triennially/onetime
+	SetupFee      float64 `gorm:"type:decimal(20,4);default:0" json:"setup_fee"`
+	Stock         int            `gorm:"default:-1" json:"stock"` // -1=无限库存
+	SalesCount    int            `gorm:"default:0" json:"sales_count"`
+	Type          string         `gorm:"type:varchar(32);not null;default:'hosting'" json:"type"` // hosting/domain/ssl/vpn/other
+	AutoSetup     bool           `gorm:"default:true" json:"auto_setup"`
+	StockControl  bool           `gorm:"default:false" json:"stock_control"`
+	QuantityMin   int            `gorm:"default:1" json:"quantity_min"`
+	QuantityMax   int            `gorm:"default:1" json:"quantity_max"`
+	TrialDays     int            `gorm:"default:0" json:"trial_days"`
+	SortOrder     int            `gorm:"default:0;index" json:"sort_order"`
+	Status        int16          `gorm:"type:smallint;default:1;not null;index" json:"status"` // 1=上架 0=下架 2=缺货
+	Hidden        bool           `gorm:"default:false" json:"hidden"`
+	Download      bool           `gorm:"default:false" json:"download"`
+	Featured      bool           `gorm:"default:false;index" json:"featured"`
+	Image         string         `gorm:"type:varchar(512)" json:"image"`
+	Images        datatypes.JSON `gorm:"type:json" json:"images"`       // 图片列表
+	ConfigOptions datatypes.JSON `gorm:"type:json" json:"config_options"` // 可配置选项
+	Metadata      datatypes.JSON `gorm:"type:json" json:"metadata"`
+	Tags          datatypes.JSON `gorm:"type:json" json:"tags"`
+	UserProducts  []UserProduct  `gorm:"foreignKey:ProductID" json:"user_products,omitempty"`
+}
+
+// UserProduct 用户已购商品/服务实例
+type UserProduct struct {
+	gorm.Model
+	UserID        uint           `gorm:"index;not null" json:"user_id"`
+	User          User           `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	OrderID       uint           `gorm:"index" json:"order_id"`
+	Order         *Order         `gorm:"foreignKey:OrderID" json:"order,omitempty"`
+	ProductID     uint           `gorm:"index;not null" json:"product_id"`
+	Product       Product        `gorm:"foreignKey:ProductID" json:"product,omitempty"`
+	UpstreamID    uint           `gorm:"index" json:"upstream_id"`
+	Name          string         `gorm:"type:varchar(256);not null" json:"name"`
+	Domain        string         `gorm:"type:varchar(256);index" json:"domain"`
+	Username      string         `gorm:"type:varchar(128)" json:"username"`
+	Password      string         `gorm:"type:varchar(256)" json:"-"`
+	IP            string         `gorm:"type:varchar(64)" json:"ip"`
+	IPAddress     string         `gorm:"type:varchar(64)" json:"ip_address"`
+	DedicatedIP   string         `gorm:"type:varchar(64)" json:"dedicated_ip"`
+	Hostname      string         `gorm:"type:varchar(256)" json:"hostname"`
+	NS1           string         `gorm:"type:varchar(256)" json:"ns1"`
+	NS2           string         `gorm:"type:varchar(256)" json:"ns2"`
+	BillingCycle  string         `gorm:"type:varchar(32)" json:"billing_cycle"`
+	Amount        float64        `gorm:"type:decimal(20,4);not null" json:"amount"`
+	Currency      string         `gorm:"type:varchar(8);default:'CNY'" json:"currency"`
+	IsManual      bool           `gorm:"default:false" json:"is_manual"`
+	RegistrationDate *time.Time  `json:"registration_date"`
+	NextDueDate   *time.Time     `gorm:"index" json:"next_due_date"`
+	TerminationDate *time.Time   `json:"termination_date"`
+	SuspendReason string         `gorm:"type:varchar(256)" json:"suspend_reason"`
+	Status        string         `gorm:"type:varchar(32);default:Active;not null;index" json:"status"`
+	ProvisioningStatus int16    `gorm:"type:smallint;default:0" json:"provisioning_status"`
+	AdminNotes    string         `gorm:"type:text" json:"admin_notes"`
+	Notes         string         `gorm:"type:text" json:"notes"`
+	ConfigOptions datatypes.JSON `gorm:"type:json" json:"config_options"`
+	CustomFields  datatypes.JSON `gorm:"type:json" json:"custom_fields"`
+	Metadata      datatypes.JSON `gorm:"type:json" json:"metadata"`
+}
+
+// ProductDownload 产品-下载文件关联
+type ProductDownload struct {
+	ID         uint `gorm:"primaryKey" json:"id"`
+	ProductID  uint `gorm:"index;not null" json:"product_id"`
+	DownloadID uint `gorm:"index;not null" json:"download_id"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+func (ProductDownload) TableName() string { return "product_downloads" }
+
+// ProductPricing 产品定价（多周期价格）
+type ProductPricing struct {
+	ID           uint    `gorm:"primaryKey" json:"id"`
+	ProductID    uint    `gorm:"index;not null" json:"product_id"`
+	Cycle        string  `gorm:"type:varchar(32);not null" json:"cycle"` // monthly/quarterly/semi-annually/annually/biennially/triennially/onetime
+	Price        float64 `gorm:"type:decimal(20,4);not null" json:"price"`
+	SetupFee     float64 `gorm:"type:decimal(20,4);default:0" json:"setup_fee"`
+	Currency     string  `gorm:"type:varchar(8);default:'CNY'" json:"currency"`
+	SortOrder    int     `gorm:"default:0" json:"sort_order"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+func (ProductPricing) TableName() string { return "product_pricings" }

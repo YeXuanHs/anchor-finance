@@ -1,0 +1,157 @@
+<template>
+  <div class="invoice-list-page">
+    <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+      <el-tab-pane :label="$t('invoice.all')" name="all" />
+      <el-tab-pane :label="$t('invoice.unpaid')" name="unpaid" />
+      <el-tab-pane :label="$t('invoice.paid')" name="paid" />
+      <el-tab-pane :label="$t('invoice.cancelled')" name="cancelled" />
+      <el-tab-pane :label="$t('invoice.refunded')" name="refunded" />
+    </el-tabs>
+
+    <el-card shadow="never" class="search-card">
+      <el-form :model="searchForm" inline>
+        <el-form-item :label="$t('invoice.keyword')">
+          <el-input v-model="searchForm.keyword" :placeholder="$t('invoice.keywordPlaceholder')" clearable style="width: 200px" @keyup.enter="handleSearch" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch"><el-icon><Search /></el-icon>{{ $t('common.search') }}</el-button>
+          <el-button @click="handleReset"><el-icon><Refresh /></el-icon>{{ $t('common.reset') }}</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card shadow="never" class="summary-card">
+      <el-row :gutter="20">
+        <el-col :span="6"><div class="summary-item"><div class="label">{{ $t('invoice.totalAmount') }}</div><div class="value">¥{{ formatMoney(summary.total) }}</div></div></el-col>
+        <el-col :span="6"><div class="summary-item"><div class="label">{{ $t('invoice.paidAmount') }}</div><div class="value text-green">¥{{ formatMoney(summary.paid) }}</div></div></el-col>
+        <el-col :span="6"><div class="summary-item"><div class="label">{{ $t('invoice.unpaidAmount') }}</div><div class="value text-orange">¥{{ formatMoney(summary.unpaid) }}</div></div></el-col>
+        <el-col :span="6"><div class="summary-item"><div class="label">{{ $t('invoice.refundedAmount') }}</div><div class="value text-red">¥{{ formatMoney(summary.refunded) }}</div></div></el-col>
+      </el-row>
+    </el-card>
+
+    <el-card shadow="never" class="action-card">
+      <div class="action-bar">
+        <div class="action-left">
+          <el-button type="danger" :disabled="selectedIds.length === 0" @click="handleBatchCancel">{{ $t('invoice.batchCancel') }}</el-button>
+          <el-button type="success" :disabled="selectedIds.length === 0" @click="handleBatchPay">{{ $t('invoice.batchPay') }}</el-button>
+          <el-button @click="handleExport"><el-icon><Download /></el-icon>{{ $t('common.export') }}</el-button>
+        </div>
+        <div class="action-right"><el-button circle @click="fetchList"><el-icon><Refresh /></el-icon></el-button></div>
+      </div>
+    </el-card>
+
+    <el-card shadow="never" class="table-card">
+      <el-table v-loading="loading" :data="tableData" border stripe @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="50" />
+        <el-table-column prop="id" label="ID" width="80" align="center" />
+        <el-table-column prop="invoice_no" :label="$t('invoice.invoiceNo')" width="150">
+          <template #default="{ row }"><el-button type="primary" link @click="handleView(row)">{{ row.invoice_no }}</el-button></template>
+        </el-table-column>
+        <el-table-column prop="client_name" :label="$t('invoice.client')" width="120">
+          <template #default="{ row }"><el-button type="primary" link @click="$router.push(`/customer-view/${row.client_id}`)">{{ row.client_name }}</el-button></template>
+        </el-table-column>
+        <el-table-column prop="amount" :label="$t('invoice.amount')" width="120" align="right">
+          <template #default="{ row }">¥{{ formatMoney(row.amount) }}</template>
+        </el-table-column>
+        <el-table-column prop="paid_amount" :label="$t('invoice.paidAmount')" width="120" align="right">
+          <template #default="{ row }">¥{{ formatMoney(row.paid_amount) }}</template>
+        </el-table-column>
+        <el-table-column prop="status" :label="$t('invoice.status')" width="100" align="center">
+          <template #default="{ row }"><el-tag :type="getStatusType(row.status)" size="small">{{ getStatusText(row.status) }}</el-tag></template>
+        </el-table-column>
+        <el-table-column prop="due_date" :label="$t('invoice.dueDate')" width="120" />
+        <el-table-column prop="created_at" :label="$t('common.createdAt')" width="170" />
+        <el-table-column :label="$t('invoice.operations')" width="150" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="handleView(row)">{{ $t('common.view') }}</el-button>
+            <el-button v-if="row.status === 'unpaid'" type="success" link size="small" @click="handleMarkPaid(row)">{{ $t('invoice.markPaid') }}</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="pagination-wrapper">
+        <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.page_size" :page-sizes="[10,20,50,100]" :total="pagination.total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="handlePageChange" />
+      </div>
+    </el-card>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Download } from '@element-plus/icons-vue'
+import request from '@/utils/http'
+import { $t } from '@/locales'
+
+const router = useRouter()
+const loading = ref(false)
+const tableData = ref([])
+const activeTab = ref('all')
+const selectedIds = ref<number[]>([])
+const searchForm = reactive({ keyword: '' })
+const pagination = reactive({ page: 1, page_size: 20, total: 0 })
+const summary = ref<any>({ total: 0, paid: 0, unpaid: 0, refunded: 0 })
+
+const formatMoney = (amount: number) => { if (!amount) return '0.00'; return Number(amount).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+const getStatusType = (status: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => { const map: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = { unpaid: 'warning', paid: 'success', cancelled: 'info', refunded: 'danger' }; return map[status] || 'info' }
+const getStatusText = (status: string) => { const map: Record<string, () => string> = { unpaid: () => $t('invoice.unpaid'), paid: () => $t('invoice.paid'), cancelled: () => $t('invoice.cancelled'), refunded: () => $t('invoice.refunded') }; return map[status]?.() || $t('common.unknown') }
+
+const handleTabChange = () => { pagination.page = 1; fetchList() }
+const handleSearch = () => { pagination.page = 1; fetchList() }
+const handleReset = () => { searchForm.keyword = ''; pagination.page = 1; fetchList() }
+const handleSizeChange = (size: number) => { pagination.page_size = size; pagination.page = 1; fetchList() }
+const handlePageChange = (page: number) => { pagination.page = page; fetchList() }
+const handleSelectionChange = (rows: any[]) => { selectedIds.value = rows.map((r) => r.id) }
+
+const fetchList = async () => {
+  loading.value = true
+  try {
+    const params: any = { page: pagination.page, page_size: pagination.page_size }
+    if (activeTab.value !== 'all') params.status = activeTab.value
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+    const data = await request.get({ url: '/api/admin/invoices', params })
+    tableData.value = data?.list || []; pagination.total = data?.total || 0; if (data?.summary) summary.value = data.summary
+  } catch (error) { console.error('fetch invoice list failed:', error) } finally { loading.value = false }
+}
+
+const handleView = (row: any) => { router.push(`/invoice-detail/${row.id}`) }
+
+const handleMarkPaid = async (row: any) => {
+  try { await ElMessageBox.confirm($t('invoice.confirmMarkPaid', { no: row.invoice_no }), $t('common.tips'), { type: 'warning' }); await request.post({ url: `/api/admin/invoices/${row.id}/mark-paid` }); ElMessage.success($t('common.operationSuccess')); fetchList() } catch (error) { if (error !== 'cancel') console.error('mark paid failed:', error) }
+}
+
+const handleBatchCancel = async () => {
+  try { await ElMessageBox.confirm($t('invoice.confirmBatchCancel', { count: selectedIds.value.length }), $t('common.tips'), { type: 'warning' }); await request.post({ url: '/api/admin/invoices/batch-cancel', data: { ids: selectedIds.value } }); ElMessage.success($t('common.operationSuccess')); fetchList() } catch (error) { if (error !== 'cancel') console.error('batch cancel failed:', error) }
+}
+
+const handleBatchPay = async () => {
+  try { await ElMessageBox.confirm($t('invoice.confirmBatchPay', { count: selectedIds.value.length }), $t('common.tips'), { type: 'warning' }); await request.post({ url: '/api/admin/invoices/batch-pay', data: { ids: selectedIds.value } }); ElMessage.success($t('common.operationSuccess')); fetchList() } catch (error) { if (error !== 'cancel') console.error('batch pay failed:', error) }
+}
+
+const handleExport = async () => {
+  try {
+    const response = await request.get({ url: '/api/admin/invoices/export', responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([response])); const link = document.createElement('a'); link.href = url
+    link.setAttribute('download', `invoices_${new Date().toISOString().split('T')[0]}.xlsx`)
+    document.body.appendChild(link); link.click(); document.body.removeChild(link); window.URL.revokeObjectURL(url)
+  } catch (error) { console.error('export failed:', error) }
+}
+
+onMounted(() => { fetchList() })
+</script>
+
+<style scoped lang="scss">
+.invoice-list-page { padding: 16px; }
+.search-card { margin-bottom: 16px; :deep(.el-card__body) { padding-bottom: 0; } }
+.summary-card { margin-bottom: 16px; }
+.summary-item { text-align: center; padding: 10px 0; }
+.label { font-size: 14px; color: #86909C; margin-bottom: 8px; }
+.value { font-size: 24px; font-weight: 600; }
+.text-green { color: #36D391; }
+.text-orange { color: #F59E0B; }
+.text-red { color: #EF4444; }
+.action-card { margin-bottom: 16px; }
+.action-bar { display: flex; justify-content: space-between; align-items: center; }
+.table-card { :deep(.el-card__body) { padding: 0; } }
+.pagination-wrapper { display: flex; justify-content: flex-end; padding: 16px; }
+</style>

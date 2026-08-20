@@ -1,0 +1,24 @@
+{
+  "latest_version": "1.0.0-demo",
+  "released_at": "2026-08-06",
+  "github_release": "https://github.com/YeXuanHs/anchor-finance/releases/latest",
+  "changelog": [
+    {
+      "version": "1.0.0-demo",
+      "date": "2026-08-06",
+      "type": "beta",
+      "changes": [
+        "首次发布 Demo 版本",
+        "完整的用户中心、产品管理、订单系统、工单系统",
+        "管理后台（Art Design Pro）",
+        "上游对接（智简魔方、WHMCS、V10）",
+        "OAuth 第三方登录（24个平台）",
+        "AI 工单自动回复、购物助手",
+        "交易市场、产品转移",
+        "多语言支持（zh-CN / en-US / zh-TW）",
+        "验证码（图形 / Geetest 4.0）",
+        "安全防护（登录限制、XSS、审计日志）"
+      ]
+    }
+  ]
+}
