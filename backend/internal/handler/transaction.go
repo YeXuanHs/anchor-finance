@@ -59,11 +59,7 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 		Limit(pageSize).
 		Find(&transactions)
 
-	c.JSON(http.StatusOK, gin.H{
-		"list":  transactions,
-		"total": total,
-		"page":  page,
-	})
+	response.SuccessPage(c, transactions, total, page, pageSize)
 }
 
 // RegisterRoutes 注册路由

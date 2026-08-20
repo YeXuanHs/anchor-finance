@@ -78,12 +78,7 @@ func (h *ClientHandler) GetClients(c *gin.Context) {
 		Limit(pageSize).
 		Find(&clients)
 
-	c.JSON(http.StatusOK, gin.H{
-		"list":      clients,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
-	})
+	response.SuccessPage(c, clients, total, page, pageSize)
 }
 
 // GetClient 获取单个客户
