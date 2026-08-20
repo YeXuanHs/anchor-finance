@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"anchorfinance/pkg/response"
 	"net/http"
 	"time"
 
@@ -19,7 +20,7 @@ func NewAdminHandler() *AdminHandler {
 func (h *AdminHandler) GetAdmins(c *gin.Context) {
 	database := db.GetDB()
 	if database == nil {
-		response.SuccessPage(c, []interface{}{}, 0, page, pageSize)
+		response.Success(c, gin.H{"list": []interface{}{}, "total": 0, "page": 1, "page_size": 20})
 		return
 	}
 
@@ -40,7 +41,7 @@ func (h *AdminHandler) GetAdmins(c *gin.Context) {
 		Where("is_admin = ?", true).
 		Find(&admins)
 
-	response.SuccessPage(c, admins, int64(len(admins)), page, pageSize)
+	response.Success(c, gin.H{"list": admins, "total": len(admins), "page": 1, "page_size": 20})
 }
 
 // GetAdmin 获取单个管理员
