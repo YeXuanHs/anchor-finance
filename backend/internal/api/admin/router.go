@@ -699,6 +699,8 @@ func RegisterRoutes(r *gin.RouterGroup, deps Deps) {
 		// 运营商检测
 		admin.GET("/sms/detect-operator", smsHandler.DetectOperator)
 		admin.GET("/sms/validate-phone", smsHandler.ValidatePhone)
+		// 提供商
+		admin.GET("/sms/providers", smsHandler.GetProviders)
 		// 模板管理
 		admin.GET("/sms/templates", smsHandler.GetTemplates)
 		admin.GET("/sms/templates/:id", smsHandler.GetTemplate)
