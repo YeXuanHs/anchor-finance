@@ -1,3 +1,4 @@
+// AnchorFinance - 锚点财务管理系统
 package main
 
 import (
