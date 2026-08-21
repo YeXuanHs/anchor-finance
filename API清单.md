@@ -198,10 +198,38 @@ backend/
 - ✅ 仪表盘API（3个接口）
 - ✅ 所有API测试通过
 
+### 实名认证
+| API | 文件 | 状态 | 说明 |
+|-----|------|------|------|
+| GET /api/admin/verifications | internal/api/admin/verifications.go | ✅完成 | 认证列表 |
+| GET /api/admin/verifications/summary | internal/api/admin/verifications.go | ✅完成 | 认证统计 |
+| GET /api/admin/verifications/:id | internal/api/admin/verifications.go | ✅完成 | 认证详情 |
+| POST /api/admin/verifications/:id/approve | internal/api/admin/verifications.go | ✅完成 | 批准认证 |
+| POST /api/admin/verifications/:id/reject | internal/api/admin/verifications.go | ✅完成 | 拒绝认证 |
+
+### 供应商管理
+| API | 文件 | 状态 | 说明 |
+|-----|------|------|------|
+| GET /api/admin/suppliers | internal/api/admin/suppliers.go | ✅完成 | 供应商列表 |
+| GET /api/admin/suppliers/summary | internal/api/admin/suppliers.go | ✅完成 | 供应商统计 |
+| GET /api/admin/suppliers/:id | internal/api/admin/suppliers.go | ✅完成 | 供应商详情 |
+| POST /api/admin/suppliers | internal/api/admin/suppliers.go | ✅完成 | 创建供应商 |
+| PUT /api/admin/suppliers/:id | internal/api/admin/suppliers.go | ✅完成 | 更新供应商 |
+| DELETE /api/admin/suppliers/:id | internal/api/admin/suppliers.go | ✅完成 | 删除供应商 |
+| GET /api/admin/suppliers/:id/products | internal/api/admin/suppliers.go | ✅完成 | 供应商产品 |
+
+### 插件管理
+| API | 文件 | 状态 | 说明 |
+|-----|------|------|------|
+| GET /api/admin/plugins | internal/api/admin/plugins.go | ✅完成 | 插件列表 |
+| GET /api/admin/plugins/:id | internal/api/admin/plugins.go | ✅完成 | 插件详情 |
+| POST /api/admin/plugins/:id/enable | internal/api/admin/plugins.go | ✅完成 | 启用插件 |
+| POST /api/admin/plugins/:id/disable | internal/api/admin/plugins.go | ✅完成 | 禁用插件 |
+| DELETE /api/admin/plugins/:id | internal/api/admin/plugins.go | ✅完成 | 卸载插件 |
+| GET /api/admin/plugins/:id/config | internal/api/admin/plugins.go | ✅完成 | 获取配置 |
+| PUT /api/admin/plugins/:id/config | internal/api/admin/plugins.go | ✅完成 | 更新配置 |
+
 ### 待完成
-- ⏳ 日志API
-- ⏳ 内容管理API（新闻、知识库、下载）
-- ⏳ 货币管理API
 - ⏳ 优惠码管理API
 - ⏳ 前端开发（所有API完成后）
 

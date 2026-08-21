@@ -155,6 +155,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/plugins/:id/config", GetPluginConfig)
 		authenticated.PUT("/plugins/:id/config", UpdatePluginConfig)
 
+		// 优惠码管理 - 已实现
+		authenticated.GET("/promo-codes", GetPromoCodeList)
+		authenticated.POST("/promo-codes", CreatePromoCode)
+		authenticated.PUT("/promo-codes/:id", UpdatePromoCode)
+		authenticated.DELETE("/promo-codes/:id", DeletePromoCode)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
