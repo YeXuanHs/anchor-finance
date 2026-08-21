@@ -37,7 +37,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 服务管理
 		authenticated.GET("/services", GetUserServices)
+		authenticated.GET("/services/grouped-overview", GetUserServicesGroupedOverview)
 		authenticated.GET("/services/:id", GetUserService)
+		authenticated.PUT("/services/:id/name", UpdateServiceName)
+		authenticated.PUT("/services/:id/remark", UpdateServiceRemark)
 		authenticated.GET("/services/:id/renewals", GetServiceRenewPreview)
 		authenticated.POST("/services/:id/renewals", CreateRenewOrder)
 		authenticated.POST("/services/:id/power-actions", PowerService)

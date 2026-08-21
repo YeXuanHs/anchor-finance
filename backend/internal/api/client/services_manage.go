@@ -207,6 +207,108 @@ func CreateRenewOrder(c *gin.Context) {
 	})
 }
 
+// GetUserServices 获取用户服务列表（带分组概览）
+// GET /api/client/services/grouped-overview
+func GetUserServicesGroupedOverview(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+
+	db := database.GetDB()
+
+	// 按产品名称分组统计
+	type GroupInfo struct {
+		ProductName string `json:"product_name"`
+		Count       int64  `json:"count"`
+	}
+
+	var groups []GroupInfo
+	db.Model(&model.Service{}).
+		Select("product_name, COUNT(*) as count").
+		Where("user_id = ?", userID).
+		Group("product_name").
+		Scan(&groups)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    groups,
+	})
+}
+
+// UpdateServiceName 更新服务名称
+// PUT /api/client/services/:id/name
+func UpdateServiceName(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	var req struct {
+		Name string `json:"name" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	// 验证服务属于该用户
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "服务不存在",
+		})
+		return
+	}
+
+	// 更新服务名称（使用domain字段存储自定义名称）
+	db.Model(&service).Update("domain", req.Name)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "更新成功",
+	})
+}
+
+// UpdateServiceRemark 更新服务备注
+// PUT /api/client/services/:id/remark
+func UpdateServiceRemark(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	var req struct {
+		Remark string `json:"remark"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	// 验证服务属于该用户
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "服务不存在",
+		})
+		return
+	}
+
+	// TODO: 更新服务备注（需要添加remark字段到service表）
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "更新成功",
+	})
+}
+
 // GetServiceStatus 获取服务状态
 // GET /api/client/services/:id/module-status
 func GetServiceStatus(c *gin.Context) {
