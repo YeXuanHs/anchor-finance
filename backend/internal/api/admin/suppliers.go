@@ -260,6 +260,24 @@ func DeleteSupplier(c *gin.Context) {
 	})
 }
 
+// GetSupplierProviderTypes 获取供应商类型列表
+// GET /api/admin/suppliers/provider-types
+func GetSupplierProviderTypes(c *gin.Context) {
+	// 返回支持的供应商类型
+	types := []gin.H{
+		{"id": "manual", "name": "手动管理", "description": "不对接API，手动管理"},
+		{"id": "zjmf", "name": "zjmf接口", "description": "对接zjmf API"},
+		{"id": "v10", "name": "v10接口", "description": "对接v10 API"},
+		{"id": "anchor", "name": "锚点接口", "description": "对接锚点财务自有API"},
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    types,
+	})
+}
+
 // GetSupplierProducts 获取供应商产品
 // GET /api/admin/suppliers/:id/products
 func GetSupplierProducts(c *gin.Context) {

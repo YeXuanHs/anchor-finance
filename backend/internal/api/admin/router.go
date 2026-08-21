@@ -214,6 +214,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		// 供应商管理 - 已实现
 		authenticated.GET("/suppliers", GetSupplierList)
 		authenticated.GET("/suppliers/summary", GetSupplierSummary)
+		authenticated.GET("/suppliers/provider-types", GetSupplierProviderTypes)
 		authenticated.GET("/suppliers/:id", GetSupplierDetail)
 		authenticated.POST("/suppliers", CreateSupplier)
 		authenticated.PUT("/suppliers/:id", UpdateSupplier)
