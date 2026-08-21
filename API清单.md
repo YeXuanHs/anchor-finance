@@ -42,7 +42,7 @@ backend/
 
 | API | 文件 | 状态 | 说明 |
 |-----|------|------|------|
-| POST /api/admin/login | internal/api/admin/auth.go | ✅完成 | 管理员登录 |
+| POST /api/admin/login | internal/api/admin/auth.go | ✅完成 | 管理员登录（带防暴力破解） |
 | POST /api/admin/logout | internal/api/admin/auth.go | ✅完成 | 管理员登出 |
 | GET /api/admin/auth/info | internal/api/admin/auth.go | ✅完成 | 获取管理员信息 |
 
@@ -58,15 +58,15 @@ backend/
 
 | API | 文件 | 状态 | 说明 |
 |-----|------|------|------|
-| GET /api/admin/users | internal/api/admin/users.go | ⏳待实现 | 用户列表 |
-| GET /api/admin/users/:id | internal/api/admin/users.go | ⏳待实现 | 用户详情 |
-| POST /api/admin/users | internal/api/admin/users.go | ⏳待实现 | 创建用户 |
-| PUT /api/admin/users/:id | internal/api/admin/users.go | ⏳待实现 | 更新用户 |
-| DELETE /api/admin/users/:id | internal/api/admin/users.go | ⏳待实现 | 删除用户 |
-| GET /api/admin/users/:id/orders | internal/api/admin/users.go | ⏳待实现 | 用户订单 |
-| GET /api/admin/users/:id/invoices | internal/api/admin/users.go | ⏳待实现 | 用户账单 |
-| GET /api/admin/users/:id/tickets | internal/api/admin/users.go | ⏳待实现 | 用户工单 |
-| GET /api/admin/users/:id/services | internal/api/admin/users.go | ⏳待实现 | 用户服务 |
+| GET /api/admin/users | internal/api/admin/users.go | ✅完成 | 用户列表（分页+搜索） |
+| GET /api/admin/users/:id | internal/api/admin/users.go | ✅完成 | 用户详情 |
+| POST /api/admin/users | internal/api/admin/users.go | ✅完成 | 创建用户 |
+| PUT /api/admin/users/:id | internal/api/admin/users.go | ✅完成 | 更新用户 |
+| DELETE /api/admin/users/:id | internal/api/admin/users.go | ✅完成 | 删除用户（软删除） |
+| GET /api/admin/users/:id/orders | internal/api/admin/users.go | ✅完成 | 用户订单 |
+| GET /api/admin/users/:id/invoices | internal/api/admin/users.go | ✅完成 | 用户账单 |
+| GET /api/admin/users/:id/tickets | internal/api/admin/users.go | ✅完成 | 用户工单 |
+| GET /api/admin/users/:id/services | internal/api/admin/users.go | ✅完成 | 用户服务 |
 
 ### 订单管理 (Admin)
 
@@ -166,12 +166,12 @@ backend/
 | 表名 | Model文件 | 状态 | 说明 |
 |------|----------|------|------|
 | users | internal/model/user.go | ✅完成 | 用户表 |
-| admins | internal/model/admin.go | ✅完成 | 管理员表 |
+| admins | internal/model/admin.go | ✅完成 | 管理员表（含防暴力破解字段） |
 | roles | internal/model/admin.go | ✅完成 | 角色表 |
-| orders | internal/model/order.go | ⏳待实现 | 订单表 |
-| services | internal/model/service.go | ⏳待实现 | 服务表 |
-| invoices | internal/model/invoice.go | ⏳待实现 | 账单表 |
-| tickets | internal/model/ticket.go | ⏳待实现 | 工单表 |
+| orders | internal/model/order.go | ✅完成 | 订单表 |
+| services | internal/model/service.go | ✅完成 | 服务表 |
+| invoices | internal/model/invoice.go | ✅完成 | 账单表 |
+| tickets | internal/model/ticket.go | ✅完成 | 工单表 |
 | products | internal/model/product.go | ⏳待实现 | 产品表 |
 | plugins | internal/model/plugin.go | ⏳待实现 | 插件表 |
 | settings | internal/model/setting.go | ⏳待实现 | 设置表 |
@@ -186,11 +186,19 @@ backend/
 - ✅ 完成认证模块（Admin登录/登出/获取信息）
 - ✅ 完成User/Admin/Role模型
 - ✅ Go后端部署成功，健康检查API正常
-- ✅ 修复前端构建问题（添加logo资源文件）
+- ✅ 用户管理CRUD完整实现
+- ✅ 管理员登录防暴力破解（5次失败冻结6小时）
+- ✅ 所有API测试通过
 
 ### 待完成
-- ⏳ 前端部署测试
-- ⏳ 完整功能测试
+- ⏳ 订单管理API
+- ⏳ 服务管理API
+- ⏳ 账单管理API
+- ⏳ 工单管理API
+- ⏳ 产品管理API
+- ⏳ 插件管理API
+- ⏳ 设置管理API
+- ⏳ 前端开发（所有API完成后）
 
 ---
 
