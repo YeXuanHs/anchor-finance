@@ -468,3 +468,174 @@ func GetUserServices(c *gin.Context) {
 		},
 	})
 }
+
+// UpdateUserStatus 更新用户状态
+// PATCH /api/admin/users/:id/status
+func UpdateUserStatus(c *gin.Context) {
+	// 1. 获取用户ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的用户ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 2. 解析请求参数
+	var req struct {
+		Status string `json:"status" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 3. 验证状态值
+	validStatuses := map[string]bool{
+		"active":    true,
+		"suspended": true,
+		"closed":    true,
+	}
+	if !validStatuses[req.Status] {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的状态值",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 4. 查询用户
+	db := database.GetDB()
+	var user model.User
+	if err := db.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "用户不存在",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 5. 更新状态
+	if err := db.Model(&user).Update("status", req.Status).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "更新状态失败: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 6. 返回统一格式
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "状态更新成功",
+		"data":    nil,
+	})
+}
+
+// GetUserBalanceLogs 获取用户余额日志
+// GET /api/admin/users/:id/balance-logs
+func GetUserBalanceLogs(c *gin.Context) {
+	// 1. 获取用户ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的用户ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 2. 解析分页参数
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	// 3. 查询余额日志（暂时返回空，后续实现balance_logs表）
+	_ = id
+	_ = page
+	_ = pageSize
+
+	// 4. 返回统一格式
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data": gin.H{
+			"list":      []interface{}{},
+			"total":     0,
+			"page":      page,
+			"page_size": pageSize,
+		},
+	})
+}
+
+// RechargeUser 用户充值
+// POST /api/admin/users/:id/recharges
+func RechargeUser(c *gin.Context) {
+	// 1. 获取用户ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的用户ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 2. 解析请求参数
+	var req struct {
+		Amount float64 `json:"amount" binding:"required"`
+		Remark string  `json:"remark"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 3. 查询用户
+	db := database.GetDB()
+	var user model.User
+	if err := db.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "用户不存在",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 4. 更新余额
+	newBalance := user.Balance + req.Amount
+	if err := db.Model(&user).Update("balance", newBalance).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "充值失败: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 5. 返回统一格式
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "充值成功",
+		"data": gin.H{
+			"balance": newBalance,
+		},
+	})
+}

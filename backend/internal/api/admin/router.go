@@ -38,10 +38,13 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/users", CreateUser)
 		authenticated.PUT("/users/:id", UpdateUser)
 		authenticated.DELETE("/users/:id", DeleteUser)
+		authenticated.PATCH("/users/:id/status", UpdateUserStatus)
 		authenticated.GET("/users/:id/orders", GetUserOrders)
 		authenticated.GET("/users/:id/invoices", GetUserInvoices)
 		authenticated.GET("/users/:id/tickets", GetUserTickets)
 		authenticated.GET("/users/:id/services", GetUserServices)
+		authenticated.GET("/users/:id/balance-logs", GetUserBalanceLogs)
+		authenticated.POST("/users/:id/recharges", RechargeUser)
 
 		// 订单管理 - 已实现
 		authenticated.GET("/orders", GetOrderList)
