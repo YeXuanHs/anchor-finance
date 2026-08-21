@@ -190,6 +190,9 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 内容管理 - 已实现
 		authenticated.GET("/content/summary", GetContentSummary)
+		authenticated.GET("/media-files", GetMediaFileList)
+		authenticated.DELETE("/media-files/:id", DeleteMediaFile)
+		authenticated.GET("/media-files/:id/references", GetMediaFileReferences)
 		authenticated.GET("/news", GetNewsList)
 		authenticated.POST("/news", CreateNews)
 		authenticated.PUT("/news/:id", UpdateNews)
