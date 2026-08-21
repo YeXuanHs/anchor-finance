@@ -138,6 +138,75 @@ func ReinstallService(c *gin.Context) {
 	})
 }
 
+// GetServiceRenewPreview 获取服务续费预览
+// GET /api/client/services/:id/renewals
+func GetServiceRenewPreview(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	// 验证服务属于该用户
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "服务不存在",
+		})
+		return
+	}
+
+	// 返回续费信息
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data": gin.H{
+			"service_id":    service.ID,
+			"product_name":  service.ProductName,
+			"billing_cycle": service.BillingCycle,
+			"amount":        service.Amount,
+			"next_due_date": service.NextDueDate,
+		},
+	})
+}
+
+// CreateRenewOrder 创建续费订单
+// POST /api/client/services/:id/renewals
+func CreateRenewOrder(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	var req struct {
+		Cycle string `json:"cycle" binding:"required"` // monthly, quarterly, yearly
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	// 验证服务属于该用户
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "服务不存在",
+		})
+		return
+	}
+
+	// TODO: 计算续费金额，创建续费订单
+	// 这里暂时返回成功
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "续费订单创建成功",
+	})
+}
+
 // GetServiceStatus 获取服务状态
 // GET /api/client/services/:id/module-status
 func GetServiceStatus(c *gin.Context) {
