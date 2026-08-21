@@ -54,6 +54,7 @@ func main() {
 		&model.SupplierProduct{},
 		&model.NotificationTemplate{},
 		&model.UserNotification{},
+		&model.Staff{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

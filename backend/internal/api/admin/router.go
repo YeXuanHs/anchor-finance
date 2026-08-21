@@ -124,6 +124,15 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/admins", CreateAdmin)
 		authenticated.PUT("/admins/:id", UpdateAdmin)
 
+		// 员工管理 - 已实现
+		authenticated.GET("/staff", GetStaffList)
+		authenticated.GET("/staff/:id", GetStaffDetail)
+		authenticated.POST("/staff", CreateStaff)
+		authenticated.PUT("/staff/:id", UpdateStaff)
+		authenticated.DELETE("/staff/:id", DeleteStaff)
+		authenticated.PATCH("/staff/:id/status", UpdateStaffStatus)
+		authenticated.POST("/staff/:id/password-resets", ResetStaffPassword)
+
 		// 角色管理 - 已实现
 		authenticated.GET("/roles", GetRoleList)
 		authenticated.GET("/roles/:id", GetRoleDetail)
