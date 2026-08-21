@@ -83,12 +83,12 @@ backend/
 
 | API | 文件 | 状态 | 说明 |
 |-----|------|------|------|
-| GET /api/admin/services | internal/api/admin/services.go | ⏳待实现 | 服务列表 |
-| GET /api/admin/services/:id | internal/api/admin/services.go | ⏳待实现 | 服务详情 |
-| PUT /api/admin/services/:id | internal/api/admin/services.go | ⏳待实现 | 更新服务 |
-| POST /api/admin/services/:id/suspend | internal/api/admin/services.go | ⏳待实现 | 暂停服务 |
-| POST /api/admin/services/:id/unsuspend | internal/api/admin/services.go | ⏳待实现 | 取消暂停 |
-| POST /api/admin/services/:id/terminate | internal/api/admin/services.go | ⏳待实现 | 终止服务 |
+| GET /api/admin/services | internal/api/admin/services.go | ✅完成 | 服务列表（分页+搜索+筛选） |
+| GET /api/admin/services/:id | internal/api/admin/services.go | ✅完成 | 服务详情 |
+| PUT /api/admin/services/:id | internal/api/admin/services.go | ✅完成 | 更新服务 |
+| POST /api/admin/services/:id/suspend | internal/api/admin/services.go | ✅完成 | 暂停服务 |
+| POST /api/admin/services/:id/unsuspend | internal/api/admin/services.go | ✅完成 | 取消暂停 |
+| POST /api/admin/services/:id/terminate | internal/api/admin/services.go | ✅完成 | 终止服务 |
 
 ### 账单管理 (Admin)
 
