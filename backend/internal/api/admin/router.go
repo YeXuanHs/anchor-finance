@@ -29,11 +29,15 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/dashboard/stats", getDashboardStats)
 
 		// 客户管理
-		authenticated.GET("/users", getUsers)
-		authenticated.GET("/users/:id", getUser)
-		authenticated.POST("/users", createUser)
-		authenticated.PUT("/users/:id", updateUser)
-		authenticated.DELETE("/users/:id", deleteUser)
+		authenticated.GET("/users", GetUserList)
+		authenticated.GET("/users/:id", GetUser)
+		authenticated.POST("/users", CreateUser)
+		authenticated.PUT("/users/:id", UpdateUser)
+		authenticated.DELETE("/users/:id", DeleteUser)
+		authenticated.GET("/users/:id/orders", GetUserOrders)
+		authenticated.GET("/users/:id/invoices", GetUserInvoices)
+		authenticated.GET("/users/:id/tickets", GetUserTickets)
+		authenticated.GET("/users/:id/services", GetUserServices)
 
 		// 订单管理
 		authenticated.GET("/orders", getOrders)
@@ -73,78 +77,4 @@ func getDashboardStats(c *gin.Context) {
 	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
 }
 
-func getUsers(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{"list": []interface{}{}, "total": 0}})
-}
 
-func getUser(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
-}
-
-func createUser(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success"})
-}
-
-func updateUser(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success"})
-}
-
-func deleteUser(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success"})
-}
-
-func getOrders(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{"list": []interface{}{}, "total": 0}})
-}
-
-func getOrder(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
-}
-
-func getServices(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{"list": []interface{}{}, "total": 0}})
-}
-
-func getService(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
-}
-
-func getInvoices(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{"list": []interface{}{}, "total": 0}})
-}
-
-func getInvoice(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
-}
-
-func getTickets(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{"list": []interface{}{}, "total": 0}})
-}
-
-func getTicket(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
-}
-
-func getProducts(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{"list": []interface{}{}, "total": 0}})
-}
-
-func getProduct(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
-}
-
-func getPlugins(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{"list": []interface{}{}, "total": 0}})
-}
-
-func getSettings(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
-}
-
-func updateSettings(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success"})
-}
-
-func getMenus(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
-}
