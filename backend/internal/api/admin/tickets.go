@@ -238,6 +238,20 @@ func GetTicketDepartments(c *gin.Context) {
 	})
 }
 
+// GetTicketAdminUsers 获取工单管理员用户列表
+// GET /api/admin/tickets/admin-users
+func GetTicketAdminUsers(c *gin.Context) {
+	db := database.GetDB()
+	var admins []model.Admin
+	db.Where("status = ?", "active").Order("id ASC").Find(&admins)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    admins,
+	})
+}
+
 // GetTicketStatuses 获取工单状态列表
 // GET /api/admin/ticket-statuses
 func GetTicketStatuses(c *gin.Context) {
