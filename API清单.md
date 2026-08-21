@@ -67,6 +67,10 @@ backend/
 | GET /api/admin/users/:id/invoices | internal/api/admin/users.go | ✅完成 | 用户账单 |
 | GET /api/admin/users/:id/tickets | internal/api/admin/users.go | ✅完成 | 用户工单 |
 | GET /api/admin/users/:id/services | internal/api/admin/users.go | ✅完成 | 用户服务 |
+| GET /api/admin/users/:id/balance-logs | internal/api/admin/users.go | ✅完成 | 余额日志 |
+| GET /api/admin/users/:id/operation-logs | internal/api/admin/users.go | ✅完成 | 操作日志 |
+| POST /api/admin/users/:id/recharges | internal/api/admin/users.go | ✅完成 | 用户充值 |
+| PATCH /api/admin/users/:id/status | internal/api/admin/users.go | ✅完成 | 更新用户状态 |
 
 ### 订单管理 (Admin)
 

@@ -46,6 +46,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/users/:id/tickets", GetUserTickets)
 		authenticated.GET("/users/:id/services", GetUserServices)
 		authenticated.GET("/users/:id/balance-logs", GetUserBalanceLogs)
+		authenticated.GET("/users/:id/operation-logs", GetUserOperationLogs)
 		authenticated.POST("/users/:id/recharges", RechargeUser)
 
 		// 订单管理 - 已实现

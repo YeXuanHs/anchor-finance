@@ -578,6 +578,49 @@ func GetUserBalanceLogs(c *gin.Context) {
 	})
 }
 
+// GetUserOperationLogs 获取用户操作日志
+// GET /api/admin/users/:id/operation-logs
+func GetUserOperationLogs(c *gin.Context) {
+	// 1. 获取用户ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的用户ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 2. 解析分页参数
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	// 3. 查询用户操作日志
+	db := database.GetDB()
+	var logs []model.OperationLog
+	var total int64
+
+	db.Model(&model.OperationLog{}).Where("user_id = ?", id).Count(&total)
+	db.Where("user_id = ?", id).
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Order("id DESC").
+		Find(&logs)
+
+	// 4. 返回统一格式
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data": gin.H{
+			"list":      logs,
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
+		},
+	})
+}
+
 // RechargeUser 用户充值
 // POST /api/admin/users/:id/recharges
 func RechargeUser(c *gin.Context) {
