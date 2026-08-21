@@ -1,7 +1,11 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
+	"os"
+	"os/exec"
+	"time"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/gin-gonic/gin"
@@ -35,6 +39,55 @@ func GetDatabaseStatus(c *gin.Context) {
 			"size_mb":     dbSize,
 			"table_count": tableCount,
 			"tables":      tables,
+		},
+	})
+}
+
+// BackupDatabase 备份数据库
+// POST /api/admin/database/backups
+func BackupDatabase(c *gin.Context) {
+	db := database.GetDB()
+
+	// 获取所有表
+	var tables []string
+	db.Raw("SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()").Pluck("table_name", &tables)
+
+	// 生成备份文件名
+	backupFile := fmt.Sprintf("/tmp/anchor_finance_backup_%s.sql", time.Now().Format("20060102_150405"))
+
+	// 执行mysqldump
+	cmd := exec.Command("mysqldump",
+		"-h", os.Getenv("DB_HOST"),
+		"-P", os.Getenv("DB_PORT"),
+		"-u", os.Getenv("DB_USER"),
+		"-p"+os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "备份失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 写入文件
+	if err := os.WriteFile(backupFile, output, 0644); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "写入备份文件失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "备份成功",
+		"data": gin.H{
+			"file": backupFile,
+			"tables": len(tables),
 		},
 	})
 }

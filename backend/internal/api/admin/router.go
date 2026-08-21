@@ -138,6 +138,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		// 数据库管理 - 已实现
 		authenticated.GET("/database/status", GetDatabaseStatus)
 		authenticated.POST("/database/optimizations", OptimizeDatabase)
+		authenticated.POST("/database/backups", BackupDatabase)
 
 		// 日志管理 - 已实现
 		authenticated.GET("/system-logs", GetSystemLogs)
