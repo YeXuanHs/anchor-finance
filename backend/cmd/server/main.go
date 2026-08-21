@@ -30,6 +30,7 @@ func main() {
 		&model.Invoice{},
 		&model.Service{},
 		&model.Ticket{},
+		&model.TicketReply{},
 		&model.TicketDepartment{},
 		&model.TicketStatus{},
 		&model.Product{},

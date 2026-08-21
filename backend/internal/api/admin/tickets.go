@@ -393,10 +393,26 @@ func AssignTicket(c *gin.Context) {
 // GetTicketReplies 获取工单回复
 // GET /api/admin/tickets/:id/replies
 func GetTicketReplies(c *gin.Context) {
-	// 暂时返回空列表，后续实现ticket_replies表
+	// 1. 获取工单ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的工单ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 2. 查询工单回复
+	db := database.GetDB()
+	var replies []model.TicketReply
+	db.Where("ticket_id = ?", id).Order("id ASC").Find(&replies)
+
+	// 3. 返回统一格式
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
-		"data":    []interface{}{},
+		"data":    replies,
 	})
 }
