@@ -107,3 +107,54 @@ func GetOnlineAdmins(c *gin.Context) {
 		"data":    admins,
 	})
 }
+
+// GetRecentInvoices 获取最近账单
+// GET /api/admin/dashboard/recent-invoices
+func GetRecentInvoices(c *gin.Context) {
+	db := database.GetDB()
+	var invoices []model.Invoice
+	db.Order("id DESC").Limit(10).Find(&invoices)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    invoices,
+	})
+}
+
+// GetMonthlyRevenue 获取月度收入
+// GET /api/admin/dashboard/monthly-revenue
+func GetMonthlyRevenue(c *gin.Context) {
+	db := database.GetDB()
+
+	type MonthlyData struct {
+		Month  string  `json:"month"`
+		Amount float64 `json:"amount"`
+	}
+
+	var results []MonthlyData
+	now := time.Now()
+
+	for i := 11; i >= 0; i-- {
+		month := now.AddDate(0, -i, 0)
+		firstOfMonth := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, month.Location())
+		lastOfMonth := firstOfMonth.AddDate(0, 1, -1)
+
+		var amount float64
+		db.Model(&model.Invoice{}).
+			Where("status = ? AND created_at >= ? AND created_at <= ?", "paid", firstOfMonth, lastOfMonth).
+			Select("COALESCE(SUM(amount), 0)").
+			Scan(&amount)
+
+		results = append(results, MonthlyData{
+			Month:  firstOfMonth.Format("2006-01"),
+			Amount: amount,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    results,
+	})
+}

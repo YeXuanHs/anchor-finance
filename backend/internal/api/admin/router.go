@@ -31,6 +31,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/dashboard/stats", GetDashboardStats)
 		authenticated.GET("/dashboard/income-trend", GetIncomeTrend)
 		authenticated.GET("/dashboard/online-admins", GetOnlineAdmins)
+		authenticated.GET("/dashboard/recent-invoices", GetRecentInvoices)
+		authenticated.GET("/dashboard/monthly-revenue", GetMonthlyRevenue)
 
 		// 客户管理 - 已实现
 		authenticated.GET("/users", GetUserList)
