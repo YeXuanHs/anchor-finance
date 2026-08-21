@@ -124,6 +124,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PATCH("/products/:id/status", UpdateProductStatus)
 		authenticated.GET("/product-groups", GetProductGroups)
 		authenticated.GET("/product-groups/tree", GetProductGroupTree)
+		authenticated.GET("/product-groups/:id/children", GetProductGroupChildren)
 		authenticated.POST("/product-groups", CreateProductGroup)
 		authenticated.PUT("/product-groups/:id", UpdateProductGroup)
 		authenticated.DELETE("/product-groups/:id", DeleteProductGroup)

@@ -1,24 +1,59 @@
 import paramiko
 import json
-import time
 
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 client.connect('45.207.210.235', username='root', password='iswlBSLY8118')
+
+# 更新systemd配置
+service_content = """[Unit]
+Description=AnchorFinance Server
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/anchor-finance/server
+ExecStart=/opt/anchor-finance/server/anchor-finance
+Restart=always
+RestartSec=5
+Environment=DB_HOST=127.0.0.1
+Environment=DB_PORT=3306
+Environment=DB_USER=root
+Environment=DB_PASSWORD='*RhbY#m0IbS8SPaAteOI'
+Environment=DB_NAME=anchor_finance
+Environment=SERVER_PORT=8080
+Environment=SERVER_MODE=release
+Environment=JWT_SECRET=anchor-finance-secret-key-2024
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+sftp = client.open_sftp()
+with sftp.file('/etc/systemd/system/anchor-finance.service', 'w') as f:
+    f.write(service_content)
+sftp.close()
+
+stdin, stdout, stderr = client.exec_command("fuser -k 8080/tcp 2>/dev/null; systemctl daemon-reload; systemctl restart anchor-finance")
+stdout.read()
+
+import time
+time.sleep(3)
 
 # 管理员登录
 print("=== 登录 ===")
 cmd = """curl -s -X POST http://localhost:8080/api/admin/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin123"}'"""
 stdin, stdout, stderr = client.exec_command(cmd)
 login_result_raw = stdout.read().decode('utf-8', errors='ignore')
-print(f"登录响应: {login_result_raw}")
+print(f"登录响应: {login_result_raw[:200]}")
 
 try:
     login_result = json.loads(login_result_raw)
     token = login_result.get('data', {}).get('token', '')
-    print(f"Token: {token[:50]}...")
-except Exception as e:
-    print(f"登录失败: {e}")
+    print(f"Token获取成功")
+except:
+    print("登录失败，无法获取token")
     client.close()
     exit(1)
 

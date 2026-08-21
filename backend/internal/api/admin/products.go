@@ -300,6 +300,22 @@ func GetProductGroups(c *gin.Context) {
 	})
 }
 
+// GetProductGroupChildren 获取产品分组子级
+// GET /api/admin/product-groups/:id/children
+func GetProductGroupChildren(c *gin.Context) {
+	id := c.Param("id")
+
+	db := database.GetDB()
+	var groups []model.ProductGroup
+	db.Where("parent_id = ? AND status = ?", id, "active").Order("sort_order ASC").Find(&groups)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    groups,
+	})
+}
+
 // GetProductGroupTree 获取产品分组树
 // GET /api/admin/product-groups/tree
 func GetProductGroupTree(c *gin.Context) {
