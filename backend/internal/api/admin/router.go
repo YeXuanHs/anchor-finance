@@ -77,6 +77,17 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/products/:id", DeleteProduct)
 		authenticated.GET("/product-groups", GetProductGroups)
 
+		// 设置管理 - 已实现
+		authenticated.GET("/settings", GetSettings)
+		authenticated.GET("/settings/:group", GetSettingsByGroup)
+		authenticated.PUT("/settings", UpdateSettings)
+
+		// 菜单管理 - 已实现
+		authenticated.GET("/menus", GetMenus)
+		authenticated.POST("/menus", CreateMenu)
+		authenticated.PUT("/menus/:id", UpdateMenu)
+		authenticated.DELETE("/menus/:id", DeleteMenu)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
