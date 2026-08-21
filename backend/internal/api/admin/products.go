@@ -363,6 +363,36 @@ func GetProductSummary(c *gin.Context) {
 	})
 }
 
+// GetProductOwners 获取产品所有者列表
+// GET /api/admin/products/:id/owners
+func GetProductOwners(c *gin.Context) {
+	// 1. 获取产品ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的产品ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 2. 查询购买了该产品的用户
+	db := database.GetDB()
+	var users []model.User
+	db.Joins("JOIN orders ON orders.user_id = users.id").
+		Where("orders.product_id = ? AND orders.status = ?", id, "paid").
+		Group("users.id").
+		Find(&users)
+
+	// 3. 返回统一格式
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    users,
+	})
+}
+
 // UpdateProductStatus 更新产品状态
 // PATCH /api/admin/products/:id/status
 func UpdateProductStatus(c *gin.Context) {
