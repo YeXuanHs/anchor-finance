@@ -219,6 +219,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/referral-withdrawals/:id/approve", ApproveReferralWithdrawal)
 		authenticated.POST("/referral-withdrawals/:id/reject", RejectReferralWithdrawal)
 
+		// 会员等级 - 已实现
+		authenticated.GET("/member-levels", GetMemberLevelList)
+		authenticated.POST("/member-levels", CreateMemberLevel)
+		authenticated.PUT("/member-levels/:id", UpdateMemberLevel)
+		authenticated.DELETE("/member-levels/:id", DeleteMemberLevel)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理

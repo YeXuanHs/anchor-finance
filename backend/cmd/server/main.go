@@ -55,6 +55,7 @@ func main() {
 		&model.NotificationTemplate{},
 		&model.UserNotification{},
 		&model.Staff{},
+		&model.MemberLevel{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
