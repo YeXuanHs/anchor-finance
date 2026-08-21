@@ -187,6 +187,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/system-logs", GetSystemLogs)
 		authenticated.GET("/operation-logs", GetOperationLogs)
 		authenticated.GET("/login-logs", GetLoginLogs)
+		authenticated.GET("/log-cleanups/overview", GetLogCleanupOverview)
+		authenticated.POST("/log-cleanups", CleanupLogs)
 
 		// 内容管理 - 已实现
 		authenticated.GET("/content/summary", GetContentSummary)
