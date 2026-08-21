@@ -146,6 +146,15 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/suppliers/:id", DeleteSupplier)
 		authenticated.GET("/suppliers/:id/products", GetSupplierProducts)
 
+		// 插件管理 - 已实现
+		authenticated.GET("/plugins", GetPluginList)
+		authenticated.GET("/plugins/:id", GetPluginDetail)
+		authenticated.POST("/plugins/:id/enable", EnablePlugin)
+		authenticated.POST("/plugins/:id/disable", DisablePlugin)
+		authenticated.DELETE("/plugins/:id", UninstallPlugin)
+		authenticated.GET("/plugins/:id/config", GetPluginConfig)
+		authenticated.PUT("/plugins/:id/config", UpdatePluginConfig)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
