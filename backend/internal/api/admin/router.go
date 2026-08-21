@@ -39,10 +39,15 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/users/:id/tickets", GetUserTickets)
 		authenticated.GET("/users/:id/services", GetUserServices)
 
+		// 订单管理 - 已实现
+		authenticated.GET("/orders", GetOrderList)
+		authenticated.GET("/orders/:id", GetOrder)
+		authenticated.POST("/orders", CreateOrder)
+		authenticated.PUT("/orders/:id", UpdateOrder)
+		authenticated.POST("/orders/:id/activate", ActivateOrder)
+		authenticated.POST("/orders/:id/cancel", CancelOrder)
+
 		// TODO: 以下功能待实现
-		// 订单管理
-		// authenticated.GET("/orders", getOrders)
-		// authenticated.GET("/orders/:id", getOrder)
 
 		// 服务管理
 		// authenticated.GET("/services", getServices)
