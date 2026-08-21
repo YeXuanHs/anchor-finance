@@ -132,11 +132,25 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 内容管理 - 已实现
 		authenticated.GET("/news", GetNewsList)
+		authenticated.POST("/news", CreateNews)
+		authenticated.PUT("/news/:id", UpdateNews)
+		authenticated.DELETE("/news/:id", DeleteNews)
 		authenticated.GET("/news-categories", GetNewsCategories)
+		authenticated.POST("/news-categories", CreateNewsCategory)
+		authenticated.PUT("/news-categories/:id", UpdateNewsCategory)
+		authenticated.DELETE("/news-categories/:id", DeleteNewsCategory)
 		authenticated.GET("/knowledge/categories", GetKnowledgeCategories)
+		authenticated.POST("/knowledge/categories", CreateKnowledgeCategory)
 		authenticated.GET("/knowledge/articles", GetKnowledgeArticles)
+		authenticated.POST("/knowledge/articles", CreateKnowledgeArticle)
+		authenticated.PUT("/knowledge/articles/:id", UpdateKnowledgeArticle)
+		authenticated.DELETE("/knowledge/articles/:id", DeleteKnowledgeArticle)
 		authenticated.GET("/downloads", GetDownloads)
+		authenticated.POST("/downloads", CreateDownload)
+		authenticated.PUT("/downloads/:id", UpdateDownload)
+		authenticated.DELETE("/downloads/:id", DeleteDownload)
 		authenticated.GET("/downloads/categories", GetDownloadCategories)
+		authenticated.POST("/downloads/categories", CreateDownloadCategory)
 
 		// 货币管理 - 已实现
 		authenticated.GET("/currencies", GetCurrencyList)
