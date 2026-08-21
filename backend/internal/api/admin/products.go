@@ -300,6 +300,60 @@ func GetProductGroups(c *gin.Context) {
 	})
 }
 
+// RestoreProduct 恢复产品
+// POST /api/admin/products/:id/restorations
+func RestoreProduct(c *gin.Context) {
+	// 1. 获取产品ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的产品ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 2. 查询产品（包括软删除的）
+	db := database.GetDB()
+	var product model.Product
+	if err := db.Unscoped().First(&product, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "产品不存在",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 3. 检查是否已删除
+	if product.DeletedAt.Time.IsZero() {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "产品未被删除",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 4. 恢复产品
+	if err := db.Unscoped().Model(&product).Update("deleted_at", nil).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "恢复产品失败: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 5. 返回统一格式
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "恢复成功",
+		"data":    nil,
+	})
+}
+
 // GetProductGroupChildren 获取产品分组子级
 // GET /api/admin/product-groups/:id/children
 func GetProductGroupChildren(c *gin.Context) {
