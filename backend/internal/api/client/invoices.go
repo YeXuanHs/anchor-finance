@@ -80,6 +80,77 @@ func GetUserInvoice(c *gin.Context) {
 	})
 }
 
+// GetInvoiceSummary 获取账单统计
+// GET /api/client/invoices/summary
+func GetInvoiceSummary(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+
+	db := database.GetDB()
+
+	// 统计待支付金额
+	var unpaidAmount float64
+	db.Model(&model.Invoice{}).Where("user_id = ? AND status = ?", userID, "unpaid").
+		Select("COALESCE(SUM(amount), 0)").Scan(&unpaidAmount)
+
+	// 统计已支付金额
+	var paidAmount float64
+	db.Model(&model.Invoice{}).Where("user_id = ? AND status = ?", userID, "paid").
+		Select("COALESCE(SUM(amount), 0)").Scan(&paidAmount)
+
+	// 统计账单数量
+	var unpaidCount int64
+	db.Model(&model.Invoice{}).Where("user_id = ? AND status = ?", userID, "unpaid").Count(&unpaidCount)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data": gin.H{
+			"unpaid_amount": unpaidAmount,
+			"paid_amount":   paidAmount,
+			"unpaid_count":  unpaidCount,
+		},
+	})
+}
+
+// CancelUserInvoice 取消用户账单
+// POST /api/client/invoices/:id/cancellations
+func CancelUserInvoice(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的账单ID",
+		})
+		return
+	}
+
+	db := database.GetDB()
+	var invoice model.Invoice
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&invoice).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "账单不存在",
+		})
+		return
+	}
+
+	if invoice.Status != "unpaid" {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "只有待支付的账单才能取消",
+		})
+		return
+	}
+
+	db.Model(&invoice).Update("status", "cancelled")
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "取消成功",
+	})
+}
+
 // PayInvoiceByBalance 余额支付账单
 // POST /api/client/invoices/:id/pay/balance
 func PayInvoiceByBalance(c *gin.Context) {

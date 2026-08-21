@@ -58,7 +58,9 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 账单管理
 		authenticated.GET("/invoices", GetUserInvoices)
+		authenticated.GET("/invoices/summary", GetInvoiceSummary)
 		authenticated.GET("/invoices/:id", GetUserInvoice)
+		authenticated.POST("/invoices/:id/cancellations", CancelUserInvoice)
 		authenticated.POST("/invoices/:id/pay/balance", PayInvoiceByBalance)
 
 		// 财务
