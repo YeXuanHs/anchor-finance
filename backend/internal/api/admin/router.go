@@ -86,6 +86,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/finance/new-customer-daily-summary", GetNewCustomerDailySummary)
 		authenticated.GET("/finance/product-income-summary", GetProductIncomeSummary)
 		authenticated.GET("/finance/ledger", GetFinanceLedger)
+		authenticated.GET("/finance/recharges", GetRechargeList)
+		authenticated.GET("/finance/recharges/summary", GetRechargeSummary)
 
 		// 工单管理 - 已实现
 		authenticated.GET("/tickets", GetTicketList)
