@@ -97,6 +97,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/admins/:id", UpdateAdmin)
 		authenticated.GET("/cron-tasks", GetCronTasks)
 
+		// 日志管理 - 已实现
+		authenticated.GET("/system-logs", GetSystemLogs)
+		authenticated.GET("/operation-logs", GetOperationLogs)
+		authenticated.GET("/login-logs", GetLoginLogs)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
