@@ -1,13 +1,19 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { vitePluginForArco } from '@arco-plugins/vite-plugin'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ArcoResolver } from 'unplugin-vue-components/resolvers'
 import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [
     vue(),
-    vitePluginForArco({
-      style: 'css'
+    AutoImport({
+      resolvers: [ArcoResolver()],
+      imports: ['vue', 'vue-router', 'pinia']
+    }),
+    Components({
+      resolvers: [ArcoResolver()]
     })
   ],
   resolve: {
@@ -21,13 +27,6 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true
-      }
-    }
-  },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: `@use "@/styles/variables" as *;`
       }
     }
   }
