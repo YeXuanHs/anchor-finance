@@ -251,3 +251,152 @@ func GetTicketStatuses(c *gin.Context) {
 		"data":    statuses,
 	})
 }
+
+// GetTicketSummary 获取工单统计
+// GET /api/admin/tickets/summary
+func GetTicketSummary(c *gin.Context) {
+	db := database.GetDB()
+
+	var openCount int64
+	db.Model(&model.Ticket{}).Where("status = ?", "open").Count(&openCount)
+
+	var pendingCount int64
+	db.Model(&model.Ticket{}).Where("status = ?", "pending").Count(&pendingCount)
+
+	var closedCount int64
+	db.Model(&model.Ticket{}).Where("status = ?", "closed").Count(&closedCount)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data": gin.H{
+			"open":    openCount,
+			"pending": pendingCount,
+			"closed":  closedCount,
+			"total":   openCount + pendingCount + closedCount,
+		},
+	})
+}
+
+// ReopenTicket 重新打开工单
+// POST /api/admin/tickets/:id/reopen
+func ReopenTicket(c *gin.Context) {
+	// 1. 获取工单ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的工单ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 2. 查询工单
+	db := database.GetDB()
+	var ticket model.Ticket
+	if err := db.First(&ticket, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "工单不存在",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 3. 检查状态
+	if ticket.Status != "closed" {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "只有已关闭的工单才能重新打开",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 4. 重新打开
+	if err := db.Model(&ticket).Update("status", "open").Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "重新打开工单失败: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 5. 返回统一格式
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "工单已重新打开",
+		"data":    nil,
+	})
+}
+
+// AssignTicket 分配工单
+// PUT /api/admin/tickets/:id/assignment
+func AssignTicket(c *gin.Context) {
+	// 1. 获取工单ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的工单ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 2. 解析请求参数
+	var req struct {
+		AssignedTo uint `json:"assigned_to" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 3. 查询工单
+	db := database.GetDB()
+	var ticket model.Ticket
+	if err := db.First(&ticket, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "工单不存在",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 4. 分配工单
+	if err := db.Model(&ticket).Update("assigned_to", req.AssignedTo).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "分配工单失败: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 5. 返回统一格式
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "分配成功",
+		"data":    nil,
+	})
+}
+
+// GetTicketReplies 获取工单回复
+// GET /api/admin/tickets/:id/replies
+func GetTicketReplies(c *gin.Context) {
+	// 暂时返回空列表，后续实现ticket_replies表
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    []interface{}{},
+	})
+}

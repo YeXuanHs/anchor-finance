@@ -70,9 +70,13 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 工单管理 - 已实现
 		authenticated.GET("/tickets", GetTicketList)
+		authenticated.GET("/tickets/summary", GetTicketSummary)
 		authenticated.GET("/tickets/:id", GetTicket)
+		authenticated.GET("/tickets/:id/replies", GetTicketReplies)
 		authenticated.POST("/tickets/:id/reply", ReplyTicket)
 		authenticated.POST("/tickets/:id/close", CloseTicket)
+		authenticated.POST("/tickets/:id/reopen", ReopenTicket)
+		authenticated.PUT("/tickets/:id/assignment", AssignTicket)
 		authenticated.GET("/ticket-departments", GetTicketDepartments)
 		authenticated.GET("/ticket-statuses", GetTicketStatuses)
 
