@@ -28,5 +28,26 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/auth/logout", authHandler.Logout)
 		authenticated.PUT("/password", authHandler.UpdatePassword)
 		authenticated.PUT("/auth/profile", authHandler.UpdateProfile)
+
+		// 服务管理
+		authenticated.GET("/services", GetUserServices)
+		authenticated.GET("/services/:id", GetUserService)
+
+		// 订单管理
+		authenticated.GET("/orders", GetUserOrders)
+		authenticated.GET("/orders/:id", GetUserOrder)
+		authenticated.POST("/orders/:id/cancel", CancelUserOrder)
+
+		// 工单管理
+		authenticated.GET("/tickets", GetUserTickets)
+		authenticated.GET("/tickets/:id", GetUserTicket)
+		authenticated.POST("/tickets", CreateUserTicket)
+		authenticated.POST("/tickets/:id/reply", ReplyUserTicket)
+		authenticated.POST("/tickets/:id/close", CloseUserTicket)
+
+		// 账单管理
+		authenticated.GET("/invoices", GetUserInvoices)
+		authenticated.GET("/invoices/:id", GetUserInvoice)
+		authenticated.POST("/invoices/:id/pay/balance", PayInvoiceByBalance)
 	}
 }
