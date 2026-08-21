@@ -31,6 +31,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/password", authHandler.UpdatePassword)
 		authenticated.PUT("/auth/profile", authHandler.UpdateProfile)
 
+		// 实名认证
+		authenticated.GET("/verification/status", GetVerificationStatus)
+		authenticated.POST("/verification/submit", SubmitVerification)
+
 		// 服务管理
 		authenticated.GET("/services", GetUserServices)
 		authenticated.GET("/services/:id", GetUserService)
@@ -63,5 +67,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 通知
 		authenticated.GET("/notifications", GetUserNotifications)
+
+		// 推介系统
+		authenticated.GET("/referral/overview", GetUserReferralOverview)
+		authenticated.GET("/referral/rewards", GetUserReferralRewards)
+		authenticated.POST("/referral/withdrawals", ApplyReferralWithdrawal)
+		authenticated.GET("/referral/withdrawals", GetUserReferralWithdrawals)
 	}
 }
