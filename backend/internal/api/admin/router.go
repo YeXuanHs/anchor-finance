@@ -110,6 +110,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/downloads", GetDownloads)
 		authenticated.GET("/downloads/categories", GetDownloadCategories)
 
+		// 货币管理 - 已实现
+		authenticated.GET("/currencies", GetCurrencyList)
+		authenticated.POST("/currencies", CreateCurrency)
+		authenticated.PUT("/currencies/:id", UpdateCurrency)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
