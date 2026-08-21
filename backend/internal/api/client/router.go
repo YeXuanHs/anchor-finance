@@ -38,6 +38,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		// 服务管理
 		authenticated.GET("/services", GetUserServices)
 		authenticated.GET("/services/:id", GetUserService)
+		authenticated.POST("/services/:id/power-actions", PowerService)
+		authenticated.POST("/services/:id/password-resets", ResetServicePassword)
+		authenticated.POST("/services/:id/reinstallations", ReinstallService)
+		authenticated.GET("/services/:id/module-status", GetServiceStatus)
 
 		// 订单管理
 		authenticated.GET("/orders", GetUserOrders)
@@ -68,6 +72,9 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 通知
 		authenticated.GET("/notifications", GetUserNotifications)
+		authenticated.GET("/notifications/unread-count", GetNotificationUnreadCount)
+		authenticated.PUT("/notifications/:id/read-state", MarkNotificationRead)
+		authenticated.POST("/notifications/mark-all-read", MarkAllNotificationsRead)
 
 		// 推介系统
 		authenticated.GET("/referral/overview", GetUserReferralOverview)

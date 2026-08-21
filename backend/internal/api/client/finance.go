@@ -158,20 +158,83 @@ func GetUserNotifications(c *gin.Context) {
 		pageSize = 20
 	}
 
-	// 暂时返回空列表，后续实现通知表
-	_ = userID
-	_ = page
-	_ = pageSize
+	db := database.GetDB()
+	var total int64
+	db.Model(&model.UserNotification{}).Where("user_id = ?", userID).Count(&total)
+
+	var notifications []model.UserNotification
+	offset := (page - 1) * pageSize
+	db.Where("user_id = ?", userID).
+		Offset(offset).
+		Limit(pageSize).
+		Order("id DESC").
+		Find(&notifications)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
 		"data": gin.H{
-			"list":      []interface{}{},
-			"total":     0,
+			"list":      notifications,
+			"total":     total,
 			"page":      page,
 			"page_size": pageSize,
 		},
+	})
+}
+
+// GetNotificationUnreadCount 获取未读通知数量
+// GET /api/client/notifications/unread-count
+func GetNotificationUnreadCount(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+
+	db := database.GetDB()
+	var count int64
+	db.Model(&model.UserNotification{}).Where("user_id = ? AND is_read = ?", userID, false).Count(&count)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data": gin.H{
+			"count": count,
+		},
+	})
+}
+
+// MarkNotificationRead 标记通知已读
+// PUT /api/client/notifications/:id/read-state
+func MarkNotificationRead(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	db := database.GetDB()
+	var notification model.UserNotification
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&notification).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "通知不存在",
+		})
+		return
+	}
+
+	db.Model(&notification).Update("is_read", true)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "标记成功",
+	})
+}
+
+// MarkAllNotificationsRead 标记所有通知已读
+// POST /api/client/notifications/mark-all-read
+func MarkAllNotificationsRead(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+
+	db := database.GetDB()
+	db.Model(&model.UserNotification{}).Where("user_id = ? AND is_read = ?", userID, false).Update("is_read", true)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "全部标记成功",
 	})
 }
 
