@@ -248,6 +248,22 @@ func UpdateMenu(c *gin.Context) {
 	})
 }
 
+// GetMenuTypeList 获取菜单类型列表
+// GET /api/admin/menu-types
+func GetMenuTypeList(c *gin.Context) {
+	types := []gin.H{
+		{"id": "system", "name": "系统菜单", "description": "系统内置菜单"},
+		{"id": "custom", "name": "自定义菜单", "description": "用户自定义菜单"},
+		{"id": "product", "name": "产品菜单", "description": "产品相关菜单"},
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    types,
+	})
+}
+
 // DeleteMenu 删除菜单
 // DELETE /api/admin/menus/:id
 func DeleteMenu(c *gin.Context) {

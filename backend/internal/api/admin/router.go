@@ -155,6 +155,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 菜单管理 - 已实现
 		authenticated.GET("/menus", GetMenus)
+		authenticated.GET("/menu-types", GetMenuTypeList)
 		authenticated.POST("/menus", CreateMenu)
 		authenticated.PUT("/menus/:id", UpdateMenu)
 		authenticated.DELETE("/menus/:id", DeleteMenu)
