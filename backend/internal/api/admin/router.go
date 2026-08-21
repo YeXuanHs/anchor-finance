@@ -135,6 +135,14 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/settings", GetSettings)
 		authenticated.GET("/settings/:group", GetSettingsByGroup)
 		authenticated.PUT("/settings", UpdateSettings)
+		authenticated.GET("/settings/email", GetEmailConfig)
+		authenticated.PUT("/settings/email", UpdateEmailConfig)
+		authenticated.GET("/settings/sms", GetSMSConfig)
+		authenticated.PUT("/settings/sms", UpdateSMSConfig)
+		authenticated.GET("/settings/register-login", GetRegisterLoginConfig)
+		authenticated.PUT("/settings/register-login", UpdateRegisterLoginConfig)
+		authenticated.GET("/settings/captcha", GetCaptchaConfig)
+		authenticated.PUT("/settings/captcha", UpdateCaptchaConfig)
 
 		// 通知模板 - 已实现
 		authenticated.GET("/notification-templates", GetNotificationTemplates)
