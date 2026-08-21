@@ -59,6 +59,7 @@ func main() {
 		&model.CustomField{},
 		&model.Coupon{},
 		&model.CouponCampaign{},
+		&model.Payment{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

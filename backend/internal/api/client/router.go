@@ -83,6 +83,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/notifications/:id/read-state", MarkNotificationRead)
 		authenticated.POST("/notifications/mark-all-read", MarkAllNotificationsRead)
 
+		// 支付记录
+		authenticated.GET("/payments", GetPaymentList)
+		authenticated.GET("/payments/summary", GetPaymentSummary)
+		authenticated.GET("/payments/:id", GetPaymentDetail)
+
 		// 推介系统
 		authenticated.GET("/referral/overview", GetUserReferralOverview)
 		authenticated.GET("/referral/rewards", GetUserReferralRewards)

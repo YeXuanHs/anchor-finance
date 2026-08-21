@@ -34,20 +34,18 @@ with sftp.file('/etc/systemd/system/anchor-finance.service', 'w') as f:
     f.write(service_content)
 sftp.close()
 
-# 重启服务
 stdin, stdout, stderr = client.exec_command("fuser -k 8080/tcp 2>/dev/null; systemctl daemon-reload; systemctl restart anchor-finance")
 stdout.read()
 
 import time
 time.sleep(3)
 
+# 检查日志
+stdin, stdout, stderr = client.exec_command("journalctl -u anchor-finance -n 10 --no-pager")
+print(stdout.read().decode('utf-8', errors='ignore'))
+
 # 测试API
 stdin, stdout, stderr = client.exec_command("curl -s http://localhost:8080/health")
-print("Health:", stdout.read().decode('utf-8', errors='ignore'))
-
-# 登录测试
-cmd = """curl -s -X POST http://localhost:8080/api/admin/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin123"}'"""
-stdin, stdout, stderr = client.exec_command(cmd)
-print("Login:", stdout.read().decode('utf-8', errors='ignore'))
+print("\nHealth:", stdout.read().decode('utf-8', errors='ignore'))
 
 client.close()
