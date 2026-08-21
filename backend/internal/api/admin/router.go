@@ -35,6 +35,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/dashboard/monthly-revenue", GetMonthlyRevenue)
 
 		// 客户管理 - 已实现
+		authenticated.GET("/os-options", GetOSOptions)
 		authenticated.GET("/users", GetUserList)
 		authenticated.GET("/users/:id", GetUser)
 		authenticated.POST("/users", CreateUser)
