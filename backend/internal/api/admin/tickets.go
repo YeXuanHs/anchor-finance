@@ -227,28 +227,27 @@ func CloseTicket(c *gin.Context) {
 // GetTicketDepartments 获取工单部门列表
 // GET /api/admin/ticket-departments
 func GetTicketDepartments(c *gin.Context) {
-	// 暂时返回默认部门
+	db := database.GetDB()
+	var departments []model.TicketDepartment
+	db.Where("status = ?", "active").Order("sort_order ASC").Find(&departments)
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
-		"data": []gin.H{
-			{"id": 1, "name": "技术支持"},
-			{"id": 2, "name": "财务部门"},
-			{"id": 3, "name": "销售部门"},
-		},
+		"data":    departments,
 	})
 }
 
 // GetTicketStatuses 获取工单状态列表
 // GET /api/admin/ticket-statuses
 func GetTicketStatuses(c *gin.Context) {
+	db := database.GetDB()
+	var statuses []model.TicketStatus
+	db.Order("sort_order ASC").Find(&statuses)
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
-		"data": []gin.H{
-			{"value": "open", "label": "开启"},
-			{"value": "pending", "label": "待回复"},
-			{"value": "closed", "label": "已关闭"},
-		},
+		"data":    statuses,
 	})
 }

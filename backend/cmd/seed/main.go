@@ -24,6 +24,13 @@ func main() {
 		&model.Admin{},
 		&model.Role{},
 		&model.Order{},
+		&model.Invoice{},
+		&model.Service{},
+		&model.Ticket{},
+		&model.TicketDepartment{},
+		&model.TicketStatus{},
+		&model.Product{},
+		&model.ProductGroup{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate: %v", err)
@@ -74,22 +81,39 @@ func main() {
 	db.FirstOrCreate(&testUser, model.User{Username: "testuser"})
 
 	fmt.Println("✅ 测试用户创建成功")
-	fmt.Println("   用户名: testuser")
-	fmt.Println("   密码: 123456")
 
-	// 创建测试订单
-	testOrder := model.Order{
-		UserID:      testUser.ID,
-		OrderNo:     "ORD20240001",
-		ProductID:   1,
-		ProductName: "云服务器 2核4G",
-		Quantity:    1,
-		Amount:      99.00,
-		Status:      "paid",
+	// 创建默认工单部门
+	departments := []model.TicketDepartment{
+		{Name: "技术支持", SortOrder: 1},
+		{Name: "财务部门", SortOrder: 2},
+		{Name: "销售部门", SortOrder: 3},
 	}
-	db.FirstOrCreate(&testOrder, model.Order{OrderNo: "ORD20240001"})
+	for _, dept := range departments {
+		db.FirstOrCreate(&dept, model.TicketDepartment{Name: dept.Name})
+	}
+	fmt.Println("✅ 默认工单部门创建成功")
 
-	fmt.Println("✅ 测试订单创建成功")
+	// 创建默认工单状态
+	statuses := []model.TicketStatus{
+		{Value: "open", Label: "开启", SortOrder: 1},
+		{Value: "pending", Label: "待回复", SortOrder: 2},
+		{Value: "closed", Label: "已关闭", SortOrder: 3},
+	}
+	for _, status := range statuses {
+		db.FirstOrCreate(&status, model.TicketStatus{Value: status.Value})
+	}
+	fmt.Println("✅ 默认工单状态创建成功")
+
+	// 创建默认产品分组
+	groups := []model.ProductGroup{
+		{Name: "云服务器", SortOrder: 1},
+		{Name: "虚拟主机", SortOrder: 2},
+		{Name: "域名", SortOrder: 3},
+	}
+	for _, group := range groups {
+		db.FirstOrCreate(&group, model.ProductGroup{Name: group.Name})
+	}
+	fmt.Println("✅ 默认产品分组创建成功")
 
 	fmt.Println("\n🎉 数据初始化完成！")
 }

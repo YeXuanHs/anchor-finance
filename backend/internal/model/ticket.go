@@ -25,3 +25,34 @@ type Ticket struct {
 func (Ticket) TableName() string {
 	return "tickets"
 }
+
+// TicketDepartment 工单部门模型
+type TicketDepartment struct {
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	Name      string         `gorm:"size:50;not null" json:"name"`
+	SortOrder int            `gorm:"default:0" json:"sort_order"`
+	Status    string         `gorm:"size:20;default:active" json:"status"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// TableName 指定表名
+func (TicketDepartment) TableName() string {
+	return "ticket_departments"
+}
+
+// TicketStatus 工单状态模型
+type TicketStatus struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Value     string    `gorm:"size:20;uniqueIndex;not null" json:"value"`
+	Label     string    `gorm:"size:50;not null" json:"label"`
+	SortOrder int       `gorm:"default:0" json:"sort_order"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName 指定表名
+func (TicketStatus) TableName() string {
+	return "ticket_statuses"
+}
