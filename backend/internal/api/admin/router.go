@@ -174,6 +174,13 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/promo-codes/:id", UpdatePromoCode)
 		authenticated.DELETE("/promo-codes/:id", DeletePromoCode)
 
+		// 推介系统 - 已实现
+		authenticated.GET("/referral/overview", GetReferralOverview)
+		authenticated.GET("/referral/rewards", GetReferralRewards)
+		authenticated.GET("/referral-withdrawals", GetReferralWithdrawals)
+		authenticated.POST("/referral-withdrawals/:id/approve", ApproveReferralWithdrawal)
+		authenticated.POST("/referral-withdrawals/:id/reject", RejectReferralWithdrawal)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
