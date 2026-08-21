@@ -73,6 +73,15 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/invoices/:id/cancel", CancelInvoice)
 		authenticated.GET("/transactions", GetTransactionList)
 
+		// 信用额管理 - 已实现
+		authenticated.GET("/credit-limits", GetCreditLimitList)
+		authenticated.GET("/credit-limits/config", GetCreditLimitConfig)
+		authenticated.POST("/credit-limits/config", SaveCreditLimitConfig)
+		authenticated.POST("/credit-limits", SaveCreditLimit)
+		authenticated.PUT("/credit-limits/:id", UpdateCreditLimit)
+		authenticated.DELETE("/credit-limits/:id", DeleteCreditLimit)
+		authenticated.GET("/credit-limits/logs", GetCreditLimitLogs)
+
 		// 财务报表 - 已实现
 		authenticated.GET("/finance/new-customer-daily-summary", GetNewCustomerDailySummary)
 		authenticated.GET("/finance/product-income-summary", GetProductIncomeSummary)

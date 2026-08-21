@@ -63,6 +63,8 @@ func main() {
 		&model.ProductType{},
 		&model.TicketPrereply{},
 		&model.TicketPrereplyCategory{},
+		&model.CreditLimit{},
+		&model.CreditLimitLog{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
