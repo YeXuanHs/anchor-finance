@@ -67,6 +67,53 @@ func DeleteMediaFile(c *gin.Context) {
 	})
 }
 
+// UploadFile 上传文件
+// POST /api/admin/upload
+func UploadFile(c *gin.Context) {
+	// 获取上传的文件
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "请选择文件",
+		})
+		return
+	}
+	defer file.Close()
+
+	// 生成文件名
+	filename := header.Filename
+	// TODO: 保存文件到磁盘或云存储
+
+	// 保存到数据库
+	db := database.GetDB()
+	mediaFile := model.MediaFile{
+		Name:      filename,
+		Path:      "/uploads/" + filename, // TODO: 实际路径
+		Size:      header.Size,
+		MimeType:  header.Header.Get("Content-Type"),
+		UploadedBy: 0, // TODO: 从token获取用户ID
+	}
+
+	if err := db.Create(&mediaFile).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "保存文件信息失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "上传成功",
+		"data": gin.H{
+			"id":   mediaFile.ID,
+			"name": filename,
+			"url":  mediaFile.Path,
+		},
+	})
+}
+
 // GetMediaFileReferences 获取媒体文件引用
 // GET /api/admin/media-files/:id/references
 func GetMediaFileReferences(c *gin.Context) {
