@@ -309,6 +309,68 @@ func UpdateServiceRemark(c *gin.Context) {
 	})
 }
 
+// GetServiceConnection 获取服务连接信息
+// GET /api/client/services/:id/connection
+func GetServiceConnection(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	// 验证服务属于该用户
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "服务不存在",
+		})
+		return
+	}
+
+	// TODO: 从上游模块获取连接信息
+	// 这里暂时返回基本信息
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data": gin.H{
+			"service_id": service.ID,
+			"product_name": service.ProductName,
+			"domain": service.Domain,
+			"username": service.Username,
+			"status": service.Status,
+		},
+	})
+}
+
+// GetServiceRuntime 获取服务运行时信息
+// GET /api/client/services/:id/runtime
+func GetServiceRuntime(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	// 验证服务属于该用户
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "服务不存在",
+		})
+		return
+	}
+
+	// TODO: 从上游模块获取运行时信息（CPU、内存、磁盘等）
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data": gin.H{
+			"service_id": service.ID,
+			"status": service.Status,
+		},
+	})
+}
+
 // GetServiceStatus 获取服务状态
 // GET /api/client/services/:id/module-status
 func GetServiceStatus(c *gin.Context) {

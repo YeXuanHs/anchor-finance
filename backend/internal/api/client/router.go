@@ -39,6 +39,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/services", GetUserServices)
 		authenticated.GET("/services/grouped-overview", GetUserServicesGroupedOverview)
 		authenticated.GET("/services/:id", GetUserService)
+		authenticated.GET("/services/:id/connection", GetServiceConnection)
+		authenticated.GET("/services/:id/runtime", GetServiceRuntime)
 		authenticated.PUT("/services/:id/name", UpdateServiceName)
 		authenticated.PUT("/services/:id/remark", UpdateServiceRemark)
 		authenticated.GET("/services/:id/renewals", GetServiceRenewPreview)
