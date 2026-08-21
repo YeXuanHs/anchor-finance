@@ -57,6 +57,8 @@ func main() {
 		&model.Staff{},
 		&model.MemberLevel{},
 		&model.CustomField{},
+		&model.Coupon{},
+		&model.CouponCampaign{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
