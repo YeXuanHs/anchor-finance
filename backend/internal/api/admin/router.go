@@ -71,6 +71,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/invoices/:id/cancel", CancelInvoice)
 		authenticated.GET("/transactions", GetTransactionList)
 
+		// 财务报表 - 已实现
+		authenticated.GET("/finance/new-customer-daily-summary", GetNewCustomerDailySummary)
+		authenticated.GET("/finance/product-income-summary", GetProductIncomeSummary)
+		authenticated.GET("/finance/ledger", GetFinanceLedger)
+
 		// 工单管理 - 已实现
 		authenticated.GET("/tickets", GetTicketList)
 		authenticated.GET("/tickets/summary", GetTicketSummary)
