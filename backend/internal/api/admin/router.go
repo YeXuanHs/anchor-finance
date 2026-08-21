@@ -102,6 +102,14 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/operation-logs", GetOperationLogs)
 		authenticated.GET("/login-logs", GetLoginLogs)
 
+		// 内容管理 - 已实现
+		authenticated.GET("/news", GetNewsList)
+		authenticated.GET("/news-categories", GetNewsCategories)
+		authenticated.GET("/knowledge/categories", GetKnowledgeCategories)
+		authenticated.GET("/knowledge/articles", GetKnowledgeArticles)
+		authenticated.GET("/downloads", GetDownloads)
+		authenticated.GET("/downloads/categories", GetDownloadCategories)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
