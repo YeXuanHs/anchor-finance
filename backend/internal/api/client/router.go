@@ -17,6 +17,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		public.POST("/login", authHandler.Login)
 		public.POST("/register", authHandler.Register)
 		public.POST("/auth/reset-password", authHandler.ResetPassword)
+		public.GET("/notices", GetNotices)
+		public.GET("/help-articles", GetHelpArticles)
 	}
 
 	// 需要认证的路由
@@ -49,5 +51,17 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/invoices", GetUserInvoices)
 		authenticated.GET("/invoices/:id", GetUserInvoice)
 		authenticated.POST("/invoices/:id/pay/balance", PayInvoiceByBalance)
+
+		// 财务
+		authenticated.GET("/balance-logs", GetBalanceLogs)
+		authenticated.GET("/recharge/gateways", GetRechargeGateways)
+		authenticated.POST("/recharge", CreateRecharge)
+
+		// 优惠券
+		authenticated.GET("/coupons", GetUserCoupons)
+		authenticated.POST("/coupons/:id/claim", ClaimCoupon)
+
+		// 通知
+		authenticated.GET("/notifications", GetUserNotifications)
 	}
 }
