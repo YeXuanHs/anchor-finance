@@ -69,6 +69,14 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/ticket-departments", GetTicketDepartments)
 		authenticated.GET("/ticket-statuses", GetTicketStatuses)
 
+		// 产品管理 - 已实现
+		authenticated.GET("/products", GetProductList)
+		authenticated.GET("/products/:id", GetProduct)
+		authenticated.POST("/products", CreateProduct)
+		authenticated.PUT("/products/:id", UpdateProduct)
+		authenticated.DELETE("/products/:id", DeleteProduct)
+		authenticated.GET("/product-groups", GetProductGroups)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
