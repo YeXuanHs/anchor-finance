@@ -160,6 +160,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/login-logs", GetLoginLogs)
 
 		// 内容管理 - 已实现
+		authenticated.GET("/content/summary", GetContentSummary)
 		authenticated.GET("/news", GetNewsList)
 		authenticated.POST("/news", CreateNews)
 		authenticated.PUT("/news/:id", UpdateNews)

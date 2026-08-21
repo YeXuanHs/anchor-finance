@@ -167,6 +167,44 @@ func GetDownloads(c *gin.Context) {
 	})
 }
 
+// GetContentSummary 获取内容统计
+// GET /api/admin/content/summary
+func GetContentSummary(c *gin.Context) {
+	db := database.GetDB()
+
+	// 统计新闻数量
+	var newsCount int64
+	db.Model(&model.News{}).Count(&newsCount)
+
+	// 统计知识库文章数量
+	var articleCount int64
+	db.Model(&model.KnowledgeArticle{}).Count(&articleCount)
+
+	// 统计下载数量
+	var downloadCount int64
+	db.Model(&model.Download{}).Count(&downloadCount)
+
+	// 统计新闻分类数量
+	var newsCategoryCount int64
+	db.Model(&model.NewsCategory{}).Count(&newsCategoryCount)
+
+	// 统计知识库分类数量
+	var knowledgeCategoryCount int64
+	db.Model(&model.KnowledgeCategory{}).Count(&knowledgeCategoryCount)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data": gin.H{
+			"news_count":               newsCount,
+			"article_count":            articleCount,
+			"download_count":           downloadCount,
+			"news_category_count":      newsCategoryCount,
+			"knowledge_category_count": knowledgeCategoryCount,
+		},
+	})
+}
+
 // GetDownloadCategories 获取下载分类
 // GET /api/admin/downloads/categories
 func GetDownloadCategories(c *gin.Context) {
