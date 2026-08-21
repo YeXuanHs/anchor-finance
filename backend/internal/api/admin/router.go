@@ -102,6 +102,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/product-groups", CreateProductGroup)
 		authenticated.PUT("/product-groups/:id", UpdateProductGroup)
 		authenticated.DELETE("/product-groups/:id", DeleteProductGroup)
+		authenticated.GET("/product-types", GetProductTypeList)
+		authenticated.POST("/product-types", CreateProductType)
+		authenticated.PUT("/product-types/:id", UpdateProductType)
+		authenticated.DELETE("/product-types/:id", DeleteProductType)
 
 		// 设置管理 - 已实现
 		authenticated.GET("/settings", GetSettings)
