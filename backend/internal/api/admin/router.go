@@ -28,7 +28,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		// 仪表盘
 		authenticated.GET("/dashboard/stats", getDashboardStats)
 
-		// 客户管理
+		// 客户管理 - 已实现
 		authenticated.GET("/users", GetUserList)
 		authenticated.GET("/users/:id", GetUser)
 		authenticated.POST("/users", CreateUser)
@@ -39,42 +39,40 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/users/:id/tickets", GetUserTickets)
 		authenticated.GET("/users/:id/services", GetUserServices)
 
+		// TODO: 以下功能待实现
 		// 订单管理
-		authenticated.GET("/orders", getOrders)
-		authenticated.GET("/orders/:id", getOrder)
+		// authenticated.GET("/orders", getOrders)
+		// authenticated.GET("/orders/:id", getOrder)
 
 		// 服务管理
-		authenticated.GET("/services", getServices)
-		authenticated.GET("/services/:id", getService)
+		// authenticated.GET("/services", getServices)
+		// authenticated.GET("/services/:id", getService)
 
 		// 账单管理
-		authenticated.GET("/invoices", getInvoices)
-		authenticated.GET("/invoices/:id", getInvoice)
+		// authenticated.GET("/invoices", getInvoices)
+		// authenticated.GET("/invoices/:id", getInvoice)
 
 		// 工单管理
-		authenticated.GET("/tickets", getTickets)
-		authenticated.GET("/tickets/:id", getTicket)
+		// authenticated.GET("/tickets", getTickets)
+		// authenticated.GET("/tickets/:id", getTicket)
 
 		// 产品管理
-		authenticated.GET("/products", getProducts)
-		authenticated.GET("/products/:id", getProduct)
+		// authenticated.GET("/products", getProducts)
+		// authenticated.GET("/products/:id", getProduct)
 
 		// 插件管理
-		authenticated.GET("/plugins", getPlugins)
+		// authenticated.GET("/plugins", getPlugins)
 
 		// 设置
-		authenticated.GET("/settings", getSettings)
-		authenticated.PUT("/settings", updateSettings)
+		// authenticated.GET("/settings", getSettings)
+		// authenticated.PUT("/settings", updateSettings)
 
 		// 菜单
-		authenticated.GET("/menus", getMenus)
+		// authenticated.GET("/menus", getMenus)
 	}
 }
 
-// 以下为占位函数，后续实现具体业务逻辑
-
+// 仪表盘统计（占位）
 func getDashboardStats(c *gin.Context) {
 	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
 }
-
-
