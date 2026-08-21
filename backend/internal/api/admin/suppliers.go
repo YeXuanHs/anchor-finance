@@ -278,6 +278,44 @@ func GetSupplierProviderTypes(c *gin.Context) {
 	})
 }
 
+// GetSupplierBalance 获取供应商余额
+// GET /api/admin/suppliers/:id/balance
+func GetSupplierBalance(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的供应商ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	db := database.GetDB()
+	var supplier model.Supplier
+	if err := db.First(&supplier, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "供应商不存在",
+			"data":    nil,
+		})
+		return
+	}
+
+	// TODO: 从上游API获取实时余额
+	// 这里暂时返回数据库中的余额
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data": gin.H{
+			"supplier_id": supplier.ID,
+			"name":        supplier.Name,
+			"balance":     supplier.Balance,
+		},
+	})
+}
+
 // GetSupplierProducts 获取供应商产品
 // GET /api/admin/suppliers/:id/products
 func GetSupplierProducts(c *gin.Context) {
