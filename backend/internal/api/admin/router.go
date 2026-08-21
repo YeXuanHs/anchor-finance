@@ -23,6 +23,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 	{
 		// 认证相关
 		authenticated.GET("/auth/info", authHandler.GetInfo)
+		authenticated.PUT("/auth/profile", authHandler.UpdateProfile)
+		authenticated.PUT("/auth/password", authHandler.UpdatePassword)
 		authenticated.POST("/logout", authHandler.Logout)
 
 		// 仪表盘 - 已实现

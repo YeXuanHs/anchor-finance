@@ -3,6 +3,8 @@ package admin
 import (
 	"net/http"
 
+	"github.com/YeXuanHs/anchor-finance/internal/database"
+	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -77,5 +79,99 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
+	})
+}
+
+// UpdateProfile 更新个人资料
+// PUT /api/admin/auth/profile
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	// 获取当前用户ID
+	userID, _ := c.Get("user_id")
+
+	var req struct {
+		RealName string `json:"real_name"`
+		Email    string `json:"email"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	db := database.GetDB()
+	updates := map[string]interface{}{}
+	if req.RealName != "" {
+		updates["real_name"] = req.RealName
+	}
+	if req.Email != "" {
+		updates["email"] = req.Email
+	}
+
+	db.Model(&model.Admin{}).Where("id = ?", userID).Updates(updates)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "更新成功",
+	})
+}
+
+// UpdatePassword 修改密码
+// PUT /api/admin/auth/password
+func (h *AuthHandler) UpdatePassword(c *gin.Context) {
+	// 获取当前用户ID
+	userID, _ := c.Get("user_id")
+
+	var req struct {
+		OldPassword string `json:"old_password" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required,min=6"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	// 查询管理员
+	db := database.GetDB()
+	var admin model.Admin
+	if err := db.First(&admin, userID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "管理员不存在",
+		})
+		return
+	}
+
+	// 验证旧密码
+	if !service.CheckPassword(req.OldPassword, admin.PasswordHash) {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "旧密码错误",
+		})
+		return
+	}
+
+	// 生成新密码hash
+	hashedPassword, err := service.HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "密码加密失败",
+		})
+		return
+	}
+
+	// 更新密码
+	db.Model(&admin).Update("password_hash", hashedPassword)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "密码修改成功",
 	})
 }
