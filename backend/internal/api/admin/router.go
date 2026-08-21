@@ -248,6 +248,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/suppliers/provider-types", GetSupplierProviderTypes)
 		authenticated.GET("/suppliers/:id", GetSupplierDetail)
 		authenticated.GET("/suppliers/:id/balance", GetSupplierBalance)
+		authenticated.PATCH("/suppliers/:id/status", UpdateSupplierStatus)
 		authenticated.POST("/suppliers", CreateSupplier)
 		authenticated.PUT("/suppliers/:id", UpdateSupplier)
 		authenticated.DELETE("/suppliers/:id", DeleteSupplier)

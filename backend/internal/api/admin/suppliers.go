@@ -278,6 +278,66 @@ func GetSupplierProviderTypes(c *gin.Context) {
 	})
 }
 
+// UpdateSupplierStatus 更新供应商状态
+// PATCH /api/admin/suppliers/:id/status
+func UpdateSupplierStatus(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的供应商ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	var req struct {
+		Status string `json:"status" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 验证状态值
+	validStatuses := map[string]bool{
+		"active":   true,
+		"disabled": true,
+	}
+	if !validStatuses[req.Status] {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的状态值",
+			"data":    nil,
+		})
+		return
+	}
+
+	db := database.GetDB()
+	var supplier model.Supplier
+	if err := db.First(&supplier, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "供应商不存在",
+			"data":    nil,
+		})
+		return
+	}
+
+	db.Model(&supplier).Update("status", req.Status)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "状态更新成功",
+		"data":    nil,
+	})
+}
+
 // GetSupplierBalance 获取供应商余额
 // GET /api/admin/suppliers/:id/balance
 func GetSupplierBalance(c *gin.Context) {
