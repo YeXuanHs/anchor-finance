@@ -137,6 +137,15 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/verifications/:id/approve", ApproveVerification)
 		authenticated.POST("/verifications/:id/reject", RejectVerification)
 
+		// 供应商管理 - 已实现
+		authenticated.GET("/suppliers", GetSupplierList)
+		authenticated.GET("/suppliers/summary", GetSupplierSummary)
+		authenticated.GET("/suppliers/:id", GetSupplierDetail)
+		authenticated.POST("/suppliers", CreateSupplier)
+		authenticated.PUT("/suppliers/:id", UpdateSupplier)
+		authenticated.DELETE("/suppliers/:id", DeleteSupplier)
+		authenticated.GET("/suppliers/:id/products", GetSupplierProducts)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
