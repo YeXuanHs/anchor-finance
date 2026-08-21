@@ -578,6 +578,89 @@ func GetUserBalanceLogs(c *gin.Context) {
 	})
 }
 
+// RefundUserService 退款用户服务
+// POST /api/admin/users/:id/services/:service_id/refunds
+func RefundUserService(c *gin.Context) {
+	// 1. 获取用户ID和服务ID
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的用户ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	serviceID, err := strconv.ParseUint(c.Param("service_id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的服务ID",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 2. 解析请求参数
+	var req struct {
+		Amount float64 `json:"amount" binding:"required"`
+		Reason string  `json:"reason"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 3. 查询用户
+	db := database.GetDB()
+	var user model.User
+	if err := db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "用户不存在",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 4. 查询服务
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", serviceID, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "服务不存在",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 5. 退款到用户余额
+	newBalance := user.Balance + req.Amount
+	if err := db.Model(&user).Update("balance", newBalance).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "退款失败: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	// 6. 返回统一格式
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "退款成功",
+		"data": gin.H{
+			"balance": newBalance,
+		},
+	})
+}
+
 // GetUserOperationLogs 获取用户操作日志
 // GET /api/admin/users/:id/operation-logs
 func GetUserOperationLogs(c *gin.Context) {
