@@ -188,6 +188,41 @@ func ReplyUserTicket(c *gin.Context) {
 	})
 }
 
+// GetUserTicketReplies 获取用户工单回复
+// GET /api/client/tickets/:id/replies
+func GetUserTicketReplies(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "无效的工单ID",
+		})
+		return
+	}
+
+	// 验证工单属于该用户
+	db := database.GetDB()
+	var ticket model.Ticket
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&ticket).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "工单不存在",
+		})
+		return
+	}
+
+	// 获取回复
+	var replies []model.TicketReply
+	db.Where("ticket_id = ?", id).Order("id ASC").Find(&replies)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    replies,
+	})
+}
+
 // CloseUserTicket 用户关闭工单
 // POST /api/client/tickets/:id/close
 func CloseUserTicket(c *gin.Context) {

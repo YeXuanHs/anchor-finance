@@ -47,6 +47,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		// 工单管理
 		authenticated.GET("/tickets", GetUserTickets)
 		authenticated.GET("/tickets/:id", GetUserTicket)
+		authenticated.GET("/tickets/:id/replies", GetUserTicketReplies)
 		authenticated.POST("/tickets", CreateUserTicket)
 		authenticated.POST("/tickets/:id/reply", ReplyUserTicket)
 		authenticated.POST("/tickets/:id/close", CloseUserTicket)
