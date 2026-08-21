@@ -88,6 +88,13 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/menus/:id", UpdateMenu)
 		authenticated.DELETE("/menus/:id", DeleteMenu)
 
+		// 管理员管理 - 已实现
+		authenticated.GET("/admins", GetAdminList)
+		authenticated.GET("/roles", GetRoleList)
+		authenticated.POST("/admins", CreateAdmin)
+		authenticated.PUT("/admins/:id", UpdateAdmin)
+		authenticated.GET("/cron-tasks", GetCronTasks)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
