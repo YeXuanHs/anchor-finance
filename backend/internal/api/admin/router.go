@@ -25,8 +25,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/auth/info", authHandler.GetInfo)
 		authenticated.POST("/logout", authHandler.Logout)
 
-		// 仪表盘
-		authenticated.GET("/dashboard/stats", getDashboardStats)
+		// 仪表盘 - 已实现
+		authenticated.GET("/dashboard/stats", GetDashboardStats)
+		authenticated.GET("/dashboard/income-trend", GetIncomeTrend)
+		authenticated.GET("/dashboard/online-admins", GetOnlineAdmins)
 
 		// 客户管理 - 已实现
 		authenticated.GET("/users", GetUserList)
@@ -125,7 +127,4 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 	}
 }
 
-// 仪表盘统计（占位）
-func getDashboardStats(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{}})
-}
+
