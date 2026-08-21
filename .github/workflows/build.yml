@@ -1,0 +1,138 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-go:
+    name: Build Go Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+    
+    - name: Build
+      working-directory: ./backend
+      run: |
+        go mod tidy
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o anchor-finance-server ./cmd/server/
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: go-server
+        path: backend/anchor-finance-server
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Build Admin Frontend
+      working-directory: ./admin-frontend
+      run: |
+        npm install
+        npm run build
+    
+    - name: Build Client Frontend
+      working-directory: ./client-frontend
+      run: |
+        npm install
+        npm run build
+    
+    - name: Upload Admin artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: admin-frontend
+        path: admin-frontend/dist
+    
+    - name: Upload Client artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: client-frontend
+        path: client-frontend/dist
+
+  deploy:
+    name: Deploy to Server
+    needs: [build-go, build-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download Go artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: go-server
+        path: ./deploy/server
+    
+    - name: Download Admin Frontend artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: admin-frontend
+        path: ./deploy/admin
+    
+    - name: Download Client Frontend artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: client-frontend
+        path: ./deploy/client
+    
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          # 停止现有服务
+          systemctl stop anchor-finance || true
+          
+          # 备份旧版本
+          mv /opt/anchor-finance/server /opt/anchor-finance/server.bak || true
+          
+          # 创建目录
+          mkdir -p /opt/anchor-finance/server
+          mkdir -p /opt/anchor-finance/admin
+          mkdir -p /opt/anchor-finance/client
+          
+    - name: Upload files via SCP
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        source: "deploy/*"
+        target: "/opt/anchor-finance/"
+    
+    - name: Start service
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          # 设置权限
+          chmod +x /opt/anchor-finance/deploy/server/anchor-finance-server
+          
+          # 启动服务
+          systemctl start anchor-finance
+          
+          # 检查状态
+          systemctl status anchor-finance
