@@ -297,6 +297,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/coupon-campaigns/:id", DeleteCouponCampaign)
 		authenticated.PATCH("/coupon-campaigns/:id/status", UpdateCouponCampaignStatus)
 
+		// 发送消息 - 已实现
+		authenticated.GET("/send-message/search-params", GetSendMessageSearchParams)
+		authenticated.GET("/send-message/send-methods", GetSendMethodList)
+		authenticated.GET("/send-message/search", SearchSendMessageList)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
