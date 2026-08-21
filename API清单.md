@@ -237,6 +237,47 @@ backend/
 | PUT /api/admin/promo-codes/:id | internal/api/admin/promos.go | ✅完成 | 更新优惠码 |
 | DELETE /api/admin/promo-codes/:id | internal/api/admin/promos.go | ✅完成 | 删除优惠码 |
 
+## 用户前台API (/api/client/)
+
+### 认证模块
+| API | 文件 | 状态 | 说明 |
+|-----|------|------|------|
+| POST /api/client/login | internal/api/client/auth.go | ✅完成 | 用户登录 |
+| POST /api/client/register | internal/api/client/auth.go | ✅完成 | 用户注册 |
+| POST /api/client/auth/reset-password | internal/api/client/auth.go | ✅完成 | 重置密码 |
+| GET /api/client/auth/info | internal/api/client/auth.go | ✅完成 | 获取用户信息 |
+| PUT /api/client/password | internal/api/client/auth.go | ✅完成 | 修改密码 |
+| PUT /api/client/auth/profile | internal/api/client/auth.go | ✅完成 | 更新个人资料 |
+
+### 服务管理
+| API | 文件 | 状态 | 说明 |
+|-----|------|------|------|
+| GET /api/client/services | internal/api/client/services.go | ✅完成 | 服务列表 |
+| GET /api/client/services/:id | internal/api/client/services.go | ✅完成 | 服务详情 |
+
+### 订单管理
+| API | 文件 | 状态 | 说明 |
+|-----|------|------|------|
+| GET /api/client/orders | internal/api/client/orders.go | ✅完成 | 订单列表 |
+| GET /api/client/orders/:id | internal/api/client/orders.go | ✅完成 | 订单详情 |
+| POST /api/client/orders/:id/cancel | internal/api/client/orders.go | ✅完成 | 取消订单 |
+
+### 工单管理
+| API | 文件 | 状态 | 说明 |
+|-----|------|------|------|
+| GET /api/client/tickets | internal/api/client/tickets.go | ✅完成 | 工单列表 |
+| GET /api/client/tickets/:id | internal/api/client/tickets.go | ✅完成 | 工单详情 |
+| POST /api/client/tickets | internal/api/client/tickets.go | ✅完成 | 创建工单 |
+| POST /api/client/tickets/:id/reply | internal/api/client/tickets.go | ✅完成 | 回复工单 |
+| POST /api/client/tickets/:id/close | internal/api/client/tickets.go | ✅完成 | 关闭工单 |
+
+### 账单管理
+| API | 文件 | 状态 | 说明 |
+|-----|------|------|------|
+| GET /api/client/invoices | internal/api/client/invoices.go | ✅完成 | 账单列表 |
+| GET /api/client/invoices/:id | internal/api/client/invoices.go | ✅完成 | 账单详情 |
+| POST /api/client/invoices/:id/pay/balance | internal/api/client/invoices.go | ✅完成 | 余额支付 |
+
 ### 待完成
 - ⏳ 前端开发（所有API完成后）
 
