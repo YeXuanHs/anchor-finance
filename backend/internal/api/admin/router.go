@@ -157,6 +157,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/roles", CreateRole)
 		authenticated.PUT("/roles/:id", UpdateRole)
 		authenticated.DELETE("/roles/:id", DeleteRole)
+		authenticated.POST("/roles/:id/copies", CopyRole)
 		authenticated.GET("/permissions", GetPermissions)
 
 		// 定时任务

@@ -344,6 +344,46 @@ func DeleteRole(c *gin.Context) {
 	})
 }
 
+// CopyRole 复制角色
+// POST /api/admin/roles/:id/copies
+func CopyRole(c *gin.Context) {
+	id := c.Param("id")
+
+	db := database.GetDB()
+	var role model.Role
+	if err := db.First(&role, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "角色不存在",
+		})
+		return
+	}
+
+	// 创建副本
+	newRole := model.Role{
+		Name:        role.Name + " (副本)",
+		Description: role.Description,
+		Permissions: role.Permissions,
+		IsSuper:     false,
+	}
+
+	if err := db.Create(&newRole).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "复制角色失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "复制成功",
+		"data": gin.H{
+			"id": newRole.ID,
+		},
+	})
+}
+
 // GetPermissions 获取权限列表
 // GET /api/admin/permissions
 func GetPermissions(c *gin.Context) {
