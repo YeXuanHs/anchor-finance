@@ -90,6 +90,17 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/ticket-departments", GetTicketDepartments)
 		authenticated.GET("/ticket-statuses", GetTicketStatuses)
 
+		// 工单预回复 - 已实现
+		authenticated.GET("/ticket-prereplies", GetTicketPrereplyList)
+		authenticated.POST("/ticket-prereplies", CreateTicketPrereply)
+		authenticated.PUT("/ticket-prereplies/:id", UpdateTicketPrereply)
+		authenticated.DELETE("/ticket-prereplies/:id", DeleteTicketPrereply)
+		authenticated.POST("/ticket-prereplies/search", SearchTicketPrereply)
+		authenticated.GET("/ticket-prereply-categories", GetTicketPrereplyCategoryList)
+		authenticated.POST("/ticket-prereply-categories", CreateTicketPrereplyCategory)
+		authenticated.PUT("/ticket-prereply-categories/:id", UpdateTicketPrereplyCategory)
+		authenticated.DELETE("/ticket-prereply-categories/:id", DeleteTicketPrereplyCategory)
+
 		// 产品管理 - 已实现
 		authenticated.GET("/products", GetProductList)
 		authenticated.GET("/products/summary", GetProductSummary)
