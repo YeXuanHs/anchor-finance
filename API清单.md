@@ -72,12 +72,12 @@ backend/
 
 | API | 文件 | 状态 | 说明 |
 |-----|------|------|------|
-| GET /api/admin/orders | internal/api/admin/orders.go | ⏳待实现 | 订单列表 |
-| GET /api/admin/orders/:id | internal/api/admin/orders.go | ⏳待实现 | 订单详情 |
-| POST /api/admin/orders | internal/api/admin/orders.go | ⏳待实现 | 创建订单 |
-| PUT /api/admin/orders/:id | internal/api/admin/orders.go | ⏳待实现 | 更新订单 |
-| POST /api/admin/orders/:id/activate | internal/api/admin/orders.go | ⏳待实现 | 激活订单 |
-| POST /api/admin/orders/:id/cancel | internal/api/admin/orders.go | ⏳待实现 | 取消订单 |
+| GET /api/admin/orders | internal/api/admin/orders.go | ✅完成 | 订单列表（分页+搜索+筛选） |
+| GET /api/admin/orders/:id | internal/api/admin/orders.go | ✅完成 | 订单详情 |
+| POST /api/admin/orders | internal/api/admin/orders.go | ✅完成 | 创建订单 |
+| PUT /api/admin/orders/:id | internal/api/admin/orders.go | ✅完成 | 更新订单 |
+| POST /api/admin/orders/:id/activate | internal/api/admin/orders.go | ✅完成 | 激活订单 |
+| POST /api/admin/orders/:id/cancel | internal/api/admin/orders.go | ✅完成 | 取消订单 |
 
 ### 服务管理 (Admin)
 

@@ -47,6 +47,14 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/orders/:id/activate", ActivateOrder)
 		authenticated.POST("/orders/:id/cancel", CancelOrder)
 
+		// 服务管理 - 已实现
+		authenticated.GET("/services", GetServiceList)
+		authenticated.GET("/services/:id", GetService)
+		authenticated.PUT("/services/:id", UpdateService)
+		authenticated.POST("/services/:id/suspend", SuspendService)
+		authenticated.POST("/services/:id/unsuspend", UnsuspendService)
+		authenticated.POST("/services/:id/terminate", TerminateService)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
