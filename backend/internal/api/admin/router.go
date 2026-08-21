@@ -107,10 +107,23 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 管理员管理 - 已实现
 		authenticated.GET("/admins", GetAdminList)
-		authenticated.GET("/roles", GetRoleList)
 		authenticated.POST("/admins", CreateAdmin)
 		authenticated.PUT("/admins/:id", UpdateAdmin)
+
+		// 角色管理 - 已实现
+		authenticated.GET("/roles", GetRoleList)
+		authenticated.GET("/roles/:id", GetRoleDetail)
+		authenticated.POST("/roles", CreateRole)
+		authenticated.PUT("/roles/:id", UpdateRole)
+		authenticated.DELETE("/roles/:id", DeleteRole)
+		authenticated.GET("/permissions", GetPermissions)
+
+		// 定时任务
 		authenticated.GET("/cron-tasks", GetCronTasks)
+
+		// 数据库管理 - 已实现
+		authenticated.GET("/database/status", GetDatabaseStatus)
+		authenticated.POST("/database/optimizations", OptimizeDatabase)
 
 		// 日志管理 - 已实现
 		authenticated.GET("/system-logs", GetSystemLogs)

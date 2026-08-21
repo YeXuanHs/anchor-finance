@@ -201,3 +201,182 @@ func GetCronTasks(c *gin.Context) {
 		},
 	})
 }
+
+// GetRoleDetail 获取角色详情
+// GET /api/admin/roles/:id
+func GetRoleDetail(c *gin.Context) {
+	id := c.Param("id")
+
+	db := database.GetDB()
+	var role model.Role
+	if err := db.First(&role, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "角色不存在",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    role,
+	})
+}
+
+// CreateRole 创建角色
+// POST /api/admin/roles
+func CreateRole(c *gin.Context) {
+	var req struct {
+		Name        string `json:"name" binding:"required"`
+		Description string `json:"description"`
+		Permissions string `json:"permissions"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	db := database.GetDB()
+	role := model.Role{
+		Name:        req.Name,
+		Description: req.Description,
+		Permissions: req.Permissions,
+	}
+
+	if err := db.Create(&role).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "创建角色失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "创建成功",
+		"data": gin.H{
+			"id": role.ID,
+		},
+	})
+}
+
+// UpdateRole 更新角色
+// PUT /api/admin/roles/:id
+func UpdateRole(c *gin.Context) {
+	id := c.Param("id")
+
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Permissions string `json:"permissions"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	db := database.GetDB()
+	var role model.Role
+	if err := db.First(&role, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "角色不存在",
+		})
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.Name != "" {
+		updates["name"] = req.Name
+	}
+	if req.Description != "" {
+		updates["description"] = req.Description
+	}
+	if req.Permissions != "" {
+		updates["permissions"] = req.Permissions
+	}
+
+	db.Model(&role).Updates(updates)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "更新成功",
+	})
+}
+
+// DeleteRole 删除角色
+// DELETE /api/admin/roles/:id
+func DeleteRole(c *gin.Context) {
+	id := c.Param("id")
+
+	db := database.GetDB()
+	var role model.Role
+	if err := db.First(&role, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    404,
+			"message": "角色不存在",
+		})
+		return
+	}
+
+	if role.IsSuper {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "不能删除超级管理员角色",
+		})
+		return
+	}
+
+	db.Delete(&role)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "删除成功",
+	})
+}
+
+// GetPermissions 获取权限列表
+// GET /api/admin/permissions
+func GetPermissions(c *gin.Context) {
+	// 返回系统所有权限
+	permissions := []gin.H{
+		{"key": "dashboard_view", "name": "查看仪表盘"},
+		{"key": "user_list", "name": "用户列表"},
+		{"key": "user_detail", "name": "用户详情"},
+		{"key": "user_manage", "name": "用户管理"},
+		{"key": "order_list", "name": "订单列表"},
+		{"key": "order_detail", "name": "订单详情"},
+		{"key": "invoice_list", "name": "账单列表"},
+		{"key": "invoice_manage", "name": "账单管理"},
+		{"key": "ticket_list", "name": "工单列表"},
+		{"key": "ticket_manage", "name": "工单管理"},
+		{"key": "product_list", "name": "产品列表"},
+		{"key": "product_manage", "name": "产品管理"},
+		{"key": "supplier_list", "name": "供应商列表"},
+		{"key": "supplier_manage", "name": "供应商管理"},
+		{"key": "plugin_list", "name": "插件列表"},
+		{"key": "plugin_manage", "name": "插件管理"},
+		{"key": "settings_view", "name": "查看设置"},
+		{"key": "settings_manage", "name": "设置管理"},
+		{"key": "log_list", "name": "查看日志"},
+		{"key": "staff_list", "name": "员工列表"},
+		{"key": "staff_manage", "name": "员工管理"},
+		{"key": "role_list", "name": "角色列表"},
+		{"key": "role_manage", "name": "角色管理"},
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    permissions,
+	})
+}
