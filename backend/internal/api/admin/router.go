@@ -130,6 +130,13 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/currencies", CreateCurrency)
 		authenticated.PUT("/currencies/:id", UpdateCurrency)
 
+		// 实名认证 - 已实现
+		authenticated.GET("/verifications", GetVerificationList)
+		authenticated.GET("/verifications/summary", GetVerificationSummary)
+		authenticated.GET("/verifications/:id", GetVerificationDetail)
+		authenticated.POST("/verifications/:id/approve", ApproveVerification)
+		authenticated.POST("/verifications/:id/reject", RejectVerification)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
