@@ -225,6 +225,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/member-levels/:id", UpdateMemberLevel)
 		authenticated.DELETE("/member-levels/:id", DeleteMemberLevel)
 
+		// 自定义字段 - 已实现
+		authenticated.GET("/custom-fields", GetCustomFieldList)
+		authenticated.POST("/custom-fields", CreateCustomField)
+		authenticated.PUT("/custom-fields/:id", UpdateCustomField)
+		authenticated.DELETE("/custom-fields/:id", DeleteCustomField)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
