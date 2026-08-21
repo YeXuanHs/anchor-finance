@@ -107,6 +107,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/settings/:group", GetSettingsByGroup)
 		authenticated.PUT("/settings", UpdateSettings)
 
+		// 通知模板 - 已实现
+		authenticated.GET("/notification-templates", GetNotificationTemplates)
+		authenticated.POST("/notification-templates", CreateNotificationTemplate)
+		authenticated.PUT("/notification-templates/:id", UpdateNotificationTemplate)
+		authenticated.DELETE("/notification-templates/:id", DeleteNotificationTemplate)
+
 		// 菜单管理 - 已实现
 		authenticated.GET("/menus", GetMenus)
 		authenticated.POST("/menus", CreateMenu)
