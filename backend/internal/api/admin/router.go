@@ -82,11 +82,17 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 产品管理 - 已实现
 		authenticated.GET("/products", GetProductList)
+		authenticated.GET("/products/summary", GetProductSummary)
 		authenticated.GET("/products/:id", GetProduct)
 		authenticated.POST("/products", CreateProduct)
 		authenticated.PUT("/products/:id", UpdateProduct)
 		authenticated.DELETE("/products/:id", DeleteProduct)
+		authenticated.PATCH("/products/:id/status", UpdateProductStatus)
 		authenticated.GET("/product-groups", GetProductGroups)
+		authenticated.GET("/product-groups/tree", GetProductGroupTree)
+		authenticated.POST("/product-groups", CreateProductGroup)
+		authenticated.PUT("/product-groups/:id", UpdateProductGroup)
+		authenticated.DELETE("/product-groups/:id", DeleteProductGroup)
 
 		// 设置管理 - 已实现
 		authenticated.GET("/settings", GetSettings)
