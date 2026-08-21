@@ -229,8 +229,15 @@ backend/
 | GET /api/admin/plugins/:id/config | internal/api/admin/plugins.go | ✅完成 | 获取配置 |
 | PUT /api/admin/plugins/:id/config | internal/api/admin/plugins.go | ✅完成 | 更新配置 |
 
+### 优惠码管理
+| API | 文件 | 状态 | 说明 |
+|-----|------|------|------|
+| GET /api/admin/promo-codes | internal/api/admin/promos.go | ✅完成 | 优惠码列表 |
+| POST /api/admin/promo-codes | internal/api/admin/promos.go | ✅完成 | 创建优惠码 |
+| PUT /api/admin/promo-codes/:id | internal/api/admin/promos.go | ✅完成 | 更新优惠码 |
+| DELETE /api/admin/promo-codes/:id | internal/api/admin/promos.go | ✅完成 | 删除优惠码 |
+
 ### 待完成
-- ⏳ 优惠码管理API
 - ⏳ 前端开发（所有API完成后）
 
 ---
