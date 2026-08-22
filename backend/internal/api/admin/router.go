@@ -334,6 +334,19 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/friendly-links/:id", UpdateFriendlyLink)
 		authenticated.DELETE("/friendly-links/:id", DeleteFriendlyLink)
 
+		// 合同管理
+		authenticated.GET("/contracts", GetContractList)
+		authenticated.GET("/contracts/:id", GetContractDetail)
+		authenticated.POST("/contracts", CreateContract)
+		authenticated.PUT("/contracts/:id", UpdateContract)
+		authenticated.DELETE("/contracts/:id", DeleteContract)
+		authenticated.POST("/contracts/:id/sign", SignContract)
+		authenticated.POST("/contracts/:id/cancel", CancelContract)
+		authenticated.GET("/contract-templates", GetContractTemplateList)
+		authenticated.POST("/contract-templates", CreateContractTemplate)
+		authenticated.PUT("/contract-templates/:id", UpdateContractTemplate)
+		authenticated.DELETE("/contract-templates/:id", DeleteContractTemplate)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
