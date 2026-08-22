@@ -347,6 +347,9 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/suppliers/:id", DeleteSupplier)
 		authenticated.GET("/suppliers/:id/products", GetSupplierProducts)
 		authenticated.POST("/suppliers/:id/tasks", RunSupplierTask)
+		authenticated.POST("/suppliers/:id/sync-products", SyncSupplierProducts)
+		authenticated.POST("/suppliers/:id/sync-prices", SyncSupplierPrices)
+		authenticated.POST("/suppliers/:id/sync-stock", SyncSupplierStock)
 
 		// 插件管理
 		authenticated.GET("/plugins", GetPluginList)
