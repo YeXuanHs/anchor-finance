@@ -81,6 +81,7 @@ func main() {
 		&model.CustomTemplateField{},
 		&model.TrafficPackage{},
 		&model.TrafficLog{},
+		&model.TaskQueue{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

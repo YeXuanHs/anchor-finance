@@ -387,6 +387,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/traffic-packages/:id", DeleteTrafficPackage)
 		authenticated.GET("/traffic-logs", GetTrafficLogList)
 
+		// 任务队列
+		authenticated.GET("/task-queue/overview", GetTaskQueueOverview)
+		authenticated.GET("/task-queue", GetTaskQueueList)
+		authenticated.POST("/task-queue/:id/retry", RetryTask)
+		authenticated.DELETE("/task-queue/:id", DeleteTask)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
