@@ -213,7 +213,7 @@ func SuspendService(c *gin.Context) {
 		"product_id": service.ProductID,
 		"user_id":    service.UserID,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
 		return
 	}
 
@@ -250,7 +250,7 @@ func UnsuspendService(c *gin.Context) {
 		"product_id": service.ProductID,
 		"user_id":    service.UserID,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
 		return
 	}
 
@@ -286,7 +286,7 @@ func TerminateService(c *gin.Context) {
 		"product_id": service.ProductID,
 		"user_id":    service.UserID,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
 		return
 	}
 
