@@ -120,9 +120,15 @@ func CreateOrder(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
+		return
+	}
+
+	// 0元购防护：订单金额不能为负数
+	if req.Amount < 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "订单金额不能为负数", "data": nil})
 		return
 	}
 

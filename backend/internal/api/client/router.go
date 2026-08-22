@@ -1,6 +1,8 @@
 package client
 
 import (
+	"time"
+
 	"github.com/YeXuanHs/anchor-finance/internal/middleware"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
@@ -11,12 +13,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 	// 创建处理器
 	authHandler := NewAuthHandler(authService)
 
-	// 公开路由（不需要认证）
+	// 公开路由（不需要认证，加限流防暴力破解/批量注册）
 	public := r.Group("")
 	{
-		public.POST("/login", authHandler.Login)
-		public.POST("/register", authHandler.Register)
-		public.POST("/auth/reset-password", authHandler.ResetPassword)
+		public.POST("/login", middleware.RateLimit(5, 1*time.Minute), authHandler.Login)
+		public.POST("/register", middleware.RateLimit(3, 1*time.Minute), authHandler.Register)
+		public.POST("/auth/reset-password", middleware.RateLimit(5, 1*time.Minute), authHandler.ResetPassword)
 		public.GET("/notices", GetNotices)
 		public.GET("/help-articles", GetHelpArticles)
 	}
