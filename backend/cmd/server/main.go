@@ -106,6 +106,7 @@ func main() {
 		&model.UserCoupon{},
 		&model.ReferralWithdrawal{},
 		&service.LoginAttempt{},
+		&model.TicketDeliveryRule{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

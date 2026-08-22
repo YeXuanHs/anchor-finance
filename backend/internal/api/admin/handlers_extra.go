@@ -1135,30 +1135,13 @@ func GetLogSummaryByChannel(c *gin.Context) {
 
 // ==================== 工单上游投递（参考图拉财务TicketDeliveryService） ====================
 
-// TicketDeliveryRule 投递规则模型
-type TicketDeliveryRule struct {
-	ID          uint   `gorm:"primaryKey" json:"id"`
-	Name        string `gorm:"size:100;not null" json:"name"`
-	DepartmentID uint  `gorm:"index" json:"department_id"`
-	ProductID   uint   `gorm:"index" json:"product_id"`
-	Keyword     string `gorm:"size:200" json:"keyword"`
-	UpstreamURL string `gorm:"size:500" json:"upstream_url"`
-	UpstreamKey string `gorm:"size:200" json:"upstream_key"`
-	Status      string `gorm:"size:20;default:active" json:"status"`
-	SortOrder   int    `gorm:"default:0" json:"sort_order"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-func (TicketDeliveryRule) TableName() string { return "ticket_delivery_rules" }
-
 // GetTicketDeliveryRules 获取投递规则列表
 // GET /api/admin/ticket-delivery-rules
 func GetTicketDeliveryRules(c *gin.Context) {
 	db := database.GetDB()
-	var rules []TicketDeliveryRule
+	var rules []model.TicketDeliveryRule
 	db.Order("sort_order ASC").Find(&rules)
-	if rules == nil { rules = []TicketDeliveryRule{} }
+	if rules == nil { rules = []model.TicketDeliveryRule{} }
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": rules})
 }
 
@@ -1179,7 +1162,7 @@ func CreateTicketDeliveryRule(c *gin.Context) {
 	}
 
 	db := database.GetDB()
-	rule := TicketDeliveryRule{
+	rule := model.TicketDeliveryRule{
 		Name:         req.Name,
 		DepartmentID: req.DepartmentID,
 		ProductID:    req.ProductID,
@@ -1200,7 +1183,7 @@ func CreateTicketDeliveryRule(c *gin.Context) {
 func UpdateTicketDeliveryRule(c *gin.Context) {
 	id := c.Param("id")
 	db := database.GetDB()
-	var rule TicketDeliveryRule
+	var rule model.TicketDeliveryRule
 	if err := db.First(&rule, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "规则不存在", "data": nil})
 		return
@@ -1238,7 +1221,7 @@ func UpdateTicketDeliveryRule(c *gin.Context) {
 func DeleteTicketDeliveryRule(c *gin.Context) {
 	id := c.Param("id")
 	db := database.GetDB()
-	if err := db.Delete(&TicketDeliveryRule{}, id).Error; err != nil {
+	if err := db.Delete(&model.TicketDeliveryRule{}, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "删除失败", "data": nil})
 		return
 	}
