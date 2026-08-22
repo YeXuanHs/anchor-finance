@@ -8,6 +8,8 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/redis/go-redis/v9"
+	"context"
 )
 
 // RedisService Redis服务（可选启用，配置存数据库）
@@ -113,10 +115,12 @@ func (s *RedisService) HealthCheck() map[string]interface{} {
 // Set 设置缓存（如果Redis启用则存Redis，否则跳过）
 func (s *RedisService) Set(key string, value interface{}, ttl time.Duration) error {
 	if !s.enabled {
-		return nil // Redis未启用，跳过
+		return nil
 	}
-	// TODO: 实现Redis SET
-	return nil
+	ctx := context.Background()
+	client := s.getClient()
+	defer client.Close()
+	return client.Set(ctx, key, fmt.Sprintf("%v", value), ttl).Err()
 }
 
 // Get 获取缓存
@@ -124,8 +128,14 @@ func (s *RedisService) Get(key string) (string, error) {
 	if !s.enabled {
 		return "", fmt.Errorf("redis未启用")
 	}
-	// TODO: 实现Redis GET
-	return "", fmt.Errorf("not implemented")
+	ctx := context.Background()
+	client := s.getClient()
+	defer client.Close()
+	val, err := client.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return "", fmt.Errorf("key不存在")
+	}
+	return val, err
 }
 
 // Delete 删除缓存
@@ -133,6 +143,17 @@ func (s *RedisService) Delete(key string) error {
 	if !s.enabled {
 		return nil
 	}
-	// TODO: 实现Redis DEL
-	return nil
+	ctx := context.Background()
+	client := s.getClient()
+	defer client.Close()
+	return client.Del(ctx, key).Err()
+}
+
+// getClient 获取Redis客户端连接
+func (s *RedisService) getClient() *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", s.host, s.port),
+		Password: s.password,
+		DB:       s.db,
+	})
 }
