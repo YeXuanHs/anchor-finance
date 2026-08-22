@@ -439,6 +439,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/customer-groups/:id", UpdateCustomerGroup)
 		authenticated.DELETE("/customer-groups/:id", DeleteCustomerGroup)
 
+		// CPU/实例规格目录
+		authenticated.GET("/cpu-model-catalog", GetCPUModelCatalog)
+		authenticated.GET("/instance-spec-catalog", GetInstanceSpecCatalog)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理

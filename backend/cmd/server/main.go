@@ -89,6 +89,8 @@ func main() {
 		&model.Theme{},
 		&model.TicketRule{},
 		&model.OrderConfig{},
+		&model.CPUModel{},
+		&model.InstanceSpec{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
