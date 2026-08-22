@@ -74,6 +74,7 @@ func main() {
 		&model.FriendlyLink{},
 		&model.Contract{},
 		&model.ContractTemplate{},
+		&model.MarketingPush{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

@@ -347,6 +347,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/contract-templates/:id", UpdateContractTemplate)
 		authenticated.DELETE("/contract-templates/:id", DeleteContractTemplate)
 
+		// 营销推送
+		authenticated.GET("/marketing/pushes", GetMarketingPushList)
+		authenticated.POST("/marketing/pushes", CreateMarketingPush)
+		authenticated.POST("/marketing/pushes/:id/send", SendMarketingPush)
+		authenticated.DELETE("/marketing/pushes/:id", DeleteMarketingPush)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
