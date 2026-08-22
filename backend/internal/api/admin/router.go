@@ -443,6 +443,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/cpu-model-catalog", GetCPUModelCatalog)
 		authenticated.GET("/instance-spec-catalog", GetInstanceSpecCatalog)
 
+		// 定时任务
+		authenticated.GET("/schedules/overview", GetScheduleOverview)
+		authenticated.GET("/schedule-runs", GetScheduleRunList)
+		authenticated.GET("/schedule-runs/:id", GetScheduleRunDetail)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理

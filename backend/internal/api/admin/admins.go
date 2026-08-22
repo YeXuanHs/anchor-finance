@@ -189,15 +189,22 @@ func UpdateAdmin(c *gin.Context) {
 // GetCronTasks 获取定时任务列表
 // GET /api/admin/cron-tasks
 func GetCronTasks(c *gin.Context) {
-	// 暂时返回空列表，后续实现定时任务
+	db := database.GetDB()
+	var tasks []model.ScheduleTask
+	db.Order("id ASC").Find(&tasks)
+
+	if tasks == nil {
+		tasks = []model.ScheduleTask{}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
 		"data": gin.H{
-			"list":      []interface{}{},
-			"total":     0,
+			"list":      tasks,
+			"total":     len(tasks),
 			"page":      1,
-			"page_size": 20,
+			"page_size": len(tasks),
 		},
 	})
 }

@@ -91,6 +91,8 @@ func main() {
 		&model.OrderConfig{},
 		&model.CPUModel{},
 		&model.InstanceSpec{},
+		&model.ScheduleTask{},
+		&model.ScheduleRun{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
