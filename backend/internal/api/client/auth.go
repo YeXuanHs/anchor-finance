@@ -67,16 +67,11 @@ func (h *AuthHandler) LoginByCode(c *gin.Context) {
 
 	db := database.GetDB()
 
-	// 验证验证码
-	var captcha model.Captcha
-	if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
-		req.Target, req.Code, "login", false, time.Now()).First(&captcha).Error; err != nil {
+	// 验证验证码（Redis优先，数据库回退）
+	if !verifyCaptchaCode(req.Target, req.Code, "login") {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效或已过期", "data": nil})
 		return
 	}
-
-	// 标记验证码已使用
-	db.Model(&captcha).Update("used", true)
 
 	// 查找用户
 	var user model.User
@@ -145,23 +140,27 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 	codeNum, _ := rand.Int(rand.Reader, big.NewInt(1000000))
 	code := fmt.Sprintf("%06d", codeNum.Int64())
 
-	// 保存验证码（记录IP用于IP维度限流）
-	captcha := model.Captcha{
-		Target:    req.Target,
-		Code:      code,
-		Type:      req.Type,
-		Used:      false,
-		IP:        clientIP,
-		ExpiresAt: time.Now().Add(10 * time.Minute),
+	// 保存验证码（Redis优先，数据库回退）
+	redisSvc := service.NewRedisService()
+	captchaKey := fmt.Sprintf("captcha:%s:%s", req.Target, req.Type)
+	if redisSvc.IsEnabled() {
+		redisSvc.Set(captchaKey, code, 10*time.Minute)
+	} else {
+		captcha := model.Captcha{
+			Target:    req.Target,
+			Code:      code,
+			Type:      req.Type,
+			Used:      false,
+			IP:        clientIP,
+			ExpiresAt: time.Now().Add(10 * time.Minute),
+		}
+		db.Create(&captcha)
 	}
-	db.Create(&captcha)
 
 	// 通过插件引擎发送（短信或邮件）
 	if req.Type == "register" || req.Type == "login" {
-		// 尝试通过短信发送
 		pluginengine.SendSMS(req.Target, fmt.Sprintf("您的验证码是：%s，10分钟内有效。", code))
 	} else {
-		// 通过邮件发送
 		pluginengine.SendEmail(req.Target, "验证码", fmt.Sprintf("您的验证码是：%s，10分钟内有效。", code))
 	}
 
@@ -199,14 +198,11 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	if requireCode {
-		// 验证验证码
-		var captcha model.Captcha
-		if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
-			req.Email, req.Code, "register", false, time.Now()).First(&captcha).Error; err != nil {
+		// 验证验证码（Redis优先，数据库回退）
+		if !verifyCaptchaCode(req.Email, req.Code, "register") {
 			c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效或已过期", "data": nil})
 			return
 		}
-		db.Model(&captcha).Update("used", true)
 	}
 
 	// 检查用户名是否已存在
@@ -266,13 +262,11 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	db := database.GetDB()
 
 	// 验证验证码
-	var captcha model.Captcha
-	if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
-		req.Email, req.Code, "reset_password", false, time.Now()).First(&captcha).Error; err != nil {
+	// 验证验证码（Redis优先，数据库回退）
+	if !verifyCaptchaCode(req.Email, req.Code, "reset_password") {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "如果邮箱存在，重置链接已发送", "data": nil})
 		return
 	}
-	db.Model(&captcha).Update("used", true)
 
 	// 查找用户
 	var user model.User
@@ -426,14 +420,11 @@ func (h *AuthHandler) UpdatePhone(c *gin.Context) {
 
 	db := database.GetDB()
 
-	// 验证验证码
-	var captcha model.Captcha
-	if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
-		req.Phone, req.Code, "bindphone", false, time.Now()).First(&captcha).Error; err != nil {
+	// 验证验证码（Redis优先，数据库回退）
+	if !verifyCaptchaCode(req.Phone, req.Code, "bindphone") {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效", "data": nil})
 		return
 	}
-	db.Model(&captcha).Update("used", true)
 
 	db.Model(&model.User{}).Where("id = ?", userID).Update("phone", req.Phone)
 
@@ -457,16 +448,43 @@ func (h *AuthHandler) UpdateEmail(c *gin.Context) {
 
 	db := database.GetDB()
 
-	// 验证验证码
-	var captcha model.Captcha
-	if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
-		req.Email, req.Code, "bindemail", false, time.Now()).First(&captcha).Error; err != nil {
+	// 验证验证码（Redis优先，数据库回退）
+	if !verifyCaptchaCode(req.Email, req.Code, "bindemail") {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效", "data": nil})
 		return
 	}
-	db.Model(&captcha).Update("used", true)
 
 	db.Model(&model.User{}).Where("id = ?", userID).Update("email", req.Email)
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "邮箱更新成功", "data": nil})
+}
+
+// verifyCaptchaCode 统一验证码验证（Redis优先，数据库回退）
+// 返回true表示验证通过，false表示无效
+func verifyCaptchaCode(target, code, captchaType string) bool {
+	redisSvc := service.NewRedisService()
+	captchaKey := fmt.Sprintf("captcha:%s:%s", target, captchaType)
+
+	if redisSvc.IsEnabled() {
+		stored, err := redisSvc.Get(captchaKey)
+		if err != nil {
+			return false
+		}
+		if stored != code {
+			return false
+		}
+		// 验证通过后删除（一次性使用）
+		redisSvc.Delete(captchaKey)
+		return true
+	}
+
+	// 数据库回退
+	db := database.GetDB()
+	var captcha model.Captcha
+	if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
+		target, code, captchaType, false, time.Now()).First(&captcha).Error; err != nil {
+		return false
+	}
+	db.Model(&captcha).Update("used", true)
+	return true
 }
