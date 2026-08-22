@@ -27,7 +27,7 @@ jobs:
         CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o anchor-finance-server ./cmd/server/
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: go-server
         path: backend/anchor-finance-server
