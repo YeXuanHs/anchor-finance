@@ -14,8 +14,8 @@ type Supplier struct {
 	Domain      string         `gorm:"size:50" json:"domain"`      // 插件域（server/payment/sms等）
 	Type        string         `gorm:"size:50" json:"type"`        // manual, zjmf, v10, anchor
 	APIURL      string         `gorm:"size:500" json:"api_url"`
-	APIKey      string         `gorm:"size:500" json:"api_key"`
-	APISecret   string         `gorm:"size:500" json:"-"`
+	APIKey      string         `gorm:"size:500" json:"api_key"`    // API密钥（前端显示用，脱敏）
+	APISecret   string         `gorm:"size:500" json:"-"`          // API密钥（json不返回，数据库加密存储）
 	Description string         `gorm:"size:500" json:"description"`
 	Status      string         `gorm:"size:20;default:active" json:"status"` // active, disabled
 	Balance     float64        `gorm:"type:decimal(10,2);default:0" json:"balance"`

@@ -289,9 +289,27 @@ func CloseUserTicket(c *gin.Context) {
 	})
 }
 
-// TicketUpstreamReply 上游工单回复回调（供应商回调，无需用户认证）
+// TicketUpstreamReply 上游工单回复回调（供应商回调，需要API Key验证）
 // POST /api/client/tickets/upstream/replies
 func TicketUpstreamReply(c *gin.Context) {
+	// 验证上游回调API Key（从Header获取）
+	apiKey := c.GetHeader("X-API-Key")
+	if apiKey == "" {
+		apiKey = c.Query("api_key")
+	}
+	if apiKey == "" {
+		c.JSON(http.StatusOK, gin.H{"code": 401, "message": "缺少API Key", "data": nil})
+		return
+	}
+
+	// 验证API Key是否有效（检查是否有匹配的供应商）
+	db := database.GetDB()
+	var supplier model.Supplier
+	if err := db.Where("api_key = ? AND status = ?", apiKey, "active").First(&supplier).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 401, "message": "无效的API Key", "data": nil})
+		return
+	}
+
 	var req struct {
 		TicketID uint   `json:"ticket_id" binding:"required"`
 		Content  string `json:"content" binding:"required"`
@@ -302,7 +320,6 @@ func TicketUpstreamReply(c *gin.Context) {
 		return
 	}
 
-	db := database.GetDB()
 	var ticket model.Ticket
 	if err := db.First(&ticket, req.TicketID).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "工单不存在", "data": nil})

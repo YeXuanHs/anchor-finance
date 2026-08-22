@@ -118,13 +118,13 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 	// 频率限制1：目标维度（同一手机号/邮箱的发送间隔）
 	db := database.GetDB()
 	var setting model.Setting
-	ratePerSecond := 3.0 // 默认3次/秒
+	ratePerMinute := 5.0 // 默认5次/分钟
 	if err := db.Where("`key` = ?", "captcha_rate").First(&setting).Error; err == nil {
 		if v, err := strconv.ParseFloat(setting.Value, 64); err == nil && v > 0 {
-			ratePerSecond = v
+			ratePerMinute = v
 		}
 	}
-	intervalSeconds := 1.0 / ratePerSecond
+	intervalSeconds := 60.0 / ratePerMinute
 	var recentCount int64
 	db.Model(&model.Captcha{}).Where("target = ? AND created_at > ?", req.Target, time.Now().Add(-time.Duration(intervalSeconds*float64(time.Second)))).Count(&recentCount)
 	if recentCount > 0 {
