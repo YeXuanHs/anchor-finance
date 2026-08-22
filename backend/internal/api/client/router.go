@@ -13,14 +13,14 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 	// 创建处理器
 	authHandler := NewAuthHandler(authService)
 
-	// 公开路由（不需要认证，加限流防暴力破解/批量注册）
+	// 公开路由（不需要认证）
 	public := r.Group("")
 	{
-		public.POST("/login", middleware.RateLimit(5, 1*time.Minute), authHandler.Login)
-		public.POST("/register", middleware.RateLimit(3, 1*time.Minute), authHandler.Register)
-		public.POST("/auth/reset-password", middleware.RateLimit(3, 5*time.Minute), authHandler.ResetPassword)
+		public.POST("/login", authHandler.Login)
+		public.POST("/register", authHandler.Register)
+		public.POST("/auth/reset-password", authHandler.ResetPassword)
 		public.POST("/auth/captcha", middleware.RateLimit(1, 1*time.Minute), authHandler.SendCaptcha)
-		public.POST("/auth/login-by-code", middleware.RateLimit(5, 1*time.Minute), authHandler.LoginByCode)
+		public.POST("/auth/login-by-code", authHandler.LoginByCode)
 		public.GET("/notices", GetNotices)
 		public.GET("/notices/:id", GetNoticeDetail)
 		public.GET("/help-articles", GetHelpArticles)
