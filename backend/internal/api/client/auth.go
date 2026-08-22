@@ -5,6 +5,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -155,9 +156,9 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	// TODO: 发送重置密码邮件
-	// 这里暂时只返回成功
-	_ = user
+	// 通过PHP插件引擎发送重置密码邮件
+	// 失败不影响接口返回（对外统一提示，避免泄露邮箱存在性）
+	pluginengine.SendEmail(user.Email, "密码重置", "请点击链接重置密码")
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,

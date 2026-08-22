@@ -1,10 +1,13 @@
 package client
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
 )
 
@@ -53,8 +56,14 @@ func PowerService(c *gin.Context) {
 		return
 	}
 
-	// TODO: 调用上游模块执行电源操作
-	// 这里暂时只返回成功
+	// 调用PHP插件引擎执行电源操作
+	if _, err := pluginengine.TriggerHook("power_service", map[string]interface{}{
+		"service_id": service.ID,
+		"action":     req.Action,
+	}); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
@@ -91,8 +100,13 @@ func ResetServicePassword(c *gin.Context) {
 		return
 	}
 
-	// TODO: 调用上游模块重置密码
-	// 这里暂时只返回成功
+	// 调用PHP插件引擎重置密码
+	if _, err := pluginengine.TriggerHook("reset_service_password", map[string]interface{}{
+		"service_id": service.ID,
+	}); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
@@ -129,8 +143,14 @@ func ReinstallService(c *gin.Context) {
 		return
 	}
 
-	// TODO: 调用上游模块重装系统
-	// 这里暂时只返回成功
+	// 调用PHP插件引擎重装系统
+	if _, err := pluginengine.TriggerHook("reinstall_service", map[string]interface{}{
+		"service_id": service.ID,
+		"os":         req.OS,
+	}); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
@@ -198,12 +218,37 @@ func CreateRenewOrder(c *gin.Context) {
 		return
 	}
 
-	// TODO: 计算续费金额，创建续费订单
-	// 这里暂时返回成功
+	// 计算续费金额并创建续费订单（金额从服务记录读取，服务端计算防0元购）
+	if service.Amount <= 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "服务金额异常，无法续费", "data": nil})
+		return
+	}
+
+	// 生成续费订单号
+	orderNo := fmt.Sprintf("REN%s%06d", time.Now().Format("20060102"), time.Now().UnixNano()%1000000)
+
+	order := model.Order{
+		UserID:      userID.(uint),
+		OrderNo:     orderNo,
+		ProductID:   service.ProductID,
+		ProductName: "续费-" + service.ProductName,
+		Amount:      service.Amount,
+		Status:      "pending",
+	}
+
+	if err := db.Create(&order).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建续费订单失败", "data": nil})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "续费订单创建成功",
+		"data": gin.H{
+			"order_id": order.ID,
+			"order_no": orderNo,
+			"amount":   service.Amount,
+		},
 	})
 }
 
@@ -326,20 +371,28 @@ func GetServiceConnection(c *gin.Context) {
 		return
 	}
 
-	// TODO: 从上游模块获取连接信息
-	// 这里暂时返回基本信息
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "success",
-		"data": gin.H{
-			"service_id": service.ID,
-			"product_name": service.ProductName,
-			"domain": service.Domain,
-			"username": service.Username,
-			"status": service.Status,
-		},
+	// 从PHP插件引擎获取连接信息
+	results, err := pluginengine.TriggerHook("get_service_connection", map[string]interface{}{
+		"service_id": service.ID,
 	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		return
+	}
+
+	connData := map[string]interface{}{
+		"service_id":   service.ID,
+		"product_name": service.ProductName,
+		"domain":       service.Domain,
+		"username":     service.Username,
+		"status":       service.Status,
+	}
+	if len(results) > 0 && results[0].Data != nil {
+		if d, ok := results[0].Data.(map[string]interface{}); ok {
+			connData = d
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": connData})
 }
 
 // GetServiceRuntime 获取服务运行时信息
@@ -359,16 +412,25 @@ func GetServiceRuntime(c *gin.Context) {
 		return
 	}
 
-	// TODO: 从上游模块获取运行时信息（CPU、内存、磁盘等）
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "success",
-		"data": gin.H{
-			"service_id": service.ID,
-			"status": service.Status,
-		},
+	// 从PHP插件引擎获取运行时信息
+	results, err := pluginengine.TriggerHook("get_service_runtime", map[string]interface{}{
+		"service_id": service.ID,
 	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		return
+	}
+
+	runtimeData := map[string]interface{}{
+		"service_id": service.ID,
+		"status":     service.Status,
+	}
+	if len(results) > 0 && results[0].Data != nil {
+		if d, ok := results[0].Data.(map[string]interface{}); ok {
+			runtimeData = d
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": runtimeData})
 }
 
 // GetServiceStatus 获取服务状态
@@ -388,14 +450,20 @@ func GetServiceStatus(c *gin.Context) {
 		return
 	}
 
-	// TODO: 从上游模块获取实时状态
-	// 这里暂时返回数据库中的状态
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "success",
-		"data": gin.H{
-			"status": service.Status,
-		},
+	// 从PHP插件引擎获取实时状态
+	results, err := pluginengine.TriggerHook("get_service_status", map[string]interface{}{
+		"service_id": service.ID,
 	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		return
+	}
+
+	statusData := map[string]interface{}{"status": service.Status}
+	if len(results) > 0 && results[0].Data != nil {
+		if d, ok := results[0].Data.(map[string]interface{}); ok {
+			statusData = d
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": statusData})
 }
