@@ -115,17 +115,18 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 		return
 	}
 
-	// 频率限制：从settings表读取配置，默认60秒
+	// 频率限制：从settings表读取配置（captcha_rate=每秒几次，默认1次/秒）
 	db := database.GetDB()
 	var setting model.Setting
-	intervalSeconds := 60 // 默认值
-	if err := db.Where("`key` = ?", "captcha_interval").First(&setting).Error; err == nil {
-		if v, err := strconv.Atoi(setting.Value); err == nil && v > 0 {
-			intervalSeconds = v
+	ratePerSecond := 1.0 // 默认1次/秒
+	if err := db.Where("`key` = ?", "captcha_rate").First(&setting).Error; err == nil {
+		if v, err := strconv.ParseFloat(setting.Value, 64); err == nil && v > 0 {
+			ratePerSecond = v
 		}
 	}
+	intervalSeconds := 1.0 / ratePerSecond
 	var recentCount int64
-	db.Model(&model.Captcha{}).Where("target = ? AND created_at > ?", req.Target, time.Now().Add(-time.Duration(intervalSeconds)*time.Second)).Count(&recentCount)
+	db.Model(&model.Captcha{}).Where("target = ? AND created_at > ?", req.Target, time.Now().Add(-time.Duration(intervalSeconds*float64(time.Second)))).Count(&recentCount)
 	if recentCount > 0 {
 		c.JSON(http.StatusOK, gin.H{"code": 429, "message": "发送过于频繁，请稍后再试", "data": nil})
 		return
