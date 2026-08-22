@@ -9,6 +9,7 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
+	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -1405,4 +1406,114 @@ func SyncSupplierStock(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "库存同步完成", "data": gin.H{"updated": updated}})
+}
+
+// ==================== Redis配置 ====================
+
+// GetRedisConfig 获取Redis配置
+// GET /api/admin/redis/config
+func GetRedisConfig(c *gin.Context) {
+	redisSvc := service.NewRedisService()
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": redisSvc.GetConfig()})
+}
+
+// RedisHealthCheck Redis健康检查
+// GET /api/admin/redis/health
+func RedisHealthCheck(c *gin.Context) {
+	redisSvc := service.NewRedisService()
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": redisSvc.HealthCheck()})
+}
+
+// ==================== AI配置 ====================
+
+// GetAIConfig 获取AI配置
+// GET /api/admin/ai/config
+func GetAIConfig(c *gin.Context) {
+	aiSvc := service.NewAIService()
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": aiSvc.GetConfig()})
+}
+
+// TestAIConnection 测试AI连接
+// POST /api/admin/ai/test
+func TestAIConnection(c *gin.Context) {
+	aiSvc := service.NewAIService()
+	if !aiSvc.IsEnabled() {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "AI服务未启用", "data": nil})
+		return
+	}
+
+	result, err := aiSvc.ChatCompletion([]map[string]string{
+		{"role": "user", "content": "你好，请回复'连接成功'四个字"},
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "AI连接失败: " + err.Error(), "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "AI连接成功", "data": gin.H{"response": result}})
+}
+
+// GenerateProductDescription AI生成商品简介
+// POST /api/admin/ai/generate-description
+func GenerateProductDescription(c *gin.Context) {
+	var req struct {
+		ProductName string                 `json:"product_name" binding:"required"`
+		Config      map[string]interface{} `json:"config"`
+		Template    string                 `json:"template"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	aiSvc := service.NewAIService()
+	if !aiSvc.IsEnabled() {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "AI服务未启用，请先在设置中配置AI", "data": nil})
+		return
+	}
+
+	result, err := aiSvc.GenerateProductDescription(req.ProductName, req.Config, req.Template)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "AI生成失败: " + err.Error(), "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "生成成功", "data": gin.H{"description": result}})
+}
+
+// AITicketReply AI工单自动回复
+// POST /api/admin/ai/ticket-reply
+func AITicketReply(c *gin.Context) {
+	var req struct {
+		TicketID uint `json:"ticket_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var ticket model.Ticket
+	if err := db.First(&ticket, req.TicketID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "工单不存在", "data": nil})
+		return
+	}
+
+	aiSvc := service.NewAIService()
+	if !aiSvc.IsEnabled() {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "AI服务未启用", "data": nil})
+		return
+	}
+
+	// 获取客户信息
+	var user model.User
+	db.First(&user, ticket.UserID)
+
+	reply, err := aiSvc.TicketAutoReply(ticket.Subject, ticket.Content, map[string]interface{}{
+		"customer_info": gin.H{"username": user.Username, "email": user.Email},
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "AI回复失败: " + err.Error(), "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "AI回复生成成功", "data": gin.H{"reply": reply}})
 }

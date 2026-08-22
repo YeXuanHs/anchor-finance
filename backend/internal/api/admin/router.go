@@ -537,5 +537,15 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/customer-groups", CreateCustomerGroup)
 		authenticated.PUT("/customer-groups/:id", UpdateCustomerGroup)
 		authenticated.DELETE("/customer-groups/:id", DeleteCustomerGroup)
+
+		// Redis配置
+		authenticated.GET("/redis/config", GetRedisConfig)
+		authenticated.GET("/redis/health", RedisHealthCheck)
+
+		// AI配置
+		authenticated.GET("/ai/config", GetAIConfig)
+		authenticated.POST("/ai/test", TestAIConnection)
+		authenticated.POST("/ai/generate-description", GenerateProductDescription)
+		authenticated.POST("/ai/ticket-reply", AITicketReply)
 	}
 }
