@@ -18,7 +18,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 	{
 		public.POST("/login", middleware.RateLimit(5, 1*time.Minute), authHandler.Login)
 		public.POST("/register", middleware.RateLimit(3, 1*time.Minute), authHandler.Register)
-		public.POST("/auth/reset-password", middleware.RateLimit(5, 1*time.Minute), authHandler.ResetPassword)
+		public.POST("/auth/reset-password", middleware.RateLimit(3, 5*time.Minute), authHandler.ResetPassword)
 		public.POST("/auth/captcha", middleware.RateLimit(1, 1*time.Minute), authHandler.SendCaptcha)
 		public.POST("/auth/login-by-code", middleware.RateLimit(5, 1*time.Minute), authHandler.LoginByCode)
 		public.GET("/notices", GetNotices)

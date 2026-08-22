@@ -223,12 +223,11 @@ func Checkout(c *gin.Context) {
 		return
 	}
 
-	// 创建订单项（M1修复：使用服务端价格而非购物车价格）
+	// 创建订单项（使用数据库价格，产品不存在则跳过）
 	for _, item := range items {
 		var product model.Product
-		dbPrice := item.Amount // 默认用购物车价格
-		if err := db.First(&product, item.ProductID).Error; err == nil {
-			dbPrice = product.Amount // 使用数据库价格
+		if err := db.First(&product, item.ProductID).Error; err != nil {
+			continue // 产品不存在，跳过
 		}
 		orderItem := model.OrderItem{
 			OrderID:     order.ID,
@@ -236,7 +235,7 @@ func Checkout(c *gin.Context) {
 			ProductName: item.ProductName,
 			Quantity:    item.Quantity,
 			Cycle:       item.Cycle,
-			Amount:      dbPrice,
+			Amount:      product.Amount,
 		}
 		db.Create(&orderItem)
 	}
