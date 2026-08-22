@@ -26,6 +26,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		public.GET("/content/overview", GetContentOverview)
 		public.GET("/home-hero", GetClientHomeHero)
 		public.POST("/payment/notify/:gateway", PaymentNotify)
+		public.POST("/tickets/upstream/replies", TicketUpstreamReply)
 	}
 
 	// 需要认证的路由（禁止admin token访问，防越权）

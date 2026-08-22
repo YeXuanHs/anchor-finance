@@ -288,3 +288,40 @@ func CloseUserTicket(c *gin.Context) {
 		"data":    nil,
 	})
 }
+
+// TicketUpstreamReply 上游工单回复回调（供应商回调，无需用户认证）
+// POST /api/client/tickets/upstream/replies
+func TicketUpstreamReply(c *gin.Context) {
+	var req struct {
+		TicketID uint   `json:"ticket_id" binding:"required"`
+		Content  string `json:"content" binding:"required"`
+		Author   string `json:"author"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var ticket model.Ticket
+	if err := db.First(&ticket, req.TicketID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "工单不存在", "data": nil})
+		return
+	}
+
+	// 创建回复
+	reply := model.TicketReply{
+		TicketID: ticket.ID,
+		Content:  req.Content,
+		IsAdmin:  false, // 上游回复标记为非管理员
+	}
+	if err := db.Create(&reply).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "保存回复失败", "data": nil})
+		return
+	}
+
+	// 更新工单状态
+	db.Model(&ticket).Update("status", "answered")
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "回复成功", "data": gin.H{"reply_id": reply.ID}})
+}

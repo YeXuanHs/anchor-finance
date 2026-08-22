@@ -1132,3 +1132,153 @@ func GetLogSummaryByChannel(c *gin.Context) {
 		"this_month": monthCount,
 	}})
 }
+
+// ==================== 工单上游投递（参考图拉财务TicketDeliveryService） ====================
+
+// TicketDeliveryRule 投递规则模型
+type TicketDeliveryRule struct {
+	ID          uint   `gorm:"primaryKey" json:"id"`
+	Name        string `gorm:"size:100;not null" json:"name"`
+	DepartmentID uint  `gorm:"index" json:"department_id"`
+	ProductID   uint   `gorm:"index" json:"product_id"`
+	Keyword     string `gorm:"size:200" json:"keyword"`
+	UpstreamURL string `gorm:"size:500" json:"upstream_url"`
+	UpstreamKey string `gorm:"size:200" json:"upstream_key"`
+	Status      string `gorm:"size:20;default:active" json:"status"`
+	SortOrder   int    `gorm:"default:0" json:"sort_order"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func (TicketDeliveryRule) TableName() string { return "ticket_delivery_rules" }
+
+// GetTicketDeliveryRules 获取投递规则列表
+// GET /api/admin/ticket-delivery-rules
+func GetTicketDeliveryRules(c *gin.Context) {
+	db := database.GetDB()
+	var rules []TicketDeliveryRule
+	db.Order("sort_order ASC").Find(&rules)
+	if rules == nil { rules = []TicketDeliveryRule{} }
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": rules})
+}
+
+// CreateTicketDeliveryRule 创建投递规则
+// POST /api/admin/ticket-delivery-rules
+func CreateTicketDeliveryRule(c *gin.Context) {
+	var req struct {
+		Name         string `json:"name" binding:"required"`
+		DepartmentID uint   `json:"department_id"`
+		ProductID    uint   `json:"product_id"`
+		Keyword      string `json:"keyword"`
+		UpstreamURL  string `json:"upstream_url"`
+		UpstreamKey  string `json:"upstream_key"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	rule := TicketDeliveryRule{
+		Name:         req.Name,
+		DepartmentID: req.DepartmentID,
+		ProductID:    req.ProductID,
+		Keyword:      req.Keyword,
+		UpstreamURL:  req.UpstreamURL,
+		UpstreamKey:  req.UpstreamKey,
+		Status:       "active",
+	}
+	if err := db.Create(&rule).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建失败", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "创建成功", "data": gin.H{"id": rule.ID}})
+}
+
+// UpdateTicketDeliveryRule 更新投递规则
+// PUT /api/admin/ticket-delivery-rules/:id
+func UpdateTicketDeliveryRule(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+	var rule TicketDeliveryRule
+	if err := db.First(&rule, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "规则不存在", "data": nil})
+		return
+	}
+
+	var req struct {
+		Name         string `json:"name"`
+		DepartmentID uint   `json:"department_id"`
+		ProductID    uint   `json:"product_id"`
+		Keyword      string `json:"keyword"`
+		UpstreamURL  string `json:"upstream_url"`
+		UpstreamKey  string `json:"upstream_key"`
+		Status       string `json:"status"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.Name != "" { updates["name"] = req.Name }
+	if req.DepartmentID > 0 { updates["department_id"] = req.DepartmentID }
+	if req.ProductID > 0 { updates["product_id"] = req.ProductID }
+	if req.Keyword != "" { updates["keyword"] = req.Keyword }
+	if req.UpstreamURL != "" { updates["upstream_url"] = req.UpstreamURL }
+	if req.UpstreamKey != "" { updates["upstream_key"] = req.UpstreamKey }
+	if req.Status != "" { updates["status"] = req.Status }
+
+	db.Model(&rule).Updates(updates)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
+}
+
+// DeleteTicketDeliveryRule 删除投递规则
+// DELETE /api/admin/ticket-delivery-rules/:id
+func DeleteTicketDeliveryRule(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+	if err := db.Delete(&TicketDeliveryRule{}, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "删除失败", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "删除成功", "data": nil})
+}
+
+// GetTicketUpstreamDelivery 获取工单上游投递状态
+// GET /api/admin/tickets/:id/upstream-delivery
+func GetTicketUpstreamDelivery(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var ticket model.Ticket
+	if err := db.First(&ticket, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "工单不存在", "data": nil})
+		return
+	}
+
+	// 查询投递记录
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{
+		"ticket_id": ticket.ID,
+		"status":    ticket.Status,
+	}})
+}
+
+// GetTicketUpstreamDeliveryLogs 获取工单上游投递日志
+// GET /api/admin/tickets/:id/upstream-delivery/logs
+func GetTicketUpstreamDeliveryLogs(c *gin.Context) {
+	id := c.Param("id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 { page = 1 }
+	if pageSize < 1 || pageSize > 100 { pageSize = 20 }
+
+	db := database.GetDB()
+	var logs []model.OperationLog
+	var total int64
+	db.Model(&model.OperationLog{}).Where("resource = ? AND resource_id = ?", "ticket_delivery", id).Count(&total)
+	offset := (page - 1) * pageSize
+	db.Where("resource = ? AND resource_id = ?", "ticket_delivery", id).Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
+	if logs == nil { logs = []model.OperationLog{} }
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"list": logs, "total": total, "page": page, "page_size": pageSize}})
+}

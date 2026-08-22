@@ -137,6 +137,14 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/ticket-statuses", GetTicketStatuses)
 		authenticated.GET("/ticket-statuses/:id", GetTicketStatusDetail)
 
+		// 工单上游投递（参考图拉财务TicketDeliveryService）
+		authenticated.GET("/ticket-delivery-rules", GetTicketDeliveryRules)
+		authenticated.POST("/ticket-delivery-rules", CreateTicketDeliveryRule)
+		authenticated.PUT("/ticket-delivery-rules/:id", UpdateTicketDeliveryRule)
+		authenticated.DELETE("/ticket-delivery-rules/:id", DeleteTicketDeliveryRule)
+		authenticated.GET("/tickets/:id/upstream-delivery", GetTicketUpstreamDelivery)
+		authenticated.GET("/tickets/:id/upstream-delivery/logs", GetTicketUpstreamDeliveryLogs)
+
 		// 工单预回复
 		authenticated.GET("/ticket-prereplies", GetTicketPrereplyList)
 		authenticated.POST("/ticket-prereplies", CreateTicketPrereply)
