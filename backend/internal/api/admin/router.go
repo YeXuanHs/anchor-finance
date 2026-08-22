@@ -310,6 +310,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/send-message/send-methods", GetSendMethodList)
 		authenticated.GET("/send-message/search", SearchSendMessageList)
 
+		// 黑名单管理
+		authenticated.GET("/blacklist", GetBlacklist)
+		authenticated.POST("/blacklist", CreateBlacklist)
+		authenticated.DELETE("/blacklist/:id", DeleteBlacklist)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理

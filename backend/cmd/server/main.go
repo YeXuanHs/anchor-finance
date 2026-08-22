@@ -68,6 +68,7 @@ func main() {
 		&model.Recharge{},
 		&model.MediaFile{},
 		&model.HomeHero{},
+		&model.Blacklist{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
