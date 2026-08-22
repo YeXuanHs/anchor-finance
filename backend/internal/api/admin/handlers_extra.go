@@ -545,7 +545,9 @@ func ScanPlugins(c *gin.Context) {
 
 	// 如果插件引擎没有返回数据，从数据库查询当前插件数
 	if found == 0 {
-		db.Model(&model.Plugin{}).Count(&found)
+		var count int64
+		db.Model(&model.Plugin{}).Count(&count)
+		found = int(count)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "扫描完成", "data": gin.H{"found": found, "new": newCount}})
@@ -753,7 +755,7 @@ func GetHomeHeroAssets(c *gin.Context) {
 
 	images := []string{}
 	for _, f := range files {
-		images = append(images, f.URL)
+		images = append(images, f.Path)
 	}
 	if images == nil { images = []string{} }
 

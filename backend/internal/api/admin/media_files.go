@@ -159,28 +159,28 @@ func GetMediaFileReferences(c *gin.Context) {
 
 	// 检查新闻
 	var news []model.News
-	db.Where("content LIKE ?", "%"+file.URL+"%").Find(&news)
+	db.Where("content LIKE ?", "%"+file.Path+"%").Find(&news)
 	for _, n := range news {
 		references = append(references, map[string]interface{}{"type": "news", "id": n.ID, "title": n.Title})
 	}
 
 	// 检查知识文章
 	var articles []model.KnowledgeArticle
-	db.Where("content LIKE ?", "%"+file.URL+"%").Find(&articles)
+	db.Where("content LIKE ?", "%"+file.Path+"%").Find(&articles)
 	for _, a := range articles {
 		references = append(references, map[string]interface{}{"type": "knowledge_article", "id": a.ID, "title": a.Title})
 	}
 
 	// 检查下载
 	var downloads []model.Download
-	db.Where("description LIKE ?", "%"+file.URL+"%").Find(&downloads)
+	db.Where("file_url LIKE ?", "%"+file.Path+"%").Find(&downloads)
 	for _, d := range downloads {
-		references = append(references, map[string]interface{}{"type": "download", "id": d.ID, "title": d.Name})
+		references = append(references, map[string]interface{}{"type": "download", "id": d.ID, "title": d.Title})
 	}
 
 	// 检查HomeHero
 	var heroes []model.HomeHero
-	db.Where("image_url = ?", file.URL).Find(&heroes)
+	db.Where("image_url = ?", file.Path).Find(&heroes)
 	for _, h := range heroes {
 		references = append(references, map[string]interface{}{"type": "home_hero", "id": h.ID, "title": h.Title})
 	}
