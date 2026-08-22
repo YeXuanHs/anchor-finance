@@ -80,11 +80,17 @@ func CreatePromoCode(c *gin.Context) {
 
 	// 验证类型
 	if req.Type != "percent" && req.Type != "fixed" {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "类型必须是 percent 或 fixed",
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "类型必须是 percent 或 fixed", "data": nil})
+		return
+	}
+
+	// 0元购防护：优惠码价值校验
+	if req.Type == "percent" && (req.Value < 0 || req.Value > 100) {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "百分比优惠码价值需在0-100之间", "data": nil})
+		return
+	}
+	if req.Type == "fixed" && req.Value < 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "固定金额优惠码价值不能为负数", "data": nil})
 		return
 	}
 

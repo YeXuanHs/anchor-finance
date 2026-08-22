@@ -63,8 +63,8 @@ func CreateTrafficPackage(c *gin.Context) {
 	}
 
 	// 0元购防护：价格必须大于0，流量必须大于0
-	if req.Price < 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "价格不能为负数", "data": nil})
+	if req.Price <= 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "价格必须大于0", "data": nil})
 		return
 	}
 	if req.Volume <= 0 {
@@ -133,7 +133,7 @@ func UpdateTrafficPackage(c *gin.Context) {
 	if req.Volume > 0 {
 		updates["volume"] = req.Volume
 	}
-	if req.Price >= 0 {
+	if req.Price > 0 {
 		updates["price"] = req.Price
 	}
 	if req.Unit != "" {
