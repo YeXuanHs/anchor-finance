@@ -2,7 +2,6 @@ package admin
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
@@ -57,7 +56,7 @@ func CreateEmailTemplate(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
@@ -71,7 +70,7 @@ func CreateEmailTemplate(c *gin.Context) {
 	}
 
 	if err := db.Create(&template).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "操作失败"})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "操作失败", "data": nil})
 		return
 	}
 
@@ -97,7 +96,7 @@ func UpdateEmailTemplate(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
@@ -142,12 +141,4 @@ func DeleteEmailTemplate(c *gin.Context) {
 	db.Delete(&template)
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "删除成功", "data": nil})
-}
-
-// GetEmailTemplateDetailByID 兼容旧路径
-func GetEmailTemplateDetailByID(c *gin.Context) {
-	id := c.Param("id")
-	_ = id
-	_, _ = strconv.Atoi(id)
-	GetEmailTemplateDetail(c)
 }
