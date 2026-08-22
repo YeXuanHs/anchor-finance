@@ -202,3 +202,43 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 		"message": "密码修改成功",
 	})
 }
+
+// ResetAdminPassword 重置管理员密码（应急用）
+// POST /api/admin/auth/reset-password
+func (h *AuthHandler) ResetAdminPassword(c *gin.Context) {
+	var req struct {
+		Username    string `json:"username" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "密码长度至少6位", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var admin model.Admin
+	if err := db.Where("username = ?", req.Username).First(&admin).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "管理员不存在", "data": nil})
+		return
+	}
+
+	hashedPassword, err := service.HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "密码加密失败", "data": nil})
+		return
+	}
+
+	db.Model(&admin).Updates(map[string]interface{}{
+		"password_hash":  hashedPassword,
+		"login_fail_count": 0,
+		"locked_until": nil,
+	})
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "密码重置成功", "data": nil})
+}
