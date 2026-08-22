@@ -77,7 +77,7 @@ func RateLimit(rate int, window time.Duration) gin.HandlerFunc {
 	limiter := NewRateLimiter(rate, window)
 	return func(c *gin.Context) {
 		// M6修复：用RemoteIP()取TCP连接真实IP，不读X-Forwarded-For等可伪造头
-		key := c.RemoteIP().String()
+		key := c.RemoteIP()
 		if !limiter.Allow(key) {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"code":    429,
