@@ -433,6 +433,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/logs/admin-login", GetAdminLoginLogs)
 		authenticated.GET("/logs/notification", GetNotificationLogs)
 
+		// 客户分组
+		authenticated.GET("/customer-groups", GetCustomerGroupList)
+		authenticated.POST("/customer-groups", CreateCustomerGroup)
+		authenticated.PUT("/customer-groups/:id", UpdateCustomerGroup)
+		authenticated.DELETE("/customer-groups/:id", DeleteCustomerGroup)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
