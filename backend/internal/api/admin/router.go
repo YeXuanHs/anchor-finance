@@ -397,6 +397,14 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/two-factor-config", GetTwoFactorConfig)
 		authenticated.PUT("/two-factor-config", UpdateTwoFactorConfig)
 
+		// 销售设置
+		authenticated.GET("/sales-config", GetSalesConfig)
+		authenticated.PUT("/sales-config", UpdateSalesConfig)
+		authenticated.GET("/sales-groups", GetSalesGroupList)
+		authenticated.POST("/sales-groups", CreateSalesGroup)
+		authenticated.PUT("/sales-groups/:id", UpdateSalesGroup)
+		authenticated.DELETE("/sales-groups/:id", DeleteSalesGroup)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
