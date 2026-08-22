@@ -54,8 +54,17 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/users/:id/services", GetUserServices)
 		authenticated.GET("/users/:id/balance-logs", GetUserBalanceLogs)
 		authenticated.GET("/users/:id/operation-logs", GetUserOperationLogs)
+		authenticated.GET("/users/:id/email-logs", GetUserEmailLogs)
+		authenticated.GET("/users/:id/sms-logs", GetUserSmsLogs)
+		authenticated.GET("/users/:id/invoices/:invoice_id", GetUserInvoiceDetail)
 		authenticated.POST("/users/:id/recharges", RechargeUser)
 		authenticated.POST("/users/:id/services/:service_id/refunds", RefundUserService)
+		authenticated.GET("/users/:id/services/:service_id/connection", AdminGetServiceConnection)
+		authenticated.GET("/users/:id/services/:service_id/remote-status", AdminGetServiceRemoteStatus)
+		authenticated.PUT("/users/:id/services/:service_id/meta", AdminUpdateServiceMeta)
+		authenticated.POST("/users/:id/services/:service_id/manual-provision", AdminManualProvision)
+		authenticated.POST("/users/:id/services/:service_id/power-actions", AdminServicePowerAction)
+		authenticated.POST("/users/:id/services/:service_id/password-resets", AdminResetServicePassword)
 		// 新增：用户备注、登录为用户、刷新服务状态
 		authenticated.GET("/users/:id/remarks", GetUserRemarks)
 		authenticated.POST("/users/:id/remarks", AddUserRemark)
@@ -100,6 +109,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/finance/new-customer-daily-summary", GetNewCustomerDailySummary)
 		authenticated.GET("/finance/product-income-summary", GetProductIncomeSummary)
 		authenticated.GET("/finance/ledger", GetFinanceLedger)
+		authenticated.GET("/finance/ledger/:id", GetFinanceLedgerDetail)
 		authenticated.GET("/finance/ledger/summary", GetFinanceLedgerSummary)
 		authenticated.GET("/finance/recharges", GetRechargeList)
 		authenticated.GET("/finance/recharges/summary", GetRechargeSummary)
@@ -121,6 +131,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/tickets/:id/reopen", ReopenTicket)
 		authenticated.POST("/tickets/:id/receive", ReceiveTicket)
 		authenticated.PUT("/tickets/:id/assignment", AssignTicket)
+		authenticated.POST("/tickets/:id/replies/:reply_id/recalls", RecallTicketReply)
 		authenticated.GET("/ticket-departments", GetTicketDepartments)
 		authenticated.GET("/ticket-departments/:id", GetTicketDepartmentDetail)
 		authenticated.POST("/ticket-departments/:id/move-up", MoveTicketDepartmentUp)
@@ -158,6 +169,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/product-groups", CreateProductGroup)
 		authenticated.PUT("/product-groups/:id", UpdateProductGroup)
 		authenticated.DELETE("/product-groups/:id", DeleteProductGroup)
+		authenticated.POST("/product-groups/reorders", ReorderProductGroups)
+		authenticated.DELETE("/products/:id/force", ForceDeleteProduct)
 		authenticated.GET("/product-types", GetProductTypeList)
 		authenticated.POST("/product-types", CreateProductType)
 		authenticated.PUT("/product-types/:id", UpdateProductType)
@@ -234,6 +247,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/schedules/overview", GetScheduleOverview)
 		authenticated.GET("/schedule-runs", GetScheduleRunList)
 		authenticated.GET("/schedule-runs/:id", GetScheduleRunDetail)
+		authenticated.POST("/schedule-runs/:id/retry", RetryScheduleRun)
+		authenticated.POST("/schedule-triggers", TriggerSchedule)
 
 		// 数据库管理
 		authenticated.GET("/database/status", GetDatabaseStatus)
@@ -250,6 +265,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/login-logs", GetLoginLogs)
 		authenticated.GET("/log-cleanups/overview", GetLogCleanupOverview)
 		authenticated.POST("/log-cleanups", CleanupLogs)
+		authenticated.GET("/log-summaries/:channel", GetLogSummaryByChannel)
 
 		// 分类日志
 		authenticated.GET("/logs/sms", GetSMSLogs)
@@ -307,8 +323,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/verifications", GetVerificationList)
 		authenticated.GET("/verifications/summary", GetVerificationSummary)
 		authenticated.GET("/verifications/:id", GetVerificationDetail)
+		authenticated.GET("/verifications/:id/history", GetVerificationHistory)
 		authenticated.POST("/verifications/:id/approve", ApproveVerification)
 		authenticated.POST("/verifications/:id/reject", RejectVerification)
+		authenticated.POST("/verifications/:id/unbindings", UnbindVerificationByUser)
 		authenticated.POST("/users/:id/unbind-verification", UnbindVerification)
 
 		// 供应商管理

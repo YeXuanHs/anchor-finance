@@ -7,6 +7,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
 )
 
@@ -668,4 +669,375 @@ func DeleteDownloadCategory(c *gin.Context) {
 // GetHomeHeroAssets 获取首页Hero可用资源文件
 func GetHomeHeroAssets(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"images": []string{}, "videos": []string{}}})
+}
+
+// ==================== Admin 用户服务子操作 ====================
+
+// GetUserEmailLogs 获取用户邮件日志
+// GET /api/admin/users/:id/email-logs
+func GetUserEmailLogs(c *gin.Context) {
+	id := c.Param("id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 { page = 1 }
+	if pageSize < 1 || pageSize > 100 { pageSize = 20 }
+
+	db := database.GetDB()
+	var logs []model.OperationLog
+	var total int64
+	db.Model(&model.OperationLog{}).Where("user_id = ? AND action = ?", id, "email").Count(&total)
+	offset := (page - 1) * pageSize
+	db.Where("user_id = ? AND action = ?", id, "email").Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
+	if logs == nil { logs = []model.OperationLog{} }
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"list": logs, "total": total, "page": page, "page_size": pageSize}})
+}
+
+// GetUserSmsLogs 获取用户短信日志
+// GET /api/admin/users/:id/sms-logs
+func GetUserSmsLogs(c *gin.Context) {
+	id := c.Param("id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 { page = 1 }
+	if pageSize < 1 || pageSize > 100 { pageSize = 20 }
+
+	db := database.GetDB()
+	var logs []model.OperationLog
+	var total int64
+	db.Model(&model.OperationLog{}).Where("user_id = ? AND action = ?", id, "sms").Count(&total)
+	offset := (page - 1) * pageSize
+	db.Where("user_id = ? AND action = ?", id, "sms").Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
+	if logs == nil { logs = []model.OperationLog{} }
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"list": logs, "total": total, "page": page, "page_size": pageSize}})
+}
+
+// GetUserInvoiceDetail 获取用户特定账单详情
+// GET /api/admin/users/:id/invoices/:invoice_id
+func GetUserInvoiceDetail(c *gin.Context) {
+	userID := c.Param("id")
+	invoiceID := c.Param("invoice_id")
+
+	db := database.GetDB()
+	var invoice model.Invoice
+	if err := db.Where("id = ? AND user_id = ?", invoiceID, userID).First(&invoice).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "账单不存在", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": invoice})
+}
+
+// AdminGetServiceConnection 管理员获取用户服务连接信息
+// GET /api/admin/users/:id/services/:service_id/connection
+func AdminGetServiceConnection(c *gin.Context) {
+	userID := c.Param("id")
+	serviceID := c.Param("service_id")
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", serviceID, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	results, err := pluginengine.TriggerHook("get_service_connection", map[string]interface{}{"service_id": service.ID})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"service": service, "connection": results}})
+}
+
+// AdminGetServiceRemoteStatus 管理员获取用户服务远程状态
+// GET /api/admin/users/:id/services/:service_id/remote-status
+func AdminGetServiceRemoteStatus(c *gin.Context) {
+	userID := c.Param("id")
+	serviceID := c.Param("service_id")
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", serviceID, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	results, err := pluginengine.TriggerHook("get_service_status", map[string]interface{}{"service_id": service.ID})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"status": service.Status, "remote": results}})
+}
+
+// AdminUpdateServiceMeta 管理员更新服务元数据
+// PUT /api/admin/users/:id/services/:service_id/meta
+func AdminUpdateServiceMeta(c *gin.Context) {
+	userID := c.Param("id")
+	serviceID := c.Param("service_id")
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", serviceID, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	var req map[string]interface{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db.Model(&service).Updates(req)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
+}
+
+// AdminManualProvision 管理员手动开通服务
+// POST /api/admin/users/:id/services/:service_id/manual-provision
+func AdminManualProvision(c *gin.Context) {
+	userID := c.Param("id")
+	serviceID := c.Param("service_id")
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", serviceID, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	results, err := pluginengine.TriggerHook("provision_service", map[string]interface{}{"service_id": service.ID})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+
+	db.Model(&service).Update("status", "active")
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "开通成功", "data": gin.H{"results": results}})
+}
+
+// AdminServicePowerAction 管理员服务电源操作
+// POST /api/admin/users/:id/services/:service_id/power-actions
+func AdminServicePowerAction(c *gin.Context) {
+	userID := c.Param("id")
+	serviceID := c.Param("service_id")
+
+	var req struct {
+		Action string `json:"action" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", serviceID, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	results, err := pluginengine.TriggerHook("service_power_action", map[string]interface{}{
+		"service_id": service.ID,
+		"action":     req.Action,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "操作成功", "data": gin.H{"results": results}})
+}
+
+// AdminResetServicePassword 管理员重置服务密码
+// POST /api/admin/users/:id/services/:service_id/password-resets
+func AdminResetServicePassword(c *gin.Context) {
+	userID := c.Param("id")
+	serviceID := c.Param("service_id")
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", serviceID, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	results, err := pluginengine.TriggerHook("reset_service_password", map[string]interface{}{"service_id": service.ID})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "密码重置成功", "data": gin.H{"results": results}})
+}
+
+// ==================== 新增路由handler ====================
+
+// ReorderProductGroups 产品分组排序
+// POST /api/admin/product-groups/reorders
+func ReorderProductGroups(c *gin.Context) {
+	var req struct {
+		Items []struct {
+			ID       uint `json:"id"`
+			SortOrder int `json:"sort_order"`
+		} `json:"items" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	for _, item := range req.Items {
+		db.Model(&model.ProductGroup{}).Where("id = ?", item.ID).Update("sort_order", item.SortOrder)
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "排序成功", "data": nil})
+}
+
+// ForceDeleteProduct 强制删除产品（跳过回收站）
+// DELETE /api/admin/products/:id/force
+func ForceDeleteProduct(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+
+	// 检查是否有活跃服务使用此产品
+	var serviceCount int64
+	db.Model(&model.Service{}).Where("product_id = ? AND status IN ?", id, []string{"active", "suspended"}).Count(&serviceCount)
+	if serviceCount > 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "该产品还有活跃服务，无法强制删除", "data": nil})
+		return
+	}
+
+	if err := db.Unscoped().Delete(&model.Product{}, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "删除失败", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "删除成功", "data": nil})
+}
+
+// RetryScheduleRun 重试定时任务
+// POST /api/admin/schedule-runs/:id/retry
+func RetryScheduleRun(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var run model.ScheduleRun
+	if err := db.First(&run, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "运行记录不存在", "data": nil})
+		return
+	}
+
+	// 重置状态为pending
+	db.Model(&run).Updates(map[string]interface{}{"status": "pending", "error_message": ""})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "已加入重试队列", "data": nil})
+}
+
+// TriggerSchedule 手动触发定时任务
+// POST /api/admin/schedule-triggers
+func TriggerSchedule(c *gin.Context) {
+	var req struct {
+		TaskID uint `json:"task_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var task model.ScheduleTask
+	if err := db.First(&task, req.TaskID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "任务不存在", "data": nil})
+		return
+	}
+
+	// 创建运行记录
+	run := model.ScheduleRun{
+		TaskID:  task.ID,
+		Status:  "pending",
+	}
+	db.Create(&run)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "已触发", "data": gin.H{"run_id": run.ID}})
+}
+
+// GetVerificationHistory 获取实名认证历史
+// GET /api/admin/verifications/:id/history
+func GetVerificationHistory(c *gin.Context) {
+	userID := c.Param("id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 { page = 1 }
+	if pageSize < 1 || pageSize > 100 { pageSize = 20 }
+
+	db := database.GetDB()
+	var records []model.Verification
+	var total int64
+	db.Model(&model.Verification{}).Where("user_id = ?", userID).Count(&total)
+	offset := (page - 1) * pageSize
+	db.Where("user_id = ?", userID).Offset(offset).Limit(pageSize).Order("id DESC").Find(&records)
+	if records == nil { records = []model.Verification{} }
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"list": records, "total": total, "page": page, "page_size": pageSize}})
+}
+
+// UnbindVerificationByUser 解绑实名认证（按用户ID）
+// POST /api/admin/verifications/:id/unbindings
+func UnbindVerificationByUser(c *gin.Context) {
+	userID := c.Param("id")
+	db := database.GetDB()
+
+	result := db.Model(&model.Verification{}).Where("user_id = ?", userID).Update("status", "unbound")
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "未找到实名认证记录", "data": nil})
+		return
+	}
+	// 同时清除用户表的verified状态
+	db.Model(&model.User{}).Where("id = ?", userID).Update("verified", false)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "解绑成功", "data": nil})
+}
+
+// RecallTicketReply 撤回工单回复
+// POST /api/admin/tickets/:id/replies/:reply_id/recalls
+func RecallTicketReply(c *gin.Context) {
+	replyID := c.Param("reply_id")
+	db := database.GetDB()
+
+	var reply model.TicketReply
+	if err := db.First(&reply, replyID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "回复不存在", "data": nil})
+		return
+	}
+
+	// 只能撤回自己的回复或管理员可以撤回任何回复
+	reply.Content = "[已撤回]"
+	db.Save(&reply)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "撤回成功", "data": nil})
+}
+
+// GetFinanceLedgerDetail 获取财务账本详情
+// GET /api/admin/finance/ledger/:id
+func GetFinanceLedgerDetail(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var invoice model.Invoice
+	if err := db.First(&invoice, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "记录不存在", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": invoice})
+}
+
+// GetLogSummaryByChannel 获取日志摘要
+// GET /api/admin/log-summaries/:channel
+func GetLogSummaryByChannel(c *gin.Context) {
+	channel := c.Param("channel")
+	db := database.GetDB()
+
+	// 统计今日、本周、本月的日志数量
+	var todayCount, weekCount, monthCount int64
+	db.Model(&model.OperationLog{}).Where("resource = ? AND created_at >= CURDATE()", channel).Count(&todayCount)
+	db.Model(&model.OperationLog{}).Where("resource = ? AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)", channel).Count(&weekCount)
+	db.Model(&model.OperationLog{}).Where("resource = ? AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)", channel).Count(&monthCount)
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{
+		"channel":    channel,
+		"today":      todayCount,
+		"this_week":  weekCount,
+		"this_month": monthCount,
+	}})
 }
