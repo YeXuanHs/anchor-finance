@@ -1,8 +1,6 @@
 package admin
 
 import (
-	"time"
-
 	"github.com/YeXuanHs/anchor-finance/internal/middleware"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
@@ -16,7 +14,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 	// 公开路由（不需要认证）
 	public := r.Group("")
 	{
-		public.POST("/login", middleware.RateLimit(5, 1*time.Minute), authHandler.Login)
+		public.POST("/login", authHandler.Login)
 	}
 
 	// 需要认证的路由（必须是管理员）
