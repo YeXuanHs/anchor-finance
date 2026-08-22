@@ -374,6 +374,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/oauth-providers/:id", UpdateOAuthProvider)
 		authenticated.DELETE("/oauth-providers/:id", DeleteOAuthProvider)
 
+		// 官网自定义字段
+		authenticated.GET("/custom-template-fields", GetCustomTemplateFieldList)
+		authenticated.POST("/custom-template-fields", CreateCustomTemplateField)
+		authenticated.PUT("/custom-template-fields/:id", UpdateCustomTemplateField)
+		authenticated.DELETE("/custom-template-fields/:id", DeleteCustomTemplateField)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理

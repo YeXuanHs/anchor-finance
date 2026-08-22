@@ -78,6 +78,7 @@ func main() {
 		&model.CancelRequest{},
 		&model.ConfigurableOption{},
 		&model.OAuthProvider{},
+		&model.CustomTemplateField{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
