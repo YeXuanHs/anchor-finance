@@ -68,13 +68,13 @@ func BackupDatabase(c *gin.Context) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "备份失败"})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "备份失败", "data": nil})
 		return
 	}
 
 	// 写入文件（权限600，仅owner可读）
 	if err := os.WriteFile(backupFile, output, 0600); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "写入备份文件失败"})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "写入备份文件失败", "data": nil})
 		return
 	}
 

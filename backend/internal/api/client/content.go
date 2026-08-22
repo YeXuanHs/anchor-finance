@@ -60,7 +60,7 @@ func GetNoticeDetail(c *gin.Context) {
 
 	var notice model.News
 	if err := db.First(&notice, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "公告不存在"})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "公告不存在", "data": nil})
 		return
 	}
 
@@ -75,7 +75,7 @@ func GetHelpArticleDetail(c *gin.Context) {
 
 	var article model.KnowledgeArticle
 	if err := db.First(&article, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "文章不存在"})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "文章不存在", "data": nil})
 		return
 	}
 
@@ -115,5 +115,5 @@ func MarkAllNoticesRead(c *gin.Context) {
 		Detail: "mark_all_read",
 	})
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": nil})
 }

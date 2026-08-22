@@ -82,13 +82,13 @@ func CreateRecharge(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
 	// 0元购防护
 	if req.Amount <= 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "充值金额必须大于0"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "充值金额必须大于0", "data": nil})
 		return
 	}
 
@@ -105,7 +105,7 @@ func CreateRecharge(c *gin.Context) {
 	}
 
 	if err := db.Create(&recharge).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建充值订单失败"})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建充值订单失败", "data": nil})
 		return
 	}
 
@@ -120,7 +120,7 @@ func CreateRecharge(c *gin.Context) {
 	})
 	if err != nil {
 		// 插件引擎离线，返回502
-		c.JSON(http.StatusBadGateway, gin.H{"code": 502, "message": "支付服务暂时不可用"})
+		c.JSON(http.StatusBadGateway, gin.H{"code": 502, "message": "支付服务暂时不可用", "data": nil})
 		return
 	}
 
@@ -197,24 +197,24 @@ func ClaimCoupon(c *gin.Context) {
 	db := database.GetDB()
 	var coupon model.Coupon
 	if err := db.First(&coupon, couponID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "优惠券不存在"})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "优惠券不存在", "data": nil})
 		return
 	}
 
 	// 校验状态
 	if coupon.Status != "active" {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已失效"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已失效", "data": nil})
 		return
 	}
 
 	// 校验有效期
 	now := time.Now()
 	if coupon.StartDate != nil && now.Before(*coupon.StartDate) {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券未开始"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券未开始", "data": nil})
 		return
 	}
 	if coupon.EndDate != nil && now.After(*coupon.EndDate) {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已过期"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已过期", "data": nil})
 		return
 	}
 
@@ -222,7 +222,7 @@ func ClaimCoupon(c *gin.Context) {
 	var existingCount int64
 	db.Model(&model.UserCoupon{}).Where("coupon_id = ? AND user_id = ?", coupon.ID, userID).Count(&existingCount)
 	if existingCount > 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "你已经领取过这张优惠券"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "你已经领取过这张优惠券", "data": nil})
 		return
 	}
 
@@ -231,7 +231,7 @@ func ClaimCoupon(c *gin.Context) {
 		var claimedCount int64
 		db.Model(&model.UserCoupon{}).Where("coupon_id = ?", coupon.ID).Count(&claimedCount)
 		if claimedCount >= int64(coupon.UsageLimit) {
-			c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已被领完"})
+			c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已被领完", "data": nil})
 			return
 		}
 	}
@@ -246,7 +246,7 @@ func ClaimCoupon(c *gin.Context) {
 		ClaimedAt:   &claimedAt,
 	}
 	if err := db.Create(&userCoupon).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "领取失败，可能已领取过"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "领取失败，可能已领取过", "data": nil})
 		return
 	}
 

@@ -191,19 +191,19 @@ func UpdateService(c *gin.Context) {
 func SuspendService(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的服务ID"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的服务ID", "data": nil})
 		return
 	}
 
 	db := database.GetDB()
 	var service model.Service
 	if err := db.First(&service, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
 		return
 	}
 
 	if service.Status != "active" {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只有活跃状态的服务才能暂停"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只有活跃状态的服务才能暂停", "data": nil})
 		return
 	}
 
@@ -220,7 +220,7 @@ func SuspendService(c *gin.Context) {
 	// 上游暂停成功后，更新本地状态
 	db.Model(&service).Update("status", "suspended")
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "暂停成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "暂停成功", "data": nil})
 }
 
 // UnsuspendService 取消暂停
@@ -228,19 +228,19 @@ func SuspendService(c *gin.Context) {
 func UnsuspendService(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的服务ID"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的服务ID", "data": nil})
 		return
 	}
 
 	db := database.GetDB()
 	var service model.Service
 	if err := db.First(&service, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
 		return
 	}
 
 	if service.Status != "suspended" {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只有暂停状态的服务才能取消暂停"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只有暂停状态的服务才能取消暂停", "data": nil})
 		return
 	}
 
@@ -256,7 +256,7 @@ func UnsuspendService(c *gin.Context) {
 
 	db.Model(&service).Update("status", "active")
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "取消暂停成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "取消暂停成功", "data": nil})
 }
 
 // TerminateService 终止服务
@@ -264,19 +264,19 @@ func UnsuspendService(c *gin.Context) {
 func TerminateService(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的服务ID"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的服务ID", "data": nil})
 		return
 	}
 
 	db := database.GetDB()
 	var service model.Service
 	if err := db.First(&service, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
 		return
 	}
 
 	if service.Status == "terminated" {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "服务已终止"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "服务已终止", "data": nil})
 		return
 	}
 
@@ -292,5 +292,5 @@ func TerminateService(c *gin.Context) {
 
 	db.Model(&service).Update("status", "terminated")
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "终止成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "终止成功", "data": nil})
 }

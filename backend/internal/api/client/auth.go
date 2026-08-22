@@ -70,7 +70,7 @@ func (h *AuthHandler) LoginByCode(c *gin.Context) {
 	var captcha model.Captcha
 	if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
 		req.Target, req.Code, "login", false, time.Now()).First(&captcha).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效或已过期"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效或已过期", "data": nil})
 		return
 	}
 
@@ -80,18 +80,18 @@ func (h *AuthHandler) LoginByCode(c *gin.Context) {
 	// 查找用户
 	var user model.User
 	if err := db.Where("phone = ? OR email = ?", req.Target, req.Target).First(&user).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "用户不存在"})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "用户不存在", "data": nil})
 		return
 	}
 
 	if user.Status != "active" {
-		c.JSON(http.StatusOK, gin.H{"code": 403, "message": "账号已被禁用"})
+		c.JSON(http.StatusOK, gin.H{"code": 403, "message": "账号已被禁用", "data": nil})
 		return
 	}
 
 	token, err := h.authService.GenerateToken(user.ID, user.Username, false)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "生成token失败"})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "生成token失败", "data": nil})
 		return
 	}
 
@@ -119,7 +119,7 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 	var recentCount int64
 	db.Model(&model.Captcha{}).Where("target = ? AND created_at > ?", req.Target, time.Now().Add(-60*time.Second)).Count(&recentCount)
 	if recentCount > 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 429, "message": "发送过于频繁，请稍后再试"})
+		c.JSON(http.StatusOK, gin.H{"code": 429, "message": "发送过于频繁，请稍后再试", "data": nil})
 		return
 	}
 
@@ -146,7 +146,7 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 		pluginengine.SendEmail(req.Target, "验证码", fmt.Sprintf("您的验证码是：%s，10分钟内有效。", code))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "验证码已发送"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "验证码已发送", "data": nil})
 }
 
 // Register 用户注册
@@ -175,7 +175,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	if requireCode && req.Code == "" {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "请输入验证码"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "请输入验证码", "data": nil})
 		return
 	}
 
@@ -184,7 +184,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		var captcha model.Captcha
 		if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
 			req.Email, req.Code, "register", false, time.Now()).First(&captcha).Error; err != nil {
-			c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效或已过期"})
+			c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效或已过期", "data": nil})
 			return
 		}
 		db.Model(&captcha).Update("used", true)
@@ -250,7 +250,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	var captcha model.Captcha
 	if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
 		req.Email, req.Code, "reset_password", false, time.Now()).First(&captcha).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "如果邮箱存在，重置链接已发送"})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "如果邮箱存在，重置链接已发送", "data": nil})
 		return
 	}
 	db.Model(&captcha).Update("used", true)
@@ -258,7 +258,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	// 查找用户
 	var user model.User
 	if err := db.Where("email = ?", req.Email).First(&user).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "如果邮箱存在，重置链接已发送"})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "如果邮箱存在，重置链接已发送", "data": nil})
 		return
 	}
 
@@ -266,7 +266,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	hashedPassword, _ := service.HashPassword(req.Password)
 	db.Model(&user).Update("password_hash", hashedPassword)
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "密码重置成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "密码重置成功", "data": nil})
 }
 
 // GetInfo 获取用户信息
@@ -320,7 +320,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": nil})
 }
 
 // UpdatePassword 修改密码
@@ -358,7 +358,7 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 
 	db.Model(&user).Update("password_hash", hashedPassword)
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "密码修改成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "密码修改成功", "data": nil})
 }
 
 // UpdateProfile 更新个人资料
@@ -387,7 +387,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 
 	db.Model(&model.User{}).Where("id = ?", userID).Updates(updates)
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
 }
 
 // UpdatePhone 更新手机号
@@ -401,7 +401,7 @@ func (h *AuthHandler) UpdatePhone(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
@@ -411,14 +411,14 @@ func (h *AuthHandler) UpdatePhone(c *gin.Context) {
 	var captcha model.Captcha
 	if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
 		req.Phone, req.Code, "bindphone", false, time.Now()).First(&captcha).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效", "data": nil})
 		return
 	}
 	db.Model(&captcha).Update("used", true)
 
 	db.Model(&model.User{}).Where("id = ?", userID).Update("phone", req.Phone)
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "手机号更新成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "手机号更新成功", "data": nil})
 }
 
 // UpdateEmail 更新邮箱
@@ -432,7 +432,7 @@ func (h *AuthHandler) UpdateEmail(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
@@ -442,12 +442,12 @@ func (h *AuthHandler) UpdateEmail(c *gin.Context) {
 	var captcha model.Captcha
 	if err := db.Where("target = ? AND code = ? AND type = ? AND used = ? AND expires_at > ?",
 		req.Email, req.Code, "bindemail", false, time.Now()).First(&captcha).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "验证码无效", "data": nil})
 		return
 	}
 	db.Model(&captcha).Update("used", true)
 
 	db.Model(&model.User{}).Where("id = ?", userID).Update("email", req.Email)
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "邮箱更新成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "邮箱更新成功", "data": nil})
 }
