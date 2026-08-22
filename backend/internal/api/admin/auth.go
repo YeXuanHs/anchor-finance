@@ -45,6 +45,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    401,
 			"message": err.Error(),
+			"data":    nil,
 		})
 		return
 	}

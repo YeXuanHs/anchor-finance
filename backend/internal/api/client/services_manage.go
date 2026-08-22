@@ -64,7 +64,7 @@ func PowerService(c *gin.Context) {
 		"service_id": service.ID,
 		"action":     req.Action,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
 		return
 	}
 
@@ -109,7 +109,7 @@ func ResetServicePassword(c *gin.Context) {
 	if _, err := pluginengine.TriggerHook("reset_service_password", map[string]interface{}{
 		"service_id": service.ID,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
 		return
 	}
 
@@ -155,7 +155,7 @@ func ReinstallService(c *gin.Context) {
 		"service_id": service.ID,
 		"os":         req.OS,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
 		return
 	}
 
@@ -389,7 +389,7 @@ func GetServiceConnection(c *gin.Context) {
 		"service_id": service.ID,
 	})
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
 		return
 	}
 
@@ -431,7 +431,7 @@ func GetServiceRuntime(c *gin.Context) {
 		"service_id": service.ID,
 	})
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
 		return
 	}
 
@@ -470,7 +470,7 @@ func GetServiceStatus(c *gin.Context) {
 		"service_id": service.ID,
 	})
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
 		return
 	}
 
