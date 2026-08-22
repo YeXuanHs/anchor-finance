@@ -51,6 +51,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/services/:id/password-resets", ResetServicePassword)
 		authenticated.POST("/services/:id/reinstallations", ReinstallService)
 		authenticated.GET("/services/:id/module-status", GetServiceStatus)
+		authenticated.GET("/services/:id/upgrades", GetServiceUpgrades)
+		authenticated.POST("/services/:id/upgrades/quote", QuoteServiceUpgrade)
+		authenticated.POST("/services/:id/upgrades", CreateServiceUpgrade)
+		authenticated.PUT("/services/:id/auto-renew", UpdateAutoRenew)
+		authenticated.GET("/services/:id/operation-logs", GetServiceOperationLogs)
 
 		// 订单管理
 		authenticated.GET("/orders", GetUserOrders)

@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
@@ -481,4 +482,197 @@ func GetServiceStatus(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": statusData})
+}
+
+// GetServiceUpgrades 获取服务可升级方案
+// GET /api/client/services/:id/upgrades
+func GetServiceUpgrades(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	// 查找同组更高配置的产品
+	var products []model.Product
+	db.Where("group_id = ? AND amount > ? AND status = ?", service.ProductID, service.Amount, "active").
+		Order("amount ASC").Find(&products)
+
+	if products == nil {
+		products = []model.Product{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0, "message": "success",
+		"data": gin.H{
+			"current_product": gin.H{
+				"id":     service.ProductID,
+				"name":   service.ProductName,
+				"amount": service.Amount,
+			},
+			"upgrade_options": products,
+		},
+	})
+}
+
+// QuoteServiceUpgrade 服务升级报价
+// POST /api/client/services/:id/upgrades/quote
+func QuoteServiceUpgrade(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	var req struct {
+		ProductID uint `json:"product_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	var newProduct model.Product
+	if err := db.First(&newProduct, req.ProductID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "产品不存在", "data": nil})
+		return
+	}
+
+	// 计算差价
+	priceDiff := newProduct.Amount - service.Amount
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0, "message": "success",
+		"data": gin.H{
+			"current_product": service.ProductName,
+			"new_product":     newProduct.Name,
+			"price_difference": priceDiff,
+		},
+	})
+}
+
+// CreateServiceUpgrade 创建服务升级订单
+// POST /api/client/services/:id/upgrades
+func CreateServiceUpgrade(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	var req struct {
+		ProductID uint `json:"product_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	var newProduct model.Product
+	if err := db.First(&newProduct, req.ProductID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "产品不存在", "data": nil})
+		return
+	}
+
+	// 价格校验（防0元购）
+	if newProduct.Amount <= 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "产品价格异常", "data": nil})
+		return
+	}
+
+	priceDiff := newProduct.Amount - service.Amount
+	if priceDiff <= 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只能升级到更高配置的产品", "data": nil})
+		return
+	}
+
+	// 创建升级订单
+	order := model.Order{
+		UserID:      userID.(uint),
+		ProductID:   newProduct.ID,
+		ProductName: newProduct.Name,
+		Amount:      priceDiff,
+		Status:      "pending",
+	}
+
+	if err := db.Create(&order).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建订单失败", "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0, "message": "升级订单创建成功",
+		"data": gin.H{
+			"order_id": order.ID,
+			"amount":   priceDiff,
+		},
+	})
+}
+
+// UpdateAutoRenew 更新自动续费设置
+// PUT /api/client/services/:id/auto-renew
+func UpdateAutoRenew(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	var req struct {
+		AutoRenew bool `json:"auto_renew"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
+}
+
+// GetServiceOperationLogs 获取服务操作日志
+// GET /api/client/services/:id/operation-logs
+func GetServiceOperationLogs(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	if page < 1 { page = 1 }
+	if pageSize < 1 || pageSize > 100 { pageSize = 20 }
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	var logs []model.OperationLog
+	var total int64
+	db.Model(&model.OperationLog{}).Where("resource = ? AND resource_id = ?", "service", id).Count(&total)
+	offset := (page - 1) * pageSize
+	db.Where("resource = ? AND resource_id = ?", "service", id).Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
+
+	if logs == nil { logs = []model.OperationLog{} }
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0, "message": "success",
+		"data": gin.H{"list": logs, "total": total, "page": page, "page_size": pageSize},
+	})
 }
