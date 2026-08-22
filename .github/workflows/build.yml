@@ -3,13 +3,13 @@ name: Build and Deploy
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   build-go:
     name: Build Go Backend
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - uses: actions/checkout@v4
@@ -31,39 +31,12 @@ jobs:
         name: go-server
         path: backend/anchor-finance-server
 
-  # TODO: 后端全部完成后再启用前端构建
-  # build-frontend:
-  #   name: Build Frontend
-  #   runs-on: ubuntu-latest
-  #   
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   
-  #   - name: Set up Node.js
-  #     uses: actions/setup-node@v4
-  #     with:
-  #       node-version: '20'
-  #   
-  #   - name: Build Admin Frontend
-  #     working-directory: ./admin-frontend
-  #     run: |
-  #       npm install
-  #       npm run build
-  #   
-  #   - name: Build Client Frontend
-  #     working-directory: ./client-frontend
-  #     run: |
-  #       npm install
-  #       npm run build
-  #   
-  #   - name: Upload Admin artifact
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: admin-frontend
-  #       path: admin-frontend/dist
-  #   
-  #   - name: Upload Client artifact
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: client-frontend
-  #       path: client-frontend/dist
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: build-${{ github.sha }}
+        name: Build ${{ github.sha }}
+        files: backend/anchor-finance-server
+        body: |
+          Commit: ${{ github.sha }}
+          Message: ${{ github.event.head_commit.message }}
