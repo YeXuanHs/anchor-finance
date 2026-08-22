@@ -448,6 +448,13 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/schedule-runs", GetScheduleRunList)
 		authenticated.GET("/schedule-runs/:id", GetScheduleRunDetail)
 
+		// 插件域（支付/短信/邮件/认证/服务器）
+		authenticated.GET("/payment-gateways", GetPaymentGateways)
+		authenticated.GET("/sms-providers", GetSMSProviders)
+		authenticated.GET("/mail-providers", GetMailProviders)
+		authenticated.GET("/certification-providers", GetCertificationProviders)
+		authenticated.GET("/server-modules", GetServerModules)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
