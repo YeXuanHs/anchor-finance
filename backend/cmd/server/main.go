@@ -71,6 +71,7 @@ func main() {
 		&model.Blacklist{},
 		&model.EmailTemplate{},
 		&model.SMSTemplate{},
+		&model.FriendlyLink{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

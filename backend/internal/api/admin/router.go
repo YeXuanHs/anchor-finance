@@ -328,6 +328,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/sms-templates/:id", UpdateSMSTemplate)
 		authenticated.DELETE("/sms-templates/:id", DeleteSMSTemplate)
 
+		// 友情链接
+		authenticated.GET("/friendly-links", GetFriendlyLinkList)
+		authenticated.POST("/friendly-links", CreateFriendlyLink)
+		authenticated.PUT("/friendly-links/:id", UpdateFriendlyLink)
+		authenticated.DELETE("/friendly-links/:id", DeleteFriendlyLink)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
