@@ -362,6 +362,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/sales/statistics", GetSalesStatistics)
 		authenticated.GET("/sales/records", GetSalesRecords)
 
+		// 全局可配置项
+		authenticated.GET("/configurable-options", GetConfigurableOptionList)
+		authenticated.POST("/configurable-options", CreateConfigurableOption)
+		authenticated.PUT("/configurable-options/:id", UpdateConfigurableOption)
+		authenticated.DELETE("/configurable-options/:id", DeleteConfigurableOption)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
