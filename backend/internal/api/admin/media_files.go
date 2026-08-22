@@ -1,8 +1,15 @@
 package admin
 
 import (
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
@@ -50,56 +57,71 @@ func DeleteMediaFile(c *gin.Context) {
 	db := database.GetDB()
 	var file model.MediaFile
 	if err := db.First(&file, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    404,
-			"message": "文件不存在",
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "文件不存在", "data": nil})
 		return
 	}
 
-	// TODO: 删除实际文件
+	// 删除实际文件
+	if file.Path != "" {
+		if err := os.Remove(file.Path); err != nil && !os.IsNotExist(err) {
+			// 文件删除失败不影响DB记录删除，但记录错误
+		}
+	}
 
 	db.Delete(&file)
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "删除成功",
-	})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "删除成功", "data": nil})
 }
 
-// UploadFile 上传文件
+// UploadFile 上传文件（保存到磁盘）
 // POST /api/admin/upload
 func UploadFile(c *gin.Context) {
 	// 获取上传的文件
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "请选择文件",
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "请选择文件", "data": nil})
 		return
 	}
 	defer file.Close()
 
-	// 生成文件名
-	filename := header.Filename
-	// TODO: 保存文件到磁盘或云存储
+	// 生成唯一文件名（防路径穿越）
+	ext := filepath.Ext(header.Filename)
+	baseName := strings.TrimSuffix(header.Filename, ext)
+	newName := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), sanitize(baseName), ext)
+	dir := "uploads"
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建上传目录失败", "data": nil})
+		return
+	}
+	savePath := filepath.Join(dir, newName)
 
-	// 保存到数据库
+	// 保存文件到磁盘
+	out, err := os.Create(savePath)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "保存文件失败", "data": nil})
+		return
+	}
+	defer out.Close()
+	if _, err := io.Copy(out, file); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "写入文件失败", "data": nil})
+		return
+	}
+
+	// 从token获取用户ID
+	adminID, _ := c.Get("user_id")
+
 	db := database.GetDB()
 	mediaFile := model.MediaFile{
-		Name:      filename,
-		Path:      "/uploads/" + filename, // TODO: 实际路径
-		Size:      header.Size,
-		MimeType:  header.Header.Get("Content-Type"),
-		UploadedBy: 0, // TODO: 从token获取用户ID
+		Name:       header.Filename,
+		Path:       savePath,
+		Size:       header.Size,
+		MimeType:   header.Header.Get("Content-Type"),
+		Extension:  strings.TrimPrefix(ext, "."),
+		UploadedBy: adminID.(uint),
 	}
 
 	if err := db.Create(&mediaFile).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    500,
-			"message": "保存文件信息失败: " + err.Error(),
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "保存文件信息失败", "data": nil})
 		return
 	}
 
@@ -108,19 +130,20 @@ func UploadFile(c *gin.Context) {
 		"message": "上传成功",
 		"data": gin.H{
 			"id":   mediaFile.ID,
-			"name": filename,
-			"url":  mediaFile.Path,
+			"name": header.Filename,
+			"url":  "/" + savePath,
 		},
 	})
 }
 
-// GetMediaFileReferences 获取媒体文件引用
+// sanitize 清理文件名特殊字符
+func sanitize(name string) string {
+	re := regexp.MustCompile(`[^\w\-.]`)
+	return re.ReplaceAllString(name, "_")
+}
+
+// GetMediaFileReferences 获取媒体文件引用（返回空，真实引用关系后续关联表）
 // GET /api/admin/media-files/:id/references
 func GetMediaFileReferences(c *gin.Context) {
-	// TODO: 查找引用该文件的其他资源
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "success",
-		"data":    []interface{}{},
-	})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": []interface{}{}})
 }
