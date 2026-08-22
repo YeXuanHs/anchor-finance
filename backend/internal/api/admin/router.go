@@ -425,6 +425,14 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/finance-config", GetFinanceConfig)
 		authenticated.PUT("/finance-config", UpdateFinanceConfig)
 
+		// 分类日志
+		authenticated.GET("/logs/sms", GetSMSLogs)
+		authenticated.GET("/logs/email", GetEmailLogs)
+		authenticated.GET("/logs/api", GetAPILogs)
+		authenticated.GET("/logs/cron", GetCronLogs)
+		authenticated.GET("/logs/admin-login", GetAdminLoginLogs)
+		authenticated.GET("/logs/notification", GetNotificationLogs)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
