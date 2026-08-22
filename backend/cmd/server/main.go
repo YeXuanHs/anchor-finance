@@ -107,6 +107,12 @@ func main() {
 		&model.ReferralWithdrawal{},
 		&service.LoginAttempt{},
 		&model.TicketDeliveryRule{},
+		// AI工单系统
+		&model.AITicketQueue{},
+		&model.AITicketMode{},
+		&model.AITicketKnowledge{},
+		&model.AITicketRule{},
+		&model.AITicketProcessLog{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

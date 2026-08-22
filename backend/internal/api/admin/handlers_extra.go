@@ -1525,3 +1525,298 @@ func AITicketReply(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "AI回复生成成功", "data": gin.H{"reply": reply}})
 }
+
+// ==================== AI工单系统（参考mianyu_ai_ticket插件） ====================
+
+// GetAITicketConfig 获取AI工单配置
+// GET /api/admin/ai-ticket/config
+func GetAITicketConfig(c *gin.Context) {
+	aiTicketSvc := service.NewAITicketService()
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": aiTicketSvc.GetConfig()})
+}
+
+// GetAITicketQueueStats 获取AI工单队列统计
+// GET /api/admin/ai-ticket/queue/stats
+func GetAITicketQueueStats(c *gin.Context) {
+	aiTicketSvc := service.NewAITicketService()
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": aiTicketSvc.GetQueueStats()})
+}
+
+// GetAITicketQueueList 获取AI工单队列列表
+// GET /api/admin/ai-ticket/queue
+func GetAITicketQueueList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	status := c.DefaultQuery("status", "")
+	if page < 1 { page = 1 }
+	if pageSize < 1 || pageSize > 100 { pageSize = 20 }
+
+	db := database.GetDB()
+	query := db.Model(&model.AITicketQueue{})
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var items []model.AITicketQueue
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&items)
+	if items == nil { items = []model.AITicketQueue{} }
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"list": items, "total": total, "page": page, "page_size": pageSize}})
+}
+
+// ProcessAITicketQueue 手动处理AI工单队列
+// POST /api/admin/ai-ticket/queue/process
+func ProcessAITicketQueue(c *gin.Context) {
+	aiTicketSvc := service.NewAITicketService()
+	processed, err := aiTicketSvc.ProcessQueue(20)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "处理失败: " + err.Error(), "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "处理完成", "data": gin.H{"processed": processed}})
+}
+
+// GetAITicketKnowledgeList 获取AI工单知识库
+// GET /api/admin/ai-ticket/knowledge
+func GetAITicketKnowledgeList(c *gin.Context) {
+	db := database.GetDB()
+	var items []model.AITicketKnowledge
+	db.Where("status = 1").Order("sort ASC").Find(&items)
+	if items == nil { items = []model.AITicketKnowledge{} }
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": items})
+}
+
+// CreateAITicketKnowledge 创建知识库条目
+// POST /api/admin/ai-ticket/knowledge
+func CreateAITicketKnowledge(c *gin.Context) {
+	var req struct {
+		Title    string `json:"title" binding:"required"`
+		Keywords string `json:"keywords"`
+		Question string `json:"question"`
+		Answer   string `json:"answer" binding:"required"`
+		Sort     int    `json:"sort"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	knowledge := model.AITicketKnowledge{
+		Title:    req.Title,
+		Keywords: req.Keywords,
+		Question: req.Question,
+		Answer:   req.Answer,
+		Sort:     req.Sort,
+		Status:   1,
+	}
+	if err := db.Create(&knowledge).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建失败", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "创建成功", "data": gin.H{"id": knowledge.ID}})
+}
+
+// UpdateAITicketKnowledge 更新知识库条目
+// PUT /api/admin/ai-ticket/knowledge/:id
+func UpdateAITicketKnowledge(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+	var item model.AITicketKnowledge
+	if err := db.First(&item, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "条目不存在", "data": nil})
+		return
+	}
+
+	var req struct {
+		Title    string `json:"title"`
+		Keywords string `json:"keywords"`
+		Question string `json:"question"`
+		Answer   string `json:"answer"`
+		Sort     int    `json:"sort"`
+		Status   *int   `json:"status"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.Title != "" { updates["title"] = req.Title }
+	if req.Keywords != "" { updates["keywords"] = req.Keywords }
+	if req.Question != "" { updates["question"] = req.Question }
+	if req.Answer != "" { updates["answer"] = req.Answer }
+	if req.Sort != 0 { updates["sort"] = req.Sort }
+	if req.Status != nil { updates["status"] = *req.Status }
+
+	db.Model(&item).Updates(updates)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
+}
+
+// DeleteAITicketKnowledge 删除知识库条目
+// DELETE /api/admin/ai-ticket/knowledge/:id
+func DeleteAITicketKnowledge(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+	if err := db.Delete(&model.AITicketKnowledge{}, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "删除失败", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "删除成功", "data": nil})
+}
+
+// GetAITicketRuleList 获取AI工单规则
+// GET /api/admin/ai-ticket/rules
+func GetAITicketRuleList(c *gin.Context) {
+	db := database.GetDB()
+	var items []model.AITicketRule
+	db.Order("priority ASC").Find(&items)
+	if items == nil { items = []model.AITicketRule{} }
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": items})
+}
+
+// CreateAITicketRule 创建规则
+// POST /api/admin/ai-ticket/rules
+func CreateAITicketRule(c *gin.Context) {
+	var req struct {
+		Name        string `json:"name" binding:"required"`
+		Keywords    string `json:"keywords"`
+		DeptFilter  string `json:"dept_filter"`
+		TargetDept  int    `json:"target_dept"`
+		Priority    int    `json:"priority"`
+		Action      string `json:"action"`
+		PromptExtra string `json:"prompt_extra"`
+		SampleReply string `json:"sample_reply"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	rule := model.AITicketRule{
+		Name:        req.Name,
+		Keywords:    req.Keywords,
+		DeptFilter:  req.DeptFilter,
+		TargetDept:  req.TargetDept,
+		Priority:    req.Priority,
+		Action:      req.Action,
+		PromptExtra: req.PromptExtra,
+		SampleReply: req.SampleReply,
+		Status:      1,
+	}
+	if err := db.Create(&rule).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建失败", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "创建成功", "data": gin.H{"id": rule.ID}})
+}
+
+// UpdateAITicketRule 更新规则
+// PUT /api/admin/ai-ticket/rules/:id
+func UpdateAITicketRule(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+	var item model.AITicketRule
+	if err := db.First(&item, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "规则不存在", "data": nil})
+		return
+	}
+
+	var req struct {
+		Name        string `json:"name"`
+		Keywords    string `json:"keywords"`
+		DeptFilter  string `json:"dept_filter"`
+		TargetDept  int    `json:"target_dept"`
+		Priority    int    `json:"priority"`
+		Action      string `json:"action"`
+		PromptExtra string `json:"prompt_extra"`
+		SampleReply string `json:"sample_reply"`
+		Status      *int   `json:"status"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.Name != "" { updates["name"] = req.Name }
+	if req.Keywords != "" { updates["keywords"] = req.Keywords }
+	if req.DeptFilter != "" { updates["dept_filter"] = req.DeptFilter }
+	if req.TargetDept != 0 { updates["target_dept"] = req.TargetDept }
+	if req.Priority != 0 { updates["priority"] = req.Priority }
+	if req.Action != "" { updates["action"] = req.Action }
+	if req.PromptExtra != "" { updates["prompt_extra"] = req.PromptExtra }
+	if req.SampleReply != "" { updates["sample_reply"] = req.SampleReply }
+	if req.Status != nil { updates["status"] = *req.Status }
+
+	db.Model(&item).Updates(updates)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
+}
+
+// DeleteAITicketRule 删除规则
+// DELETE /api/admin/ai-ticket/rules/:id
+func DeleteAITicketRule(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+	if err := db.Delete(&model.AITicketRule{}, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "删除失败", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "删除成功", "data": nil})
+}
+
+// GetAITicketProcessLogs 获取AI工单处理日志
+// GET /api/admin/ai-ticket/logs
+func GetAITicketProcessLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 { page = 1 }
+	if pageSize < 1 || pageSize > 100 { pageSize = 20 }
+
+	db := database.GetDB()
+	var total int64
+	db.Model(&model.AITicketProcessLog{}).Count(&total)
+
+	var items []model.AITicketProcessLog
+	offset := (page - 1) * pageSize
+	db.Offset(offset).Limit(pageSize).Order("id DESC").Find(&items)
+	if items == nil { items = []model.AITicketProcessLog{} }
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"list": items, "total": total, "page": page, "page_size": pageSize}})
+}
+
+// SetAITicketMode 设置工单AI/人工模式
+// POST /api/admin/ai-ticket/tickets/:id/mode
+func SetAITicketMode(c *gin.Context) {
+	ticketIDStr := c.Param("id")
+	ticketID, err := strconv.ParseUint(ticketIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的工单ID", "data": nil})
+		return
+	}
+
+	var req struct {
+		Mode string `json:"mode" binding:"required"` // ai, human
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	if req.Mode != "ai" && req.Mode != "human" {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "模式必须是ai或human", "data": nil})
+		return
+	}
+
+	aiTicketSvc := service.NewAITicketService()
+	if err := aiTicketSvc.SetTicketMode(uint(ticketID), req.Mode); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "设置失败", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "设置成功", "data": nil})
+}

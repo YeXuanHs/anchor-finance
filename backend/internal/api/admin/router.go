@@ -546,6 +546,21 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/ai/config", GetAIConfig)
 		authenticated.POST("/ai/test", TestAIConnection)
 		authenticated.POST("/ai/generate-description", GenerateProductDescription)
-		authenticated.POST("/ai/ticket-reply", AITicketReply)
+
+		// AI工单系统（参考mianyu_ai_ticket插件）
+		authenticated.GET("/ai-ticket/config", GetAITicketConfig)
+		authenticated.GET("/ai-ticket/queue/stats", GetAITicketQueueStats)
+		authenticated.GET("/ai-ticket/queue", GetAITicketQueueList)
+		authenticated.POST("/ai-ticket/queue/process", ProcessAITicketQueue)
+		authenticated.GET("/ai-ticket/knowledge", GetAITicketKnowledgeList)
+		authenticated.POST("/ai-ticket/knowledge", CreateAITicketKnowledge)
+		authenticated.PUT("/ai-ticket/knowledge/:id", UpdateAITicketKnowledge)
+		authenticated.DELETE("/ai-ticket/knowledge/:id", DeleteAITicketKnowledge)
+		authenticated.GET("/ai-ticket/rules", GetAITicketRuleList)
+		authenticated.POST("/ai-ticket/rules", CreateAITicketRule)
+		authenticated.PUT("/ai-ticket/rules/:id", UpdateAITicketRule)
+		authenticated.DELETE("/ai-ticket/rules/:id", DeleteAITicketRule)
+		authenticated.GET("/ai-ticket/logs", GetAITicketProcessLogs)
+		authenticated.POST("/ai-ticket/tickets/:id/mode", SetAITicketMode)
 	}
 }
