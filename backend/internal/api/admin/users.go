@@ -658,12 +658,15 @@ func RefundUserService(c *gin.Context) {
 		return
 	}
 
-	// 6. 返回统一格式
+	// 6. 查询最新余额并返回
+	var updatedUser model.User
+	db.First(&updatedUser, userID)
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "退款成功",
 		"data": gin.H{
-			"balance": newBalance,
+			"balance": updatedUser.Balance,
 		},
 	})
 }
