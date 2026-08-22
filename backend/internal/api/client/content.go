@@ -25,7 +25,7 @@ func GetClientHomeHero(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": hero.Config})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": hero})
 }
 
 // GetContentOverview 获取首页内容概览

@@ -57,8 +57,8 @@ func PaymentNotify(c *gin.Context) {
 					UserID:        invoice.UserID,
 					InvoiceID:     invoice.ID,
 					Amount:        invoice.Amount,
-					PaymentMethod: gateway,
-					TransactionID: transactionID,
+					Gateway:       gateway,
+					TransactionNo: transactionID,
 					Status:        "completed",
 				})
 			}
