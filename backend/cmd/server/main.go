@@ -70,6 +70,7 @@ func main() {
 		&model.HomeHero{},
 		&model.Blacklist{},
 		&model.EmailTemplate{},
+		&model.SMSTemplate{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

@@ -322,6 +322,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/email-templates/:id", UpdateEmailTemplate)
 		authenticated.DELETE("/email-templates/:id", DeleteEmailTemplate)
 
+		// 短信模板
+		authenticated.GET("/sms-templates", GetSMSTemplateList)
+		authenticated.POST("/sms-templates", CreateSMSTemplate)
+		authenticated.PUT("/sms-templates/:id", UpdateSMSTemplate)
+		authenticated.DELETE("/sms-templates/:id", DeleteSMSTemplate)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
