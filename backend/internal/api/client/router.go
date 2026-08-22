@@ -1,8 +1,6 @@
 package client
 
 import (
-	"time"
-
 	"github.com/YeXuanHs/anchor-finance/internal/middleware"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
@@ -19,7 +17,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		public.POST("/login", authHandler.Login)
 		public.POST("/register", authHandler.Register)
 		public.POST("/auth/reset-password", authHandler.ResetPassword)
-		public.POST("/auth/captcha", middleware.RateLimit(1, 1*time.Minute), authHandler.SendCaptcha)
+		public.POST("/auth/captcha", authHandler.SendCaptcha)
 		public.POST("/auth/login-by-code", authHandler.LoginByCode)
 		public.GET("/notices", GetNotices)
 		public.GET("/notices/:id", GetNoticeDetail)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
@@ -114,10 +115,17 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 		return
 	}
 
-	// 频率限制：同一目标60秒内只能发送一次
+	// 频率限制：从settings表读取配置，默认60秒
 	db := database.GetDB()
+	var setting model.Setting
+	intervalSeconds := 60 // 默认值
+	if err := db.Where("`key` = ?", "captcha_interval").First(&setting).Error; err == nil {
+		if v, err := strconv.Atoi(setting.Value); err == nil && v > 0 {
+			intervalSeconds = v
+		}
+	}
 	var recentCount int64
-	db.Model(&model.Captcha{}).Where("target = ? AND created_at > ?", req.Target, time.Now().Add(-60*time.Second)).Count(&recentCount)
+	db.Model(&model.Captcha{}).Where("target = ? AND created_at > ?", req.Target, time.Now().Add(-time.Duration(intervalSeconds)*time.Second)).Count(&recentCount)
 	if recentCount > 0 {
 		c.JSON(http.StatusOK, gin.H{"code": 429, "message": "发送过于频繁，请稍后再试", "data": nil})
 		return
