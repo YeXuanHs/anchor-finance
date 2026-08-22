@@ -65,8 +65,8 @@ func GetStaffDetail(c *gin.Context) {
 	if err := db.First(&staff, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "员工不存在",
-		})
+			"message": "员工不存在",,
+			"data": nil})
 		return
 	}
 
@@ -92,8 +92,8 @@ func CreateStaff(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -104,8 +104,8 @@ func CreateStaff(c *gin.Context) {
 	if count > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "用户名或邮箱已存在",
-		})
+			"message": "用户名或邮箱已存在",,
+			"data": nil})
 		return
 	}
 
@@ -114,8 +114,8 @@ func CreateStaff(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "密码加密失败",
-		})
+			"message": "密码加密失败",,
+			"data": nil})
 		return
 	}
 
@@ -132,8 +132,8 @@ func CreateStaff(c *gin.Context) {
 	if err := db.Create(&staff).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建员工失败: " + err.Error(),
-		})
+			"message": "创建员工失败: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -161,8 +161,8 @@ func UpdateStaff(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -171,8 +171,8 @@ func UpdateStaff(c *gin.Context) {
 	if err := db.First(&staff, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "员工不存在",
-		})
+			"message": "员工不存在",,
+			"data": nil})
 		return
 	}
 
@@ -208,8 +208,8 @@ func DeleteStaff(c *gin.Context) {
 	if err := db.First(&staff, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "员工不存在",
-		})
+			"message": "员工不存在",,
+			"data": nil})
 		return
 	}
 
@@ -233,8 +233,8 @@ func UpdateStaffStatus(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -246,8 +246,8 @@ func UpdateStaffStatus(c *gin.Context) {
 	if !validStatuses[req.Status] {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的状态值",
-		})
+			"message": "无效的状态值",,
+			"data": nil})
 		return
 	}
 
@@ -256,8 +256,8 @@ func UpdateStaffStatus(c *gin.Context) {
 	if err := db.First(&staff, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "员工不存在",
-		})
+			"message": "员工不存在",,
+			"data": nil})
 		return
 	}
 
@@ -281,8 +281,8 @@ func ResetStaffPassword(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -291,8 +291,8 @@ func ResetStaffPassword(c *gin.Context) {
 	if err := db.First(&staff, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "员工不存在",
-		})
+			"message": "员工不存在",,
+			"data": nil})
 		return
 	}
 
@@ -301,8 +301,8 @@ func ResetStaffPassword(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "密码加密失败",
-		})
+			"message": "密码加密失败",,
+			"data": nil})
 		return
 	}
 

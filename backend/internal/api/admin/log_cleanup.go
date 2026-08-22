@@ -67,8 +67,8 @@ func CleanupLogs(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -99,8 +99,8 @@ func CleanupLogs(c *gin.Context) {
 	default:
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的日志类型",
-		})
+			"message": "无效的日志类型",,
+			"data": nil})
 		return
 	}
 

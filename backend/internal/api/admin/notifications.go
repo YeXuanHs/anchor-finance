@@ -36,8 +36,8 @@ func CreateNotificationTemplate(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -54,8 +54,8 @@ func CreateNotificationTemplate(c *gin.Context) {
 	if err := db.Create(&template).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建模板失败: " + err.Error(),
-		})
+			"message": "创建模板失败: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -84,8 +84,8 @@ func UpdateNotificationTemplate(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -94,8 +94,8 @@ func UpdateNotificationTemplate(c *gin.Context) {
 	if err := db.First(&template, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "模板不存在",
-		})
+			"message": "模板不存在",,
+			"data": nil})
 		return
 	}
 
@@ -134,8 +134,8 @@ func DeleteNotificationTemplate(c *gin.Context) {
 	if err := db.First(&template, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "模板不存在",
-		})
+			"message": "模板不存在",,
+			"data": nil})
 		return
 	}
 

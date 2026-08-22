@@ -36,8 +36,8 @@ func CreateMemberLevel(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -58,8 +58,8 @@ func CreateMemberLevel(c *gin.Context) {
 	if err := db.Create(&level).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建等级失败: " + err.Error(),
-		})
+			"message": "创建等级失败: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -88,8 +88,8 @@ func UpdateMemberLevel(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -98,8 +98,8 @@ func UpdateMemberLevel(c *gin.Context) {
 	if err := db.First(&level, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "等级不存在",
-		})
+			"message": "等级不存在",,
+			"data": nil})
 		return
 	}
 
@@ -138,8 +138,8 @@ func DeleteMemberLevel(c *gin.Context) {
 	if err := db.First(&level, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "等级不存在",
-		})
+			"message": "等级不存在",,
+			"data": nil})
 		return
 	}
 

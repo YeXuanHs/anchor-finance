@@ -34,8 +34,8 @@ func CreateProductType(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -50,8 +50,8 @@ func CreateProductType(c *gin.Context) {
 	if err := db.Create(&productType).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建类型失败: " + err.Error(),
-		})
+			"message": "创建类型失败: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -78,8 +78,8 @@ func UpdateProductType(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -88,8 +88,8 @@ func UpdateProductType(c *gin.Context) {
 	if err := db.First(&productType, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "类型不存在",
-		})
+			"message": "类型不存在",,
+			"data": nil})
 		return
 	}
 
@@ -122,8 +122,8 @@ func DeleteProductType(c *gin.Context) {
 	if err := db.First(&productType, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "类型不存在",
-		})
+			"message": "类型不存在",,
+			"data": nil})
 		return
 	}
 

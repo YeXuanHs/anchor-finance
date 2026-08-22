@@ -31,8 +31,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -67,8 +67,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -79,8 +79,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if count > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "用户名或邮箱已存在",
-		})
+			"message": "用户名或邮箱已存在",,
+			"data": nil})
 		return
 	}
 
@@ -89,8 +89,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "密码加密失败",
-		})
+			"message": "密码加密失败",,
+			"data": nil})
 		return
 	}
 
@@ -105,8 +105,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if err := db.Create(&user).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "注册失败: " + err.Error(),
-		})
+			"message": "注册失败: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -115,8 +115,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "生成token失败",
-		})
+			"message": "生成token失败",,
+			"data": nil})
 		return
 	}
 
@@ -139,8 +139,8 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -176,8 +176,8 @@ func (h *AuthHandler) GetInfo(c *gin.Context) {
 	if err := db.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "用户不存在",
-		})
+			"message": "用户不存在",,
+			"data": nil})
 		return
 	}
 
@@ -219,8 +219,8 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -230,8 +230,8 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	if err := db.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "用户不存在",
-		})
+			"message": "用户不存在",,
+			"data": nil})
 		return
 	}
 
@@ -239,8 +239,8 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	if !service.CheckPassword(req.OldPassword, user.PasswordHash) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "旧密码错误",
-		})
+			"message": "旧密码错误",,
+			"data": nil})
 		return
 	}
 
@@ -249,8 +249,8 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "密码加密失败",
-		})
+			"message": "密码加密失败",,
+			"data": nil})
 		return
 	}
 
@@ -276,8 +276,8 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 

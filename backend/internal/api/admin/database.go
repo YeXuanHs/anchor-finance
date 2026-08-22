@@ -68,8 +68,8 @@ func BackupDatabase(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "备份失败: " + err.Error(),
-		})
+			"message": "备份失败: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -77,8 +77,8 @@ func BackupDatabase(c *gin.Context) {
 	if err := os.WriteFile(backupFile, output, 0644); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "写入备份文件失败: " + err.Error(),
-		})
+			"message": "写入备份文件失败: " + err.Error(),,
+			"data": nil})
 		return
 	}
 

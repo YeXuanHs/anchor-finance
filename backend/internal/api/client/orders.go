@@ -58,8 +58,8 @@ func GetUserOrder(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的订单ID",
-		})
+			"message": "无效的订单ID",,
+			"data": nil})
 		return
 	}
 
@@ -68,8 +68,8 @@ func GetUserOrder(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&order).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "订单不存在",
-		})
+			"message": "订单不存在",,
+			"data": nil})
 		return
 	}
 
@@ -88,8 +88,8 @@ func CancelUserOrder(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的订单ID",
-		})
+			"message": "无效的订单ID",,
+			"data": nil})
 		return
 	}
 
@@ -98,16 +98,16 @@ func CancelUserOrder(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&order).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "订单不存在",
-		})
+			"message": "订单不存在",,
+			"data": nil})
 		return
 	}
 
 	if order.Status != "pending" {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "只有待支付的订单才能取消",
-		})
+			"message": "只有待支付的订单才能取消",,
+			"data": nil})
 		return
 	}
 

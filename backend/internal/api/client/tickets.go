@@ -60,8 +60,8 @@ func GetUserTicket(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的工单ID",
-		})
+			"message": "无效的工单ID",,
+			"data": nil})
 		return
 	}
 
@@ -70,8 +70,8 @@ func GetUserTicket(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&ticket).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "工单不存在",
-		})
+			"message": "工单不存在",,
+			"data": nil})
 		return
 	}
 
@@ -96,8 +96,8 @@ func CreateUserTicket(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -121,8 +121,8 @@ func CreateUserTicket(c *gin.Context) {
 	if err := db.Create(&ticket).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建工单失败: " + err.Error(),
-		})
+			"message": "创建工单失败: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -144,8 +144,8 @@ func ReplyUserTicket(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的工单ID",
-		})
+			"message": "无效的工单ID",,
+			"data": nil})
 		return
 	}
 
@@ -156,8 +156,8 @@ func ReplyUserTicket(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -166,16 +166,16 @@ func ReplyUserTicket(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&ticket).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "工单不存在",
-		})
+			"message": "工单不存在",,
+			"data": nil})
 		return
 	}
 
 	if ticket.Status == "closed" {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "已关闭的工单不能回复",
-		})
+			"message": "已关闭的工单不能回复",,
+			"data": nil})
 		return
 	}
 
@@ -196,8 +196,8 @@ func GetUserTicketReplies(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的工单ID",
-		})
+			"message": "无效的工单ID",,
+			"data": nil})
 		return
 	}
 
@@ -207,8 +207,8 @@ func GetUserTicketReplies(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&ticket).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "工单不存在",
-		})
+			"message": "工单不存在",,
+			"data": nil})
 		return
 	}
 
@@ -231,8 +231,8 @@ func CloseUserTicket(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的工单ID",
-		})
+			"message": "无效的工单ID",,
+			"data": nil})
 		return
 	}
 
@@ -241,16 +241,16 @@ func CloseUserTicket(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&ticket).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "工单不存在",
-		})
+			"message": "工单不存在",,
+			"data": nil})
 		return
 	}
 
 	if ticket.Status == "closed" {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "工单已关闭",
-		})
+			"message": "工单已关闭",,
+			"data": nil})
 		return
 	}
 

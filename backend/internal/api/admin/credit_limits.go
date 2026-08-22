@@ -121,8 +121,8 @@ func SaveCreditLimit(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -133,8 +133,8 @@ func SaveCreditLimit(c *gin.Context) {
 	if err := db.First(&user, req.UserID).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "用户不存在",
-		})
+			"message": "用户不存在",,
+			"data": nil})
 		return
 	}
 
@@ -181,8 +181,8 @@ func UpdateCreditLimit(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -191,8 +191,8 @@ func UpdateCreditLimit(c *gin.Context) {
 	if err := db.First(&limit, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "信用额度不存在",
-		})
+			"message": "信用额度不存在",,
+			"data": nil})
 		return
 	}
 
@@ -223,8 +223,8 @@ func DeleteCreditLimit(c *gin.Context) {
 	if err := db.First(&limit, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "信用额度不存在",
-		})
+			"message": "信用额度不存在",,
+			"data": nil})
 		return
 	}
 

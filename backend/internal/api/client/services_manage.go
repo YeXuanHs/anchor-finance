@@ -24,8 +24,8 @@ func PowerService(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -40,8 +40,8 @@ func PowerService(c *gin.Context) {
 	if !validActions[req.Action] {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的操作类型",
-		})
+			"message": "无效的操作类型",,
+			"data": nil})
 		return
 	}
 
@@ -51,8 +51,8 @@ func PowerService(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "服务不存在",
-		})
+			"message": "服务不存在",,
+			"data": nil})
 		return
 	}
 
@@ -61,7 +61,8 @@ func PowerService(c *gin.Context) {
 		"service_id": service.ID,
 		"action":     req.Action,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(),
+			"data": nil})
 		return
 	}
 
@@ -84,8 +85,8 @@ func ResetServicePassword(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -95,8 +96,8 @@ func ResetServicePassword(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "服务不存在",
-		})
+			"message": "服务不存在",,
+			"data": nil})
 		return
 	}
 
@@ -104,7 +105,8 @@ func ResetServicePassword(c *gin.Context) {
 	if _, err := pluginengine.TriggerHook("reset_service_password", map[string]interface{}{
 		"service_id": service.ID,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(),
+			"data": nil})
 		return
 	}
 
@@ -127,8 +129,8 @@ func ReinstallService(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -138,8 +140,8 @@ func ReinstallService(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "服务不存在",
-		})
+			"message": "服务不存在",,
+			"data": nil})
 		return
 	}
 
@@ -148,7 +150,8 @@ func ReinstallService(c *gin.Context) {
 		"service_id": service.ID,
 		"os":         req.OS,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(),
+			"data": nil})
 		return
 	}
 
@@ -170,8 +173,8 @@ func GetServiceRenewPreview(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "服务不存在",
-		})
+			"message": "服务不存在",,
+			"data": nil})
 		return
 	}
 
@@ -202,8 +205,8 @@ func CreateRenewOrder(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -213,8 +216,8 @@ func CreateRenewOrder(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "服务不存在",
-		})
+			"message": "服务不存在",,
+			"data": nil})
 		return
 	}
 
@@ -292,8 +295,8 @@ func UpdateServiceName(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -303,8 +306,8 @@ func UpdateServiceName(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "服务不存在",
-		})
+			"message": "服务不存在",,
+			"data": nil})
 		return
 	}
 
@@ -330,8 +333,8 @@ func UpdateServiceRemark(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+			"message": "参数错误: " + err.Error(),,
+			"data": nil})
 		return
 	}
 
@@ -341,8 +344,8 @@ func UpdateServiceRemark(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "服务不存在",
-		})
+			"message": "服务不存在",,
+			"data": nil})
 		return
 	}
 
@@ -364,8 +367,8 @@ func GetServiceConnection(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "服务不存在",
-		})
+			"message": "服务不存在",,
+			"data": nil})
 		return
 	}
 
@@ -374,7 +377,8 @@ func GetServiceConnection(c *gin.Context) {
 		"service_id": service.ID,
 	})
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(),
+			"data": nil})
 		return
 	}
 
@@ -405,8 +409,8 @@ func GetServiceRuntime(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "服务不存在",
-		})
+			"message": "服务不存在",,
+			"data": nil})
 		return
 	}
 
@@ -415,7 +419,8 @@ func GetServiceRuntime(c *gin.Context) {
 		"service_id": service.ID,
 	})
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(),
+			"data": nil})
 		return
 	}
 
@@ -443,8 +448,8 @@ func GetServiceStatus(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "服务不存在",
-		})
+			"message": "服务不存在",,
+			"data": nil})
 		return
 	}
 
@@ -453,7 +458,8 @@ func GetServiceStatus(c *gin.Context) {
 		"service_id": service.ID,
 	})
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(),
+			"data": nil})
 		return
 	}
 
