@@ -85,12 +85,12 @@ func GetFinanceLedger(c *gin.Context) {
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&totalIncome)
 
-	// 统计本月收入
+	// 统计本月收入（按paid_at统计，上月创建本月支付的计入本月）
 	now := time.Now()
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	var monthlyIncome float64
 	db.Model(&model.Invoice{}).
-		Where("status = ? AND created_at >= ?", "paid", firstOfMonth).
+		Where("status = ? AND paid_at >= ?", "paid", firstOfMonth).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&monthlyIncome)
 
