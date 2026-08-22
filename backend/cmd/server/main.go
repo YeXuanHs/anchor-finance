@@ -105,6 +105,7 @@ func main() {
 		&model.Referral{},
 		&model.UserCoupon{},
 		&model.ReferralWithdrawal{},
+		&service.LoginAttempt{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

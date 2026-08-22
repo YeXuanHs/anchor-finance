@@ -14,13 +14,18 @@ import (
 
 // AuthService 认证服务
 type AuthService struct {
-	db  *gorm.DB
-	cfg *config.JWTConfig
+	db    *gorm.DB
+	cfg   *config.JWTConfig
+	risk  *LoginRiskControl
 }
 
 // NewAuthService 创建认证服务
 func NewAuthService(db *gorm.DB, cfg *config.JWTConfig) *AuthService {
-	return &AuthService{db: db, cfg: cfg}
+	return &AuthService{
+		db:   db,
+		cfg:  cfg,
+		risk: NewLoginRiskControl(db),
+	}
 }
 
 // Claims JWT声明
@@ -77,10 +82,16 @@ func (s *AuthService) ParseToken(tokenString string) (*Claims, error) {
 	return nil, errors.New("invalid token")
 }
 
-// AdminLogin 管理员登录（带防暴力破解）
+// AdminLogin 管理员登录（带防暴力破解+IP软锁）
 func (s *AuthService) AdminLogin(username, password, ip string) (string, error) {
+	// IP风控检查
+	if locked, msg := s.risk.IsLocked(username, ip); locked {
+		return "", errors.New(msg)
+	}
+
 	var admin model.Admin
 	if err := s.db.Where("username = ?", username).First(&admin).Error; err != nil {
+		s.risk.RecordFailure(username, ip)
 		return "", errors.New("用户名或密码错误")
 	}
 
@@ -99,6 +110,9 @@ func (s *AuthService) AdminLogin(username, password, ip string) (string, error) 
 
 	// 验证密码
 	if !CheckPassword(password, admin.PasswordHash) {
+		// 记录IP风控失败
+		s.risk.RecordFailure(username, ip)
+
 		// 增加失败次数
 		admin.LoginFailCount++
 
@@ -123,7 +137,8 @@ func (s *AuthService) AdminLogin(username, password, ip string) (string, error) 
 		return "", fmt.Errorf("用户名或密码错误（已失败%d次，连续5次将冻结）", admin.LoginFailCount)
 	}
 
-	// 登录成功，重置失败次数
+	// 登录成功，重置失败次数+清除风控
+	s.risk.ClearSuccess(username, ip)
 	admin.LoginFailCount = 0
 	admin.LockedUntil = nil
 	now := time.Now()
@@ -135,9 +150,15 @@ func (s *AuthService) AdminLogin(username, password, ip string) (string, error) 
 }
 
 // UserLogin 用户登录（M2修复：带防暴力破解锁定）
-func (s *AuthService) UserLogin(username, password string) (string, error) {
+func (s *AuthService) UserLogin(username, password, ip string) (string, error) {
+	// IP风控检查
+	if locked, msg := s.risk.IsLocked(username, ip); locked {
+		return "", errors.New(msg)
+	}
+
 	var user model.User
 	if err := s.db.Where("username = ? OR email = ?", username, username).First(&user).Error; err != nil {
+		s.risk.RecordFailure(username, ip)
 		return "", errors.New("用户名或密码错误")
 	}
 
@@ -154,6 +175,9 @@ func (s *AuthService) UserLogin(username, password string) (string, error) {
 	}
 
 	if !CheckPassword(password, user.PasswordHash) {
+		// 记录IP风控失败
+		s.risk.RecordFailure(username, ip)
+
 		// M2修复：增加失败次数
 		user.LoginFailCount++
 
@@ -170,7 +194,8 @@ func (s *AuthService) UserLogin(username, password string) (string, error) {
 		return "", fmt.Errorf("用户名或密码错误（已失败%d次，连续5次将冻结）", user.LoginFailCount)
 	}
 
-	// 登录成功，重置失败次数
+	// 登录成功，重置失败次数+清除风控
+	s.risk.ClearSuccess(username, ip)
 	user.LoginFailCount = 0
 	user.LockedUntil = nil
 	now := time.Now()
