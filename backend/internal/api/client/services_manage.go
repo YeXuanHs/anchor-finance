@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -632,9 +633,19 @@ func CreateServiceUpgradeOrder(c *gin.Context) {
 
 // UpdateAutoRenew 更新自动续费设置
 // PUT /api/client/services/:id/auto-renew
+// UpdateAutoRenew 更新自动续费设置
+// PUT /api/client/services/:id/renewals/auto
 func UpdateAutoRenew(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	id := c.Param("id")
+
+	var req struct {
+		AutoRenew bool `json:"auto_renew"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
 
 	db := database.GetDB()
 	var service model.Service
@@ -643,26 +654,8 @@ func UpdateAutoRenew(c *gin.Context) {
 		return
 	}
 
-	// 查找同组更高配置的产品
-	var products []model.Product
-	db.Where("group_id = ? AND amount > ? AND status = ?", service.ProductID, service.Amount, "active").
-		Order("amount ASC").Find(&products)
-
-	if products == nil {
-		products = []model.Product{}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code": 0, "message": "success",
-		"data": gin.H{
-			"current_product": gin.H{
-				"id":     service.ProductID,
-				"name":   service.ProductName,
-				"amount": service.Amount,
-			},
-			"upgrade_options": products,
-		},
-	})
+	db.Model(&service).Update("auto_renew", req.AutoRenew)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": gin.H{"auto_renew": req.AutoRenew}})
 }
 
 // GetServiceOperationLogs 获取服务操作日志
@@ -722,6 +715,8 @@ func GetServiceConfig(c *gin.Context) {
 
 // GetServiceReinstallOptions 获取重装系统选项
 // GET /api/client/services/:id/reinstallations/options
+// GetServiceReinstallOptions 获取重装选项
+// GET /api/client/services/:id/reinstallations/options
 func GetServiceReinstallOptions(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	id := c.Param("id")
@@ -733,14 +728,28 @@ func GetServiceReinstallOptions(c *gin.Context) {
 		return
 	}
 
-	options := []gin.H{
-		{"id": "centos7", "name": "CentOS 7", "icon": "centos"},
-		{"id": "centos8", "name": "CentOS 8", "icon": "centos"},
-		{"id": "ubuntu20", "name": "Ubuntu 20.04", "icon": "ubuntu"},
-		{"id": "ubuntu22", "name": "Ubuntu 22.04", "icon": "ubuntu"},
-		{"id": "debian11", "name": "Debian 11", "icon": "debian"},
-		{"id": "windows2019", "name": "Windows Server 2019", "icon": "windows"},
-		{"id": "windows2022", "name": "Windows Server 2022", "icon": "windows"},
+	// 从settings表读取OS选项（如果配置了的话）
+	var osSetting model.Setting
+	options := []gin.H{}
+	if err := db.Where("`key` = ?", "os_options").First(&osSetting).Error; err == nil && osSetting.Value != "" {
+		// 解析JSON格式的OS选项
+		var parsed []gin.H
+		if json.Unmarshal([]byte(osSetting.Value), &parsed) == nil {
+			options = parsed
+		}
+	}
+
+	// 如果没有配置，使用默认值
+	if len(options) == 0 {
+		options = []gin.H{
+			{"id": "centos7", "name": "CentOS 7", "icon": "centos"},
+			{"id": "centos8", "name": "CentOS 8", "icon": "centos"},
+			{"id": "ubuntu20", "name": "Ubuntu 20.04", "icon": "ubuntu"},
+			{"id": "ubuntu22", "name": "Ubuntu 22.04", "icon": "ubuntu"},
+			{"id": "debian11", "name": "Debian 11", "icon": "debian"},
+			{"id": "windows2019", "name": "Windows Server 2019", "icon": "windows"},
+			{"id": "windows2022", "name": "Windows Server 2022", "icon": "windows"},
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": options})

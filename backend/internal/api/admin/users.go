@@ -662,6 +662,18 @@ func RefundUserService(c *gin.Context) {
 	var updatedUser model.User
 	db.First(&updatedUser, userID)
 
+	// 记录审计日志
+	currentAdminID, _ := c.Get("user_id")
+	db.Create(&model.OperationLog{
+		UserID:   currentAdminID.(uint),
+		Username: fmt.Sprintf("%v", currentAdminID),
+		Action:   "refund",
+		Resource: "service",
+		ResourceID: serviceID,
+		Detail:   fmt.Sprintf("退款 %.2f 元，原因: %s", req.Amount, req.Reason),
+		IP:       c.ClientIP(),
+	})
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "退款成功",
@@ -767,6 +779,18 @@ func RechargeUser(c *gin.Context) {
 	// 查询最新余额
 	var updatedUser model.User
 	db.First(&updatedUser, user.ID)
+
+	// 记录审计日志
+	currentAdminID, _ := c.Get("user_id")
+	db.Create(&model.OperationLog{
+		UserID:   currentAdminID.(uint),
+		Username: fmt.Sprintf("%v", currentAdminID),
+		Action:   "recharge",
+		Resource: "user",
+		ResourceID: user.ID,
+		Detail:   fmt.Sprintf("充值 %.2f 元，备注: %s", req.Amount, req.Remark),
+		IP:       c.ClientIP(),
+	})
 
 	// 5. 返回统一格式
 	c.JSON(http.StatusOK, gin.H{

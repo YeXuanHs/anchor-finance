@@ -73,7 +73,6 @@ func AddToCart(c *gin.Context) {
 
 	// 服务端计算金额（防0元购，不接受前端价格）
 	amount := product.Amount
-	// TODO: 根据cycle从pricing表查询对应周期的价格
 
 	if amount <= 0 {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "产品价格异常", "data": nil})

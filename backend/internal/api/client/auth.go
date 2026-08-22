@@ -115,10 +115,10 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 		return
 	}
 
-	// 频率限制1：目标维度（同一手机号/邮箱的发送间隔）
+	// 频率限制1：目标维度（同一手机号/邮箱的发送间隔，默认3次/分钟，后台可改）
 	db := database.GetDB()
 	var setting model.Setting
-	ratePerMinute := 5.0 // 默认5次/分钟
+	ratePerMinute := 3.0 // 默认3次/分钟
 	if err := db.Where("`key` = ?", "captcha_rate").First(&setting).Error; err == nil {
 		if v, err := strconv.ParseFloat(setting.Value, 64); err == nil && v > 0 {
 			ratePerMinute = v
