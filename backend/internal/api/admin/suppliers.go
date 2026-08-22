@@ -6,6 +6,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -128,12 +129,17 @@ func CreateSupplier(c *gin.Context) {
 	}
 
 	db := database.GetDB()
+
+	// 加密存储API密钥
+	encryptedKey, _ := util.EncryptAES(req.APIKey)
+	encryptedSecret, _ := util.EncryptAES(req.APISecret)
+
 	supplier := model.Supplier{
 		Name:        req.Name,
 		Type:        req.Type,
 		APIURL:      req.APIURL,
-		APIKey:      req.APIKey,
-		APISecret:   req.APISecret,
+		APIKey:      encryptedKey,
+		APISecret:   encryptedSecret,
 		Description: req.Description,
 		Status:      "active",
 	}
@@ -209,10 +215,12 @@ func UpdateSupplier(c *gin.Context) {
 		updates["api_url"] = req.APIURL
 	}
 	if req.APIKey != "" {
-		updates["api_key"] = req.APIKey
+		encryptedKey, _ := util.EncryptAES(req.APIKey)
+		updates["api_key"] = encryptedKey
 	}
 	if req.APISecret != "" {
-		updates["api_secret"] = req.APISecret
+		encryptedSecret, _ := util.EncryptAES(req.APISecret)
+		updates["api_secret"] = encryptedSecret
 	}
 	if req.Description != "" {
 		updates["description"] = req.Description
@@ -412,4 +420,42 @@ func GetSupplierProducts(c *gin.Context) {
 			"page_size": pageSize,
 		},
 	})
+}
+
+// RevealSupplierSecret 查看供应商密钥（解密返回完整值）
+// GET /api/admin/suppliers/:id/secrets/:key
+func RevealSupplierSecret(c *gin.Context) {
+	id := c.Param("id")
+	key := c.Param("key") // api_key 或 api_secret
+
+	db := database.GetDB()
+	var supplier model.Supplier
+	if err := db.First(&supplier, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "供应商不存在", "data": nil})
+		return
+	}
+
+	var encrypted string
+	switch key {
+	case "api_key":
+		encrypted = supplier.APIKey
+	case "api_secret":
+		encrypted = supplier.APISecret
+	default:
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的密钥类型", "data": nil})
+		return
+	}
+
+	if encrypted == "" {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"key": key, "value": ""}})
+		return
+	}
+
+	decrypted, err := util.DecryptAES(encrypted)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "解密失败", "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"key": key, "value": decrypted}})
 }

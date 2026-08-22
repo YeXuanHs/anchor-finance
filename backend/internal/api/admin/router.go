@@ -350,6 +350,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/suppliers/:id/sync-products", SyncSupplierProducts)
 		authenticated.POST("/suppliers/:id/sync-prices", SyncSupplierPrices)
 		authenticated.POST("/suppliers/:id/sync-stock", SyncSupplierStock)
+		authenticated.GET("/suppliers/:id/secrets/:key", RevealSupplierSecret)
 
 		// 插件管理
 		authenticated.GET("/plugins", GetPluginList)
