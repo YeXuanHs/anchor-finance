@@ -19,6 +19,13 @@ import (
 func PaymentNotify(c *gin.Context) {
 	gateway := c.Param("gateway")
 
+	// gateway白名单校验
+	allowedGateways := map[string]bool{"alipay": true, "wxpay": true, "balance": true, "manual": true}
+	if !allowedGateways[gateway] {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "不支持的支付网关", "data": nil})
+		return
+	}
+
 	callbackParams := make(map[string]interface{})
 	for key, values := range c.Request.URL.Query() {
 		if len(values) > 0 {
@@ -45,23 +52,43 @@ func PaymentNotify(c *gin.Context) {
 		transactionID, _ := result["transaction_id"].(string)
 		if invoiceID > 0 {
 			db := database.GetDB()
+
+			// 幂等保护：检查是否已支付
 			var invoice model.Invoice
-			if err := db.First(&invoice, uint(invoiceID)).Error; err == nil {
-				now := time.Now()
-				db.Model(&invoice).Updates(map[string]interface{}{
+			if err := db.First(&invoice, uint(invoiceID)).Error; err != nil {
+				c.JSON(http.StatusOK, gin.H{"code": 404, "message": "账单不存在", "data": nil})
+				return
+			}
+			if invoice.Status == "paid" {
+				// 已支付，直接返回成功（幂等）
+				c.JSON(http.StatusOK, gin.H{"code": 0, "message": "ok", "data": nil})
+				return
+			}
+
+			// 使用乐观锁更新（防并发）
+			now := time.Now()
+			result := db.Model(&model.Invoice{}).
+				Where("id = ? AND status = ?", uint(invoiceID), "unpaid").
+				Updates(map[string]interface{}{
 					"status":         "paid",
 					"paid_at":        &now,
 					"payment_method": gateway,
 				})
-				db.Create(&model.Payment{
-					UserID:        invoice.UserID,
-					InvoiceID:     invoice.ID,
-					Amount:        invoice.Amount,
-					Gateway:       gateway,
-					TransactionNo: transactionID,
-					Status:        "completed",
-				})
+			if result.RowsAffected == 0 {
+				// 并发冲突或已支付
+				c.JSON(http.StatusOK, gin.H{"code": 0, "message": "ok", "data": nil})
+				return
 			}
+
+			// 创建支付记录
+			db.Create(&model.Payment{
+				UserID:        invoice.UserID,
+				InvoiceID:     invoice.ID,
+				Amount:        invoice.Amount,
+				Gateway:       gateway,
+				TransactionNo: transactionID,
+				Status:        "completed",
+			})
 		}
 	}
 

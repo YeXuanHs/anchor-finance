@@ -8,6 +8,7 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // GetUserList 获取用户列表
@@ -650,14 +651,10 @@ func RefundUserService(c *gin.Context) {
 		return
 	}
 
-	// 5. 退款到用户余额
-	newBalance := user.Balance + req.Amount
-	if err := db.Model(&user).Update("balance", newBalance).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    500,
-			"message": "退款失败: " + err.Error(),
-			"data":    nil,
-		})
+	// 5. 退款到用户余额（原子操作防并发）
+	if err := db.Model(&model.User{}).Where("id = ?", userID).
+		Update("balance", gorm.Expr("balance + ?", req.Amount)).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "退款失败", "data": nil})
 		return
 	}
 
@@ -757,23 +754,23 @@ func RechargeUser(c *gin.Context) {
 		return
 	}
 
-	// 4. 更新余额
-	newBalance := user.Balance + req.Amount
-	if err := db.Model(&user).Update("balance", newBalance).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    500,
-			"message": "充值失败: " + err.Error(),
-			"data":    nil,
-		})
+	// 4. 更新余额（原子操作防并发）
+	if err := db.Model(&model.User{}).Where("id = ?", user.ID).
+		Update("balance", gorm.Expr("balance + ?", req.Amount)).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "充值失败", "data": nil})
 		return
 	}
+
+	// 查询最新余额
+	var updatedUser model.User
+	db.First(&updatedUser, user.ID)
 
 	// 5. 返回统一格式
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "充值成功",
 		"data": gin.H{
-			"balance": newBalance,
+			"balance": updatedUser.Balance,
 		},
 	})
 }

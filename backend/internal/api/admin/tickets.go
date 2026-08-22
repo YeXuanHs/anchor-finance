@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
@@ -152,23 +153,26 @@ func ReplyTicket(c *gin.Context) {
 		return
 	}
 
-	// 5. 更新工单状态为pending（等待用户回复）
-	if err := db.Model(&ticket).Update("status", "pending").Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    500,
-			"message": "回复工单失败: " + err.Error(),
-			"data":    nil,
-		})
+	// 5. 保存回复内容到ticket_replies表
+	reply := model.TicketReply{
+		TicketID: ticket.ID,
+		UserID:   ticket.UserID,
+		Content:  req.Content,
+		IsAdmin:  true,
+	}
+	if err := db.Create(&reply).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "保存回复失败", "data": nil})
 		return
 	}
 
-	// 6. 返回统一格式
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "回复成功",
-		"data":    nil,
+	// 6. 更新工单状态为pending（等待用户回复）
+	db.Model(&ticket).Updates(map[string]interface{}{
+		"status":     "pending",
+		"updated_at": time.Now(),
 	})
-}
+
+	// 7. 返回统一格式
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "回复成功", "data": gin.H{"reply_id": reply.ID}})
 
 // CloseTicket 关闭工单
 // POST /api/admin/tickets/:id/close
