@@ -143,7 +143,7 @@ func GetFinanceLedgerSummary(c *gin.Context) {
 	var totalIncome float64
 	db.Model(&model.Invoice{}).Where("status = ?", "paid").Select("COALESCE(SUM(amount), 0)").Scan(&totalIncome)
 	var totalRecharge float64
-	db.Model(&model.Recharge{}).Where("status = ?", "completed").Select("COALESCE(SUM(amount), 0)").Scan(&totalRecharge)
+	db.Model(&model.Recharge{}).Where("status = ?", "success").Select("COALESCE(SUM(amount), 0)").Scan(&totalRecharge)
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"total_income": totalIncome, "total_recharge": totalRecharge}})
 }
 
@@ -469,8 +469,29 @@ func TestNotificationTemplate(c *gin.Context) {
 		ID     uint   `json:"id" binding:"required"`
 		Target string `json:"target" binding:"required"`
 	}
-	c.ShouldBindJSON(&req)
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "测试发送成功", "data": nil})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var template model.NotificationTemplate
+	if err := db.First(&template, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "模板不存在", "data": nil})
+		return
+	}
+
+	// 通过PHP插件引擎发送测试通知
+	results, err := pluginengine.TriggerHook("send_notification", map[string]interface{}{
+		"template_id": template.ID,
+		"target":      req.Target,
+		"is_test":     true,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "测试发送成功", "data": gin.H{"results": results}})
 }
 
 // ==================== 员工扩展 ====================
@@ -503,12 +524,34 @@ func InstallPlugin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "安装成功", "data": gin.H{"id": plugin.ID}})
 }
 
-// ScanPlugins 扫描插件
+// ScanPlugins 扫描插件（通过PHP插件引擎扫描插件目录）
 func ScanPlugins(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "扫描完成", "data": gin.H{"found": 0, "new": 0}})
+	results, err := pluginengine.TriggerHook("scan_plugins", map[string]interface{}{})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+
+	// 同步扫描结果到数据库
+	db := database.GetDB()
+	found := 0
+	newCount := 0
+	if len(results) > 0 {
+		if data, ok := results[0].Data.(map[string]interface{}); ok {
+			if f, ok := data["found"].(float64); ok { found = int(f) }
+			if n, ok := data["new"].(float64); ok { newCount = int(n) }
+		}
+	}
+
+	// 如果插件引擎没有返回数据，从数据库查询当前插件数
+	if found == 0 {
+		db.Model(&model.Plugin{}).Count(&found)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "扫描完成", "data": gin.H{"found": found, "new": newCount}})
 }
 
-// PluginHealthCheck 插件健康检查
+// PluginHealthCheck 插件健康检查（通过PHP插件引擎检查）
 func PluginHealthCheck(c *gin.Context) {
 	id := c.Param("id")
 	db := database.GetDB()
@@ -517,25 +560,61 @@ func PluginHealthCheck(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "插件不存在", "data": nil})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"status": "healthy", "plugin_id": plugin.ID}})
+
+	// 通过PHP插件引擎检查插件健康状态
+	results, err := pluginengine.TriggerHook("plugin_health_check", map[string]interface{}{
+		"plugin_id": plugin.ID,
+		"slug":      plugin.Slug,
+		"domain":    plugin.Domain,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+
+	status := "healthy"
+	if len(results) > 0 && results[0].Data != nil {
+		if data, ok := results[0].Data.(map[string]interface{}); ok {
+			if s, ok := data["status"].(string); ok {
+				status = s
+			}
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"status": status, "plugin_id": plugin.ID}})
 }
 
 // ==================== 供应商扩展 ====================
 
-// RunSupplierTask 执行供应商任务
+// RunSupplierTask 执行供应商任务（通过PHP插件引擎执行）
 func RunSupplierTask(c *gin.Context) {
 	id := c.Param("id")
 	var req struct {
 		Task string `json:"task" binding:"required"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
 	db := database.GetDB()
 	var supplier model.Supplier
 	if err := db.First(&supplier, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "供应商不存在", "data": nil})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "任务已提交", "data": gin.H{"supplier_id": supplier.ID, "task": req.Task}})
+
+	// 通过PHP插件引擎执行供应商任务
+	results, err := pluginengine.TriggerHook("supplier_task", map[string]interface{}{
+		"supplier_id": supplier.ID,
+		"task":        req.Task,
+		"api_url":     supplier.APIURL,
+		"api_key":     supplier.APIKey,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "任务已提交", "data": gin.H{"supplier_id": supplier.ID, "task": req.Task, "results": results}})
 }
 
 // ==================== 实名认证扩展 ====================
@@ -666,9 +745,19 @@ func DeleteDownloadCategory(c *gin.Context) {
 
 // ==================== Home Hero Assets ====================
 
-// GetHomeHeroAssets 获取首页Hero可用资源文件
+// GetHomeHeroAssets 获取首页Hero可用资源文件（扫描uploads目录）
 func GetHomeHeroAssets(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"images": []string{}, "videos": []string{}}})
+	db := database.GetDB()
+	var files []model.MediaFile
+	db.Where("mime_type LIKE ?", "image/%").Order("id DESC").Limit(50).Find(&files)
+
+	images := []string{}
+	for _, f := range files {
+		images = append(images, f.URL)
+	}
+	if images == nil { images = []string{} }
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"images": images, "videos": []string{}}})
 }
 
 // ==================== Admin 用户服务子操作 ====================
@@ -683,12 +772,12 @@ func GetUserEmailLogs(c *gin.Context) {
 	if pageSize < 1 || pageSize > 100 { pageSize = 20 }
 
 	db := database.GetDB()
-	var logs []model.OperationLog
+	var logs []model.SystemLog
 	var total int64
-	db.Model(&model.OperationLog{}).Where("user_id = ? AND action = ?", id, "email").Count(&total)
+	db.Model(&model.SystemLog{}).Where("user_id = ? AND type = ?", id, "email").Count(&total)
 	offset := (page - 1) * pageSize
-	db.Where("user_id = ? AND action = ?", id, "email").Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
-	if logs == nil { logs = []model.OperationLog{} }
+	db.Where("user_id = ? AND type = ?", id, "email").Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
+	if logs == nil { logs = []model.SystemLog{} }
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"list": logs, "total": total, "page": page, "page_size": pageSize}})
 }
 
@@ -702,12 +791,12 @@ func GetUserSmsLogs(c *gin.Context) {
 	if pageSize < 1 || pageSize > 100 { pageSize = 20 }
 
 	db := database.GetDB()
-	var logs []model.OperationLog
+	var logs []model.SystemLog
 	var total int64
-	db.Model(&model.OperationLog{}).Where("user_id = ? AND action = ?", id, "sms").Count(&total)
+	db.Model(&model.SystemLog{}).Where("user_id = ? AND type = ?", id, "sms").Count(&total)
 	offset := (page - 1) * pageSize
-	db.Where("user_id = ? AND action = ?", id, "sms").Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
-	if logs == nil { logs = []model.OperationLog{} }
+	db.Where("user_id = ? AND type = ?", id, "sms").Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
+	if logs == nil { logs = []model.SystemLog{} }
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"list": logs, "total": total, "page": page, "page_size": pageSize}})
 }
 
@@ -986,7 +1075,7 @@ func UnbindVerificationByUser(c *gin.Context) {
 		return
 	}
 	// 同时清除用户表的verified状态
-	db.Model(&model.User{}).Where("id = ?", userID).Update("verified", false)
+	db.Model(&model.User{}).Where("id = ?", userID).Update("is_verified", false)
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "解绑成功", "data": nil})
 }
 

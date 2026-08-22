@@ -142,8 +142,49 @@ func sanitize(name string) string {
 	return re.ReplaceAllString(name, "_")
 }
 
-// GetMediaFileReferences 获取媒体文件引用（返回空，真实引用关系后续关联表）
+// GetMediaFileReferences 获取媒体文件引用（查找哪些内容引用了该文件）
 // GET /api/admin/media-files/:id/references
 func GetMediaFileReferences(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": []interface{}{}})
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var file model.MediaFile
+	if err := db.First(&file, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "文件不存在", "data": nil})
+		return
+	}
+
+	// 检查哪些内容引用了该文件URL
+	references := []map[string]interface{}{}
+
+	// 检查新闻
+	var news []model.News
+	db.Where("content LIKE ?", "%"+file.URL+"%").Find(&news)
+	for _, n := range news {
+		references = append(references, map[string]interface{}{"type": "news", "id": n.ID, "title": n.Title})
+	}
+
+	// 检查知识文章
+	var articles []model.KnowledgeArticle
+	db.Where("content LIKE ?", "%"+file.URL+"%").Find(&articles)
+	for _, a := range articles {
+		references = append(references, map[string]interface{}{"type": "knowledge_article", "id": a.ID, "title": a.Title})
+	}
+
+	// 检查下载
+	var downloads []model.Download
+	db.Where("description LIKE ?", "%"+file.URL+"%").Find(&downloads)
+	for _, d := range downloads {
+		references = append(references, map[string]interface{}{"type": "download", "id": d.ID, "title": d.Name})
+	}
+
+	// 检查HomeHero
+	var heroes []model.HomeHero
+	db.Where("image_url = ?", file.URL).Find(&heroes)
+	for _, h := range heroes {
+		references = append(references, map[string]interface{}{"type": "home_hero", "id": h.ID, "title": h.Title})
+	}
+
+	if references == nil { references = []map[string]interface{}{} }
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": references})
 }
