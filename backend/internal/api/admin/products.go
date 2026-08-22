@@ -136,6 +136,7 @@ func CreateProduct(c *gin.Context) {
 		GroupID:      req.GroupID,
 		Type:         req.Type,
 		Description:  req.Description,
+		Amount:       req.Price,
 		Price:        req.Price,
 		BillingCycle: req.BillingCycle,
 		Status:       "active",
@@ -222,6 +223,7 @@ func UpdateProduct(c *gin.Context) {
 	}
 	if req.Price > 0 {
 		updates["price"] = req.Price
+		updates["amount"] = req.Price
 	}
 	if req.BillingCycle != "" {
 		updates["billing_cycle"] = req.BillingCycle
