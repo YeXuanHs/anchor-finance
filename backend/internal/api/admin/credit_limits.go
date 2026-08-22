@@ -119,10 +119,13 @@ func SaveCreditLimit(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	// 0元购防护：信用额度不能为负数
+	if req.Amount < 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "信用额度不能为负数", "data": nil})
 		return
 	}
 
@@ -131,10 +134,7 @@ func SaveCreditLimit(c *gin.Context) {
 	// 检查用户是否存在
 	var user model.User
 	if err := db.First(&user, req.UserID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    404,
-			"message": "用户不存在",
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "用户不存在", "data": nil})
 		return
 	}
 
@@ -179,20 +179,20 @@ func UpdateCreditLimit(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	// 0元购防护：信用额度不能为负数
+	if req.Amount < 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "信用额度不能为负数", "data": nil})
 		return
 	}
 
 	db := database.GetDB()
 	var limit model.CreditLimit
 	if err := db.First(&limit, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    404,
-			"message": "信用额度不存在",
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "信用额度不存在", "data": nil})
 		return
 	}
 
@@ -221,10 +221,7 @@ func DeleteCreditLimit(c *gin.Context) {
 	db := database.GetDB()
 	var limit model.CreditLimit
 	if err := db.First(&limit, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    404,
-			"message": "信用额度不存在",
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "信用额度不存在", "data": nil})
 		return
 	}
 
