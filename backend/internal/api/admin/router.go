@@ -315,6 +315,13 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/blacklist", CreateBlacklist)
 		authenticated.DELETE("/blacklist/:id", DeleteBlacklist)
 
+		// 邮件模板
+		authenticated.GET("/email-templates", GetEmailTemplateList)
+		authenticated.GET("/email-templates/:id", GetEmailTemplateDetail)
+		authenticated.POST("/email-templates", CreateEmailTemplate)
+		authenticated.PUT("/email-templates/:id", UpdateEmailTemplate)
+		authenticated.DELETE("/email-templates/:id", DeleteEmailTemplate)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
