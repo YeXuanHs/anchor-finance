@@ -562,5 +562,6 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/ai-ticket/rules/:id", DeleteAITicketRule)
 		authenticated.GET("/ai-ticket/logs", GetAITicketProcessLogs)
 		authenticated.POST("/ai-ticket/tickets/:id/mode", SetAITicketMode)
+		authenticated.POST("/ai/ticket-reply", AITicketReply)
 	}
 }
