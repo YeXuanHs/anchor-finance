@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -42,24 +43,42 @@ func GetCreditLimitList(c *gin.Context) {
 	})
 }
 
-// GetCreditLimitConfig 获取信用额配置
+// GetCreditLimitConfig 获取信用额配置（从settings表读）
 // GET /api/admin/credit-limits/config
 func GetCreditLimitConfig(c *gin.Context) {
-	// 返回信用额配置
-	config := gin.H{
-		"enabled":        true,
-		"default_amount": 0,
-		"max_amount":     100000,
+	db := database.GetDB()
+	var enabledSetting, defaultSetting, maxSetting model.Setting
+
+	enabled := false
+	db.Where("`group` = ? AND `key` = ?", "credit", "enabled").First(&enabledSetting)
+	if enabledSetting.Value == "1" || enabledSetting.Value == "true" {
+		enabled = true
+	}
+
+	defaultAmount := 0.0
+	db.Where("`group` = ? AND `key` = ?", "credit", "default_amount").First(&defaultSetting)
+	if v, err := strconv.ParseFloat(defaultSetting.Value, 64); err == nil {
+		defaultAmount = v
+	}
+
+	maxAmount := 0.0
+	db.Where("`group` = ? AND `key` = ?", "credit", "max_amount").First(&maxSetting)
+	if v, err := strconv.ParseFloat(maxSetting.Value, 64); err == nil {
+		maxAmount = v
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
-		"data":    config,
+		"data": gin.H{
+			"enabled":        enabled,
+			"default_amount": defaultAmount,
+			"max_amount":     maxAmount,
+		},
 	})
 }
 
-// SaveCreditLimitConfig 保存信用额配置
+// SaveCreditLimitConfig 保存信用额配置（存settings表）
 // POST /api/admin/credit-limits/config
 func SaveCreditLimitConfig(c *gin.Context) {
 	var req struct {
@@ -69,19 +88,26 @@ func SaveCreditLimitConfig(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
-	// TODO: 保存到settings表
+	// 0元购防护：最大额度必须>=0
+	if req.MaxAmount < 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "最大额度不能为负数", "data": nil})
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "保存成功",
-	})
+	db := database.GetDB()
+	saveSetting := func(key, value string) {
+		db.Where("key = ?", key).Assign(map[string]interface{}{"value": value, "group": "credit"}).FirstOrCreate(&model.Setting{})
+	}
+
+	saveSetting("credit_enabled", fmt.Sprintf("%v", req.Enabled))
+	saveSetting("credit_default_amount", fmt.Sprintf("%v", req.DefaultAmount))
+	saveSetting("credit_max_amount", fmt.Sprintf("%v", req.MaxAmount))
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "保存成功", "data": nil})
 }
 
 // SaveCreditLimit 设置用户信用额度
