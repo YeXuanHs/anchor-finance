@@ -1507,7 +1507,15 @@ func AITicketReply(c *gin.Context) {
 	var user model.User
 	db.First(&user, ticket.UserID)
 
-	reply, err := aiSvc.TicketAutoReply(ticket.Subject, ticket.Content, map[string]interface{}{
+	// 获取最新工单回复内容
+	var lastReply model.TicketReply
+	ticketContent := ticket.Subject
+	db.Where("ticket_id = ?", ticket.ID).Order("id DESC").First(&lastReply)
+	if lastReply.Content != "" {
+		ticketContent = lastReply.Content
+	}
+
+	reply, err := aiSvc.TicketAutoReply(ticket.Subject, ticketContent, map[string]interface{}{
 		"customer_info": gin.H{"username": user.Username, "email": user.Email},
 	})
 	if err != nil {
