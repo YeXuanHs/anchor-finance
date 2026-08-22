@@ -79,6 +79,8 @@ func main() {
 		&model.ConfigurableOption{},
 		&model.OAuthProvider{},
 		&model.CustomTemplateField{},
+		&model.TrafficPackage{},
+		&model.TrafficLog{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

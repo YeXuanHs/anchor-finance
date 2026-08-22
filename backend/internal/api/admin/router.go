@@ -380,6 +380,13 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/custom-template-fields/:id", UpdateCustomTemplateField)
 		authenticated.DELETE("/custom-template-fields/:id", DeleteCustomTemplateField)
 
+		// 流量包管理
+		authenticated.GET("/traffic-packages", GetTrafficPackageList)
+		authenticated.POST("/traffic-packages", CreateTrafficPackage)
+		authenticated.PUT("/traffic-packages/:id", UpdateTrafficPackage)
+		authenticated.DELETE("/traffic-packages/:id", DeleteTrafficPackage)
+		authenticated.GET("/traffic-logs", GetTrafficLogList)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
