@@ -219,11 +219,15 @@ func PayInvoiceByBalance(c *gin.Context) {
 	// 更新账单状态
 	db.Model(&invoice).Update("status", "paid")
 
+	// 查询最新余额
+	var updatedUser model.User
+	db.First(&updatedUser, userID)
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "支付成功",
 		"data": gin.H{
-			"balance": newBalance,
+			"balance": updatedUser.Balance,
 		},
 	})
 }
