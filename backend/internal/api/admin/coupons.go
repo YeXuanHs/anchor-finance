@@ -95,6 +95,7 @@ func CreateCoupon(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -144,6 +145,7 @@ func CreateCoupon(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建优惠券失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -175,6 +177,7 @@ func UpdateCoupon(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -255,6 +258,7 @@ func UpdateCouponStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -359,6 +363,7 @@ func CreateCouponCampaign(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -375,6 +380,7 @@ func CreateCouponCampaign(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建活动失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -402,6 +408,7 @@ func UpdateCouponCampaign(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -470,6 +477,7 @@ func UpdateCouponCampaignStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}

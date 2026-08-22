@@ -25,6 +25,7 @@ func CreateNews(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -46,6 +47,7 @@ func CreateNews(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建新闻失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -76,6 +78,7 @@ func UpdateNews(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -154,6 +157,7 @@ func CreateNewsCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -169,6 +173,7 @@ func CreateNewsCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建分类失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -197,6 +202,7 @@ func UpdateNewsCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -269,6 +275,7 @@ func CreateKnowledgeCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -284,6 +291,7 @@ func CreateKnowledgeCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建分类失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -313,6 +321,7 @@ func CreateKnowledgeArticle(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -333,6 +342,7 @@ func CreateKnowledgeArticle(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建文章失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -362,6 +372,7 @@ func UpdateKnowledgeArticle(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -440,6 +451,7 @@ func CreateDownload(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -461,6 +473,7 @@ func CreateDownload(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建下载失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -491,6 +504,7 @@ func UpdateDownload(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -569,6 +583,7 @@ func CreateDownloadCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -584,6 +599,7 @@ func CreateDownloadCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建分类失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}

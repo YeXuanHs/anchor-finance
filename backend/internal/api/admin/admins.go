@@ -245,6 +245,7 @@ func CreateRole(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -260,6 +261,7 @@ func CreateRole(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建角色失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -288,6 +290,7 @@ func UpdateRole(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -383,6 +386,7 @@ func CopyRole(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "复制角色失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}

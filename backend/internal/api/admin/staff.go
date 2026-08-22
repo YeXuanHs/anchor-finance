@@ -94,6 +94,7 @@ func CreateStaff(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -136,6 +137,7 @@ func CreateStaff(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建员工失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -165,6 +167,7 @@ func UpdateStaff(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -239,6 +242,7 @@ func UpdateStaffStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -289,6 +293,7 @@ func ResetStaffPassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}

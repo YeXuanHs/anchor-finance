@@ -75,6 +75,7 @@ func CreateTicketPrereplyCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -90,6 +91,7 @@ func CreateTicketPrereplyCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建分类失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -117,6 +119,7 @@ func UpdateTicketPrereplyCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -184,6 +187,7 @@ func CreateTicketPrereply(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -201,6 +205,7 @@ func CreateTicketPrereply(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建预回复失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -230,6 +235,7 @@ func UpdateTicketPrereply(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -300,6 +306,7 @@ func SearchTicketPrereply(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}

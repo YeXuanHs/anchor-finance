@@ -99,6 +99,7 @@ func CreateUserTicket(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -124,6 +125,7 @@ func CreateUserTicket(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建工单失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -160,6 +162,7 @@ func ReplyUserTicket(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}

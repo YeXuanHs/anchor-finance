@@ -37,6 +37,7 @@ func CreateNotificationTemplate(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -55,6 +56,7 @@ func CreateNotificationTemplate(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建模板失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -85,6 +87,7 @@ func UpdateNotificationTemplate(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}

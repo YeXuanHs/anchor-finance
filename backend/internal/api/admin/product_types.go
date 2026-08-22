@@ -35,6 +35,7 @@ func CreateProductType(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -51,6 +52,7 @@ func CreateProductType(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "创建类型失败: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
@@ -79,6 +81,7 @@ func UpdateProductType(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "参数错误: " + err.Error(),
+			"data": nil,
 		})
 		return
 	}
