@@ -173,6 +173,7 @@ func ReplyTicket(c *gin.Context) {
 
 	// 7. 返回统一格式
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "回复成功", "data": gin.H{"reply_id": reply.ID}})
+}
 
 // CloseTicket 关闭工单
 // POST /api/admin/tickets/:id/close
