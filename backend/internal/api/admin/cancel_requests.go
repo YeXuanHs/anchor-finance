@@ -75,15 +75,19 @@ func ApproveCancelRequest(c *gin.Context) {
 		return
 	}
 
-	// 更新请求状态
-	db.Model(&request).Update("status", "approved")
-
 	// 暂停相关服务（走PHP插件引擎）
 	if request.ServiceID > 0 {
-		pluginengine.TriggerHook("suspend_service", map[string]interface{}{
+		if _, err := pluginengine.TriggerHook("suspend_service", map[string]interface{}{
 			"service_id": request.ServiceID,
-		})
+		}); err != nil {
+			// 服务暂停失败仍需记录，但不阻止审批流
+			c.JSON(http.StatusOK, gin.H{"code": 502, "message": "服务暂停失败: " + err.Error(), "data": nil})
+			return
+		}
 	}
+
+	// 更新请求状态
+	db.Model(&request).Update("status", "approved")
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "批准成功", "data": nil})
 }
