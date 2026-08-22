@@ -86,6 +86,7 @@ func main() {
 		&model.UserTwoFactor{},
 		&model.SalesConfig{},
 		&model.SalesGroup{},
+		&model.Theme{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

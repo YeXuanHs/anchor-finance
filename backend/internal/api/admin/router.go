@@ -405,6 +405,14 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/sales-groups/:id", UpdateSalesGroup)
 		authenticated.DELETE("/sales-groups/:id", DeleteSalesGroup)
 
+		// 主题模板
+		authenticated.GET("/themes", GetThemeList)
+		authenticated.GET("/themes/active", GetActiveTheme)
+		authenticated.POST("/themes", CreateTheme)
+		authenticated.PUT("/themes/:id", UpdateTheme)
+		authenticated.DELETE("/themes/:id", DeleteTheme)
+		authenticated.POST("/themes/:id/set-default", SetDefaultTheme)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
