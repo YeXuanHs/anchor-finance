@@ -8,26 +8,28 @@ import (
 
 // User 用户模型
 type User struct {
-	ID            uint           `gorm:"primaryKey" json:"id"`
-	Username      string         `gorm:"size:50;uniqueIndex;not null" json:"username"`
-	Email         string         `gorm:"size:100;uniqueIndex;not null" json:"email"`
-	PasswordHash  string         `gorm:"size:255;not null" json:"-"`
-	Phone         string         `gorm:"size:20" json:"phone"`
-	Company       string         `gorm:"size:100" json:"company"`
-	Status        string         `gorm:"size:20;default:active" json:"status"` // active, suspended, closed
-	Balance       float64        `gorm:"type:decimal(10,2);default:0" json:"balance"`
-	CreditLimit   float64        `gorm:"type:decimal(10,2);default:0" json:"credit_limit"`
-	GroupID       uint           `gorm:"default:0" json:"group_id"`
-	LevelID       uint           `gorm:"default:0" json:"level_id"`
-	Avatar        string         `gorm:"size:255" json:"avatar"`
-	RealName      string         `gorm:"size:50" json:"real_name"`      // 实名认证姓名
-	IDCard        string         `gorm:"size:20" json:"-"`              // 身份证号（加密存储）
-	IsVerified    bool           `gorm:"default:false" json:"is_verified"` // 是否实名认证
-	LastLoginAt   *time.Time     `json:"last_login_at"`
-	LastLoginIP   string         `gorm:"size:45" json:"last_login_ip"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+	ID             uint           `gorm:"primaryKey" json:"id"`
+	Username       string         `gorm:"size:50;uniqueIndex;not null" json:"username"`
+	Email          string         `gorm:"size:100;uniqueIndex;not null" json:"email"`
+	PasswordHash   string         `gorm:"size:255;not null" json:"-"`
+	Phone          string         `gorm:"size:20" json:"phone"`
+	Company        string         `gorm:"size:100" json:"company"`
+	Status         string         `gorm:"size:20;default:active" json:"status"` // active, suspended, closed
+	Balance        float64        `gorm:"type:decimal(10,2);default:0" json:"balance"`
+	CreditLimit    float64        `gorm:"type:decimal(10,2);default:0" json:"credit_limit"`
+	GroupID        uint           `gorm:"default:0" json:"group_id"`
+	LevelID        uint           `gorm:"default:0" json:"level_id"`
+	Avatar         string         `gorm:"size:255" json:"avatar"`
+	RealName       string         `gorm:"size:50" json:"real_name"`
+	IDCard         string         `gorm:"size:20" json:"-"`
+	IsVerified     bool           `gorm:"default:false" json:"is_verified"`
+	LoginFailCount int            `gorm:"default:0" json:"-"`
+	LockedUntil    *time.Time     `json:"-"`
+	LastLoginAt    *time.Time     `json:"last_login_at"`
+	LastLoginIP    string         `gorm:"size:45" json:"last_login_ip"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // TableName 指定表名

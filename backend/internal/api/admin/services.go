@@ -6,6 +6,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
 )
 
@@ -188,161 +189,108 @@ func UpdateService(c *gin.Context) {
 // SuspendService 暂停服务
 // POST /api/admin/services/:id/suspend
 func SuspendService(c *gin.Context) {
-	// 1. 获取服务ID
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "无效的服务ID",
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的服务ID"})
 		return
 	}
 
-	// 2. 查询服务
 	db := database.GetDB()
 	var service model.Service
 	if err := db.First(&service, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    404,
-			"message": "服务不存在",
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在"})
 		return
 	}
 
-	// 3. 检查状态
 	if service.Status != "active" {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "只有活跃状态的服务才能暂停",
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只有活跃状态的服务才能暂停"})
 		return
 	}
 
-	// 4. 暂停服务
-	if err := db.Model(&service).Update("status", "suspended").Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    500,
-			"message": "暂停服务失败: " + err.Error(),
-			"data":    nil,
-		})
+	// 调用PHP插件引擎执行上游暂停操作
+	if _, err := pluginengine.TriggerHook("suspend_service", map[string]interface{}{
+		"service_id": service.ID,
+		"product_id": service.ProductID,
+		"user_id":    service.UserID,
+	}); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
 		return
 	}
 
-	// 5. 返回统一格式
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "暂停成功",
-		"data":    nil,
-	})
+	// 上游暂停成功后，更新本地状态
+	db.Model(&service).Update("status", "suspended")
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "暂停成功"})
 }
 
 // UnsuspendService 取消暂停
 // POST /api/admin/services/:id/unsuspend
 func UnsuspendService(c *gin.Context) {
-	// 1. 获取服务ID
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "无效的服务ID",
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的服务ID"})
 		return
 	}
 
-	// 2. 查询服务
 	db := database.GetDB()
 	var service model.Service
 	if err := db.First(&service, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    404,
-			"message": "服务不存在",
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在"})
 		return
 	}
 
-	// 3. 检查状态
 	if service.Status != "suspended" {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "只有暂停状态的服务才能取消暂停",
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只有暂停状态的服务才能取消暂停"})
 		return
 	}
 
-	// 4. 取消暂停
-	if err := db.Model(&service).Update("status", "active").Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    500,
-			"message": "取消暂停失败: " + err.Error(),
-			"data":    nil,
-		})
+	// 调用PHP插件引擎执行上游取消暂停操作
+	if _, err := pluginengine.TriggerHook("unsuspend_service", map[string]interface{}{
+		"service_id": service.ID,
+		"product_id": service.ProductID,
+		"user_id":    service.UserID,
+	}); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
 		return
 	}
 
-	// 5. 返回统一格式
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "取消暂停成功",
-		"data":    nil,
-	})
+	db.Model(&service).Update("status", "active")
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "取消暂停成功"})
 }
 
 // TerminateService 终止服务
 // POST /api/admin/services/:id/terminate
 func TerminateService(c *gin.Context) {
-	// 1. 获取服务ID
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "无效的服务ID",
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无效的服务ID"})
 		return
 	}
 
-	// 2. 查询服务
 	db := database.GetDB()
 	var service model.Service
 	if err := db.First(&service, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    404,
-			"message": "服务不存在",
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在"})
 		return
 	}
 
-	// 3. 检查状态
 	if service.Status == "terminated" {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "服务已终止",
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "服务已终止"})
 		return
 	}
 
-	// 4. 终止服务
-	if err := db.Model(&service).Update("status", "terminated").Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    500,
-			"message": "终止服务失败: " + err.Error(),
-			"data":    nil,
-		})
+	// 调用PHP插件引擎执行上游终止操作
+	if _, err := pluginengine.TriggerHook("terminate_service", map[string]interface{}{
+		"service_id": service.ID,
+		"product_id": service.ProductID,
+		"user_id":    service.UserID,
+	}); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error()})
 		return
 	}
 
-	// 5. 返回统一格式
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "终止成功",
-		"data":    nil,
-	})
+	db.Model(&service).Update("status", "terminated")
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "终止成功"})
 }

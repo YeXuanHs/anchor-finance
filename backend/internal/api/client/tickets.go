@@ -187,12 +187,25 @@ func ReplyUserTicket(c *gin.Context) {
 		return
 	}
 
+	// 保存回复内容到数据库
+	reply := model.TicketReply{
+		TicketID: uint(id),
+		UserID:   userID.(uint),
+		Content:  req.Content,
+		IsAdmin:  false,
+	}
+	db.Create(&reply)
+
 	// 更新工单状态
-	db.Model(&ticket).Update("status", "open")
+	db.Model(&ticket).Updates(map[string]interface{}{
+		"status":     "open",
+		"updated_at": time.Now(),
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "回复成功",
+		"data":    gin.H{"reply_id": reply.ID},
 	})
 }
 

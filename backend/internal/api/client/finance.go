@@ -8,6 +8,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -81,17 +82,17 @@ func CreateRecharge(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误"})
 		return
 	}
 
 	// 0元购防护
 	if req.Amount <= 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "充值金额必须大于0", "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "充值金额必须大于0"})
 		return
 	}
 
-	// 生成真实交易号
+	// 生成交易号
 	paymentNo := fmt.Sprintf("RCH%s%06d", time.Now().Format("20060102"), time.Now().UnixNano()%1000000)
 
 	db := database.GetDB()
@@ -104,18 +105,41 @@ func CreateRecharge(c *gin.Context) {
 	}
 
 	if err := db.Create(&recharge).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建充值订单失败", "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建充值订单失败"})
 		return
 	}
 
+	// 调用PHP插件引擎创建支付（获取支付URL）
+	result, err := pluginengine.TriggerHook("create_payment", map[string]interface{}{
+		"invoice_id":   recharge.ID,
+		"amount":       req.Amount,
+		"gateway":      req.Gateway,
+		"payment_no":   paymentNo,
+		"user_id":      userID,
+		"type":         "recharge",
+	})
+	if err != nil {
+		// 插件引擎离线，返回502
+		c.JSON(http.StatusBadGateway, gin.H{"code": 502, "message": "支付服务暂时不可用"})
+		return
+	}
+
+	// 从PHP插件返回结果中获取支付URL
+	var paymentURL string
+	if len(result) > 0 {
+		if url, ok := result[0].Data.(map[string]interface{}); ok {
+			paymentURL, _ = url["pay_url"].(string)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "充值订单创建成功",
+		"code": 0, "message": "充值订单创建成功",
 		"data": gin.H{
-			"recharge_id":  recharge.ID,
-			"payment_no":   paymentNo,
-			"amount":       req.Amount,
-			"gateway":      req.Gateway,
+			"recharge_id": recharge.ID,
+			"payment_no":  paymentNo,
+			"amount":      req.Amount,
+			"gateway":     req.Gateway,
+			"pay_url":     paymentURL,
 		},
 	})
 }
@@ -168,41 +192,68 @@ func GetUserCoupons(c *gin.Context) {
 // POST /api/client/coupons/:id/claim
 func ClaimCoupon(c *gin.Context) {
 	couponID := c.Param("id")
+	userID, _ := c.Get("user_id")
 
 	db := database.GetDB()
 	var coupon model.Coupon
 	if err := db.First(&coupon, couponID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "优惠券不存在", "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "优惠券不存在"})
 		return
 	}
 
 	// 校验状态
 	if coupon.Status != "active" {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已失效", "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已失效"})
 		return
 	}
 
 	// 校验有效期
 	now := time.Now()
 	if coupon.StartDate != nil && now.Before(*coupon.StartDate) {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券未开始", "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券未开始"})
 		return
 	}
 	if coupon.EndDate != nil && now.After(*coupon.EndDate) {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已过期", "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已过期"})
 		return
 	}
 
-	// 校验使用次数
-	if coupon.UsageLimit > 0 && coupon.UsedCount >= coupon.UsageLimit {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已领完", "data": nil})
+	// 学创欧：检查是否已领取过（user_coupons表）
+	var existingCount int64
+	db.Model(&model.UserCoupon{}).Where("coupon_id = ? AND user_id = ?", coupon.ID, userID).Count(&existingCount)
+	if existingCount > 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "你已经领取过这张优惠券"})
 		return
 	}
 
-	// 领取：使用次数+1（原子操作防并发）
+	// 校验领取上限
+	if coupon.UsageLimit > 0 {
+		var claimedCount int64
+		db.Model(&model.UserCoupon{}).Where("coupon_id = ?", coupon.ID).Count(&claimedCount)
+		if claimedCount >= int64(coupon.UsageLimit) {
+			c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已被领完"})
+			return
+		}
+	}
+
+	// 创建领取记录
+	claimedAt := time.Now()
+	userCoupon := model.UserCoupon{
+		CouponID:    coupon.ID,
+		UserID:      userID.(uint),
+		ReceiveType: "claim",
+		Status:      1,
+		ClaimedAt:   &claimedAt,
+	}
+	if err := db.Create(&userCoupon).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "领取失败，可能已领取过"})
+		return
+	}
+
+	// 更新优惠券使用次数
 	db.Model(&coupon).Update("used_count", gorm.Expr("used_count + ?", 1))
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "领取成功", "data": gin.H{"coupon_id": coupon.ID}})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "领取成功", "data": gin.H{"coupon_id": coupon.ID, "user_coupon_id": userCoupon.ID}})
 }
 
 // GetUserNotifications 获取用户通知

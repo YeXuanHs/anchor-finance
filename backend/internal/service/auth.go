@@ -134,7 +134,7 @@ func (s *AuthService) AdminLogin(username, password, ip string) (string, error) 
 	return s.GenerateToken(admin.ID, admin.Username, true)
 }
 
-// UserLogin 用户登录
+// UserLogin 用户登录（M2修复：带防暴力破解锁定）
 func (s *AuthService) UserLogin(username, password string) (string, error) {
 	var user model.User
 	if err := s.db.Where("username = ? OR email = ?", username, username).First(&user).Error; err != nil {
@@ -145,15 +145,37 @@ func (s *AuthService) UserLogin(username, password string) (string, error) {
 		return "", errors.New("账号已被禁用")
 	}
 
-	if !CheckPassword(password, user.PasswordHash) {
-		return "", errors.New("用户名或密码错误")
+	// M2修复：检查是否被锁定
+	if user.LockedUntil != nil && user.LockedUntil.After(time.Now()) {
+		remaining := time.Until(*user.LockedUntil)
+		hours := int(remaining.Hours())
+		minutes := int(remaining.Minutes()) % 60
+		return "", fmt.Errorf("账号已冻结，请%d小时%d分钟后重试", hours, minutes)
 	}
 
-	// 更新最后登录时间
+	if !CheckPassword(password, user.PasswordHash) {
+		// M2修复：增加失败次数
+		user.LoginFailCount++
+
+		// 连续5次失败，冻结6小时
+		if user.LoginFailCount >= 5 {
+			lockedUntil := time.Now().Add(6 * time.Hour)
+			user.LockedUntil = &lockedUntil
+			user.LoginFailCount = 0
+			s.db.Save(&user)
+			return "", errors.New("连续5次密码错误，账号已冻结6小时")
+		}
+
+		s.db.Save(&user)
+		return "", fmt.Errorf("用户名或密码错误（已失败%d次，连续5次将冻结）", user.LoginFailCount)
+	}
+
+	// 登录成功，重置失败次数
+	user.LoginFailCount = 0
+	user.LockedUntil = nil
 	now := time.Now()
-	s.db.Model(&user).Updates(map[string]interface{}{
-		"last_login_at": &now,
-	})
+	user.LastLoginAt = &now
+	s.db.Save(&user)
 
 	return s.GenerateToken(user.ID, user.Username, false)
 }

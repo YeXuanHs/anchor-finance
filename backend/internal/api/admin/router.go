@@ -19,9 +19,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		public.POST("/login", middleware.RateLimit(5, 1*time.Minute), authHandler.Login)
 	}
 
-	// 需要认证的路由
+	// 需要认证的路由（必须是管理员）
 	authenticated := r.Group("")
 	authenticated.Use(middleware.JWTAuth(authService))
+	authenticated.Use(middleware.AdminRequired())
 	{
 		// 认证相关
 		authenticated.GET("/auth/info", authHandler.GetInfo)
@@ -29,15 +30,17 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/auth/password", authHandler.UpdatePassword)
 		authenticated.POST("/logout", authHandler.Logout)
 
-		// 仪表盘 - 已实现
+		// 仪表盘
 		authenticated.GET("/dashboard/stats", GetDashboardStats)
 		authenticated.GET("/dashboard/income-trend", GetIncomeTrend)
 		authenticated.GET("/dashboard/online-admins", GetOnlineAdmins)
 		authenticated.GET("/dashboard/recent-invoices", GetRecentInvoices)
 		authenticated.GET("/dashboard/monthly-revenue", GetMonthlyRevenue)
 
-		// 客户管理 - 已实现
+		// 客户管理
 		authenticated.GET("/os-options", GetOSOptions)
+		authenticated.GET("/cpu-model-catalog", GetCPUModelCatalog)
+		authenticated.GET("/instance-spec-catalog", GetInstanceSpecCatalog)
 		authenticated.GET("/users", GetUserList)
 		authenticated.GET("/users/:id", GetUser)
 		authenticated.POST("/users", CreateUser)
@@ -52,16 +55,23 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/users/:id/operation-logs", GetUserOperationLogs)
 		authenticated.POST("/users/:id/recharges", RechargeUser)
 		authenticated.POST("/users/:id/services/:service_id/refunds", RefundUserService)
+		// 新增：用户备注、登录为用户、刷新服务状态
+		authenticated.GET("/users/:id/remarks", GetUserRemarks)
+		authenticated.POST("/users/:id/remarks", AddUserRemark)
+		authenticated.POST("/users/:id/login-as", LoginAsUser)
+		authenticated.POST("/users/:id/services/refresh-statuses", RefreshUserServicesStatus)
 
-		// 订单管理 - 已实现
+		// 订单管理
 		authenticated.GET("/orders", GetOrderList)
+		authenticated.POST("/orders/search", SearchOrders)
 		authenticated.GET("/orders/:id", GetOrder)
 		authenticated.POST("/orders", CreateOrder)
 		authenticated.PUT("/orders/:id", UpdateOrder)
 		authenticated.POST("/orders/:id/activate", ActivateOrder)
 		authenticated.POST("/orders/:id/cancel", CancelOrder)
+		authenticated.POST("/orders/:id/notes", AddOrderNote)
 
-		// 服务管理 - 已实现
+		// 服务管理
 		authenticated.GET("/services", GetServiceList)
 		authenticated.GET("/services/:id", GetService)
 		authenticated.PUT("/services/:id", UpdateService)
@@ -69,13 +79,14 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/services/:id/unsuspend", UnsuspendService)
 		authenticated.POST("/services/:id/terminate", TerminateService)
 
-		// 账单管理 - 已实现
+		// 账单管理
 		authenticated.GET("/invoices", GetInvoiceList)
 		authenticated.GET("/invoices/:id", GetInvoice)
 		authenticated.POST("/invoices/:id/cancel", CancelInvoice)
+		authenticated.POST("/invoices/:id/notes", AddInvoiceNote)
 		authenticated.GET("/transactions", GetTransactionList)
 
-		// 信用额管理 - 已实现
+		// 信用额管理
 		authenticated.GET("/credit-limits", GetCreditLimitList)
 		authenticated.GET("/credit-limits/config", GetCreditLimitConfig)
 		authenticated.POST("/credit-limits/config", SaveCreditLimitConfig)
@@ -84,14 +95,21 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/credit-limits/:id", DeleteCreditLimit)
 		authenticated.GET("/credit-limits/logs", GetCreditLimitLogs)
 
-		// 财务报表 - 已实现
+		// 财务报表
 		authenticated.GET("/finance/new-customer-daily-summary", GetNewCustomerDailySummary)
 		authenticated.GET("/finance/product-income-summary", GetProductIncomeSummary)
 		authenticated.GET("/finance/ledger", GetFinanceLedger)
+		authenticated.GET("/finance/ledger/summary", GetFinanceLedgerSummary)
 		authenticated.GET("/finance/recharges", GetRechargeList)
 		authenticated.GET("/finance/recharges/summary", GetRechargeSummary)
+		authenticated.GET("/finance/renewal-orders", GetRenewalOrders)
+		authenticated.GET("/finance/upgrade-orders", GetUpgradeOrders)
 
-		// 工单管理 - 已实现
+		// 报表
+		authenticated.GET("/reports/new-customers", GetNewCustomerStatistics)
+		authenticated.GET("/reports/revenue-ranking", GetRevenueRanking)
+
+		// 工单管理
 		authenticated.GET("/tickets", GetTicketList)
 		authenticated.GET("/tickets/summary", GetTicketSummary)
 		authenticated.GET("/tickets/admin-users", GetTicketAdminUsers)
@@ -100,11 +118,16 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/tickets/:id/reply", ReplyTicket)
 		authenticated.POST("/tickets/:id/close", CloseTicket)
 		authenticated.POST("/tickets/:id/reopen", ReopenTicket)
+		authenticated.POST("/tickets/:id/receive", ReceiveTicket)
 		authenticated.PUT("/tickets/:id/assignment", AssignTicket)
 		authenticated.GET("/ticket-departments", GetTicketDepartments)
+		authenticated.GET("/ticket-departments/:id", GetTicketDepartmentDetail)
+		authenticated.POST("/ticket-departments/:id/move-up", MoveTicketDepartmentUp)
+		authenticated.POST("/ticket-departments/:id/move-down", MoveTicketDepartmentDown)
 		authenticated.GET("/ticket-statuses", GetTicketStatuses)
+		authenticated.GET("/ticket-statuses/:id", GetTicketStatusDetail)
 
-		// 工单预回复 - 已实现
+		// 工单预回复
 		authenticated.GET("/ticket-prereplies", GetTicketPrereplyList)
 		authenticated.POST("/ticket-prereplies", CreateTicketPrereply)
 		authenticated.PUT("/ticket-prereplies/:id", UpdateTicketPrereply)
@@ -115,7 +138,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/ticket-prereply-categories/:id", UpdateTicketPrereplyCategory)
 		authenticated.DELETE("/ticket-prereply-categories/:id", DeleteTicketPrereplyCategory)
 
-		// 产品管理 - 已实现
+		// 产品管理
 		authenticated.GET("/products", GetProductList)
 		authenticated.GET("/products/summary", GetProductSummary)
 		authenticated.GET("/products/:id", GetProduct)
@@ -125,8 +148,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/products/:id", DeleteProduct)
 		authenticated.POST("/products/:id/restorations", RestoreProduct)
 		authenticated.PATCH("/products/:id/status", UpdateProductStatus)
+		authenticated.POST("/products/reorders", ReorderProducts)
+		authenticated.POST("/products/category-batches", BatchUpdateProductCategory)
 		authenticated.GET("/product-groups", GetProductGroups)
 		authenticated.GET("/product-groups/tree", GetProductGroupTree)
+		authenticated.GET("/product-groups/:id", GetProductGroupDetail)
 		authenticated.GET("/product-groups/:id/children", GetProductGroupChildren)
 		authenticated.POST("/product-groups", CreateProductGroup)
 		authenticated.PUT("/product-groups/:id", UpdateProductGroup)
@@ -135,8 +161,9 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/product-types", CreateProductType)
 		authenticated.PUT("/product-types/:id", UpdateProductType)
 		authenticated.DELETE("/product-types/:id", DeleteProductType)
+		authenticated.POST("/product-types/reorders", ReorderProductTypes)
 
-		// 设置管理 - 已实现
+		// 设置管理
 		authenticated.GET("/settings", GetSettings)
 		authenticated.GET("/settings/:group", GetSettingsByGroup)
 		authenticated.PUT("/settings", UpdateSettings)
@@ -148,27 +175,43 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/settings/register-login", UpdateRegisterLoginConfig)
 		authenticated.GET("/settings/captcha", GetCaptchaConfig)
 		authenticated.PUT("/settings/captcha", UpdateCaptchaConfig)
+		authenticated.GET("/settings/security", GetSecurityConfig)
+		authenticated.PUT("/settings/security", UpdateSecurityConfig)
+		authenticated.GET("/settings/general", GetGeneralConfig)
+		authenticated.PUT("/settings/general", UpdateGeneralConfig)
+		authenticated.GET("/settings/display", GetDisplayConfig)
+		authenticated.PUT("/settings/display", UpdateDisplayConfig)
+		authenticated.GET("/settings/invoice", GetInvoiceConfig)
+		authenticated.PUT("/settings/invoice", UpdateInvoiceConfig)
+		authenticated.GET("/settings/contract", GetContractConfig)
+		authenticated.PUT("/settings/contract", UpdateContractConfig)
+		authenticated.GET("/settings/credit-setting", GetCreditSettingConfig)
+		authenticated.PUT("/settings/credit-setting", UpdateCreditSettingConfig)
+		authenticated.GET("/settings/payment-gateway", GetPaymentGatewayConfig)
+		authenticated.PUT("/settings/payment-gateway", UpdatePaymentGatewayConfig)
 
-		// 通知模板 - 已实现
+		// 通知模板
 		authenticated.GET("/notification-templates", GetNotificationTemplates)
 		authenticated.POST("/notification-templates", CreateNotificationTemplate)
+		authenticated.POST("/notification-templates/test-send", TestNotificationTemplate)
 		authenticated.PUT("/notification-templates/:id", UpdateNotificationTemplate)
 		authenticated.DELETE("/notification-templates/:id", DeleteNotificationTemplate)
 
-		// 菜单管理 - 已实现
+		// 菜单管理
 		authenticated.GET("/menus", GetMenus)
 		authenticated.GET("/menu-types", GetMenuTypeList)
 		authenticated.POST("/menus", CreateMenu)
 		authenticated.PUT("/menus/:id", UpdateMenu)
 		authenticated.DELETE("/menus/:id", DeleteMenu)
 
-		// 管理员管理 - 已实现
+		// 管理员管理
 		authenticated.GET("/admins", GetAdminList)
 		authenticated.POST("/admins", CreateAdmin)
 		authenticated.PUT("/admins/:id", UpdateAdmin)
 
-		// 员工管理 - 已实现
+		// 员工管理
 		authenticated.GET("/staff", GetStaffList)
+		authenticated.GET("/staff/roles", GetStaffRoles)
 		authenticated.GET("/staff/:id", GetStaffDetail)
 		authenticated.POST("/staff", CreateStaff)
 		authenticated.PUT("/staff/:id", UpdateStaff)
@@ -176,7 +219,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PATCH("/staff/:id/status", UpdateStaffStatus)
 		authenticated.POST("/staff/:id/password-resets", ResetStaffPassword)
 
-		// 角色管理 - 已实现
+		// 角色管理
 		authenticated.GET("/roles", GetRoleList)
 		authenticated.GET("/roles/:id", GetRoleDetail)
 		authenticated.POST("/roles", CreateRole)
@@ -187,32 +230,48 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 		// 定时任务
 		authenticated.GET("/cron-tasks", GetCronTasks)
+		authenticated.GET("/schedules/overview", GetScheduleOverview)
+		authenticated.GET("/schedule-runs", GetScheduleRunList)
+		authenticated.GET("/schedule-runs/:id", GetScheduleRunDetail)
 
-		// 数据库管理 - 已实现
+		// 数据库管理
 		authenticated.GET("/database/status", GetDatabaseStatus)
 		authenticated.POST("/database/optimizations", OptimizeDatabase)
 		authenticated.POST("/database/backups", BackupDatabase)
 
-		// 系统信息 - 已实现
+		// 系统信息
 		authenticated.GET("/system/info", GetSystemInfo)
 		authenticated.GET("/system/modules", GetSystemModules)
 
-		// 日志管理 - 已实现
+		// 日志管理
 		authenticated.GET("/system-logs", GetSystemLogs)
 		authenticated.GET("/operation-logs", GetOperationLogs)
 		authenticated.GET("/login-logs", GetLoginLogs)
 		authenticated.GET("/log-cleanups/overview", GetLogCleanupOverview)
 		authenticated.POST("/log-cleanups", CleanupLogs)
 
-		// 内容管理 - 已实现
+		// 分类日志
+		authenticated.GET("/logs/sms", GetSMSLogs)
+		authenticated.GET("/logs/email", GetEmailLogs)
+		authenticated.GET("/logs/api", GetAPILogs)
+		authenticated.GET("/logs/cron", GetCronLogs)
+		authenticated.GET("/logs/admin-login", GetAdminLoginLogs)
+		authenticated.GET("/logs/notification", GetNotificationLogs)
+
+		// 内容管理
 		authenticated.GET("/content/summary", GetContentSummary)
-		authenticated.GET("/site/home-hero", GetHomeHero)
-		authenticated.POST("/site/home-hero", UpdateHomeHero)
+
+		// 主题模板 - 首页Hero（修正路径：MD文档定义 /api/admin/home-hero）
+		authenticated.GET("/home-hero", GetHomeHero)
+		authenticated.PUT("/home-hero", UpdateHomeHero)
+		authenticated.GET("/home-hero/assets", GetHomeHeroAssets)
+
 		authenticated.POST("/upload", UploadFile)
 		authenticated.GET("/media-files", GetMediaFileList)
 		authenticated.DELETE("/media-files/:id", DeleteMediaFile)
 		authenticated.GET("/media-files/:id/references", GetMediaFileReferences)
 		authenticated.GET("/news", GetNewsList)
+		authenticated.GET("/news/:id", GetNewsDetail)
 		authenticated.POST("/news", CreateNews)
 		authenticated.PUT("/news/:id", UpdateNews)
 		authenticated.DELETE("/news/:id", DeleteNews)
@@ -222,7 +281,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/news-categories/:id", DeleteNewsCategory)
 		authenticated.GET("/knowledge/categories", GetKnowledgeCategories)
 		authenticated.POST("/knowledge/categories", CreateKnowledgeCategory)
+		authenticated.PUT("/knowledge/categories/:id", UpdateKnowledgeCategory)
+		authenticated.DELETE("/knowledge/categories/:id", DeleteKnowledgeCategory)
 		authenticated.GET("/knowledge/articles", GetKnowledgeArticles)
+		authenticated.GET("/knowledge/articles/:id", GetKnowledgeArticleDetail)
 		authenticated.POST("/knowledge/articles", CreateKnowledgeArticle)
 		authenticated.PUT("/knowledge/articles/:id", UpdateKnowledgeArticle)
 		authenticated.DELETE("/knowledge/articles/:id", DeleteKnowledgeArticle)
@@ -232,20 +294,23 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/downloads/:id", DeleteDownload)
 		authenticated.GET("/downloads/categories", GetDownloadCategories)
 		authenticated.POST("/downloads/categories", CreateDownloadCategory)
+		authenticated.PUT("/downloads/categories/:id", UpdateDownloadCategory)
+		authenticated.DELETE("/downloads/categories/:id", DeleteDownloadCategory)
 
-		// 货币管理 - 已实现
+		// 货币管理
 		authenticated.GET("/currencies", GetCurrencyList)
 		authenticated.POST("/currencies", CreateCurrency)
 		authenticated.PUT("/currencies/:id", UpdateCurrency)
 
-		// 实名认证 - 已实现
+		// 实名认证
 		authenticated.GET("/verifications", GetVerificationList)
 		authenticated.GET("/verifications/summary", GetVerificationSummary)
 		authenticated.GET("/verifications/:id", GetVerificationDetail)
 		authenticated.POST("/verifications/:id/approve", ApproveVerification)
 		authenticated.POST("/verifications/:id/reject", RejectVerification)
+		authenticated.POST("/users/:id/unbind-verification", UnbindVerification)
 
-		// 供应商管理 - 已实现
+		// 供应商管理
 		authenticated.GET("/suppliers", GetSupplierList)
 		authenticated.GET("/suppliers/summary", GetSupplierSummary)
 		authenticated.GET("/suppliers/provider-types", GetSupplierProviderTypes)
@@ -256,50 +321,62 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/suppliers/:id", UpdateSupplier)
 		authenticated.DELETE("/suppliers/:id", DeleteSupplier)
 		authenticated.GET("/suppliers/:id/products", GetSupplierProducts)
+		authenticated.POST("/suppliers/:id/tasks", RunSupplierTask)
 
-		// 插件管理 - 已实现
+		// 插件管理
 		authenticated.GET("/plugins", GetPluginList)
+		authenticated.POST("/plugins/install", InstallPlugin)
+		authenticated.POST("/plugins/scan", ScanPlugins)
 		authenticated.GET("/plugins/:id", GetPluginDetail)
 		authenticated.POST("/plugins/:id/enable", EnablePlugin)
 		authenticated.POST("/plugins/:id/disable", DisablePlugin)
 		authenticated.DELETE("/plugins/:id", UninstallPlugin)
 		authenticated.GET("/plugins/:id/config", GetPluginConfig)
 		authenticated.PUT("/plugins/:id/config", UpdatePluginConfig)
+		authenticated.POST("/plugins/:id/health", PluginHealthCheck)
 
-		// 优惠码管理 - 已实现
+		// 插件域API
+		authenticated.GET("/payment-gateways", GetPaymentGateways)
+		authenticated.GET("/sms-providers", GetSMSProviders)
+		authenticated.GET("/mail-providers", GetMailProviders)
+		authenticated.GET("/certification-providers", GetCertificationProviders)
+		authenticated.GET("/server-modules", GetServerModules)
+
+		// 优惠码管理
 		authenticated.GET("/promo-codes", GetPromoCodeList)
 		authenticated.POST("/promo-codes", CreatePromoCode)
 		authenticated.PUT("/promo-codes/:id", UpdatePromoCode)
 		authenticated.DELETE("/promo-codes/:id", DeletePromoCode)
 
-		// 推介系统 - 已实现
+		// 推介系统
 		authenticated.GET("/referral/overview", GetReferralOverview)
 		authenticated.GET("/referral/rewards", GetReferralRewards)
 		authenticated.GET("/referral-withdrawals", GetReferralWithdrawals)
 		authenticated.POST("/referral-withdrawals/:id/approve", ApproveReferralWithdrawal)
 		authenticated.POST("/referral-withdrawals/:id/reject", RejectReferralWithdrawal)
 
-		// 会员等级 - 已实现
+		// 会员等级
 		authenticated.GET("/member-levels", GetMemberLevelList)
 		authenticated.POST("/member-levels", CreateMemberLevel)
 		authenticated.PUT("/member-levels/:id", UpdateMemberLevel)
 		authenticated.DELETE("/member-levels/:id", DeleteMemberLevel)
 
-		// 自定义字段 - 已实现
+		// 自定义字段
 		authenticated.GET("/custom-fields", GetCustomFieldList)
 		authenticated.POST("/custom-fields", CreateCustomField)
 		authenticated.PUT("/custom-fields/:id", UpdateCustomField)
 		authenticated.DELETE("/custom-fields/:id", DeleteCustomField)
 
-		// 优惠券 - 已实现
+		// 优惠券
 		authenticated.GET("/coupons", GetCouponList)
 		authenticated.GET("/coupons/summary", GetCouponSummary)
+		authenticated.GET("/coupon-product-groups", GetCouponProductGroups)
 		authenticated.POST("/coupons", CreateCoupon)
 		authenticated.PUT("/coupons/:id", UpdateCoupon)
 		authenticated.DELETE("/coupons/:id", DeleteCoupon)
 		authenticated.PATCH("/coupons/:id/status", UpdateCouponStatus)
 
-		// 优惠券活动 - 已实现
+		// 优惠券活动
 		authenticated.GET("/coupon-campaigns", GetCouponCampaignList)
 		authenticated.GET("/coupon-campaigns/summary", GetCouponCampaignSummary)
 		authenticated.POST("/coupon-campaigns", CreateCouponCampaign)
@@ -307,7 +384,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/coupon-campaigns/:id", DeleteCouponCampaign)
 		authenticated.PATCH("/coupon-campaigns/:id/status", UpdateCouponCampaignStatus)
 
-		// 发送消息 - 已实现
+		// 发送消息
 		authenticated.GET("/send-message/search-params", GetSendMessageSearchParams)
 		authenticated.GET("/send-message/send-methods", GetSendMethodList)
 		authenticated.GET("/send-message/search", SearchSendMessageList)
@@ -427,36 +504,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/finance-config", GetFinanceConfig)
 		authenticated.PUT("/finance-config", UpdateFinanceConfig)
 
-		// 分类日志
-		authenticated.GET("/logs/sms", GetSMSLogs)
-		authenticated.GET("/logs/email", GetEmailLogs)
-		authenticated.GET("/logs/api", GetAPILogs)
-		authenticated.GET("/logs/cron", GetCronLogs)
-		authenticated.GET("/logs/admin-login", GetAdminLoginLogs)
-		authenticated.GET("/logs/notification", GetNotificationLogs)
-
 		// 客户分组
 		authenticated.GET("/customer-groups", GetCustomerGroupList)
 		authenticated.POST("/customer-groups", CreateCustomerGroup)
 		authenticated.PUT("/customer-groups/:id", UpdateCustomerGroup)
 		authenticated.DELETE("/customer-groups/:id", DeleteCustomerGroup)
-
-		// CPU/实例规格目录
-		authenticated.GET("/cpu-model-catalog", GetCPUModelCatalog)
-		authenticated.GET("/instance-spec-catalog", GetInstanceSpecCatalog)
-
-		// 定时任务
-		authenticated.GET("/schedules/overview", GetScheduleOverview)
-		authenticated.GET("/schedule-runs", GetScheduleRunList)
-		authenticated.GET("/schedule-runs/:id", GetScheduleRunDetail)
-
-		// 插件域（支付/短信/邮件/认证/服务器）
-		authenticated.GET("/payment-gateways", GetPaymentGateways)
-		authenticated.GET("/sms-providers", GetSMSProviders)
-		authenticated.GET("/mail-providers", GetMailProviders)
-		authenticated.GET("/certification-providers", GetCertificationProviders)
-		authenticated.GET("/server-modules", GetServerModules)
 	}
 }
-
-

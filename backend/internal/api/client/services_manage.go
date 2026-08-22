@@ -72,6 +72,7 @@ func PowerService(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "操作成功",
+		"data": nil,
 	})
 }
 
@@ -117,6 +118,7 @@ func ResetServicePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "密码重置成功",
+		"data": nil,
 	})
 }
 
@@ -163,6 +165,7 @@ func ReinstallService(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "重装请求已提交",
+		"data": nil,
 	})
 }
 
@@ -245,6 +248,7 @@ func CreateRenewOrder(c *gin.Context) {
 		ProductName: "续费-" + service.ProductName,
 		Amount:      service.Amount,
 		Status:      "pending",
+		Type:        "renew",
 	}
 
 	if err := db.Create(&order).Error; err != nil {
@@ -327,6 +331,7 @@ func UpdateServiceName(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "更新成功",
+		"data": nil,
 	})
 }
 
@@ -484,9 +489,150 @@ func GetServiceStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": statusData})
 }
 
-// GetServiceUpgrades 获取服务可升级方案
+// GetServiceUpgradePreview 获取服务可升级方案
 // GET /api/client/services/:id/upgrades
-func GetServiceUpgrades(c *gin.Context) {
+func GetServiceUpgradePreview(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	var products []model.Product
+	db.Where("product_type_id = ? AND id != ? AND status = ?", service.ProductTypeID, service.ProductID, "active").Find(&products)
+
+	type UpgradeOption struct {
+		ProductID   uint    `json:"product_id"`
+		ProductName string  `json:"product_name"`
+		PriceDiff   float64 `json:"price_diff"`
+	}
+
+	options := make([]UpgradeOption, 0)
+	for _, p := range products {
+		priceDiff := p.Amount - service.Amount
+		if priceDiff > 0 {
+			options = append(options, UpgradeOption{
+				ProductID:   p.ID,
+				ProductName: p.Name,
+				PriceDiff:   priceDiff,
+			})
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": options})
+}
+
+// QuoteServiceUpgrade 服务升级报价
+// POST /api/client/services/:id/upgrades/quotes
+func QuoteServiceUpgrade(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	var req struct {
+		TargetProductID uint `json:"target_product_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	var targetProduct model.Product
+	if err := db.First(&targetProduct, req.TargetProductID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "目标产品不存在", "data": nil})
+		return
+	}
+
+	priceDiff := targetProduct.Price - service.Amount
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0, "message": "success",
+		"data": gin.H{
+			"current_product": service.ProductName,
+			"target_product":  targetProduct.Name,
+			"current_price":   service.Amount,
+			"target_price":    targetProduct.Price,
+			"price_diff":      priceDiff,
+		},
+	})
+}
+
+// CreateServiceUpgradeOrder 创建服务升级订单
+// POST /api/client/services/:id/upgrades/orders
+func CreateServiceUpgradeOrder(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+
+	var req struct {
+		TargetProductID uint `json:"target_product_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	var targetProduct model.Product
+	if err := db.First(&targetProduct, req.TargetProductID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "目标产品不存在", "data": nil})
+		return
+	}
+
+	priceDiff := targetProduct.Price - service.Amount
+	if priceDiff <= 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只能升级到更高配置的产品", "data": nil})
+		return
+	}
+
+	orderNo := "UPG" + time.Now().Format("20060102150405")
+	order := model.Order{
+		UserID:  userID.(uint),
+		OrderNo: orderNo,
+		Amount:  priceDiff,
+		Status:  "pending",
+		Type:    "upgrade",
+	}
+	db.Create(&order)
+
+	invoice := model.Invoice{
+		UserID:  userID.(uint),
+		OrderID: order.ID,
+		Amount:  priceDiff,
+		Status:  "unpaid",
+		DueDate: time.Now().Add(7 * 24 * time.Hour),
+	}
+	db.Create(&invoice)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0, "message": "升级订单创建成功",
+		"data": gin.H{
+			"order_id":   order.ID,
+			"order_no":   orderNo,
+			"invoice_id": invoice.ID,
+			"amount":     priceDiff,
+		},
+	})
+}
+
+// UpdateAutoRenew 更新自动续费设置
+// PUT /api/client/services/:id/auto-renew
+func UpdateAutoRenew(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	id := c.Param("id")
 
@@ -519,132 +665,6 @@ func GetServiceUpgrades(c *gin.Context) {
 	})
 }
 
-// QuoteServiceUpgrade 服务升级报价
-// POST /api/client/services/:id/upgrades/quote
-func QuoteServiceUpgrade(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	id := c.Param("id")
-
-	var req struct {
-		ProductID uint `json:"product_id" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
-		return
-	}
-
-	db := database.GetDB()
-	var service model.Service
-	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
-		return
-	}
-
-	var newProduct model.Product
-	if err := db.First(&newProduct, req.ProductID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "产品不存在", "data": nil})
-		return
-	}
-
-	// 计算差价
-	priceDiff := newProduct.Price - service.Amount
-
-	c.JSON(http.StatusOK, gin.H{
-		"code": 0, "message": "success",
-		"data": gin.H{
-			"current_product": service.ProductName,
-			"new_product":     newProduct.Name,
-			"price_difference": priceDiff,
-		},
-	})
-}
-
-// CreateServiceUpgrade 创建服务升级订单
-// POST /api/client/services/:id/upgrades
-func CreateServiceUpgrade(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	id := c.Param("id")
-
-	var req struct {
-		ProductID uint `json:"product_id" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
-		return
-	}
-
-	db := database.GetDB()
-	var service model.Service
-	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
-		return
-	}
-
-	var newProduct model.Product
-	if err := db.First(&newProduct, req.ProductID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "产品不存在", "data": nil})
-		return
-	}
-
-	// 价格校验（防0元购）
-	if newProduct.Price <= 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "产品价格异常", "data": nil})
-		return
-	}
-
-	priceDiff := newProduct.Price - service.Amount
-	if priceDiff <= 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只能升级到更高配置的产品", "data": nil})
-		return
-	}
-
-	// 创建升级订单
-	order := model.Order{
-		UserID:      userID.(uint),
-		ProductID:   newProduct.ID,
-		ProductName: newProduct.Name,
-		Amount:      priceDiff,
-		Status:      "pending",
-	}
-
-	if err := db.Create(&order).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建订单失败", "data": nil})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code": 0, "message": "升级订单创建成功",
-		"data": gin.H{
-			"order_id": order.ID,
-			"amount":   priceDiff,
-		},
-	})
-}
-
-// UpdateAutoRenew 更新自动续费设置
-// PUT /api/client/services/:id/auto-renew
-func UpdateAutoRenew(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	id := c.Param("id")
-
-	var req struct {
-		AutoRenew bool `json:"auto_renew"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
-		return
-	}
-
-	db := database.GetDB()
-	var service model.Service
-	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
-}
-
 // GetServiceOperationLogs 获取服务操作日志
 // GET /api/client/services/:id/operation-logs
 func GetServiceOperationLogs(c *gin.Context) {
@@ -675,4 +695,53 @@ func GetServiceOperationLogs(c *gin.Context) {
 		"code": 0, "message": "success",
 		"data": gin.H{"list": logs, "total": total, "page": page, "page_size": pageSize},
 	})
+}
+
+// GetServiceConfig 获取服务配置信息
+// GET /api/client/services/:id/config
+func GetServiceConfig(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0, "message": "success",
+		"data": gin.H{
+			"config":   service.Config,
+			"username": service.Username,
+			"domain":   service.Domain,
+		},
+	})
+}
+
+// GetServiceReinstallOptions 获取重装系统选项
+// GET /api/client/services/:id/reinstallations/options
+func GetServiceReinstallOptions(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var service model.Service
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	options := []gin.H{
+		{"id": "centos7", "name": "CentOS 7", "icon": "centos"},
+		{"id": "centos8", "name": "CentOS 8", "icon": "centos"},
+		{"id": "ubuntu20", "name": "Ubuntu 20.04", "icon": "ubuntu"},
+		{"id": "ubuntu22", "name": "Ubuntu 22.04", "icon": "ubuntu"},
+		{"id": "debian11", "name": "Debian 11", "icon": "debian"},
+		{"id": "windows2019", "name": "Windows Server 2019", "icon": "windows"},
+		{"id": "windows2022", "name": "Windows Server 2022", "icon": "windows"},
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": options})
 }

@@ -88,3 +88,35 @@ func HealthCheck() error {
 	}
 	return nil
 }
+
+// HandlePaymentCallback 转发支付回调给PHP插件引擎处理
+// PHP插件负责：验证网关签名、更新账单状态、记录交易
+func HandlePaymentCallback(gateway string, params map[string]interface{}) (map[string]interface{}, error) {
+	body, _ := json.Marshal(map[string]interface{}{
+		"gateway": gateway,
+		"params":  params,
+	})
+
+	resp, err := Default.HTTP.Post(
+		Default.BaseURL+"/internal/payment/callback/"+gateway,
+		"application/json",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("插件引擎连接失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	var r struct {
+		Code int                    `json:"code"`
+		Data map[string]interface{} `json:"data"`
+	}
+	if err := json.Unmarshal(respBody, &r); err != nil {
+		return nil, fmt.Errorf("解析响应失败: %w", err)
+	}
+	if r.Code != 0 {
+		return nil, fmt.Errorf("支付处理失败: code=%d", r.Code)
+	}
+	return r.Data, nil
+}

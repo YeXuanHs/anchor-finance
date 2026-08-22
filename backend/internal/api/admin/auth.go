@@ -1,7 +1,10 @@
 package admin
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
+	"time"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
@@ -78,10 +81,27 @@ func (h *AuthHandler) GetInfo(c *gin.Context) {
 
 // Logout 管理员登出
 func (h *AuthHandler) Logout(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "success",
-	})
+	// 将token加入黑名单
+	authHeader := c.GetHeader("Authorization")
+	if len(authHeader) > 7 {
+		tokenStr := authHeader[7:]
+		hash := sha256.Sum256([]byte(tokenStr))
+		tokenHash := hex.EncodeToString(hash[:])
+
+		claims, _ := h.authService.ParseToken(tokenStr)
+		expiresAt := time.Now().Add(24 * time.Hour)
+		if claims != nil {
+			expiresAt = claims.ExpiresAt.Time
+		}
+
+		db := database.GetDB()
+		db.Create(&model.TokenBlacklist{
+			TokenHash: tokenHash,
+			ExpiresAt: expiresAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": nil})
 }
 
 // UpdateProfile 更新个人资料

@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/YeXuanHs/anchor-finance/config"
 	"github.com/YeXuanHs/anchor-finance/internal/api/admin"
 	"github.com/YeXuanHs/anchor-finance/internal/api/client"
 	"github.com/YeXuanHs/anchor-finance/internal/database"
+	"github.com/YeXuanHs/anchor-finance/internal/middleware"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
@@ -27,6 +29,7 @@ func main() {
 		&model.Admin{},
 		&model.Role{},
 		&model.Order{},
+		&model.OrderItem{},
 		&model.Invoice{},
 		&model.Service{},
 		&model.Ticket{},
@@ -35,6 +38,7 @@ func main() {
 		&model.TicketStatus{},
 		&model.Product{},
 		&model.ProductGroup{},
+		&model.ProductType{},
 		&model.Plugin{},
 		&model.Setting{},
 		&model.Menu{},
@@ -60,7 +64,6 @@ func main() {
 		&model.Coupon{},
 		&model.CouponCampaign{},
 		&model.Payment{},
-		&model.ProductType{},
 		&model.TicketPrereply{},
 		&model.TicketPrereplyCategory{},
 		&model.CreditLimit{},
@@ -93,6 +96,14 @@ func main() {
 		&model.InstanceSpec{},
 		&model.ScheduleTask{},
 		&model.ScheduleRun{},
+		// 新增模型
+		&model.CartItem{},
+		&model.Captcha{},
+		&model.TokenBlacklist{},
+		&model.UserRemark{},
+		&model.SMSConfig{},
+		&model.Referral{},
+		&model.UserCoupon{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
@@ -101,6 +112,24 @@ func main() {
 	// 创建服务
 	authService := service.NewAuthService(db, &cfg.JWT)
 
+	// M5修复：定时清理过期的token黑名单和验证码（每小时执行一次）
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			// 清理过期的token黑名单
+			result := db.Where("expires_at < ?", time.Now()).Delete(&model.TokenBlacklist{})
+			if result.RowsAffected > 0 {
+				log.Printf("[Cleanup] Deleted %d expired token blacklist entries", result.RowsAffected)
+			}
+			// 清理过期的验证码
+			result = db.Where("expires_at < ?", time.Now()).Delete(&model.Captcha{})
+			if result.RowsAffected > 0 {
+				log.Printf("[Cleanup] Deleted %d expired captcha entries", result.RowsAffected)
+			}
+		}
+	}()
+
 	// 初始化Gin
 	if cfg.Server.Mode == "release" {
 		gin.SetMode(gin.ReleaseMode)
@@ -108,8 +137,8 @@ func main() {
 
 	r := gin.Default()
 
-	// CORS中间件
-	r.Use(corsMiddleware())
+	// CORS中间件（使用独立的middleware包）
+	r.Use(middleware.CORS())
 
 	// API路由
 	api := r.Group("/api")
@@ -125,8 +154,8 @@ func main() {
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"status": "ok",
-			"name":   "锚点财务",
+			"status":  "ok",
+			"name":    "锚点财务",
 			"en_name": "AnchorFinance",
 		})
 	})
@@ -136,22 +165,5 @@ func main() {
 	log.Printf("Server starting on %s", addr)
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
-	}
-}
-
-// corsMiddleware CORS中间件
-func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
 	}
 }
