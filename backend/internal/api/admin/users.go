@@ -560,18 +560,30 @@ func GetUserBalanceLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
-	// 3. 查询余额日志（暂时返回空，后续实现balance_logs表）
-	_ = id
-	_ = page
-	_ = pageSize
+	// 3. 查询余额变动（充值记录）
+	db := database.GetDB()
+	var total int64
+	db.Model(&model.Recharge{}).Where("user_id = ?", id).Count(&total)
+
+	var logs []model.Recharge
+	offset := (page - 1) * pageSize
+	db.Where("user_id = ?", id).
+		Offset(offset).
+		Limit(pageSize).
+		Order("id DESC").
+		Find(&logs)
 
 	// 4. 返回统一格式
+	if logs == nil {
+		logs = []model.Recharge{}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
 		"data": gin.H{
-			"list":      []interface{}{},
-			"total":     0,
+			"list":      logs,
+			"total":     total,
 			"page":      page,
 			"page_size": pageSize,
 		},

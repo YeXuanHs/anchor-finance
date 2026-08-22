@@ -179,16 +179,32 @@ func GetTransactionList(c *gin.Context) {
 		pageSize = 20
 	}
 
-	// 2. 构建查询（暂时返回空数据，后续实现交易表）
-	_ = userID
+	// 2. 构建查询（从支付记录表读取真实交易数据）
+	db := database.GetDB()
+	query := db.Model(&model.Payment{})
+
+	if userID != "" {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var transactions []model.Payment
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&transactions)
+
+	if transactions == nil {
+		transactions = []model.Payment{}
+	}
 
 	// 3. 返回统一格式
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
 		"data": gin.H{
-			"list":      []interface{}{},
-			"total":     0,
+			"list":      transactions,
+			"total":     total,
 			"page":      page,
 			"page_size": pageSize,
 		},

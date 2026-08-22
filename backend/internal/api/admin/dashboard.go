@@ -90,16 +90,30 @@ func GetIncomeTrend(c *gin.Context) {
 	})
 }
 
-// GetOnlineAdmins 获取在线管理员
+// GetOnlineAdmins 获取在线管理员（最近登录的管理员）
 // GET /api/admin/dashboard/online-admins
 func GetOnlineAdmins(c *gin.Context) {
-	// 暂时返回最近登录的管理员
 	db := database.GetDB()
-	var admins []model.Admin
-	db.Where("last_login_at IS NOT NULL").
-		Order("last_login_at DESC").
+
+	// 从登录日志查最近活跃的管理员
+	var logs []model.LoginLog
+	db.Where("is_admin = ? AND status = ?", true, "success").
+		Order("created_at DESC").
 		Limit(10).
-		Find(&admins)
+		Find(&logs)
+
+	var admins []gin.H
+	for _, log := range logs {
+		admins = append(admins, gin.H{
+			"username":   log.Username,
+			"ip":         log.IP,
+			"last_login": log.CreatedAt,
+		})
+	}
+
+	if admins == nil {
+		admins = []gin.H{}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
