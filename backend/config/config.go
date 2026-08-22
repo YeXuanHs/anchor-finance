@@ -13,13 +13,11 @@ type Config struct {
 	JWT      JWTConfig
 }
 
-// ServerConfig 服务器配置
 type ServerConfig struct {
 	Port int
-	Mode string // debug, release, test
+	Mode string
 }
 
-// DatabaseConfig 数据库配置
 type DatabaseConfig struct {
 	Host     string
 	Port     int
@@ -28,7 +26,6 @@ type DatabaseConfig struct {
 	DBName   string
 }
 
-// RedisConfig Redis配置
 type RedisConfig struct {
 	Host     string
 	Port     int
@@ -36,13 +33,12 @@ type RedisConfig struct {
 	DB       int
 }
 
-// JWTConfig JWT配置
 type JWTConfig struct {
 	Secret     string
 	ExpireHour int
 }
 
-// Load 从环境变量加载配置
+// Load 从环境变量加载配置（.env由systemd的EnvironmentFile加载）
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
