@@ -123,9 +123,9 @@ func CreateProduct(c *gin.Context) {
 		return
 	}
 
-	// 0元购防护：价格不能为负数
-	if req.Price < 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "价格不能为负数", "data": nil})
+	// 0元购防护：价格必须大于0
+	if req.Price <= 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "价格必须大于0", "data": nil})
 		return
 	}
 
