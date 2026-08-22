@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -669,7 +670,7 @@ func RefundUserService(c *gin.Context) {
 		Username: fmt.Sprintf("%v", currentAdminID),
 		Action:   "refund",
 		Resource: "service",
-		ResourceID: serviceID,
+		ResourceID: uint(serviceID),
 		Detail:   fmt.Sprintf("退款 %.2f 元，原因: %s", req.Amount, req.Reason),
 		IP:       c.ClientIP(),
 	})
