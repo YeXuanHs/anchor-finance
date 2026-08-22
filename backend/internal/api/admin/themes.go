@@ -7,6 +7,7 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // GetThemeList 获取主题列表
@@ -76,7 +77,7 @@ func SetDefaultTheme(c *gin.Context) {
 	}
 
 	// 事务：取消所有默认，再设置新默认
-	db.Transaction(func(tx interface{}) error {
+	db.Transaction(func(tx *gorm.DB) error {
 		db.Model(&model.Theme{}).Where("is_default = ?", true).Update("is_default", false)
 		db.Model(&theme).Update("is_default", true)
 		return nil
