@@ -358,6 +358,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/cancel-requests/:id/approve", ApproveCancelRequest)
 		authenticated.POST("/cancel-requests/:id/reject", RejectCancelRequest)
 
+		// 销售统计
+		authenticated.GET("/sales/statistics", GetSalesStatistics)
+		authenticated.GET("/sales/records", GetSalesRecords)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
