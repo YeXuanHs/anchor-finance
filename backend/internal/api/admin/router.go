@@ -368,6 +368,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/configurable-options/:id", UpdateConfigurableOption)
 		authenticated.DELETE("/configurable-options/:id", DeleteConfigurableOption)
 
+		// 第三方登录
+		authenticated.GET("/oauth-providers", GetOAuthProviderList)
+		authenticated.POST("/oauth-providers", CreateOAuthProvider)
+		authenticated.PUT("/oauth-providers/:id", UpdateOAuthProvider)
+		authenticated.DELETE("/oauth-providers/:id", DeleteOAuthProvider)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理

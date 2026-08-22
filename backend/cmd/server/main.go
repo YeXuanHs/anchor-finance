@@ -77,6 +77,7 @@ func main() {
 		&model.MarketingPush{},
 		&model.CancelRequest{},
 		&model.ConfigurableOption{},
+		&model.OAuthProvider{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
