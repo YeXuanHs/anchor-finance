@@ -12,7 +12,7 @@ jobs:
       contents: write
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -27,7 +27,7 @@ jobs:
         CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o anchor-finance-server ./cmd/server/
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: go-server
         path: backend/anchor-finance-server
