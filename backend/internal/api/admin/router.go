@@ -353,6 +353,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/marketing/pushes/:id/send", SendMarketingPush)
 		authenticated.DELETE("/marketing/pushes/:id", DeleteMarketingPush)
 
+		// 取消请求
+		authenticated.GET("/cancel-requests", GetCancelRequestList)
+		authenticated.POST("/cancel-requests/:id/approve", ApproveCancelRequest)
+		authenticated.POST("/cancel-requests/:id/reject", RejectCancelRequest)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
