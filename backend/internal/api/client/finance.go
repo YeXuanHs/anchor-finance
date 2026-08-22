@@ -272,8 +272,8 @@ func MarkNotificationRead(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&notification).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "通知不存在",,
-			"data": nil})
+			"message": "通知不存在",
+		})
 		return
 	}
 

@@ -36,8 +36,8 @@ func UpdateHomeHero(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -54,8 +54,8 @@ func UpdateHomeHero(c *gin.Context) {
 	if err := db.Create(&hero).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建失败: " + err.Error(),
+		})
 		return
 	}
 

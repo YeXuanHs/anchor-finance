@@ -118,8 +118,8 @@ func ApproveReferralWithdrawal(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的提现ID",,
-			"data": nil})
+			"message": "无效的提现ID",
+		})
 		return
 	}
 
@@ -128,16 +128,16 @@ func ApproveReferralWithdrawal(c *gin.Context) {
 	if err := db.First(&withdrawal, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "提现记录不存在",,
-			"data": nil})
+			"message": "提现记录不存在",
+		})
 		return
 	}
 
 	if withdrawal.Status != "pending" {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "只有待审核的提现才能批准",,
-			"data": nil})
+			"message": "只有待审核的提现才能批准",
+		})
 		return
 	}
 
@@ -156,8 +156,8 @@ func RejectReferralWithdrawal(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的提现ID",,
-			"data": nil})
+			"message": "无效的提现ID",
+		})
 		return
 	}
 
@@ -171,16 +171,16 @@ func RejectReferralWithdrawal(c *gin.Context) {
 	if err := db.First(&withdrawal, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "提现记录不存在",,
-			"data": nil})
+			"message": "提现记录不存在",
+		})
 		return
 	}
 
 	if withdrawal.Status != "pending" {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "只有待审核的提现才能拒绝",,
-			"data": nil})
+			"message": "只有待审核的提现才能拒绝",
+		})
 		return
 	}
 

@@ -56,8 +56,8 @@ func SubmitVerification(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -68,8 +68,8 @@ func SubmitVerification(c *gin.Context) {
 	if count > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "已有待审核的认证，请等待审核",,
-			"data": nil})
+			"message": "已有待审核的认证，请等待审核",
+		})
 		return
 	}
 
@@ -86,8 +86,8 @@ func SubmitVerification(c *gin.Context) {
 	if err := db.Create(&verification).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "提交认证失败: " + err.Error(),,
-			"data": nil})
+			"message": "提交认证失败: " + err.Error(),
+		})
 		return
 	}
 

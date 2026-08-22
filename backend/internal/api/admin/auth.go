@@ -31,8 +31,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "请求参数错误",,
-			"data": nil})
+			"message": "请求参数错误",
+		})
 		return
 	}
 
@@ -96,8 +96,8 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -132,8 +132,8 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -143,8 +143,8 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	if err := db.First(&admin, userID).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "管理员不存在",,
-			"data": nil})
+			"message": "管理员不存在",
+		})
 		return
 	}
 
@@ -152,8 +152,8 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	if !service.CheckPassword(req.OldPassword, admin.PasswordHash) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "旧密码错误",,
-			"data": nil})
+			"message": "旧密码错误",
+		})
 		return
 	}
 
@@ -162,8 +162,8 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "密码加密失败",,
-			"data": nil})
+			"message": "密码加密失败",
+		})
 		return
 	}
 

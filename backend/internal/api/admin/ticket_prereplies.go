@@ -74,8 +74,8 @@ func CreateTicketPrereplyCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -89,8 +89,8 @@ func CreateTicketPrereplyCategory(c *gin.Context) {
 	if err := db.Create(&category).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建分类失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建分类失败: " + err.Error(),
+		})
 		return
 	}
 
@@ -116,8 +116,8 @@ func UpdateTicketPrereplyCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -126,8 +126,8 @@ func UpdateTicketPrereplyCategory(c *gin.Context) {
 	if err := db.First(&category, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "分类不存在",,
-			"data": nil})
+			"message": "分类不存在",
+		})
 		return
 	}
 
@@ -157,8 +157,8 @@ func DeleteTicketPrereplyCategory(c *gin.Context) {
 	if err := db.First(&category, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "分类不存在",,
-			"data": nil})
+			"message": "分类不存在",
+		})
 		return
 	}
 
@@ -183,8 +183,8 @@ func CreateTicketPrereply(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -200,8 +200,8 @@ func CreateTicketPrereply(c *gin.Context) {
 	if err := db.Create(&prereply).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建预回复失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建预回复失败: " + err.Error(),
+		})
 		return
 	}
 
@@ -229,8 +229,8 @@ func UpdateTicketPrereply(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -239,8 +239,8 @@ func UpdateTicketPrereply(c *gin.Context) {
 	if err := db.First(&prereply, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "预回复不存在",,
-			"data": nil})
+			"message": "预回复不存在",
+		})
 		return
 	}
 
@@ -276,8 +276,8 @@ func DeleteTicketPrereply(c *gin.Context) {
 	if err := db.First(&prereply, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "预回复不存在",,
-			"data": nil})
+			"message": "预回复不存在",
+		})
 		return
 	}
 
@@ -299,8 +299,8 @@ func SearchTicketPrereply(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 

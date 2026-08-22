@@ -24,8 +24,8 @@ func CreateNews(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -45,8 +45,8 @@ func CreateNews(c *gin.Context) {
 	if err := db.Create(&news).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建新闻失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建新闻失败: " + err.Error(),
+		})
 		return
 	}
 
@@ -75,8 +75,8 @@ func UpdateNews(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -85,8 +85,8 @@ func UpdateNews(c *gin.Context) {
 	if err := db.First(&news, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "新闻不存在",,
-			"data": nil})
+			"message": "新闻不存在",
+		})
 		return
 	}
 
@@ -125,8 +125,8 @@ func DeleteNews(c *gin.Context) {
 	if err := db.First(&news, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "新闻不存在",,
-			"data": nil})
+			"message": "新闻不存在",
+		})
 		return
 	}
 
@@ -151,8 +151,8 @@ func CreateNewsCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -166,8 +166,8 @@ func CreateNewsCategory(c *gin.Context) {
 	if err := db.Create(&category).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建分类失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建分类失败: " + err.Error(),
+		})
 		return
 	}
 
@@ -194,8 +194,8 @@ func UpdateNewsCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -204,8 +204,8 @@ func UpdateNewsCategory(c *gin.Context) {
 	if err := db.First(&category, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "分类不存在",,
-			"data": nil})
+			"message": "分类不存在",
+		})
 		return
 	}
 
@@ -238,8 +238,8 @@ func DeleteNewsCategory(c *gin.Context) {
 	if err := db.First(&category, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "分类不存在",,
-			"data": nil})
+			"message": "分类不存在",
+		})
 		return
 	}
 
@@ -264,8 +264,8 @@ func CreateKnowledgeCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -279,8 +279,8 @@ func CreateKnowledgeCategory(c *gin.Context) {
 	if err := db.Create(&category).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建分类失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建分类失败: " + err.Error(),
+		})
 		return
 	}
 
@@ -308,8 +308,8 @@ func CreateKnowledgeArticle(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -328,8 +328,8 @@ func CreateKnowledgeArticle(c *gin.Context) {
 	if err := db.Create(&article).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建文章失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建文章失败: " + err.Error(),
+		})
 		return
 	}
 
@@ -357,8 +357,8 @@ func UpdateKnowledgeArticle(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -367,8 +367,8 @@ func UpdateKnowledgeArticle(c *gin.Context) {
 	if err := db.First(&article, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "文章不存在",,
-			"data": nil})
+			"message": "文章不存在",
+		})
 		return
 	}
 
@@ -404,8 +404,8 @@ func DeleteKnowledgeArticle(c *gin.Context) {
 	if err := db.First(&article, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "文章不存在",,
-			"data": nil})
+			"message": "文章不存在",
+		})
 		return
 	}
 
@@ -433,8 +433,8 @@ func CreateDownload(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -454,8 +454,8 @@ func CreateDownload(c *gin.Context) {
 	if err := db.Create(&download).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建下载失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建下载失败: " + err.Error(),
+		})
 		return
 	}
 
@@ -484,8 +484,8 @@ func UpdateDownload(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -494,8 +494,8 @@ func UpdateDownload(c *gin.Context) {
 	if err := db.First(&download, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "下载不存在",,
-			"data": nil})
+			"message": "下载不存在",
+		})
 		return
 	}
 
@@ -534,8 +534,8 @@ func DeleteDownload(c *gin.Context) {
 	if err := db.First(&download, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "下载不存在",,
-			"data": nil})
+			"message": "下载不存在",
+		})
 		return
 	}
 
@@ -560,8 +560,8 @@ func CreateDownloadCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -575,8 +575,8 @@ func CreateDownloadCategory(c *gin.Context) {
 	if err := db.Create(&category).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建分类失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建分类失败: " + err.Error(),
+		})
 		return
 	}
 

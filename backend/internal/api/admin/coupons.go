@@ -94,8 +94,8 @@ func CreateCoupon(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -123,8 +123,8 @@ func CreateCoupon(c *gin.Context) {
 	if count > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "优惠券代码已存在",,
-			"data": nil})
+			"message": "优惠券代码已存在",
+		})
 		return
 	}
 
@@ -142,8 +142,8 @@ func CreateCoupon(c *gin.Context) {
 	if err := db.Create(&coupon).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建优惠券失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建优惠券失败: " + err.Error(),
+		})
 		return
 	}
 
@@ -173,8 +173,8 @@ func UpdateCoupon(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -183,8 +183,8 @@ func UpdateCoupon(c *gin.Context) {
 	if err := db.First(&coupon, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "优惠券不存在",,
-			"data": nil})
+			"message": "优惠券不存在",
+		})
 		return
 	}
 
@@ -226,8 +226,8 @@ func DeleteCoupon(c *gin.Context) {
 	if err := db.First(&coupon, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "优惠券不存在",,
-			"data": nil})
+			"message": "优惠券不存在",
+		})
 		return
 	}
 
@@ -251,8 +251,8 @@ func UpdateCouponStatus(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -264,8 +264,8 @@ func UpdateCouponStatus(c *gin.Context) {
 	if !validStatuses[req.Status] {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的状态值",,
-			"data": nil})
+			"message": "无效的状态值",
+		})
 		return
 	}
 
@@ -274,8 +274,8 @@ func UpdateCouponStatus(c *gin.Context) {
 	if err := db.First(&coupon, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "优惠券不存在",,
-			"data": nil})
+			"message": "优惠券不存在",
+		})
 		return
 	}
 
@@ -353,8 +353,8 @@ func CreateCouponCampaign(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -369,8 +369,8 @@ func CreateCouponCampaign(c *gin.Context) {
 	if err := db.Create(&campaign).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建活动失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建活动失败: " + err.Error(),
+		})
 		return
 	}
 
@@ -396,8 +396,8 @@ func UpdateCouponCampaign(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -406,8 +406,8 @@ func UpdateCouponCampaign(c *gin.Context) {
 	if err := db.First(&campaign, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "活动不存在",,
-			"data": nil})
+			"message": "活动不存在",
+		})
 		return
 	}
 
@@ -437,8 +437,8 @@ func DeleteCouponCampaign(c *gin.Context) {
 	if err := db.First(&campaign, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "活动不存在",,
-			"data": nil})
+			"message": "活动不存在",
+		})
 		return
 	}
 
@@ -462,8 +462,8 @@ func UpdateCouponCampaignStatus(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -472,8 +472,8 @@ func UpdateCouponCampaignStatus(c *gin.Context) {
 	if err := db.First(&campaign, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "活动不存在",,
-			"data": nil})
+			"message": "活动不存在",
+		})
 		return
 	}
 

@@ -58,8 +58,8 @@ func GetUserInvoice(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的账单ID",,
-			"data": nil})
+			"message": "无效的账单ID",
+		})
 		return
 	}
 
@@ -68,8 +68,8 @@ func GetUserInvoice(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&invoice).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "账单不存在",,
-			"data": nil})
+			"message": "账单不存在",
+		})
 		return
 	}
 
@@ -120,8 +120,8 @@ func CancelUserInvoice(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的账单ID",,
-			"data": nil})
+			"message": "无效的账单ID",
+		})
 		return
 	}
 
@@ -130,16 +130,16 @@ func CancelUserInvoice(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&invoice).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "账单不存在",,
-			"data": nil})
+			"message": "账单不存在",
+		})
 		return
 	}
 
 	if invoice.Status != "unpaid" {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "只有待支付的账单才能取消",,
-			"data": nil})
+			"message": "只有待支付的账单才能取消",
+		})
 		return
 	}
 
@@ -159,8 +159,8 @@ func PayInvoiceByBalance(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "无效的账单ID",,
-			"data": nil})
+			"message": "无效的账单ID",
+		})
 		return
 	}
 
@@ -171,16 +171,16 @@ func PayInvoiceByBalance(c *gin.Context) {
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&invoice).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "账单不存在",,
-			"data": nil})
+			"message": "账单不存在",
+		})
 		return
 	}
 
 	if invoice.Status != "unpaid" {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "账单不是待支付状态",,
-			"data": nil})
+			"message": "账单不是待支付状态",
+		})
 		return
 	}
 
@@ -189,16 +189,16 @@ func PayInvoiceByBalance(c *gin.Context) {
 	if err := db.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "获取用户信息失败",,
-			"data": nil})
+			"message": "获取用户信息失败",
+		})
 		return
 	}
 
 	if user.Balance < invoice.Amount {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "余额不足",,
-			"data": nil})
+			"message": "余额不足",
+		})
 		return
 	}
 

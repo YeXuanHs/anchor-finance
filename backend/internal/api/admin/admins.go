@@ -219,8 +219,8 @@ func GetRoleDetail(c *gin.Context) {
 	if err := db.First(&role, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "角色不存在",,
-			"data": nil})
+			"message": "角色不存在",
+		})
 		return
 	}
 
@@ -243,8 +243,8 @@ func CreateRole(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -258,8 +258,8 @@ func CreateRole(c *gin.Context) {
 	if err := db.Create(&role).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建角色失败: " + err.Error(),,
-			"data": nil})
+			"message": "创建角色失败: " + err.Error(),
+		})
 		return
 	}
 
@@ -286,8 +286,8 @@ func UpdateRole(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),,
-			"data": nil})
+			"message": "参数错误: " + err.Error(),
+		})
 		return
 	}
 
@@ -296,8 +296,8 @@ func UpdateRole(c *gin.Context) {
 	if err := db.First(&role, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "角色不存在",,
-			"data": nil})
+			"message": "角色不存在",
+		})
 		return
 	}
 
@@ -330,16 +330,16 @@ func DeleteRole(c *gin.Context) {
 	if err := db.First(&role, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "角色不存在",,
-			"data": nil})
+			"message": "角色不存在",
+		})
 		return
 	}
 
 	if role.IsSuper {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "不能删除超级管理员角色",,
-			"data": nil})
+			"message": "不能删除超级管理员角色",
+		})
 		return
 	}
 
@@ -361,8 +361,8 @@ func CopyRole(c *gin.Context) {
 	if err := db.First(&role, id).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
-			"message": "角色不存在",,
-			"data": nil})
+			"message": "角色不存在",
+		})
 		return
 	}
 
@@ -377,8 +377,8 @@ func CopyRole(c *gin.Context) {
 	if err := db.Create(&newRole).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "复制角色失败: " + err.Error(),,
-			"data": nil})
+			"message": "复制角色失败: " + err.Error(),
+		})
 		return
 	}
 
