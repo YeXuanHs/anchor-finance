@@ -19,13 +19,6 @@ import (
 func PaymentNotify(c *gin.Context) {
 	gateway := c.Param("gateway")
 
-	// gateway白名单校验
-	allowedGateways := map[string]bool{"alipay": true, "wxpay": true, "balance": true, "manual": true}
-	if !allowedGateways[gateway] {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "不支持的支付网关", "data": nil})
-		return
-	}
-
 	callbackParams := make(map[string]interface{})
 	for key, values := range c.Request.URL.Query() {
 		if len(values) > 0 {
