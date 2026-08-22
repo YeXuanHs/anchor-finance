@@ -57,6 +57,11 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/services/:id/auto-renew", UpdateAutoRenew)
 		authenticated.GET("/services/:id/operation-logs", GetServiceOperationLogs)
 
+		// 产品浏览
+		authenticated.GET("/products", GetClientProducts)
+		authenticated.GET("/products/categories", GetClientProductCategories)
+		authenticated.GET("/products/:id", GetClientProductDetail)
+
 		// 订单管理
 		authenticated.GET("/orders", GetUserOrders)
 		authenticated.GET("/orders/:id", GetUserOrder)
@@ -76,6 +81,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/invoices/:id", GetUserInvoice)
 		authenticated.POST("/invoices/:id/cancellations", CancelUserInvoice)
 		authenticated.POST("/invoices/:id/pay/balance", PayInvoiceByBalance)
+		authenticated.POST("/invoices/:id/fund", FundInvoice)
+		authenticated.POST("/invoices/combines", CombineInvoices)
 
 		// 财务
 		authenticated.GET("/balance-logs", GetBalanceLogs)
