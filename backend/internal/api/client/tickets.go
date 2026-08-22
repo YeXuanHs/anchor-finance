@@ -285,5 +285,6 @@ func CloseUserTicket(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "关闭成功",
+		"data":    nil,
 	})
 }

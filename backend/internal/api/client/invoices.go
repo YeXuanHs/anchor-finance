@@ -8,6 +8,7 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // GetUserInvoices 获取用户账单列表
@@ -154,6 +155,7 @@ func CancelUserInvoice(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "取消成功",
+		"data":    nil,
 	})
 }
 
@@ -196,26 +198,23 @@ func PayInvoiceByBalance(c *gin.Context) {
 	// 查询用户余额
 	var user model.User
 	if err := db.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    500,
-			"message": "获取用户信息失败",
-			"data": nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "获取用户信息失败", "data": nil})
 		return
 	}
 
 	if user.Balance < invoice.Amount {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "余额不足",
-			"data": nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "余额不足", "data": nil})
 		return
 	}
 
-	// 扣除余额
-	newBalance := user.Balance - invoice.Amount
-	db.Model(&user).Update("balance", newBalance)
+	// 安全修复：使用原子操作扣除余额（防并发竞态）
+	// UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?
+	result := db.Model(&model.User{}).Where("id = ? AND balance >= ?", userID, invoice.Amount).
+		Update("balance", gorm.Expr("balance - ?", invoice.Amount))
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "余额不足（并发冲突）", "data": nil})
+		return
+	}
 
 	// 更新账单状态
 	db.Model(&invoice).Update("status", "paid")

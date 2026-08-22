@@ -98,6 +98,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/invoices/:id", GetUserInvoice)
 		authenticated.POST("/invoices/:id/cancellations", CancelUserInvoice)
 		authenticated.POST("/invoices/:id/pay/balance", PayInvoiceByBalance)
+		authenticated.POST("/invoices/combines", CombineInvoices)
+		authenticated.POST("/invoices/:id/fund", FundInvoice)
 
 		// 财务
 		authenticated.GET("/balance-logs", GetBalanceLogs)

@@ -138,6 +138,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "更新成功",
+		"data":    nil,
 	})
 }
 
@@ -200,6 +201,7 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "密码修改成功",
+		"data":    nil,
 	})
 }
 

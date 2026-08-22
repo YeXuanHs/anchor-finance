@@ -121,5 +121,6 @@ func CancelUserOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "取消成功",
+		"data":    nil,
 	})
 }
