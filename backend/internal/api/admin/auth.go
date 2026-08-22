@@ -203,9 +203,16 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	})
 }
 
-// ResetAdminPassword 重置管理员密码（应急用）
+// ResetAdminPassword 重置管理员密码（需要已登录的管理员权限）
 // POST /api/admin/auth/reset-password
 func (h *AuthHandler) ResetAdminPassword(c *gin.Context) {
+	// 安全修复：必须是已登录的管理员才能重置密码
+	currentAdminID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusOK, gin.H{"code": 401, "message": "请先登录", "data": nil})
+		return
+	}
+
 	var req struct {
 		Username    string `json:"username" binding:"required"`
 		NewPassword string `json:"new_password" binding:"required"`
@@ -222,8 +229,16 @@ func (h *AuthHandler) ResetAdminPassword(c *gin.Context) {
 	}
 
 	db := database.GetDB()
-	var admin model.Admin
-	if err := db.Where("username = ?", req.Username).First(&admin).Error; err != nil {
+
+	// 验证当前操作者是否存在
+	var currentAdmin model.Admin
+	if err := db.First(&currentAdmin, currentAdminID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 401, "message": "操作者不存在", "data": nil})
+		return
+	}
+
+	var targetAdmin model.Admin
+	if err := db.Where("username = ?", req.Username).First(&targetAdmin).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "管理员不存在", "data": nil})
 		return
 	}
@@ -234,7 +249,7 @@ func (h *AuthHandler) ResetAdminPassword(c *gin.Context) {
 		return
 	}
 
-	db.Model(&admin).Updates(map[string]interface{}{
+	db.Model(&targetAdmin).Updates(map[string]interface{}{
 		"password_hash":  hashedPassword,
 		"login_fail_count": 0,
 		"locked_until": nil,

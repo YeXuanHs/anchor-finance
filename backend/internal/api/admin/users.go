@@ -184,14 +184,13 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// 2. 解析请求参数
+	// 2. 解析请求参数（安全修复：禁止直接修改balance，余额只能通过充值/退款操作）
 	var req struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
 		Phone    string `json:"phone"`
 		Company  string `json:"company"`
 		Status   string `json:"status"`
-		Balance  float64 `json:"balance"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -231,9 +230,6 @@ func UpdateUser(c *gin.Context) {
 	}
 	if req.Status != "" {
 		updates["status"] = req.Status
-	}
-	if req.Balance != 0 {
-		updates["balance"] = req.Balance
 	}
 
 	if err := db.Model(&user).Updates(updates).Error; err != nil {
@@ -621,11 +617,13 @@ func RefundUserService(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "参数错误: " + err.Error(),
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	// 安全修复：退款金额必须大于0
+	if req.Amount <= 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "退款金额必须大于0", "data": nil})
 		return
 	}
 
@@ -737,11 +735,13 @@ func RechargeUser(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "参数错误: " + err.Error(),
-			"data":    nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	// 安全修复：金额必须大于0
+	if req.Amount <= 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "充值金额必须大于0", "data": nil})
 		return
 	}
 

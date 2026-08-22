@@ -17,7 +17,6 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 	public := r.Group("")
 	{
 		public.POST("/login", middleware.RateLimit(5, 1*time.Minute), authHandler.Login)
-		public.POST("/auth/reset-password", authHandler.ResetAdminPassword)
 	}
 
 	// 需要认证的路由（必须是管理员）
@@ -30,6 +29,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/auth/profile", authHandler.UpdateProfile)
 		authenticated.PUT("/auth/password", authHandler.UpdatePassword)
 		authenticated.POST("/logout", authHandler.Logout)
+		authenticated.POST("/auth/reset-password", authHandler.ResetAdminPassword)
 
 		// 仪表盘
 		authenticated.GET("/dashboard/stats", GetDashboardStats)
