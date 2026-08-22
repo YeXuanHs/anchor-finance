@@ -393,6 +393,10 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/task-queue/:id/retry", RetryTask)
 		authenticated.DELETE("/task-queue/:id", DeleteTask)
 
+		// 二次验证配置
+		authenticated.GET("/two-factor-config", GetTwoFactorConfig)
+		authenticated.PUT("/two-factor-config", UpdateTwoFactorConfig)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理

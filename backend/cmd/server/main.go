@@ -82,6 +82,8 @@ func main() {
 		&model.TrafficPackage{},
 		&model.TrafficLog{},
 		&model.TaskQueue{},
+		&model.TwoFactorConfig{},
+		&model.UserTwoFactor{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
