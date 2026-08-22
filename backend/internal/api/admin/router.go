@@ -419,6 +419,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/ticket-rules/:id", UpdateTicketRule)
 		authenticated.DELETE("/ticket-rules/:id", DeleteTicketRule)
 
+		// 商品订购/财务配置
+		authenticated.GET("/order-config", GetOrderConfig)
+		authenticated.PUT("/order-config", UpdateOrderConfig)
+		authenticated.GET("/finance-config", GetFinanceConfig)
+		authenticated.PUT("/finance-config", UpdateFinanceConfig)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
