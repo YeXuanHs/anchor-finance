@@ -2,6 +2,7 @@ package client
 
 import (
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
@@ -29,11 +30,19 @@ func GetUserReferralOverview(c *gin.Context) {
 	db.Model(&model.Referral{}).Where("referrer_id = ? AND status = ?", userID, "completed").
 		Select("COALESCE(SUM(reward), 0)").Scan(&totalReward)
 
+	// 生成邀请链接（用环境变量配置前端地址，默认用请求Host）
+	frontendBase := os.Getenv("CLIENT_URL")
+	if frontendBase == "" {
+		frontendBase = "http://" + c.Request.Host
+	}
+	referralLink := frontendBase + "/register?ref=" + strconv.FormatUint(uint64(user.ID), 10)
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
 		"data": gin.H{
 			"referral_code":   user.ID,
+			"referral_link":   referralLink,
 			"referral_count":  referralCount,
 			"total_reward":    totalReward,
 		},
