@@ -298,28 +298,21 @@ func ActivateOrder(c *gin.Context) {
 		return
 	}
 
-	// 4. 激活订单
+	// 4. 激活订单（乐观锁防重复激活）
 	now := time.Now()
-	updates := map[string]interface{}{
-		"status":   "active",
-		"paid_at":  &now,
-	}
-
-	if err := db.Model(&order).Updates(updates).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    500,
-			"message": "激活订单失败: " + err.Error(),
-			"data":    nil,
+	result := db.Model(&model.Order{}).
+		Where("id = ? AND status IN ?", id, []string{"pending", "paid"}).
+		Updates(map[string]interface{}{
+			"status":  "active",
+			"paid_at": &now,
 		})
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "订单状态已变更，无法激活", "data": nil})
 		return
 	}
 
 	// 5. 返回统一格式
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "激活成功",
-		"data":    nil,
-	})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "激活成功", "data": nil})
 }
 
 // CancelOrder 取消订单
