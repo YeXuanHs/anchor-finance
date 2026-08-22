@@ -26,16 +26,17 @@ func NewRedisService() *RedisService {
 	return s
 }
 
-// loadConfig 从settings表加载Redis配置
+// loadConfig 从settings表加载Redis配置（按key查询，兼容所有group）
 func (s *RedisService) loadConfig() {
 	db := database.GetDB()
 
-	var settings []model.Setting
-	db.Where("`group` = ?", "redis").Find(&settings)
-
+	keys := []string{"redis_enabled", "redis_host", "redis_port", "redis_password", "redis_db"}
 	configMap := make(map[string]string)
-	for _, setting := range settings {
-		configMap[setting.Key] = setting.Value
+	for _, key := range keys {
+		var setting model.Setting
+		if err := db.Where("`key` = ?", key).First(&setting).Error; err == nil {
+			configMap[key] = setting.Value
+		}
 	}
 
 	// 检查是否启用

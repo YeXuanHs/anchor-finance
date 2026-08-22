@@ -31,16 +31,17 @@ func NewAIService() *AIService {
 	return s
 }
 
-// loadConfig 从settings表加载AI配置
+// loadConfig 从settings表加载AI配置（按key查询，兼容所有group）
 func (s *AIService) loadConfig() {
 	db := database.GetDB()
 
-	var settings []model.Setting
-	db.Where("`group` = ?", "ai").Find(&settings)
-
+	keys := []string{"ai_enabled", "ai_provider", "ai_api_key", "ai_base_url", "ai_model"}
 	configMap := make(map[string]string)
-	for _, setting := range settings {
-		configMap[setting.Key] = setting.Value
+	for _, key := range keys {
+		var setting model.Setting
+		if err := db.Where("`key` = ?", key).First(&setting).Error; err == nil {
+			configMap[key] = setting.Value
+		}
 	}
 
 	if enabled, ok := configMap["ai_enabled"]; ok && enabled == "1" {
