@@ -346,12 +346,10 @@ func UpdateServiceRemark(c *gin.Context) {
 		return
 	}
 
-	// TODO: 更新服务备注（需要添加remark字段到service表）
+	// 更新服务备注
+	db.Model(&service).Update("remark", req.Remark)
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "更新成功",
-	})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
 }
 
 // GetServiceConnection 获取服务连接信息

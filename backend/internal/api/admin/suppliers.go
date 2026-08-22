@@ -362,9 +362,7 @@ func GetSupplierBalance(c *gin.Context) {
 		return
 	}
 
-	// TODO: 从上游API获取实时余额
-	// 这里暂时返回数据库中的余额
-
+	// 返回供应商余额（数据库记录；实时上游余额待供应商插件接入）
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",

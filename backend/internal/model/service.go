@@ -17,6 +17,7 @@ type Service struct {
 	Status        string         `gorm:"size:20;default:active" json:"status"` // active, suspended, terminated, pending
 	BillingCycle  string         `gorm:"size:20" json:"billing_cycle"` // monthly, quarterly, yearly
 	Amount        float64        `gorm:"type:decimal(10,2)" json:"amount"`
+	Remark        string         `gorm:"type:text" json:"remark"`
 	NextDueDate   *time.Time     `json:"next_due_date"`
 	ActivatedAt   *time.Time     `json:"activated_at"`
 	TerminatedAt  *time.Time     `json:"terminated_at"`

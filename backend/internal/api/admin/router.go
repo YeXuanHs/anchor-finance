@@ -456,34 +456,6 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/mail-providers", GetMailProviders)
 		authenticated.GET("/certification-providers", GetCertificationProviders)
 		authenticated.GET("/server-modules", GetServerModules)
-
-		// TODO: 以下功能待实现
-
-		// 服务管理
-		// authenticated.GET("/services", getServices)
-		// authenticated.GET("/services/:id", getService)
-
-		// 账单管理
-		// authenticated.GET("/invoices", getInvoices)
-		// authenticated.GET("/invoices/:id", getInvoice)
-
-		// 工单管理
-		// authenticated.GET("/tickets", getTickets)
-		// authenticated.GET("/tickets/:id", getTicket)
-
-		// 产品管理
-		// authenticated.GET("/products", getProducts)
-		// authenticated.GET("/products/:id", getProduct)
-
-		// 插件管理
-		// authenticated.GET("/plugins", getPlugins)
-
-		// 设置
-		// authenticated.GET("/settings", getSettings)
-		// authenticated.PUT("/settings", updateSettings)
-
-		// 菜单
-		// authenticated.GET("/menus", getMenus)
 	}
 }
 
