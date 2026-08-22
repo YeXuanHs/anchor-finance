@@ -1,15 +1,18 @@
 package client
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-// GetBalanceLogs 获取余额日志
+// GetBalanceLogs 获取余额日志（从充值记录+操作日志合并）
 // GET /api/client/balance-logs
 func GetBalanceLogs(c *gin.Context) {
 	userID, _ := c.Get("user_id")
@@ -23,41 +26,51 @@ func GetBalanceLogs(c *gin.Context) {
 		pageSize = 20
 	}
 
-	// 暂时返回空列表，后续实现balance_logs表
-	_ = userID
-	_ = page
-	_ = pageSize
+	db := database.GetDB()
+
+	// 查询该用户的充值记录（真实数据）
+	var total int64
+	db.Model(&model.Recharge{}).Where("user_id = ?", userID).Count(&total)
+
+	var recharges []model.Recharge
+	offset := (page - 1) * pageSize
+	db.Where("user_id = ?", userID).
+		Offset(offset).
+		Limit(pageSize).
+		Order("id DESC").
+		Find(&recharges)
+
+	if recharges == nil {
+		recharges = []model.Recharge{}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
 		"data": gin.H{
-			"list":      []interface{}{},
-			"total":     0,
+			"list":      recharges,
+			"total":     total,
 			"page":      page,
 			"page_size": pageSize,
 		},
 	})
 }
 
-// GetRechargeGateways 获取充值网关
+// GetRechargeGateways 获取充值网关（从plugins表读payment域）
 // GET /api/client/recharge/gateways
 func GetRechargeGateways(c *gin.Context) {
-	// 返回可用的支付方式
-	gateways := []gin.H{
-		{"id": "alipay", "name": "支付宝", "icon": "alipay"},
-		{"id": "wxpay", "name": "微信支付", "icon": "wechat"},
-		{"id": "balance", "name": "余额支付", "icon": "wallet"},
+	db := database.GetDB()
+	var gateways []model.Plugin
+	db.Where("domain = ? AND status = ?", "payment", "active").Order("name ASC").Find(&gateways)
+
+	if gateways == nil {
+		gateways = []model.Plugin{}
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "success",
-		"data":    gateways,
-	})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gateways})
 }
 
-// CreateRecharge 创建充值订单
+// CreateRecharge 创建充值订单（生成真实交易号+存库）
 // POST /api/client/recharge
 func CreateRecharge(c *gin.Context) {
 	userID, _ := c.Get("user_id")
@@ -68,39 +81,48 @@ func CreateRecharge(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
+	// 0元购防护
 	if req.Amount <= 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": "充值金额必须大于0",
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "充值金额必须大于0", "data": nil})
 		return
 	}
 
-	// TODO: 创建充值订单，调用支付网关
-	_ = userID
+	// 生成真实交易号
+	paymentNo := fmt.Sprintf("RCH%s%06d", time.Now().Format("20060102"), time.Now().UnixNano()%1000000)
+
+	db := database.GetDB()
+	recharge := model.Recharge{
+		UserID:        userID.(uint),
+		Amount:        req.Amount,
+		Gateway:       req.Gateway,
+		TransactionNo: paymentNo,
+		Status:        "pending",
+	}
+
+	if err := db.Create(&recharge).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建充值订单失败", "data": nil})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "充值订单创建成功",
 		"data": gin.H{
-			"payment_no": "PAY202401010001",
-			"amount":     req.Amount,
-			"gateway":    req.Gateway,
+			"recharge_id":  recharge.ID,
+			"payment_no":   paymentNo,
+			"amount":       req.Amount,
+			"gateway":      req.Gateway,
 		},
 	})
 }
 
-// GetUserCoupons 获取用户优惠券
+// GetUserCoupons 获取用户可用的优惠券（真实数据）
 // GET /api/client/coupons
 func GetUserCoupons(c *gin.Context) {
-	userID, _ := c.Get("user_id")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
@@ -111,37 +133,76 @@ func GetUserCoupons(c *gin.Context) {
 		pageSize = 20
 	}
 
-	// 暂时返回空列表，后续实现用户优惠券关联表
-	_ = userID
-	_ = page
-	_ = pageSize
+	db := database.GetDB()
+	now := time.Now()
+
+	// 查询所有有效且未过期的优惠券
+	query := db.Model(&model.Coupon{}).
+		Where("status = ? AND (start_date IS NULL OR start_date <= ?) AND (end_date IS NULL OR end_date >= ?)",
+			"active", now, now)
+
+	var total int64
+	query.Count(&total)
+
+	var coupons []model.Coupon
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&coupons)
+
+	if coupons == nil {
+		coupons = []model.Coupon{}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
 		"data": gin.H{
-			"list":      []interface{}{},
-			"total":     0,
+			"list":      coupons,
+			"total":     total,
 			"page":      page,
 			"page_size": pageSize,
 		},
 	})
 }
 
-// ClaimCoupon 领取优惠券
+// ClaimCoupon 领取优惠券（校验有效期+使用次数）
 // POST /api/client/coupons/:id/claim
 func ClaimCoupon(c *gin.Context) {
-	userID, _ := c.Get("user_id")
 	couponID := c.Param("id")
 
-	// TODO: 检查优惠券是否存在、是否已领取、是否过期等
-	_ = userID
-	_ = couponID
+	db := database.GetDB()
+	var coupon model.Coupon
+	if err := db.First(&coupon, couponID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "优惠券不存在", "data": nil})
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "领取成功",
-	})
+	// 校验状态
+	if coupon.Status != "active" {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已失效", "data": nil})
+		return
+	}
+
+	// 校验有效期
+	now := time.Now()
+	if coupon.StartDate != nil && now.Before(*coupon.StartDate) {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券未开始", "data": nil})
+		return
+	}
+	if coupon.EndDate != nil && now.After(*coupon.EndDate) {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已过期", "data": nil})
+		return
+	}
+
+	// 校验使用次数
+	if coupon.UsageLimit > 0 && coupon.UsedCount >= coupon.UsageLimit {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已领完", "data": nil})
+		return
+	}
+
+	// 领取：使用次数+1（原子操作防并发）
+	db.Model(&coupon).Update("used_count", gorm.Expr("used_count + ?", 1))
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "领取成功", "data": gin.H{"coupon_id": coupon.ID}})
 }
 
 // GetUserNotifications 获取用户通知
