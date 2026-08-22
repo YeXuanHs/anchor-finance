@@ -413,6 +413,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/themes/:id", DeleteTheme)
 		authenticated.POST("/themes/:id/set-default", SetDefaultTheme)
 
+		// 工单传递规则
+		authenticated.GET("/ticket-rules", GetTicketRuleList)
+		authenticated.POST("/ticket-rules", CreateTicketRule)
+		authenticated.PUT("/ticket-rules/:id", UpdateTicketRule)
+		authenticated.DELETE("/ticket-rules/:id", DeleteTicketRule)
+
 		// TODO: 以下功能待实现
 
 		// 服务管理
