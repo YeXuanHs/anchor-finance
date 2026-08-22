@@ -65,12 +65,32 @@ func LoginAsUser(c *gin.Context) {
 }
 
 // RefreshUserServicesStatus 刷新用户服务状态
+// RefreshUserServicesStatus 刷新用户服务状态（通过插件引擎同步远程状态）
+// POST /api/admin/users/:id/services/refresh-statuses
 func RefreshUserServicesStatus(c *gin.Context) {
 	id := c.Param("id")
 	db := database.GetDB()
 	var services []model.Service
-	db.Where("user_id = ?", id).Find(&services)
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "已刷新", "data": gin.H{"count": len(services)}})
+	db.Where("user_id = ? AND status IN ?", id, []string{"active", "suspended"}).Find(&services)
+
+	refreshed := 0
+	for _, svc := range services {
+		results, err := pluginengine.TriggerHook("get_service_status", map[string]interface{}{
+			"service_id": svc.ID,
+		})
+		if err != nil {
+			continue
+		}
+		if len(results) > 0 && results[0].Data != nil {
+			if data, ok := results[0].Data.(map[string]interface{}); ok {
+				if status, ok := data["status"].(string); ok && status != svc.Status {
+					db.Model(&svc).Update("status", status)
+					refreshed++
+				}
+			}
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "刷新完成", "data": gin.H{"total": len(services), "refreshed": refreshed}})
 }
 
 // ==================== 订单扩展 ====================
@@ -874,13 +894,27 @@ func AdminUpdateServiceMeta(c *gin.Context) {
 		return
 	}
 
-	var req map[string]interface{}
+	var req struct {
+		Remark     string `json:"remark"`
+		Hostname   string `json:"hostname"`
+		Username   string `json:"username"`
+		Password   string `json:"password"`
+		IPAddress  string `json:"ip_address"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
-	db.Model(&service).Updates(req)
+	// 白名单更新（只允许修改非敏感字段）
+	updates := map[string]interface{}{}
+	if req.Remark != "" { updates["remark"] = req.Remark }
+	if req.Hostname != "" { updates["hostname"] = req.Hostname }
+	if req.Username != "" { updates["username"] = req.Username }
+	if req.Password != "" { updates["password"] = req.Password }
+	if req.IPAddress != "" { updates["ip_address"] = req.IPAddress }
+
+	db.Model(&service).Updates(updates)
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
 }
 

@@ -13,18 +13,19 @@ import (
 )
 
 // JWTAuth JWT认证中间件（含黑名单检查）
+// MD规范：统一返回HTTP 200，用code字段区分错误类型
 func JWTAuth(authService *service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "未提供认证令牌", "data": nil})
+			c.JSON(http.StatusOK, gin.H{"code": 401, "message": "未提供认证令牌", "data": nil})
 			c.Abort()
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "认证格式错误", "data": nil})
+			c.JSON(http.StatusOK, gin.H{"code": 401, "message": "认证格式错误", "data": nil})
 			c.Abort()
 			return
 		}
@@ -32,7 +33,7 @@ func JWTAuth(authService *service.AuthService) gin.HandlerFunc {
 		tokenStr := parts[1]
 		claims, err := authService.ParseToken(tokenStr)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "无效的认证令牌", "data": nil})
+			c.JSON(http.StatusOK, gin.H{"code": 401, "message": "无效的认证令牌", "data": nil})
 			c.Abort()
 			return
 		}
@@ -43,7 +44,7 @@ func JWTAuth(authService *service.AuthService) gin.HandlerFunc {
 		var count int64
 		database.GetDB().Model(&model.TokenBlacklist{}).Where("token_hash = ?", tokenHash).Count(&count)
 		if count > 0 {
-			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "令牌已失效，请重新登录", "data": nil})
+			c.JSON(http.StatusOK, gin.H{"code": 401, "message": "令牌已失效，请重新登录", "data": nil})
 			c.Abort()
 			return
 		}
@@ -60,7 +61,7 @@ func AdminRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		isAdmin, exists := c.Get("is_admin")
 		if !exists || !isAdmin.(bool) {
-			c.JSON(http.StatusForbidden, gin.H{"code": 403, "message": "需要管理员权限", "data": nil})
+			c.JSON(http.StatusOK, gin.H{"code": 403, "message": "需要管理员权限", "data": nil})
 			c.Abort()
 			return
 		}
@@ -73,7 +74,7 @@ func ClientRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		isAdmin, exists := c.Get("is_admin")
 		if exists && isAdmin.(bool) {
-			c.JSON(http.StatusForbidden, gin.H{"code": 403, "message": "请使用客户账号登录", "data": nil})
+			c.JSON(http.StatusOK, gin.H{"code": 403, "message": "请使用客户账号登录", "data": nil})
 			c.Abort()
 			return
 		}
