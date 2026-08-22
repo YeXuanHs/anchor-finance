@@ -240,13 +240,16 @@ func Checkout(c *gin.Context) {
 		db.Create(&orderItem)
 	}
 
-	// 创建对应的账单
+	// 创建对应的账单（必须设置InvoiceNo，否则uniqueIndex冲突）
+	invRandNum, _ := rand.Int(rand.Reader, big.NewInt(100000))
+	invoiceNo := "INV" + time.Now().Format("20060102150405") + strconv.FormatUint(uint64(userID.(uint)), 10) + strconv.FormatInt(invRandNum.Int64(), 10)
 	invoice := model.Invoice{
-		UserID:  userID.(uint),
-		OrderID: order.ID,
-		Amount:  totalAmount,
-		Status:  "unpaid",
-		DueDate: time.Now().Add(7 * 24 * time.Hour), // 7天后到期
+		UserID:    userID.(uint),
+		InvoiceNo: invoiceNo,
+		OrderID:   order.ID,
+		Amount:    totalAmount,
+		Status:    "unpaid",
+		DueDate:   time.Now().Add(7 * 24 * time.Hour),
 	}
 	db.Create(&invoice)
 
