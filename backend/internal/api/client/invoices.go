@@ -59,6 +59,7 @@ func GetUserInvoice(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "无效的账单ID",
+			"data": nil,
 		})
 		return
 	}
@@ -69,6 +70,7 @@ func GetUserInvoice(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "账单不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -121,6 +123,7 @@ func CancelUserInvoice(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "无效的账单ID",
+			"data": nil,
 		})
 		return
 	}
@@ -131,6 +134,7 @@ func CancelUserInvoice(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "账单不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -139,6 +143,7 @@ func CancelUserInvoice(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "只有待支付的账单才能取消",
+			"data": nil,
 		})
 		return
 	}
@@ -160,6 +165,7 @@ func PayInvoiceByBalance(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "无效的账单ID",
+			"data": nil,
 		})
 		return
 	}
@@ -172,6 +178,7 @@ func PayInvoiceByBalance(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "账单不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -180,6 +187,7 @@ func PayInvoiceByBalance(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "账单不是待支付状态",
+			"data": nil,
 		})
 		return
 	}
@@ -190,6 +198,7 @@ func PayInvoiceByBalance(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "获取用户信息失败",
+			"data": nil,
 		})
 		return
 	}
@@ -198,6 +207,7 @@ func PayInvoiceByBalance(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "余额不足",
+			"data": nil,
 		})
 		return
 	}

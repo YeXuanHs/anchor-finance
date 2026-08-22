@@ -32,6 +32,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "请求参数错误",
+			"data": nil,
 		})
 		return
 	}
@@ -144,6 +145,7 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "管理员不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -153,6 +155,7 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "旧密码错误",
+			"data": nil,
 		})
 		return
 	}
@@ -163,6 +166,7 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "密码加密失败",
+			"data": nil,
 		})
 		return
 	}

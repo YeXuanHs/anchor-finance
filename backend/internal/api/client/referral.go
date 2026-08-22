@@ -99,6 +99,7 @@ func ApplyReferralWithdrawal(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "提现金额必须大于0",
+			"data": nil,
 		})
 		return
 	}
@@ -119,6 +120,7 @@ func ApplyReferralWithdrawal(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "可提现金额不足",
+			"data": nil,
 		})
 		return
 	}

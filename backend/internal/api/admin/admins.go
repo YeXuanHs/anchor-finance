@@ -220,6 +220,7 @@ func GetRoleDetail(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "角色不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -297,6 +298,7 @@ func UpdateRole(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "角色不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -331,6 +333,7 @@ func DeleteRole(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "角色不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -339,6 +342,7 @@ func DeleteRole(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "不能删除超级管理员角色",
+			"data": nil,
 		})
 		return
 	}
@@ -362,6 +366,7 @@ func CopyRole(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "角色不存在",
+			"data": nil,
 		})
 		return
 	}

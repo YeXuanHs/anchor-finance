@@ -86,6 +86,7 @@ func UpdateNews(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "新闻不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -126,6 +127,7 @@ func DeleteNews(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "新闻不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -205,6 +207,7 @@ func UpdateNewsCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "分类不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -239,6 +242,7 @@ func DeleteNewsCategory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "分类不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -368,6 +372,7 @@ func UpdateKnowledgeArticle(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "文章不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -405,6 +410,7 @@ func DeleteKnowledgeArticle(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "文章不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -495,6 +501,7 @@ func UpdateDownload(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "下载不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -535,6 +542,7 @@ func DeleteDownload(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "下载不存在",
+			"data": nil,
 		})
 		return
 	}

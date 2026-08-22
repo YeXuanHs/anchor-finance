@@ -66,6 +66,7 @@ func GetStaffDetail(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "员工不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -105,6 +106,7 @@ func CreateStaff(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "用户名或邮箱已存在",
+			"data": nil,
 		})
 		return
 	}
@@ -115,6 +117,7 @@ func CreateStaff(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "密码加密失败",
+			"data": nil,
 		})
 		return
 	}
@@ -172,6 +175,7 @@ func UpdateStaff(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "员工不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -209,6 +213,7 @@ func DeleteStaff(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "员工不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -247,6 +252,7 @@ func UpdateStaffStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "无效的状态值",
+			"data": nil,
 		})
 		return
 	}
@@ -257,6 +263,7 @@ func UpdateStaffStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "员工不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -292,6 +299,7 @@ func ResetStaffPassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "员工不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -302,6 +310,7 @@ func ResetStaffPassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "密码加密失败",
+			"data": nil,
 		})
 		return
 	}

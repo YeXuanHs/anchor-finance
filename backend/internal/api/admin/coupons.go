@@ -124,6 +124,7 @@ func CreateCoupon(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "优惠券代码已存在",
+			"data": nil,
 		})
 		return
 	}
@@ -184,6 +185,7 @@ func UpdateCoupon(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "优惠券不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -227,6 +229,7 @@ func DeleteCoupon(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "优惠券不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -265,6 +268,7 @@ func UpdateCouponStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "无效的状态值",
+			"data": nil,
 		})
 		return
 	}
@@ -275,6 +279,7 @@ func UpdateCouponStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "优惠券不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -407,6 +412,7 @@ func UpdateCouponCampaign(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "活动不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -438,6 +444,7 @@ func DeleteCouponCampaign(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "活动不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -473,6 +480,7 @@ func UpdateCouponCampaignStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "活动不存在",
+			"data": nil,
 		})
 		return
 	}

@@ -91,6 +91,7 @@ func GetPaymentDetail(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "无效的支付ID",
+			"data": nil,
 		})
 		return
 	}
@@ -101,6 +102,7 @@ func GetPaymentDetail(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "支付记录不存在",
+			"data": nil,
 		})
 		return
 	}

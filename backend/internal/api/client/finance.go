@@ -273,6 +273,7 @@ func MarkNotificationRead(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "通知不存在",
+			"data": nil,
 		})
 		return
 	}

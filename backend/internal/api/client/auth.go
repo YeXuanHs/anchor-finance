@@ -80,6 +80,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "用户名或邮箱已存在",
+			"data": nil,
 		})
 		return
 	}
@@ -90,6 +91,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "密码加密失败",
+			"data": nil,
 		})
 		return
 	}
@@ -116,6 +118,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "生成token失败",
+			"data": nil,
 		})
 		return
 	}
@@ -177,6 +180,7 @@ func (h *AuthHandler) GetInfo(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "用户不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -231,6 +235,7 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "用户不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -240,6 +245,7 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "旧密码错误",
+			"data": nil,
 		})
 		return
 	}
@@ -250,6 +256,7 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": "密码加密失败",
+			"data": nil,
 		})
 		return
 	}

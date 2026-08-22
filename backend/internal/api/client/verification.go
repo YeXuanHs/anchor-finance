@@ -69,6 +69,7 @@ func SubmitVerification(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "已有待审核的认证，请等待审核",
+			"data": nil,
 		})
 		return
 	}

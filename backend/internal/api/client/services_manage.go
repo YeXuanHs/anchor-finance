@@ -41,6 +41,7 @@ func PowerService(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
 			"message": "无效的操作类型",
+			"data": nil,
 		})
 		return
 	}
@@ -52,6 +53,7 @@ func PowerService(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "服务不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -96,6 +98,7 @@ func ResetServicePassword(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "服务不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -139,6 +142,7 @@ func ReinstallService(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "服务不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -171,6 +175,7 @@ func GetServiceRenewPreview(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "服务不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -214,6 +219,7 @@ func CreateRenewOrder(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "服务不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -304,6 +310,7 @@ func UpdateServiceName(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "服务不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -342,6 +349,7 @@ func UpdateServiceRemark(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "服务不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -365,6 +373,7 @@ func GetServiceConnection(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "服务不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -406,6 +415,7 @@ func GetServiceRuntime(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "服务不存在",
+			"data": nil,
 		})
 		return
 	}
@@ -444,6 +454,7 @@ func GetServiceStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    404,
 			"message": "服务不存在",
+			"data": nil,
 		})
 		return
 	}
