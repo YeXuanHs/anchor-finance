@@ -547,7 +547,7 @@ func QuoteServiceUpgrade(c *gin.Context) {
 	}
 
 	// 计算差价
-	priceDiff := newProduct.Amount - service.Amount
+	priceDiff := newProduct.Price - service.Amount
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0, "message": "success",
@@ -587,12 +587,12 @@ func CreateServiceUpgrade(c *gin.Context) {
 	}
 
 	// 价格校验（防0元购）
-	if newProduct.Amount <= 0 {
+	if newProduct.Price <= 0 {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "产品价格异常", "data": nil})
 		return
 	}
 
-	priceDiff := newProduct.Amount - service.Amount
+	priceDiff := newProduct.Price - service.Amount
 	if priceDiff <= 0 {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只能升级到更高配置的产品", "data": nil})
 		return
