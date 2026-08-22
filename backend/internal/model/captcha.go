@@ -11,6 +11,7 @@ type Captcha struct {
 	Code      string    `gorm:"size:10;not null" json:"code"`
 	Type      string    `gorm:"size:20;not null" json:"type"` // register, login, reset_password
 	Used      bool      `gorm:"default:false" json:"used"`
+	IP        string    `gorm:"size:45;index" json:"ip"` // 发送IP（用于IP维度限流）
 	ExpiresAt time.Time `gorm:"not null;index" json:"expires_at"`
 	CreatedAt time.Time `json:"created_at"`
 }

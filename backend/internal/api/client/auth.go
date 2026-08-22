@@ -115,7 +115,7 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 		return
 	}
 
-	// 频率限制：从settings表读取配置（captcha_rate=每秒几次，默认1次/秒）
+	// 频率限制1：目标维度（同一手机号/邮箱的发送间隔）
 	db := database.GetDB()
 	var setting model.Setting
 	ratePerSecond := 3.0 // 默认3次/秒
@@ -132,16 +132,26 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 		return
 	}
 
+	// 频率限制2：IP维度（同一IP每分钟最多发10次验证码，防跨目标轰炸）
+	clientIP := c.ClientIP()
+	var ipCount int64
+	db.Model(&model.Captcha{}).Where("ip = ? AND created_at > ?", clientIP, time.Now().Add(-1*time.Minute)).Count(&ipCount)
+	if ipCount >= 10 {
+		c.JSON(http.StatusOK, gin.H{"code": 429, "message": "该IP发送验证码过于频繁，请稍后再试", "data": nil})
+		return
+	}
+
 	// L2修复：使用crypto/rand生成安全验证码
 	codeNum, _ := rand.Int(rand.Reader, big.NewInt(1000000))
 	code := fmt.Sprintf("%06d", codeNum.Int64())
 
-	// 保存验证码
+	// 保存验证码（记录IP用于IP维度限流）
 	captcha := model.Captcha{
 		Target:    req.Target,
 		Code:      code,
 		Type:      req.Type,
 		Used:      false,
+		IP:        clientIP,
 		ExpiresAt: time.Now().Add(10 * time.Minute),
 	}
 	db.Create(&captcha)
