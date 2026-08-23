@@ -7,7 +7,6 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
-	"github.com/YeXuanHs/anchor-finance/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,12 +28,9 @@ func AdminEnableUserAPI(c *gin.Context) {
 	}
 
 	apiKey, _ := generateAPIKeyLocal()
-	encrypted, _ := util.EncryptAES(apiKey)
 
-	db.Model(&user).Updates(map[string]interface{}{
-		"api_key":     encrypted,
-		"api_enabled": true,
-	})
+	db.Model(&user).Update("api_key", apiKey)
+	db.Model(&user).Update("api_enabled", true)
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "API已强制开通", "data": gin.H{"api_key": apiKey}})
 }
@@ -57,8 +53,7 @@ func AdminResetUserAPI(c *gin.Context) {
 	}
 
 	apiKey, _ := generateAPIKeyLocal()
-	encrypted, _ := util.EncryptAES(apiKey)
-	db.Model(&user).Update("api_key", encrypted)
+	db.Model(&user).Update("api_key", apiKey)
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "API密钥已重置", "data": gin.H{"api_key": apiKey}})
 }

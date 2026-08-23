@@ -14,7 +14,6 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
-	"github.com/YeXuanHs/anchor-finance/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -531,13 +530,8 @@ func LoginByAPIKey(account, apiKey string) (string, error) {
 		return "", fmt.Errorf("API密钥未设置")
 	}
 
-	// 解密存储的密钥并比较
-	decrypted, err := util.DecryptAES(user.APIKey)
-	if err != nil {
-		return "", fmt.Errorf("密钥解密失败")
-	}
-
-	if decrypted != apiKey {
+	// 直接比较明文（API密钥明文存储，和zjmf一样）
+	if user.APIKey != apiKey {
 		return "", fmt.Errorf("API密钥错误")
 	}
 

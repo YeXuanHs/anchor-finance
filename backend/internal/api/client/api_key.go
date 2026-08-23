@@ -7,7 +7,6 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
-	"github.com/YeXuanHs/anchor-finance/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -40,11 +39,8 @@ func GetAPIKeyStatus(c *gin.Context) {
 		apiEnabled = false
 	}
 
-	// 解密API密钥（如果已开通）
-	apiKey := ""
-	if user.APIEnabled && user.APIKey != "" {
-		apiKey, _ = util.DecryptAES(user.APIKey)
-	}
+	// API密钥（明文存储，直接返回）
+	apiKey := user.APIKey
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0, "message": "success",
@@ -100,15 +96,10 @@ func EnableAPIKey(c *gin.Context) {
 		}
 	}
 
-	// 生成API密钥
+	// 生成API密钥（明文存储，和zjmf一样）
 	apiKey, _ := generateAPIKey()
-	encrypted, encErr := util.EncryptAES(apiKey)
-	if encErr != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "密钥加密失败", "data": nil})
-		return
-	}
 
-	db.Model(&user).Update("api_key", encrypted)
+	db.Model(&user).Update("api_key", apiKey)
 	db.Model(&user).Update("api_enabled", true)
 
 	c.JSON(http.StatusOK, gin.H{
@@ -135,14 +126,9 @@ func ResetAPIKey(c *gin.Context) {
 	}
 
 	// 生成新密钥
+	// 生成新密钥（明文存储）
 	apiKey, _ := generateAPIKey()
-	encrypted, encErr := util.EncryptAES(apiKey)
-	if encErr != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "密钥加密失败", "data": nil})
-		return
-	}
-
-	db.Model(&user).Update("api_key", encrypted)
+	db.Model(&user).Update("api_key", apiKey)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0, "message": "API密钥已重置",
