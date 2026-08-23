@@ -10,7 +10,7 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 )
 
-// UpstreamDriver 上游驱动接口（参考创欧UpstreamDriver）
+// UpstreamDriver 上游驱动接口（MD 7.3 参考创欧UpstreamDriver）
 type UpstreamDriver interface {
 	// Key 驱动唯一标识
 	Key() string
@@ -22,6 +22,8 @@ type UpstreamDriver interface {
 	FetchProducts() ([]RemoteProduct, error)
 	// FetchProductGroups 拉取上游商品分组
 	FetchProductGroups() ([]RemoteGroup, error)
+	// GetProductStructure 获取完整商品结构（分组+商品树）
+	GetProductStructure() (*ProductStructure, error)
 	// SyncStatus 同步服务状态
 	SyncStatus(serviceID string) (*StatusResult, error)
 	// CreateService 创建服务（开通）
@@ -34,6 +36,11 @@ type UpstreamDriver interface {
 	TerminateService(serviceID string) error
 	// RenewService 续费服务
 	RenewService(serviceID string, cycle string) error
+}
+
+// ProductStructure 商品结构（MD 7.3）
+type ProductStructure struct {
+	Groups []RemoteGroup `json:"groups"`
 }
 
 // RemoteProduct 上游商品
@@ -190,6 +197,14 @@ func (d *PluginDriver) FetchProductGroups() ([]RemoteGroup, error) {
 		}
 	}
 	return groups, nil
+}
+
+func (d *PluginDriver) GetProductStructure() (*ProductStructure, error) {
+	groups, err := d.FetchProductGroups()
+	if err != nil {
+		return nil, err
+	}
+	return &ProductStructure{Groups: groups}, nil
 }
 
 func (d *PluginDriver) SyncStatus(serviceID string) (*StatusResult, error) {

@@ -30,6 +30,9 @@ func (d *ManualDriver) FetchProducts() ([]RemoteProduct, error) {
 func (d *ManualDriver) FetchProductGroups() ([]RemoteGroup, error) {
 	return nil, fmt.Errorf("手动管理不支持自动拉取分组")
 }
+func (d *ManualDriver) GetProductStructure() (*ProductStructure, error) {
+	return nil, fmt.Errorf("手动管理不支持获取商品结构")
+}
 func (d *ManualDriver) SyncStatus(serviceID string) (*StatusResult, error) {
 	return nil, fmt.Errorf("手动管理不支持状态同步")
 }
@@ -189,6 +192,14 @@ func (d *ZjmfDriver) FetchProductGroups() ([]RemoteGroup, error) {
 		}
 	}
 	return groups, nil
+}
+
+func (d *ZjmfDriver) GetProductStructure() (*ProductStructure, error) {
+	groups, err := d.FetchProductGroups()
+	if err != nil {
+		return nil, err
+	}
+	return &ProductStructure{Groups: groups}, nil
 }
 
 func (d *ZjmfDriver) SyncStatus(serviceID string) (*StatusResult, error) {
@@ -397,6 +408,14 @@ func (d *V10Driver) FetchProductGroups() ([]RemoteGroup, error) {
 	return groups, nil
 }
 
+func (d *V10Driver) GetProductStructure() (*ProductStructure, error) {
+	groups, err := d.FetchProductGroups()
+	if err != nil {
+		return nil, err
+	}
+	return &ProductStructure{Groups: groups}, nil
+}
+
 func (d *V10Driver) SyncStatus(serviceID string) (*StatusResult, error) {
 	result, err := d.request("GET", "/console/v1/mf_cloud/"+serviceID+"/status", nil)
 	if err != nil {
@@ -562,6 +581,14 @@ func (d *AnchorDriver) FetchProductGroups() ([]RemoteGroup, error) {
 		}
 	}
 	return groups, nil
+}
+
+func (d *AnchorDriver) GetProductStructure() (*ProductStructure, error) {
+	groups, err := d.FetchProductGroups()
+	if err != nil {
+		return nil, err
+	}
+	return &ProductStructure{Groups: groups}, nil
 }
 
 func (d *AnchorDriver) SyncStatus(serviceID string) (*StatusResult, error) {
