@@ -113,6 +113,7 @@ func main() {
 		&model.AITicketKnowledge{},
 		&model.AITicketRule{},
 		&model.AITicketProcessLog{},
+		&model.SupplierGroupMapping{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

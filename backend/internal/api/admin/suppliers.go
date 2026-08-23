@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"net/http"
@@ -458,4 +458,103 @@ func RevealSupplierSecret(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"key": key, "value": decrypted}})
+}
+
+// ==================== 供应商分组映射（MD 7.2.5）====================
+
+// GetSupplierGroupMappings 获取供应商分组映射
+// GET /api/admin/suppliers/:id/group-mappings
+func GetSupplierGroupMappings(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var mappings []model.SupplierGroupMapping
+	db.Where("supplier_id = ?", id).Order("id ASC").Find(&mappings)
+	if mappings == nil {
+		mappings = []model.SupplierGroupMapping{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": mappings})
+}
+
+// CreateSupplierGroupMapping 创建分组映射
+// POST /api/admin/suppliers/:id/group-mappings
+func CreateSupplierGroupMapping(c *gin.Context) {
+	supplierID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+
+	var req struct {
+		RemoteGroupID   string  `json:"remote_group_id" binding:"required"`
+		RemoteGroupName string  `json:"remote_group_name"`
+		LocalGroupID    uint    `json:"local_group_id" binding:"required"`
+		ProfitRate      float64 `json:"profit_rate"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	if req.ProfitRate <= 0 {
+		req.ProfitRate = 25
+	}
+
+	mapping := model.SupplierGroupMapping{
+		SupplierID:      uint(supplierID),
+		RemoteGroupID:   req.RemoteGroupID,
+		RemoteGroupName: req.RemoteGroupName,
+		LocalGroupID:    req.LocalGroupID,
+		ProfitRate:      req.ProfitRate,
+	}
+
+	db := database.GetDB()
+	if err := db.Create(&mapping).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建失败", "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "创建成功", "data": gin.H{"id": mapping.ID}})
+}
+
+// UpdateSupplierGroupMapping 更新分组映射
+// PUT /api/admin/suppliers/:id/group-mappings/:mapping_id
+func UpdateSupplierGroupMapping(c *gin.Context) {
+	mappingID := c.Param("mapping_id")
+	db := database.GetDB()
+
+	var req struct {
+		RemoteGroupID   string  `json:"remote_group_id"`
+		RemoteGroupName string  `json:"remote_group_name"`
+		LocalGroupID    uint    `json:"local_group_id"`
+		ProfitRate      float64 `json:"profit_rate"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.RemoteGroupID != "" {
+		updates["remote_group_id"] = req.RemoteGroupID
+	}
+	if req.RemoteGroupName != "" {
+		updates["remote_group_name"] = req.RemoteGroupName
+	}
+	if req.LocalGroupID > 0 {
+		updates["local_group_id"] = req.LocalGroupID
+	}
+	if req.ProfitRate > 0 {
+		updates["profit_rate"] = req.ProfitRate
+	}
+
+	db.Model(&model.SupplierGroupMapping{}).Where("id = ?", mappingID).Updates(updates)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
+}
+
+// DeleteSupplierGroupMapping 删除分组映射
+// DELETE /api/admin/suppliers/:id/group-mappings/:mapping_id
+func DeleteSupplierGroupMapping(c *gin.Context) {
+	mappingID := c.Param("mapping_id")
+	db := database.GetDB()
+
+	db.Where("id = ?", mappingID).Delete(&model.SupplierGroupMapping{})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "删除成功", "data": nil})
 }

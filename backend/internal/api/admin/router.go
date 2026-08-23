@@ -352,6 +352,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/suppliers/:id/sync-stock", SyncSupplierStock)
 		authenticated.GET("/suppliers/:id/secrets/:key", RevealSupplierSecret)
 
+		// 供应商分组映射（MD 7.2.5）
+		authenticated.GET("/suppliers/:id/group-mappings", GetSupplierGroupMappings)
+		authenticated.POST("/suppliers/:id/group-mappings", CreateSupplierGroupMapping)
+		authenticated.PUT("/suppliers/:id/group-mappings/:mapping_id", UpdateSupplierGroupMapping)
+		authenticated.DELETE("/suppliers/:id/group-mappings/:mapping_id", DeleteSupplierGroupMapping)
+
 		// 插件管理
 		authenticated.GET("/plugins", GetPluginList)
 		authenticated.POST("/plugins/install", InstallPlugin)
