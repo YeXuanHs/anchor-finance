@@ -28,6 +28,9 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 		v1Auth.GET("/hosts/:id/renew", ZjmfCompatRenew)
 		v1Auth.GET("/host/header", ZjmfCompatHostDetail)
 	}
+
+	// zjmf兼容余额查询（/cart/credit，需JWT）
+	r.GET("/cart/credit", middleware.JWTAuth(authService), ZjmfCompatBalance)
 }
 
 // SetupRoutes 设置用户前台路由
