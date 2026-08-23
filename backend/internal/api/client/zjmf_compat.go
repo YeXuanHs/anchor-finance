@@ -1,6 +1,8 @@
 package client
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 
@@ -999,82 +1001,407 @@ func ZjmfCompatSetDownstream(c *gin.Context) {
 
 // ZjmfCompatDcimOn POST /dcim/on - 开机
 func ZjmfCompatDcimOn(c *gin.Context) {
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	db.Model(&svc).Update("status", "active")
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 }
 
 // ZjmfCompatDcimOff POST /dcim/off - 关机
 func ZjmfCompatDcimOff(c *gin.Context) {
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	db.Model(&svc).Update("status", "suspended")
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 }
 
 // ZjmfCompatDcimReboot POST /dcim/reboot - 重启
 func ZjmfCompatDcimReboot(c *gin.Context) {
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 }
 
 // ZjmfCompatDcimRescue POST /dcim/rescue - 救援模式
 func ZjmfCompatDcimRescue(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"rescue_mode": true}})
 }
 
 // ZjmfCompatDcimReinstall POST /dcim/reinstall - 重装系统
 func ZjmfCompatDcimReinstall(c *gin.Context) {
+	var req struct {
+		ID uint   `json:"id" form:"id"`
+		OS string `json:"os" form:"os"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	if req.OS != "" {
+		db.Model(&svc).Update("config", req.OS)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 }
 
 // ZjmfCompatDcimCrackPass POST /dcim/crack_pass - 重置密码
 func ZjmfCompatDcimCrackPass(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	// 生成随机密码
+	bytes := make([]byte, 16)
+	rand.Read(bytes)
+	password := hex.EncodeToString(bytes)[:16]
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"password": password}})
 }
 
 // ZjmfCompatDcimCheckReinstall POST /dcim/check_reinstall - 检查可重装
 func ZjmfCompatDcimCheckReinstall(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	allow := svc.Status == "active"
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"allow": allow}})
 }
 
 // ZjmfCompatDcimDetail GET /dcim/detail - 服务器详情
 func ZjmfCompatDcimDetail(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	id := c.Query("id")
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "请求成功",
+		"data": gin.H{
+			"id":     svc.ID,
+			"status": svc.Status,
+			"domain": svc.Domain,
+			"os":     svc.Config,
+			"ip":     "",
+		},
+	})
 }
 
 // ZjmfCompatDcimBuyReinstallTimes POST /dcim/buy_reinstall_times - 购买重装次数
 func ZjmfCompatDcimBuyReinstallTimes(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 1}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	invoice := model.Invoice{
+		UserID: svc.UserID,
+		Amount: 0,
+		Status: "unpaid",
+		Note:   fmt.Sprintf("购买重装次数 服务#%d", svc.ID),
+	}
+	db.Create(&invoice)
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": invoice.ID, "amount": fmt.Sprintf("%.2f", invoice.Amount)}})
 }
 
 // ZjmfCompatDcimBuyFlowPacket POST /dcim/buy_flow_packet - 购买流量包
 func ZjmfCompatDcimBuyFlowPacket(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 1}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	invoice := model.Invoice{
+		UserID: svc.UserID,
+		Amount: 0,
+		Status: "unpaid",
+		Note:   fmt.Sprintf("购买流量包 服务#%d", svc.ID),
+	}
+	db.Create(&invoice)
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": invoice.ID, "amount": fmt.Sprintf("%.2f", invoice.Amount)}})
 }
 
 // ZjmfCompatUpgradeCheckoutConfig POST /upgrade/checkout_config_upgrade - 配置升级结算
 func ZjmfCompatUpgradeCheckoutConfig(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 1, "amount": "0.00"}})
+	var req struct {
+		HostID uint `json:"host_id" form:"host_id"`
+	}
+	c.ShouldBind(&req)
+
+	db := database.GetDB()
+	var svc model.Service
+	if req.HostID > 0 {
+		db.First(&svc, req.HostID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 0, "amount": "0.00"}})
 }
 
 // ZjmfCompatUpgradeProductPost POST /upgrade/upgrade_product_post - 产品升级
 func ZjmfCompatUpgradeProductPost(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 1, "amount": "0.00"}})
+	var req struct {
+		HostID uint `json:"host_id" form:"host_id"`
+	}
+	c.ShouldBind(&req)
+
+	db := database.GetDB()
+	var svc model.Service
+	if req.HostID > 0 {
+		db.First(&svc, req.HostID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 0, "amount": "0.00"}})
 }
 
 // ZjmfCompatUpgradeCheckoutProduct POST /upgrade/checkout_upgrade_product - 产品升级结算
 func ZjmfCompatUpgradeCheckoutProduct(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 1, "amount": "0.00"}})
+	var req struct {
+		HostID uint `json:"host_id" form:"host_id"`
+	}
+	c.ShouldBind(&req)
+
+	db := database.GetDB()
+	var svc model.Service
+	if req.HostID > 0 {
+		db.First(&svc, req.HostID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 0, "amount": "0.00"}})
 }
 
 // ZjmfCompatSslCertFunc POST /provision/sslCertFunc - SSL证书管理
 func ZjmfCompatSslCertFunc(c *gin.Context) {
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	c.ShouldBind(&req)
+
+	if req.ID > 0 {
+		db := database.GetDB()
+		var svc model.Service
+		db.First(&svc, req.ID)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 }
 
 // ZjmfCompatRefreshPowerStatus POST /dcim/refresh_power_status - 刷新电源状态
 func ZjmfCompatRefreshPowerStatus(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	powerStatus := "off"
+	if svc.Status == "active" {
+		powerStatus = "on"
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"power_status": powerStatus}})
 }
 
 // ZjmfCompatRefreshAllPowerStatus POST /dcim/refresh_all_power_status - 批量刷新电源状态
 func ZjmfCompatRefreshAllPowerStatus(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	var req struct {
+		IDs []uint `json:"ids" form:"ids"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	db := database.GetDB()
+	var results []gin.H
+	for _, id := range req.IDs {
+		var svc model.Service
+		if err := db.First(&svc, id).Error; err != nil {
+			results = append(results, gin.H{"id": id, "status": "off"})
+			continue
+		}
+
+		powerStatus := "off"
+		if svc.Status == "active" {
+			powerStatus = "on"
+		}
+		results = append(results, gin.H{"id": id, "status": powerStatus})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"results": results}})
 }
 
 // ZjmfCompatDcimHideResult POST /dcim/hide_result - 隐藏操作结果
@@ -1545,7 +1872,35 @@ func ZjmfCompatUpgradeConfigPost(c *gin.Context) {
 
 // ZjmfCompatDcimBmc POST /dcim/bmc - BMC管理
 func ZjmfCompatDcimBmc(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "请求成功",
+		"data": gin.H{
+			"bmc_ip":   "",
+			"bmc_user": "",
+			"bmc_pass": "",
+		},
+	})
 }
 
 // ZjmfCompatDcimCancelTask POST /dcim/cancel_task - 取消任务
@@ -1555,31 +1910,137 @@ func ZjmfCompatDcimCancelTask(c *gin.Context) {
 
 // ZjmfCompatDcimIkvm POST /dcim/ikvm - iKVM
 func ZjmfCompatDcimIkvm(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": ""}})
 }
 
 // ZjmfCompatDcimKvm POST /dcim/kvm - KVM
 func ZjmfCompatDcimKvm(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": ""}})
 }
 
 // ZjmfCompatDcimNovnc POST /dcim/novnc - NoVNC
 func ZjmfCompatDcimNovnc(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": "", "port": 0}})
 }
 
 // ZjmfCompatDcimReinstallStatus GET /dcim/resintall_status - 重装状态（注意zjmf原始拼写）
 func ZjmfCompatDcimReinstallStatus(c *gin.Context) {
+	id := c.Query("id")
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"progress": 100, "status": "completed"}})
 }
 
 // ZjmfCompatDcimTraffic POST /dcim/traffic - 流量管理
 func ZjmfCompatDcimTraffic(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"bwlimit": 0, "bwusage": 0}})
 }
 
 // ZjmfCompatDcimTrafficUsage GET /dcim/traffic_usage - 流量使用统计
 func ZjmfCompatDcimTrafficUsage(c *gin.Context) {
+	id := c.Query("id")
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"incoming": 0, "outgoing": 0, "total": 0}})
 }
 
