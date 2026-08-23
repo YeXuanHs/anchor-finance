@@ -292,16 +292,17 @@ func ZjmfCompatCartAll(c *gin.Context) {
 
 			var productList []gin.H
 			for _, p := range products {
-				productList = append(productList, gin.H{
+			 productList = append(productList, gin.H{
 					"id":            p.ID,
 					"name":          p.Name,
 					"description":   p.Description,
+					"type":          p.Type,
 					"product_price": p.Price,
 					"billingcycle":  p.BillingCycle,
-					"type":          p.Type,
-					"qty":           1,
-					"stock_control": 0,
-					"setup_fee":     0,
+					"qty":           p.Qty,
+					"stock_control": func() int { if p.StockControl { return 1 }; return 0 }(),
+					"setup_fee":     p.SetupFee,
+					"pay_type":      p.PayType,
 					"ontrial":       gin.H{"ontrial": 0},
 				})
 			}
