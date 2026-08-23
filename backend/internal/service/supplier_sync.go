@@ -100,7 +100,7 @@ func NewDriver(supplier model.Supplier) UpstreamDriver {
 	case "v10":
 		return NewV10Driver(supplier.ID, supplier.APIURL, supplier.APIKey, supplier.APISecret)
 	case "anchor":
-		return NewAnchorDriver(supplier.ID, supplier.APIURL, supplier.APIKey)
+		return NewAnchorDriver(supplier.ID, supplier.APIURL, supplier.APIKey, supplier.APISecret)
 	case "manual":
 		return NewManualDriver(supplier.ID)
 	default:
