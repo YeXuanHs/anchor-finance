@@ -27,25 +27,36 @@ func ZjmfCompatLogin(c *gin.Context) {
 	}
 
 	db := database.GetDB()
+
+	// 先查users表
 	var user model.User
-	if err := db.Where("username = ? OR email = ?", req.Account, req.Account).First(&user).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 401, "msg": "用户名或密码错误"})
-		return
+	if err := db.Where("username = ? OR email = ?", req.Account, req.Account).First(&user).Error; err == nil {
+		if service.CheckPassword(req.Password, user.PasswordHash) {
+			token, err := service.GenerateTokenStatic(user.ID, user.Username, false)
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "生成token失败"})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success", "data": gin.H{"jwt": token}})
+			return
+		}
 	}
 
-	if !service.CheckPassword(req.Password, user.PasswordHash) {
-		c.JSON(http.StatusOK, gin.H{"code": 401, "msg": "用户名或密码错误"})
-		return
+	// 再查admins表
+	var admin model.Admin
+	if err := db.Where("username = ?", req.Account).First(&admin).Error; err == nil {
+		if service.CheckPassword(req.Password, admin.PasswordHash) {
+			token, err := service.GenerateTokenStatic(admin.ID, admin.Username, true)
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "生成token失败"})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success", "data": gin.H{"jwt": token}})
+			return
+		}
 	}
 
-	// 生成JWT（用同一个authService）
-	token, err := service.GenerateTokenStatic(user.ID, user.Username, false)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "生成token失败"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success", "data": gin.H{"jwt": token}})
+	c.JSON(http.StatusOK, gin.H{"code": 401, "msg": "用户名或密码错误"})
 }
 
 // ZjmfCompatProducts zjmf兼容商品列表（/v1/products）
