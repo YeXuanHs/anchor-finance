@@ -440,8 +440,6 @@ func (s *SupplierSyncService) SyncAllPrices(supplierID uint) error {
 		return err
 	}
 
-	db := database.GetDB()
-
 	// 检查是否启用价格变动通知
 	priceNotify := getSettingInt("price_change_notify", 1) == 1
 	defaultProfitRate := float64(getSettingInt("default_profit_rate", 25))

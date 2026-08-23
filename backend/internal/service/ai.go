@@ -412,7 +412,7 @@ func ExecuteAITool(funcName string, argsJSON string) string {
 				return `{"error":"余额不足"}`
 			}
 		}
-		return fmt.Sprintf(`{"success":true,"message":"余额调整%.2f元"}`, amount)
+		return fmt.Sprintf(`{"success":true,"message":"余额调整%.2f元，原因: %s"}`, amount, reason)
 
 	case "power_service":
 		serviceID := int(args["service_id"].(float64))
