@@ -14,25 +14,38 @@ import (
 // ============================================================
 
 // ZjmfCompatLogin zjmf兼容登录（/zjmf_api_login 和 /v1/login_api）
-// zjmf传username+password（API密钥），我们也兼容account+password
+// zjmf用http_build_query发送POST数据（form-encoded，非JSON），参数名username+password
+// 同时兼容JSON格式和account参数名
 func ZjmfCompatLogin(c *gin.Context) {
-	var req struct {
-		Account  string `json:"account"`
-		Username string `json:"username"`
-		Password string `json:"password"` // API密钥（不是登录密码）
+	// 兼容form-encoded和JSON两种格式
+	account := c.PostForm("username")
+	if account == "" {
+		account = c.PostForm("account")
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	password := c.PostForm("password")
+
+	// 如果form-encoded没拿到，尝试JSON
+	if account == "" {
+		var req struct {
+			Account  string `json:"account"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+		}
+		if err := c.ShouldBindJSON(&req); err == nil {
+			account = req.Username
+			if account == "" {
+				account = req.Account
+			}
+			password = req.Password
+		}
+	}
+
+	if account == "" || password == "" {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
 		return
 	}
 
-	// 兼容两种参数名
-	account := req.Username
-	if account == "" {
-		account = req.Account
-	}
-
-	token, err := LoginByAPIKey(account, req.Password)
+	token, err := LoginByAPIKey(account, password)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"status": 401, "msg": err.Error()})
 		return
