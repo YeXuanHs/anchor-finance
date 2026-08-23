@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/YeXuanHs/anchor-finance/config"
@@ -229,12 +230,10 @@ func (s *AuthService) logSecurityEvent(adminID uint, username, ip, eventType str
 
 // GenerateTokenStatic 静态版本GenerateToken（用于zjmf兼容登录等不需要AuthService实例的场景）
 func GenerateTokenStatic(userID uint, username string, isAdmin bool) (string, error) {
-	secret := "anchor-finance-secret-key-2024" // 从环境变量读取
-	// 尝试从settings表读取
-	db := database.GetDB()
-	var setting model.Setting
-	if err := db.Where("`key` = ?", "jwt_secret").First(&setting).Error; err == nil && setting.Value != "" {
-		secret = setting.Value
+	secret := "anchor-finance-secret-key-2024"
+	// 尝试从环境变量读取
+	if envSecret := os.Getenv("JWT_SECRET"); envSecret != "" {
+		secret = envSecret
 	}
 
 	claims := Claims{
@@ -250,10 +249,4 @@ func GenerateTokenStatic(userID uint, username string, isAdmin bool) (string, er
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
-}
-
-// CheckPassword 验证密码（公开函数，供zjmf兼容登录使用）
-func CheckPassword(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
 }
