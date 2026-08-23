@@ -271,27 +271,74 @@ func ZjmfCompatBalance(c *gin.Context) {
 	})
 }
 
-// ZjmfCompatCartAll zjmf兼容购物车/商品列表（/cart/all）
-// zjmf.php line 38: $path = "cart/all"
+// ZjmfCompatCartAll zjmf兼容商品目录（/cart/all）
+// zjmf调此端点获取商品目录，期望嵌套结构：first_group→group→products
 func ZjmfCompatCartAll(c *gin.Context) {
 	db := database.GetDB()
-	var products []model.Product
-	db.Where("status = ?", "active").Order("id ASC").Find(&products)
 
-	var list []gin.H
-	for _, p := range products {
-		list = append(list, gin.H{
-			"id":          p.ID,
-			"name":        p.Name,
-			"description": p.Description,
-			"price":       p.Price,
-			"gid":         p.GroupID,
-			"stock":       999,
-			"status":      "active",
+	// 获取一级分组
+	var firstGroups []model.ProductGroup
+	db.Where("parent_id = 0 AND status = ?", "active").Order("sort_order ASC").Find(&firstGroups)
+	if firstGroups == nil {
+		firstGroups = []model.ProductGroup{}
+	}
+
+	var result []gin.H
+	for _, fg := range firstGroups {
+		// 获取二级分组
+		var groups []model.ProductGroup
+		db.Where("parent_id = ? AND status = ?", fg.ID, "active").Order("sort_order ASC").Find(&groups)
+		if groups == nil {
+			groups = []model.ProductGroup{}
+		}
+
+		var groupList []gin.H
+		for _, g := range groups {
+			// 获取该分组下的商品
+			var products []model.Product
+			db.Where("group_id = ? AND status = ?", g.ID, "active").Find(&products)
+			if products == nil {
+				products = []model.Product{}
+			}
+
+			var productList []gin.H
+			for _, p := range products {
+				productList = append(productList, gin.H{
+					"id":   p.ID,
+					"name": p.Name,
+					"price": p.Price,
+					"pay_type": "recurring",
+					"billingcycle": p.BillingCycle,
+				})
+			}
+
+			groupList = append(groupList, gin.H{
+				"id":       g.ID,
+				"name":     g.Name,
+				"products": productList,
+			})
+		}
+
+		result = append(result, gin.H{
+			"id":    fg.ID,
+			"name":  fg.Name,
+			"group": groupList,
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success", "data": list})
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":    "success",
+		"data": gin.H{
+			"first_group": result,
+			"currency": gin.H{
+				"id":     1,
+				"code":   "CNY",
+				"prefix": "¥",
+				"suffix": "元",
+			},
+		},
+	})
 }
 
 // ZjmfCompatProductInfo zjmf兼容商品详情（/api/product/proinfo）
