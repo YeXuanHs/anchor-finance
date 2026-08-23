@@ -177,6 +177,24 @@ func main() {
 
 	r := gin.Default()
 
+	// 规范化双斜杠（zjmf拼接URL时会产生//cart/all等路径）
+	r.Use(func(c *gin.Context) {
+		if len(c.Request.URL.Path) > 1 {
+			// 把连续多个斜杠替换为单个
+			cleaned := "/"
+			for i := 1; i < len(c.Request.URL.Path); i++ {
+				if c.Request.URL.Path[i] == '/' && c.Request.URL.Path[i-1] == '/' {
+					continue
+				}
+				cleaned += string(c.Request.URL.Path[i])
+			}
+			if cleaned != c.Request.URL.Path {
+				c.Request.URL.Path = cleaned
+			}
+		}
+		c.Next()
+	})
+
 	// CORS中间件（使用独立的middleware包）
 	r.Use(middleware.CORS())
 
