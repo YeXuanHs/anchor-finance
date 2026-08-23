@@ -11,21 +11,21 @@ import (
 	"gorm.io/gorm"
 )
 
-// UpstreamDriver 上游驱动接口（MD 7.3 参考创欧UpstreamDriver）
+// UpstreamDriver 上游驱动接口（MD 7.3 参考创欧UpstreamDriver�?
 type UpstreamDriver interface {
 	// Key 驱动唯一标识
 	Key() string
 	// Name 驱动显示名称
 	Name() string
-	// Capabilities 支持的能力
+	// Capabilities 支持的能�?
 	Capabilities() []string
 	// FetchProducts 拉取上游商品列表
 	FetchProducts() ([]RemoteProduct, error)
 	// FetchProductGroups 拉取上游商品分组
 	FetchProductGroups() ([]RemoteGroup, error)
-	// GetProductStructure 获取完整商品结构（分组+商品树）
+	// GetProductStructure 获取完整商品结构（分�?商品树）
 	GetProductStructure() (*ProductStructure, error)
-	// SyncStatus 同步服务状态
+	// SyncStatus 同步服务状�?
 	SyncStatus(serviceID string) (*StatusResult, error)
 	// CreateService 创建服务（开通）
 	CreateService(params CreateServiceParams) (*ServiceResult, error)
@@ -39,7 +39,7 @@ type UpstreamDriver interface {
 	RenewService(serviceID string, cycle string) error
 }
 
-// ProductStructure 商品结构（MD 7.3）
+// ProductStructure 商品结构（MD 7.3�?
 type ProductStructure struct {
 	Groups []RemoteGroup `json:"groups"`
 }
@@ -57,7 +57,7 @@ type RemoteProduct struct {
 	Status      string  `json:"status"`
 }
 
-// RemoteGroup 上游商品分组（MD 7.3）
+// RemoteGroup 上游商品分组（MD 7.3�?
 type RemoteGroup struct {
 	ID       string        `json:"id"`
 	Name     string        `json:"name"`
@@ -66,7 +66,7 @@ type RemoteGroup struct {
 	Products []RemoteProduct `json:"products,omitempty"`
 }
 
-// StatusResult 状态同步结果
+// StatusResult 状态同步结�?
 type StatusResult struct {
 	Status    string `json:"status"`
 	IPAddress string `json:"ip_address"`
@@ -90,7 +90,7 @@ type ServiceResult struct {
 	Hostname  string `json:"hostname"`
 }
 
-// PluginDriver 基于PHP插件引擎的上游驱动（通用实现）
+// PluginDriver 基于PHP插件引擎的上游驱动（通用实现�?
 type PluginDriver struct {
 	supplierID uint
 	slug       string
@@ -101,7 +101,7 @@ type PluginDriver struct {
 	apiType    string // manual, zjmf, v10, anchor
 }
 
-// NewDriver 根据供应商类型创建对应的驱动（Go原生实现，不走PHP）
+// NewDriver 根据供应商类型创建对应的驱动（Go原生实现，不走PHP�?
 func NewDriver(supplier model.Supplier) UpstreamDriver {
 	switch supplier.Type {
 	case "zjmf":
@@ -118,7 +118,7 @@ func NewDriver(supplier model.Supplier) UpstreamDriver {
 	}
 }
 
-// NewPluginDriver 创建插件驱动（兼容旧代码，走PHP插件引擎）
+// NewPluginDriver 创建插件驱动（兼容旧代码，走PHP插件引擎�?
 func NewPluginDriver(supplier model.Supplier) *PluginDriver {
 	return &PluginDriver{
 		supplierID: supplier.ID,
@@ -291,13 +291,13 @@ func (d *PluginDriver) RenewService(serviceID string, cycle string) error {
 	return err
 }
 
-// SupplierSyncService 供应商同步服务
+// SupplierSyncService 供应商同步服�?
 type SupplierSyncService struct {
 	drivers map[uint]UpstreamDriver
 	mu      sync.RWMutex
 }
 
-// NewSupplierSyncService 创建供应商同步服务
+// NewSupplierSyncService 创建供应商同步服�?
 func NewSupplierSyncService() *SupplierSyncService {
 	return &SupplierSyncService{
 		drivers: make(map[uint]UpstreamDriver),
@@ -318,15 +318,15 @@ func (s *SupplierSyncService) GetDriver(supplierID uint) UpstreamDriver {
 	return s.drivers[supplierID]
 }
 
-// SyncAllProducts 同步所有供应商商品（多线程，自动创建分组+自动上架）
+// SyncAllProducts 同步所有供应商商品（多线程，自动创建分�?自动上架�?
 func (s *SupplierSyncService) SyncAllProducts(supplierID uint) error {
 	driver := s.GetDriver(supplierID)
 	if driver == nil {
 		return fmt.Errorf("供应商驱动未注册: %d", supplierID)
 	}
 
-	// MD 7.2.2: 拉取上游分组并自动创建本地分组（需开启auto_create_groups）
-	if getSettingInt("auto_create_groups", 0) == 1 {
+	// MD 7.2.2: 拉取上游分组并自动创建本地分组（需开启auto_create_groups�?
+	if GetSettingInt("auto_create_groups", 0) == 1 {
 		groups, err := driver.FetchProductGroups()
 		if err == nil && len(groups) > 0 {
 			s.autoCreateGroups(groups)
@@ -340,14 +340,14 @@ func (s *SupplierSyncService) SyncAllProducts(supplierID uint) error {
 
 	db := database.GetDB()
 
-	// 检查是否启用自动上架
+	// 检查是否启用自动上�?
 	autoListing := false
 	var listingSetting model.Setting
 	if err := db.Where("`key` = ?", "auto_listing_enabled").First(&listingSetting).Error; err == nil && listingSetting.Value == "1" {
 		autoListing = true
 	}
 
-	// MD 7.2.3: 多线程并发同步（每个商品一个goroutine）
+	// MD 7.2.3: 多线程并发同步（每个商品一个goroutine�?
 	var wg sync.WaitGroup
 	for _, p := range products {
 		wg.Add(1)
@@ -360,7 +360,7 @@ func (s *SupplierSyncService) SyncAllProducts(supplierID uint) error {
 	return nil
 }
 
-// syncSingleProduct 同步单个商品（goroutine安全）
+// syncSingleProduct 同步单个商品（goroutine安全�?
 func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct, autoListing bool) {
 	db := database.GetDB()
 
@@ -368,8 +368,8 @@ func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct
 	var existing model.SupplierProduct
 	result := db.Where("supplier_id = ? AND remote_product_id = ?", supplierID, p.ID).First(&existing)
 	if result.Error != nil {
-		// 新商品，创建供应商商品记录
-		profitRate := float64(getSettingInt("default_profit_rate", 25))
+		// 新商品，创建供应商商品记�?
+		profitRate := float64(GetSettingInt("default_profit_rate", 25))
 		localPrice := p.Price * (1 + profitRate/100)
 
 		sp := model.SupplierProduct{
@@ -393,7 +393,7 @@ func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct
 				Amount: localPrice,
 				Status: "active",
 			}
-			// 查找分组映射（上游分组→本地分组）
+			// 查找分组映射（上游分组→本地分组�?
 			if p.GroupID != "" {
 				var mapping model.SupplierGroupMapping
 				if err := db.Where("supplier_id = ? AND remote_group_id = ?", supplierID, p.GroupID).First(&mapping).Error; err == nil {
@@ -403,7 +403,7 @@ func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct
 						product.Amount = product.Price
 					}
 				} else {
-					// 无映射时，按上游分组名自动创建本地二级分组（MD 7.2.5）
+					// 无映射时，按上游分组名自动创建本地二级分组（MD 7.2.5�?
 					if p.GroupName != "" {
 						var localGroup model.ProductGroup
 						if err := db.Where("name = ? AND parent_id = 0", p.GroupName).First(&localGroup).Error; err != nil {
@@ -426,10 +426,10 @@ func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct
 			"name":         p.Name,
 		})
 
-		// MD 7.2.4: 库存不足通知（通知所有admin）
-		stockThreshold := getSettingInt("stock_notify_threshold", 5)
+		// MD 7.2.4: 库存不足通知（通知所有admin�?
+		stockThreshold := GetSettingInt("stock_notify_threshold", 5)
 		if oldStock > stockThreshold && p.Stock <= stockThreshold && p.Stock >= 0 {
-			notifyAllAdmins(db, "供应商库存不足", fmt.Sprintf("商品 %s 库存不足: %d（阈值%d）", existing.Name, p.Stock, stockThreshold), "stock_low")
+			notifyAllAdmins(db, "供应商库存不�?, fmt.Sprintf("商品 %s 库存不足: %d（阈�?d�?, existing.Name, p.Stock, stockThreshold), "stock_low")
 		}
 	}
 }
@@ -447,10 +447,10 @@ func (s *SupplierSyncService) SyncAllPrices(supplierID uint) error {
 	}
 
 	// 检查是否启用价格变动通知
-	priceNotify := getSettingInt("price_change_notify", 1) == 1
-	defaultProfitRate := float64(getSettingInt("default_profit_rate", 25))
+	priceNotify := GetSettingInt("price_change_notify", 1) == 1
+	defaultProfitRate := float64(GetSettingInt("default_profit_rate", 25))
 
-	// MD 7.2.3: 多线程并发同步价格
+	// MD 7.2.3: 多线程并发同步价�?
 	var wg sync.WaitGroup
 	for _, p := range products {
 		wg.Add(1)
@@ -463,7 +463,7 @@ func (s *SupplierSyncService) SyncAllPrices(supplierID uint) error {
 	return nil
 }
 
-// syncSinglePrice 同步单个商品价格（goroutine安全）
+// syncSinglePrice 同步单个商品价格（goroutine安全�?
 func (s *SupplierSyncService) syncSinglePrice(supplierID uint, p RemoteProduct, priceNotify bool, defaultProfitRate float64) {
 	db := database.GetDB()
 
@@ -486,12 +486,13 @@ func (s *SupplierSyncService) syncSinglePrice(supplierID uint, p RemoteProduct, 
 	})
 
 	if priceNotify && oldPrice != p.Price && oldPrice > 0 {
-		notifyAllAdmins(db, "供应商价格变动", fmt.Sprintf("商品 %s 价格变动: %.2f → %.2f", existing.Name, oldPrice, p.Price), "price_change")
+		notifyAllAdmins(db, "供应商价格变�?, fmt.Sprintf("商品 %s 价格变动: %.2f �?%.2f", existing.Name, oldPrice, p.Price), "price_change")
 	}
 }
 
-// getSettingInt 从settings表读取整数配置
-func getSettingInt(key string, defaultVal int) int {
+// getSettingInt 从settings表读取整数配�?
+// GetSettingInt 从settings表读取整数配置（公共函数�?
+func GetSettingInt(key string, defaultVal int) int {
 	db := database.GetDB()
 	var setting model.Setting
 	if err := db.Where("`key` = ?", key).First(&setting).Error; err == nil {
@@ -503,16 +504,16 @@ func getSettingInt(key string, defaultVal int) int {
 	return defaultVal
 }
 
-// StartPriceSyncCron 启动价格同步定时任务（MD 7.2.4：频率后台可配置，默认每小时）
+// StartPriceSyncCron 启动价格同步定时任务（MD 7.2.4：频率后台可配置，默认每小时�?
 func (s *SupplierSyncService) StartPriceSyncCron() {
 	go func() {
 		for {
 			// 从settings读取同步频率（分钟）
-			intervalMin := getSettingInt("price_sync_interval", 60)
+			intervalMin := GetSettingInt("price_sync_interval", 60)
 			time.Sleep(time.Duration(intervalMin) * time.Minute)
 
-			// 检查是否启用
-			if getSettingInt("price_sync_enabled", 1) == 0 {
+			// 检查是否启�?
+			if GetSettingInt("price_sync_enabled", 1) == 0 {
 				continue
 			}
 
@@ -528,16 +529,16 @@ func (s *SupplierSyncService) StartPriceSyncCron() {
 	}()
 }
 
-// StartStockSyncCron 启动库存同步定时任务（MD 7.2.4：频率后台可配置，默认每5分钟）
+// StartStockSyncCron 启动库存同步定时任务（MD 7.2.4：频率后台可配置，默认每5分钟�?
 func (s *SupplierSyncService) StartStockSyncCron() {
 	go func() {
 		for {
 			// 从settings读取同步频率（分钟）
-			intervalMin := getSettingInt("stock_sync_interval", 5)
+			intervalMin := GetSettingInt("stock_sync_interval", 5)
 			time.Sleep(time.Duration(intervalMin) * time.Minute)
 
-			// 检查是否启用
-			if getSettingInt("stock_sync_enabled", 1) == 0 {
+			// 检查是否启�?
+			if GetSettingInt("stock_sync_enabled", 1) == 0 {
 				continue
 			}
 
@@ -559,7 +560,7 @@ func (s *SupplierSyncService) StartFullSyncCron() {
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
 		for range ticker.C {
-			if getSettingInt("full_sync_enabled", 1) == 0 {
+			if GetSettingInt("full_sync_enabled", 1) == 0 {
 				continue
 			}
 			db := database.GetDB()
@@ -576,7 +577,7 @@ func (s *SupplierSyncService) StartFullSyncCron() {
 	}()
 }
 
-// autoCreateGroups 自动创建商品分组（MD 7.2.2）
+// autoCreateGroups 自动创建商品分组（MD 7.2.2�?
 func (s *SupplierSyncService) autoCreateGroups(groups []RemoteGroup) {
 	db := database.GetDB()
 	for _, g := range groups {
@@ -595,7 +596,7 @@ func (s *SupplierSyncService) autoCreateGroups(groups []RemoteGroup) {
 	}
 }
 
-// SyncProductStatus 同步商品状态（MD 7.2.4：上游隐藏/删除时本地自动同步）
+// SyncProductStatus 同步商品状态（MD 7.2.4：上游隐�?删除时本地自动同步）
 func (s *SupplierSyncService) SyncProductStatus(supplierID uint) error {
 	driver := s.GetDriver(supplierID)
 	if driver == nil {

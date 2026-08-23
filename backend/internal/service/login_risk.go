@@ -2,10 +2,8 @@ package service
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
-	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"gorm.io/gorm"
 )
 
@@ -32,22 +30,10 @@ func NewLoginRiskControl(db *gorm.DB) *LoginRiskControl {
 	return &LoginRiskControl{db: db}
 }
 
-// getSetting 从settings表读取整数配置
-func (lrc *LoginRiskControl) getSetting(key string, defaultVal int) int {
-	var setting model.Setting
-	if err := lrc.db.Where("`key` = ?", key).First(&setting).Error; err == nil {
-		if v, err := strconv.Atoi(setting.Value); err == nil && v > 0 {
-			return v
-		}
-	}
-	return defaultVal
-}
-
 // IsLocked 检查是否被锁定
 func (lrc *LoginRiskControl) IsLocked(username, ip string) (bool, string) {
 	now := time.Now()
 
-	// 检查账号+IP锁定
 	var accountIPAttempt LoginAttempt
 	if err := lrc.db.Where("username = ? AND ip = ?", username, ip).First(&accountIPAttempt).Error; err == nil {
 		if accountIPAttempt.LockedUntil != nil && now.Before(*accountIPAttempt.LockedUntil) {
@@ -56,7 +42,6 @@ func (lrc *LoginRiskControl) IsLocked(username, ip string) (bool, string) {
 		}
 	}
 
-	// 检查IP锁定
 	var ipAttempt LoginAttempt
 	if err := lrc.db.Where("ip = ? AND locked_until IS NOT NULL AND locked_until > ?", ip, now).First(&ipAttempt).Error; err == nil {
 		remaining := time.Until(*ipAttempt.LockedUntil)
@@ -71,15 +56,14 @@ func (lrc *LoginRiskControl) RecordFailure(username, ip string) {
 	now := time.Now()
 
 	// 从settings读取配置（MD 9.2：后台可配置）
-	accountIPMaxAttempts := lrc.getSetting("login_fail_max_attempts", 5)
-	accountIPDecayMin := lrc.getSetting("login_lock_minutes", 15)
-	ipMaxAttempts := lrc.getSetting("ip_max_attempts", 15)
-	ipDecayMin := lrc.getSetting("ip_lock_minutes", 30)
+	accountIPMaxAttempts := GetSettingInt("login_fail_max_attempts", 5)
+	accountIPDecayMin := GetSettingInt("login_lock_minutes", 15)
+	ipMaxAttempts := GetSettingInt("ip_max_attempts", 15)
+	ipDecayMin := GetSettingInt("ip_lock_minutes", 30)
 
 	accountIPDecay := time.Duration(accountIPDecayMin) * time.Minute
 	ipDecay := time.Duration(ipDecayMin) * time.Minute
 
-	// 更新账号+IP记录
 	var accountIPAttempt LoginAttempt
 	result := lrc.db.Where("username = ? AND ip = ?", username, ip).First(&accountIPAttempt)
 	if result.Error != nil {
@@ -100,7 +84,6 @@ func (lrc *LoginRiskControl) RecordFailure(username, ip string) {
 		lrc.db.Save(&accountIPAttempt)
 	}
 
-	// 统计该IP对不同账号的失败总数（防跨账号暴力破解）
 	var ipFailures int64
 	lrc.db.Model(&LoginAttempt{}).Where("ip = ? AND last_fail > ?", ip, now.Add(-ipDecay)).Count(&ipFailures)
 	if ipFailures >= int64(ipMaxAttempts) {
