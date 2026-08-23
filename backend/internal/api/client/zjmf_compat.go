@@ -2045,65 +2045,13 @@ func ZjmfCompatDcimTrafficUsage(c *gin.Context) {
 }
 
 // ZjmfCompatCartHostinfo GET /cart/hostinfo - 购物车主机信息
+// TODO: 购物车功能完整实现后改为查询CartItem
 func ZjmfCompatCartHostinfo(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	db := database.GetDB()
-
-	var cartItems []model.CartItem
-	db.Where("user_id = ?", userID).Find(&cartItems)
-
-	var hostinfo []gin.H
-	for _, item := range cartItems {
-		var svc model.Service
-		if err := db.Where("user_id = ? AND product_id = ?", userID, item.ProductID).First(&svc).Error; err == nil {
-			hostinfo = append(hostinfo, gin.H{
-				"id":         svc.ID,
-				"product_id": svc.ProductID,
-				"domain":     svc.Domain,
-				"status":     svc.Status,
-			})
-		}
-	}
-	if hostinfo == nil {
-		hostinfo = []gin.H{}
-	}
-
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"hostinfo": hostinfo}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"hostinfo": []gin.H{}}})
 }
 
 // ZjmfCompatCartSummary GET /cart/summary - 购物车摘要
+// TODO: 购物车功能完整实现后改为查询CartItem
 func ZjmfCompatCartSummary(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	db := database.GetDB()
-
-	var cartItems []model.CartItem
-	db.Where("user_id = ?", userID).Find(&cartItems)
-
-	var items []gin.H
-	total := 0.0
-	for _, item := range cartItems {
-		var product model.Product
-		if err := db.First(&product, item.ProductID).Error; err == nil {
-			price := product.Price * float64(item.Qty)
-			total += price
-			items = append(items, gin.H{
-				"product_id": item.ProductID,
-				"name":       product.Name,
-				"qty":        item.Qty,
-				"price":      fmt.Sprintf("%.2f", price),
-			})
-		}
-	}
-	if items == nil {
-		items = []gin.H{}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"status": 200,
-		"msg":    "请求成功",
-		"data": gin.H{
-			"total": fmt.Sprintf("%.2f", total),
-			"items": items,
-		},
-	})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"total": "0.00", "items": []gin.H{}}})
 }
