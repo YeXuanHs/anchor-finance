@@ -17,6 +17,7 @@ type Product struct {
 	Amount        float64        `gorm:"type:decimal(10,2)" json:"amount"` // 价格
 	Price         float64        `gorm:"type:decimal(10,2)" json:"price"`  // 兼容字段
 	BillingCycle  string         `gorm:"size:20" json:"billing_cycle"`
+	ConfigOptions string         `gorm:"type:text" json:"config_options"` // JSON配置选项（创欧方式）
 	Status        string         `gorm:"size:20;default:active" json:"status"` // active, hidden, deleted
 	SortOrder     int            `gorm:"default:0" json:"sort_order"`
 	CreatedAt     time.Time      `json:"created_at"`

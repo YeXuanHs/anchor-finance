@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -629,6 +630,26 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 		"triennially": "-1.00",
 	}}
 
+	// 解析产品的ConfigOptions构建config_groups
+	var configGroups []gin.H
+	var configLinks []int
+	if product.ConfigOptions != "" {
+		var options []map[string]interface{}
+		if jsonErr := json.Unmarshal([]byte(product.ConfigOptions), &options); jsonErr == nil && len(options) > 0 {
+			configLinks = append(configLinks, int(product.ID))
+			group := gin.H{
+				"id":       product.ID,
+				"name":     product.Name + "配置项组",
+				"desc":     product.Name,
+				"options":  options,
+			}
+			configGroups = append(configGroups, group)
+		}
+	}
+	if configGroups == nil {
+		configGroups = []gin.H{}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status":  200,
 		"msg":     "请求成功",
@@ -638,8 +659,8 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 			"customfields":     []gin.H{},
 			"product_pricings": productPricings,
 			"advanced":         "",
-			"config_groups":    []gin.H{},
-			"config_links":     0,
+			"config_groups":    configGroups,
+			"config_links":     configLinks,
 		},
 		"is_aff": "1",
 	})
