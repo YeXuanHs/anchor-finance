@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"fmt"
@@ -1316,39 +1316,24 @@ func SyncSupplierProducts(c *gin.Context) {
 		return
 	}
 
-	results, err := pluginengine.TriggerHook("supplier_fetch_products", map[string]interface{}{
-		"supplier_id": supplier.ID, "api_url": supplier.APIURL, "api_key": supplier.APIKey,
-	})
+	// 根据供应商类型选择驱动（Go原生，不走PHP）
+	driver := service.NewDriver(supplier)
+	products, err := driver.FetchProducts()
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "拉取商品失败", "data": nil})
 		return
 	}
 
 	synced := 0
-	if len(results) > 0 && results[0].Data != nil {
-		if data, ok := results[0].Data.(map[string]interface{}); ok {
-			if items, ok := data["products"].([]interface{}); ok {
-				for _, item := range items {
-					if m, ok := item.(map[string]interface{}); ok {
-						remoteID := fmt.Sprintf("%v", m["id"])
-						name := fmt.Sprintf("%v", m["name"])
-						var price float64
-						if p, ok := m["price"].(float64); ok { price = p }
-						var stock int
-						if s, ok := m["stock"].(float64); ok { stock = int(s) }
-
-						var existing model.SupplierProduct
-						result := db.Where("supplier_id = ? AND remote_product_id = ?", supplier.ID, remoteID).First(&existing)
-						if result.Error != nil {
-							db.Create(&model.SupplierProduct{SupplierID: supplier.ID, RemoteProductID: remoteID, Name: name, RemotePrice: price, Stock: stock, Status: "active"})
-						} else {
-							db.Model(&existing).Updates(map[string]interface{}{"name": name, "remote_price": price, "stock": stock})
-						}
-						synced++
-					}
-				}
-			}
+	for _, p := range products {
+		var existing model.SupplierProduct
+		result := db.Where("supplier_id = ? AND remote_product_id = ?", supplier.ID, p.ID).First(&existing)
+		if result.Error != nil {
+			db.Create(&model.SupplierProduct{SupplierID: supplier.ID, RemoteProductID: p.ID, Name: p.Name, RemotePrice: p.Price, Stock: p.Stock, Status: "active"})
+		} else {
+			db.Model(&existing).Updates(map[string]interface{}{"name": p.Name, "remote_price": p.Price, "stock": p.Stock})
 		}
+		synced++
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "同步完成", "data": gin.H{"synced": synced}})
 }
@@ -1365,35 +1350,22 @@ func SyncSupplierPrices(c *gin.Context) {
 		return
 	}
 
-	results, err := pluginengine.TriggerHook("supplier_fetch_products", map[string]interface{}{
-		"supplier_id": supplier.ID, "api_url": supplier.APIURL, "api_key": supplier.APIKey,
-	})
+	driver := service.NewDriver(supplier)
+	products, err := driver.FetchProducts()
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "拉取价格失败", "data": nil})
 		return
 	}
 
 	updated := 0
-	if len(results) > 0 && results[0].Data != nil {
-		if data, ok := results[0].Data.(map[string]interface{}); ok {
-			if items, ok := data["products"].([]interface{}); ok {
-				for _, item := range items {
-					if m, ok := item.(map[string]interface{}); ok {
-						remoteID := fmt.Sprintf("%v", m["id"])
-						var price float64
-						if p, ok := m["price"].(float64); ok { price = p }
-
-						var existing model.SupplierProduct
-						if err := db.Where("supplier_id = ? AND remote_product_id = ?", supplier.ID, remoteID).First(&existing).Error; err == nil {
-							profitRate := existing.ProfitRate
-							if profitRate <= 0 { profitRate = 25 }
-							localPrice := price * (1 + profitRate/100)
-							db.Model(&existing).Updates(map[string]interface{}{"remote_price": price, "local_price": localPrice})
-							updated++
-						}
-					}
-				}
-			}
+	for _, p := range products {
+		var existing model.SupplierProduct
+		if err := db.Where("supplier_id = ? AND remote_product_id = ?", supplier.ID, p.ID).First(&existing).Error; err == nil {
+			profitRate := existing.ProfitRate
+			if profitRate <= 0 { profitRate = 25 }
+			localPrice := p.Price * (1 + profitRate/100)
+			db.Model(&existing).Updates(map[string]interface{}{"remote_price": p.Price, "local_price": localPrice})
+			updated++
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "价格同步完成", "data": gin.H{"updated": updated}})
@@ -1411,32 +1383,19 @@ func SyncSupplierStock(c *gin.Context) {
 		return
 	}
 
-	results, err := pluginengine.TriggerHook("supplier_fetch_products", map[string]interface{}{
-		"supplier_id": supplier.ID, "api_url": supplier.APIURL, "api_key": supplier.APIKey,
-	})
+	driver := service.NewDriver(supplier)
+	products, err := driver.FetchProducts()
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "拉取库存失败", "data": nil})
 		return
 	}
 
 	updated := 0
-	if len(results) > 0 && results[0].Data != nil {
-		if data, ok := results[0].Data.(map[string]interface{}); ok {
-			if items, ok := data["products"].([]interface{}); ok {
-				for _, item := range items {
-					if m, ok := item.(map[string]interface{}); ok {
-						remoteID := fmt.Sprintf("%v", m["id"])
-						var stock int
-						if s, ok := m["stock"].(float64); ok { stock = int(s) }
-
-						var existing model.SupplierProduct
-						if err := db.Where("supplier_id = ? AND remote_product_id = ?", supplier.ID, remoteID).First(&existing).Error; err == nil {
-							db.Model(&existing).Update("stock", stock)
-							updated++
-						}
-					}
-				}
-			}
+	for _, p := range products {
+		var existing model.SupplierProduct
+		if err := db.Where("supplier_id = ? AND remote_product_id = ?", supplier.ID, p.ID).First(&existing).Error; err == nil {
+			db.Model(&existing).Update("stock", p.Stock)
+			updated++
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "库存同步完成", "data": gin.H{"updated": updated}})

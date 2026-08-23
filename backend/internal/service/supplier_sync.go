@@ -88,9 +88,28 @@ type PluginDriver struct {
 	domain     string
 	apiURL     string
 	apiKey     string
+	apiSecret  string
+	apiType    string // manual, zjmf, v10, anchor
 }
 
-// NewPluginDriver 创建插件驱动
+// NewDriver 根据供应商类型创建对应的驱动（Go原生实现，不走PHP）
+func NewDriver(supplier model.Supplier) UpstreamDriver {
+	switch supplier.Type {
+	case "zjmf":
+		return NewZjmfDriver(supplier.ID, supplier.APIURL, supplier.APIKey, supplier.APISecret)
+	case "v10":
+		return NewV10Driver(supplier.ID, supplier.APIURL, supplier.APIKey, supplier.APISecret)
+	case "anchor":
+		return NewAnchorDriver(supplier.ID, supplier.APIURL, supplier.APIKey)
+	case "manual":
+		return NewManualDriver(supplier.ID)
+	default:
+		// 未知类型走PHP插件引擎（兼容未来扩展）
+		return NewPluginDriver(supplier)
+	}
+}
+
+// NewPluginDriver 创建插件驱动（兼容旧代码，走PHP插件引擎）
 func NewPluginDriver(supplier model.Supplier) *PluginDriver {
 	return &PluginDriver{
 		supplierID: supplier.ID,
@@ -98,6 +117,8 @@ func NewPluginDriver(supplier model.Supplier) *PluginDriver {
 		domain:     supplier.Domain,
 		apiURL:     supplier.APIURL,
 		apiKey:     supplier.APIKey,
+		apiSecret:  supplier.APISecret,
+		apiType:    supplier.Type,
 	}
 }
 
