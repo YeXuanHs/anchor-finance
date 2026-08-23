@@ -465,24 +465,21 @@ func (d *V10Driver) RenewService(serviceID string, cycle string) error {
 }
 
 // ============================================================
-// AnchorDriver 锚点自有API驱动（JWT认证，调用我们自己的API）
+// AnchorDriver 锚点自有API驱动（X-API-Key认证）
 // ============================================================
 
 type AnchorDriver struct {
 	supplierID uint
 	apiURL     string // 我们自己的API地址
-	username   string // 管理员账号
-	password   string // 管理员密码
+	apiKey     string // API密钥
 	client     *http.Client
-	jwt        string
 }
 
-func NewAnchorDriver(supplierID uint, apiURL, username, password string) *AnchorDriver {
+func NewAnchorDriver(supplierID uint, apiURL, apiKey, _ string) *AnchorDriver {
 	return &AnchorDriver{
 		supplierID: supplierID,
 		apiURL:     apiURL,
-		username:   username,
-		password:   password,
+		apiKey:     apiKey,
 		client:     &http.Client{Timeout: 30 * time.Second},
 	}
 }
@@ -491,49 +488,7 @@ func (d *AnchorDriver) Key() string           { return "anchor" }
 func (d *AnchorDriver) Name() string           { return "锚点接口" }
 func (d *AnchorDriver) Capabilities() []string { return []string{"provisioning", "renewal", "status_sync", "product_sync"} }
 
-// login 管理员登录获取JWT
-func (d *AnchorDriver) login() (string, error) {
-	if d.jwt != "" {
-		return d.jwt, nil
-	}
-
-	payload := map[string]string{
-		"username": d.username,
-		"password": d.password,
-	}
-	body, _ := json.Marshal(payload)
-
-	resp, err := d.client.Post(d.apiURL+"/api/client/login", "application/json", bytes.NewReader(body))
-	if err != nil {
-		return "", fmt.Errorf("登录请求失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(resp.Body)
-	var result struct {
-		Code int    `json:"code"`
-		Msg  string `json:"message"`
-		Data struct {
-			Token string `json:"token"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return "", fmt.Errorf("解析登录响应失败")
-	}
-	if result.Code != 0 {
-		return "", fmt.Errorf("登录失败: %s", result.Msg)
-	}
-
-	d.jwt = result.Data.Token
-	return d.jwt, nil
-}
-
 func (d *AnchorDriver) request(method, path string, params map[string]interface{}) (map[string]interface{}, error) {
-	jwt, err := d.login()
-	if err != nil {
-		return nil, err
-	}
-
 	var req *http.Request
 	if method == "GET" {
 		req, _ = http.NewRequest(method, d.apiURL+path, nil)
@@ -548,7 +503,7 @@ func (d *AnchorDriver) request(method, path string, params map[string]interface{
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	req.Header.Set("Authorization", "Bearer "+jwt)
+	req.Header.Set("X-API-Key", d.apiKey)
 
 	resp, err := d.client.Do(req)
 	if err != nil {
