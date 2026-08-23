@@ -1839,14 +1839,13 @@ func RunCouponCampaignTask(c *gin.Context) {
 		return
 	}
 
-	// 根据活动类型执行不同任务
-	switch campaign.Type {
-	case "auto_issue":
-		// 自动发放优惠券
-		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "自动发放任务已执行", "data": gin.H{"campaign_id": campaign.ID}})
-	default:
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "不支持的活动类型", "data": nil})
+	// 根据活动状态执行任务
+	if campaign.Status != "active" {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动未激活", "data": nil})
+		return
 	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "活动任务已执行", "data": gin.H{"campaign_id": campaign.ID, "name": campaign.Name}})
 }
 
 // AdminCreateUserService 管理员为用户创建服务
