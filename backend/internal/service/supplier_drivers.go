@@ -110,8 +110,12 @@ func (d *ZjmfDriver) login() (string, error) {
 	return d.jwt, nil
 }
 
-// request 发送认证请求
+// request 发送认证请求（含JWT过期自动刷新）
 func (d *ZjmfDriver) request(method, path string, params map[string]interface{}) (map[string]interface{}, error) {
+	return d.doRequest(method, path, params, false)
+}
+
+func (d *ZjmfDriver) doRequest(method, path string, params map[string]interface{}, isRetry bool) (map[string]interface{}, error) {
 	jwt, err := d.login()
 	if err != nil {
 		return nil, err
@@ -138,6 +142,12 @@ func (d *ZjmfDriver) request(method, path string, params map[string]interface{})
 		return nil, fmt.Errorf("请求失败: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// JWT过期自动刷新（创欧shouldRetryWithFreshJwt机制）
+	if resp.StatusCode == 401 && !isRetry {
+		d.jwt = ""
+		return d.doRequest(method, path, params, true)
+	}
 
 	respBody, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
@@ -334,7 +344,12 @@ func (d *V10Driver) login() (string, error) {
 	return d.jwt, nil
 }
 
+// request 发送认证请求（含JWT过期自动刷新）
 func (d *V10Driver) request(method, path string, params map[string]interface{}) (map[string]interface{}, error) {
+	return d.doRequest(method, path, params, false)
+}
+
+func (d *V10Driver) doRequest(method, path string, params map[string]interface{}, isRetry bool) (map[string]interface{}, error) {
 	jwt, err := d.login()
 	if err != nil {
 		return nil, err
@@ -361,6 +376,12 @@ func (d *V10Driver) request(method, path string, params map[string]interface{}) 
 		return nil, fmt.Errorf("请求失败: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// JWT过期自动刷新
+	if resp.StatusCode == 401 && !isRetry {
+		d.jwt = ""
+		return d.doRequest(method, path, params, true)
+	}
 
 	respBody, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
