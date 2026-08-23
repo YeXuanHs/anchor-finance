@@ -1,4 +1,4 @@
-package service
+﻿package service
 
 import (
 	"fmt"
@@ -147,8 +147,8 @@ func (d *PluginDriver) FetchProducts() ([]RemoteProduct, error) {
 	}
 
 	var products []RemoteProduct
-	if len(results) > 0 && results[0].Data != nil {
-		if data, ok := results[0].Data.(map[string]interface{}); ok {
+	if len(results) > 0 && results[0].Result != nil {
+		if data, ok := results[0].Result.(map[string]interface{}); ok {
 			if items, ok := data["products"].([]interface{}); ok {
 				for _, item := range items {
 					if m, ok := item.(map[string]interface{}); ok {
@@ -182,8 +182,8 @@ func (d *PluginDriver) FetchProductGroups() ([]RemoteGroup, error) {
 	}
 
 	var groups []RemoteGroup
-	if len(results) > 0 && results[0].Data != nil {
-		if data, ok := results[0].Data.(map[string]interface{}); ok {
+	if len(results) > 0 && results[0].Result != nil {
+		if data, ok := results[0].Result.(map[string]interface{}); ok {
 			if items, ok := data["groups"].([]interface{}); ok {
 				for _, item := range items {
 					if m, ok := item.(map[string]interface{}); ok {
@@ -216,8 +216,8 @@ func (d *PluginDriver) SyncStatus(serviceID string) (*StatusResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("插件引擎离线: %w", err)
 	}
-	if len(results) > 0 && results[0].Data != nil {
-		if data, ok := results[0].Data.(map[string]interface{}); ok {
+	if len(results) > 0 && results[0].Result != nil {
+		if data, ok := results[0].Result.(map[string]interface{}); ok {
 			sr := &StatusResult{}
 			if s, ok := data["status"].(string); ok {
 				sr.Status = s
@@ -242,8 +242,8 @@ func (d *PluginDriver) CreateService(params CreateServiceParams) (*ServiceResult
 	if err != nil {
 		return nil, fmt.Errorf("插件引擎离线: %w", err)
 	}
-	if len(results) > 0 && results[0].Data != nil {
-		if data, ok := results[0].Data.(map[string]interface{}); ok {
+	if len(results) > 0 && results[0].Result != nil {
+		if data, ok := results[0].Result.(map[string]interface{}); ok {
 			sr := &ServiceResult{}
 			if sid, ok := data["service_id"].(string); ok {
 				sr.ServiceID = sid
@@ -407,11 +407,24 @@ func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct
 		}
 	} else {
 		// 已有商品，更新价格和库存
+		oldStock := existing.Stock
+
 		db.Model(&existing).Updates(map[string]interface{}{
 			"remote_price": p.Price,
 			"stock":        p.Stock,
 			"name":         p.Name,
 		})
+
+		// MD 7.2.4: 库存不足通知
+		stockThreshold := getSettingInt("stock_notify_threshold", 5)
+		if oldStock > stockThreshold && p.Stock <= stockThreshold && p.Stock >= 0 {
+			db.Create(&model.UserNotification{
+				UserID:  1,
+				Title:   "供应商库存不足",
+				Content: fmt.Sprintf("商品 %s 库存不足: %d（阈值%d）", existing.Name, p.Stock, stockThreshold),
+				Type:    "stock_low",
+			})
+		}
 	}
 }
 
@@ -428,11 +441,17 @@ func (s *SupplierSyncService) SyncAllPrices(supplierID uint) error {
 	}
 
 	db := database.GetDB()
+
+	// 检查是否启用价格变动通知
+	priceNotify := getSettingInt("price_change_notify", 1) == 1
+
 	for _, p := range products {
 		var existing model.SupplierProduct
 		if err := db.Where("supplier_id = ? AND remote_product_id = ?", supplierID, p.ID).First(&existing).Error; err != nil {
 			continue
 		}
+
+		oldPrice := existing.RemotePrice
 
 		// 应用利润率（MD 7.2.4：利润率后台可配置，默认25%）
 		profitRate := existing.ProfitRate
@@ -446,6 +465,16 @@ func (s *SupplierSyncService) SyncAllPrices(supplierID uint) error {
 			"remote_price": p.Price,
 			"local_price":  localPrice,
 		})
+
+		// MD 7.2.4: 价格变动通知
+		if priceNotify && oldPrice != p.Price && oldPrice > 0 {
+			db.Create(&model.UserNotification{
+				UserID:  1, // 通知管理员
+				Title:   "供应商价格变动",
+				Content: fmt.Sprintf("商品 %s 价格变动: %.2f → %.2f", existing.Name, oldPrice, p.Price),
+				Type:    "price_change",
+			})
+		}
 	}
 	return nil
 }

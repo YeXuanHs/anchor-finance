@@ -127,7 +127,7 @@ func CreateRecharge(c *gin.Context) {
 	// 从PHP插件返回结果中获取支付URL
 	var paymentURL string
 	if len(result) > 0 {
-		if url, ok := result[0].Data.(map[string]interface{}); ok {
+		if url, ok := result[0].Result.(map[string]interface{}); ok {
 			paymentURL, _ = url["pay_url"].(string)
 		}
 	}

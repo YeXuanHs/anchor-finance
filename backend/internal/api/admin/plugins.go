@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -277,8 +277,8 @@ func PluginAdminArea(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
 		return
 	}
-	if len(results) > 0 && results[0].Data != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Data})
+	if len(results) > 0 && results[0].Result != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Result})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 404, "message": "插件页面不存在", "data": nil})
@@ -296,8 +296,8 @@ func PluginAddonArea(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
 		return
 	}
-	if len(results) > 0 && results[0].Data != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Data})
+	if len(results) > 0 && results[0].Result != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Result})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 404, "message": "插件页面不存在", "data": nil})
@@ -316,8 +316,8 @@ func PluginConfigArea(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
 		return
 	}
-	if len(results) > 0 && results[0].Data != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Data})
+	if len(results) > 0 && results[0].Result != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Result})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 404, "message": "插件页面不存在", "data": nil})
@@ -337,8 +337,8 @@ func PluginOAuthCallback(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
 		return
 	}
-	if len(results) > 0 && results[0].Data != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Data})
+	if len(results) > 0 && results[0].Result != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Result})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 404, "message": "OAuth回调处理失败", "data": nil})

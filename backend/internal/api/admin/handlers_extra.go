@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -80,8 +80,8 @@ func RefreshUserServicesStatus(c *gin.Context) {
 		if err != nil {
 			continue
 		}
-		if len(results) > 0 && results[0].Data != nil {
-			if data, ok := results[0].Data.(map[string]interface{}); ok {
+		if len(results) > 0 && results[0].Result != nil {
+			if data, ok := results[0].Result.(map[string]interface{}); ok {
 				if status, ok := data["status"].(string); ok && status != svc.Status {
 					db.Model(&svc).Update("status", status)
 					refreshed++
@@ -558,7 +558,7 @@ func ScanPlugins(c *gin.Context) {
 	found := 0
 	newCount := 0
 	if len(results) > 0 {
-		if data, ok := results[0].Data.(map[string]interface{}); ok {
+		if data, ok := results[0].Result.(map[string]interface{}); ok {
 			if f, ok := data["found"].(float64); ok { found = int(f) }
 			if n, ok := data["new"].(float64); ok { newCount = int(n) }
 		}
@@ -596,8 +596,8 @@ func PluginHealthCheck(c *gin.Context) {
 	}
 
 	status := "healthy"
-	if len(results) > 0 && results[0].Data != nil {
-		if data, ok := results[0].Data.(map[string]interface{}); ok {
+	if len(results) > 0 && results[0].Result != nil {
+		if data, ok := results[0].Result.(map[string]interface{}); ok {
 			if s, ok := data["status"].(string); ok {
 				status = s
 			}

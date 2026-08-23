@@ -22,12 +22,12 @@ var Default = &Client{
 	HTTP:    &http.Client{Timeout: 30 * time.Second},
 }
 
-// Result Hook执行结果
+// Result Hook执行结果（与MD 3.4定义一致：Handler/Result/Status/Error）
 type Result struct {
 	Handler string      `json:"handler"`
 	Status  string      `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
+	Error   string      `json:"error,omitempty"`
+	Result  interface{} `json:"result,omitempty"`
 }
 
 // TriggerHook 触发Hook

@@ -407,8 +407,8 @@ func GetServiceConnection(c *gin.Context) {
 		"username":     service.Username,
 		"status":       service.Status,
 	}
-	if len(results) > 0 && results[0].Data != nil {
-		if d, ok := results[0].Data.(map[string]interface{}); ok {
+	if len(results) > 0 && results[0].Result != nil {
+		if d, ok := results[0].Result.(map[string]interface{}); ok {
 			connData = d
 		}
 	}
@@ -446,8 +446,8 @@ func GetServiceRuntime(c *gin.Context) {
 		"service_id": service.ID,
 		"status":     service.Status,
 	}
-	if len(results) > 0 && results[0].Data != nil {
-		if d, ok := results[0].Data.(map[string]interface{}); ok {
+	if len(results) > 0 && results[0].Result != nil {
+		if d, ok := results[0].Result.(map[string]interface{}); ok {
 			runtimeData = d
 		}
 	}
@@ -482,8 +482,8 @@ func GetServiceStatus(c *gin.Context) {
 	}
 
 	statusData := map[string]interface{}{"status": service.Status}
-	if len(results) > 0 && results[0].Data != nil {
-		if d, ok := results[0].Data.(map[string]interface{}); ok {
+	if len(results) > 0 && results[0].Result != nil {
+		if d, ok := results[0].Result.(map[string]interface{}); ok {
 			statusData = d
 		}
 	}

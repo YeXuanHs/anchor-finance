@@ -1,4 +1,4 @@
-package service
+﻿package service
 
 import (
 	"bytes"
@@ -106,7 +106,7 @@ func (d *ZjmfDriver) login() (string, error) {
 		return "", fmt.Errorf("登录失败: %s", result.Msg)
 	}
 
-	d.jwt = result.Data.JWT
+	d.jwt = result.Result.JWT
 	return d.jwt, nil
 }
 
@@ -330,7 +330,7 @@ func (d *V10Driver) login() (string, error) {
 		return "", fmt.Errorf("登录失败: %s", result.Msg)
 	}
 
-	d.jwt = result.Data.JWT
+	d.jwt = result.Result.JWT
 	return d.jwt, nil
 }
 
