@@ -30,9 +30,10 @@ def main():
 
     # 1. 先停服务，避免 Text file busy
     print("\n=== 停服务 ===")
-    run(client, "systemctl stop anchor-finance")
-    run(client, "pkill -f 'anchor-finance$' 2>/dev/null || true")
-    time.sleep(2)
+    run(client, "systemctl stop anchor-finance 2>/dev/null; true")
+    # 杀掉所有占用8080端口的进程（包括旧项目/opt/anchorfinance等）
+    run(client, "fuser -k 8080/tcp 2>/dev/null; true")
+    run(client, "sleep 3")
 
     # 2. 拉取代码（备份.env防止被覆盖）
     print("\n=== 拉取代码 ===")
