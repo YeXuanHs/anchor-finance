@@ -27,6 +27,8 @@ type User struct {
 	LockedUntil    *time.Time     `json:"-"`
 	LastLoginAt    *time.Time     `json:"last_login_at"`
 	LastLoginIP    string         `gorm:"size:45" json:"last_login_ip"`
+	APIKey         string         `gorm:"size:64" json:"-"`           // API密钥（AES加密存储）
+	APIEnabled     bool           `gorm:"default:false" json:"api_enabled"` // API是否开通
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`

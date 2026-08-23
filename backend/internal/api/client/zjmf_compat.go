@@ -5,7 +5,6 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
-	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,48 +14,24 @@ import (
 // ============================================================
 
 // ZjmfCompatLogin zjmf兼容登录（/v1/login_api）
-// zjmf用账号+密码登录获取JWT
+// 用账号+API密钥登录获取JWT（参考zjmf：account=用户名/邮箱，password=API密钥）
 func ZjmfCompatLogin(c *gin.Context) {
 	var req struct {
 		Account  string `json:"account"`
-		Password string `json:"password"`
+		Password string `json:"password"` // API密钥（不是登录密码）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "msg": "参数错误"})
 		return
 	}
 
-	db := database.GetDB()
-
-	// 先查users表
-	var user model.User
-	if err := db.Where("username = ? OR email = ?", req.Account, req.Account).First(&user).Error; err == nil {
-		if service.CheckPassword(req.Password, user.PasswordHash) {
-			token, err := service.GenerateTokenStatic(user.ID, user.Username, false)
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "生成token失败"})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success", "data": gin.H{"jwt": token}})
-			return
-		}
+	token, err := LoginByAPIKey(req.Account, req.Password)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 401, "msg": err.Error()})
+		return
 	}
 
-	// 再查admins表
-	var admin model.Admin
-	if err := db.Where("username = ?", req.Account).First(&admin).Error; err == nil {
-		if service.CheckPassword(req.Password, admin.PasswordHash) {
-			token, err := service.GenerateTokenStatic(admin.ID, admin.Username, true)
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "生成token失败"})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success", "data": gin.H{"jwt": token}})
-			return
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{"code": 401, "msg": "用户名或密码错误"})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success", "data": gin.H{"jwt": token}})
 }
 
 // ZjmfCompatProducts zjmf兼容商品列表（/v1/products）

@@ -47,6 +47,9 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/users/:id", UpdateUser)
 		authenticated.DELETE("/users/:id", DeleteUser)
 		authenticated.PATCH("/users/:id/status", UpdateUserStatus)
+		authenticated.POST("/users/:id/api-key/enable", AdminEnableUserAPI)
+		authenticated.POST("/users/:id/api-key/reset", AdminResetUserAPI)
+		authenticated.POST("/users/:id/api-key/disable", AdminDisableUserAPI)
 		authenticated.GET("/users/:id/orders", GetUserOrders)
 		authenticated.GET("/users/:id/invoices", GetUserInvoices)
 		authenticated.GET("/users/:id/tickets", GetUserTickets)
@@ -217,6 +220,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/settings/credit-setting", UpdateCreditSettingConfig)
 		authenticated.GET("/settings/payment-gateway", GetPaymentGatewayConfig)
 		authenticated.PUT("/settings/payment-gateway", UpdatePaymentGatewayConfig)
+		authenticated.GET("/settings/api", GetAPISettings)
+		authenticated.PUT("/settings/api", UpdateAPISettings)
 
 		// 通知模板
 		authenticated.GET("/notification-templates", GetNotificationTemplates)

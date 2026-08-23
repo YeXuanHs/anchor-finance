@@ -14,6 +14,7 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
+	"github.com/YeXuanHs/anchor-finance/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -510,4 +511,64 @@ func verifyCaptchaCode(target, code, captchaType string) bool {
 	}
 	db.Model(&captcha).Update("used", true)
 	return true
+}
+
+// LoginByAPIKey API密钥登录（通用，供锚点自有和zjmf兼容共用）
+// account = 用户名或邮箱，apiKey = API密钥
+func LoginByAPIKey(account, apiKey string) (string, error) {
+	db := database.GetDB()
+
+	var user model.User
+	if err := db.Where("username = ? OR email = ?", account, account).First(&user).Error; err != nil {
+		return "", fmt.Errorf("用户不存在")
+	}
+
+	if !user.APIEnabled {
+		return "", fmt.Errorf("API未开通")
+	}
+
+	if user.APIKey == "" {
+		return "", fmt.Errorf("API密钥未设置")
+	}
+
+	// 解密存储的密钥并比较
+	decrypted, err := util.DecryptAES(user.APIKey)
+	if err != nil {
+		return "", fmt.Errorf("密钥解密失败")
+	}
+
+	if decrypted != apiKey {
+		return "", fmt.Errorf("API密钥错误")
+	}
+
+	// 生成JWT
+	token, err := service.GenerateTokenStatic(user.ID, user.Username, false)
+	if err != nil {
+		return "", fmt.Errorf("生成token失败")
+	}
+
+	return token, nil
+}
+
+// LoginByAPIKeyHandler 锚点自有API密钥登录（/api/client/auth/login-api）
+func LoginByAPIKeyHandler(c *gin.Context) {
+	var req struct {
+		Account string `json:"account" binding:"required"`
+		APIKey  string `json:"api_key" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	token, err := LoginByAPIKey(req.Account, req.APIKey)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 401, "message": err.Error(), "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0, "message": "success",
+		"data": gin.H{"token": token},
+	})
 }

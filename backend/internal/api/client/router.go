@@ -55,6 +55,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		public.GET("/home-hero", GetClientHomeHero)
 		public.POST("/payment/notify/:gateway", PaymentNotify)
 		public.POST("/tickets/upstream/replies", TicketUpstreamReply)
+		public.POST("/auth/login-api", LoginByAPIKeyHandler) // 锚点自有API密钥登录
 	}
 
 	// 需要认证的路由（禁止admin token访问，防越权）
@@ -71,6 +72,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/auth/email", authHandler.UpdateEmail)
 		authenticated.GET("/auth/notification-preferences", GetNotificationPreferences)
 		authenticated.PUT("/auth/notification-preferences", UpdateNotificationPreferences)
+
+		// API密钥管理
+		authenticated.GET("/api-key/status", GetAPIKeyStatus)
+		authenticated.POST("/api-key/enable", EnableAPIKey)
+		authenticated.POST("/api-key/reset", ResetAPIKey)
+		authenticated.POST("/api-key/disable", DisableAPIKey)
 
 		// 实名认证
 		authenticated.GET("/verification/status", GetVerificationStatus)
