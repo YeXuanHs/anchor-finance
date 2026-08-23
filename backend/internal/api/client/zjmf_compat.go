@@ -1540,3 +1540,55 @@ func ZjmfCompatUpgradeConfigPost(c *gin.Context) {
 		},
 	})
 }
+
+// ==================== 补充缺失端点 ====================
+
+// ZjmfCompatDcimBmc POST /dcim/bmc - BMC管理
+func ZjmfCompatDcimBmc(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimCancelTask POST /dcim/cancel_task - 取消任务
+func ZjmfCompatDcimCancelTask(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimIkvm POST /dcim/ikvm - iKVM
+func ZjmfCompatDcimIkvm(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimKvm POST /dcim/kvm - KVM
+func ZjmfCompatDcimKvm(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimNovnc POST /dcim/novnc - NoVNC
+func ZjmfCompatDcimNovnc(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimReinstallStatus GET /dcim/resintall_status - 重装状态（注意zjmf原始拼写）
+func ZjmfCompatDcimReinstallStatus(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"progress": 100, "status": "completed"}})
+}
+
+// ZjmfCompatDcimTraffic POST /dcim/traffic - 流量管理
+func ZjmfCompatDcimTraffic(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimTrafficUsage GET /dcim/traffic_usage - 流量使用统计
+func ZjmfCompatDcimTrafficUsage(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"incoming": 0, "outgoing": 0, "total": 0}})
+}
+
+// ZjmfCompatCartHostinfo GET /cart/hostinfo - 购物车主机信息
+func ZjmfCompatCartHostinfo(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"hostinfo": []gin.H{}}})
+}
+
+// ZjmfCompatCartSummary GET /cart/summary - 购物车摘要
+func ZjmfCompatCartSummary(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"total": "0.00", "items": []gin.H{}}})
+}

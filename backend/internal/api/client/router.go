@@ -83,6 +83,18 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 	r.POST("/provision/custom/:id", middleware.JWTAuth(authService), ZjmfCompatProvisionCustom)
 	r.GET("/provision/chart/:id", middleware.JWTAuth(authService), ZjmfCompatProvisionChart)
 	r.POST("/upgrade/upgrade_config_post", middleware.JWTAuth(authService), ZjmfCompatUpgradeConfigPost)
+
+	// 补充缺失端点
+	r.POST("/dcim/bmc", middleware.JWTAuth(authService), ZjmfCompatDcimBmc)
+	r.POST("/dcim/cancel_task", middleware.JWTAuth(authService), ZjmfCompatDcimCancelTask)
+	r.POST("/dcim/ikvm", middleware.JWTAuth(authService), ZjmfCompatDcimIkvm)
+	r.POST("/dcim/kvm", middleware.JWTAuth(authService), ZjmfCompatDcimKvm)
+	r.POST("/dcim/novnc", middleware.JWTAuth(authService), ZjmfCompatDcimNovnc)
+	r.GET("/dcim/resintall_status", middleware.JWTAuth(authService), ZjmfCompatDcimReinstallStatus)
+	r.POST("/dcim/traffic", middleware.JWTAuth(authService), ZjmfCompatDcimTraffic)
+	r.GET("/dcim/traffic_usage", middleware.JWTAuth(authService), ZjmfCompatDcimTrafficUsage)
+	r.GET("/cart/hostinfo", middleware.JWTAuth(authService), ZjmfCompatCartHostinfo)
+	r.GET("/cart/summary", middleware.JWTAuth(authService), ZjmfCompatCartSummary)
 }
 
 // SetupRoutes 设置用户前台路由
