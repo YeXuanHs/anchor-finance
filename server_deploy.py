@@ -53,8 +53,12 @@ def main():
 
     # 4. 重启（先彻底释放端口，必须daemon-reload加载新环境变量）
     print("\n=== 启动服务 ===")
+    run(client, "systemctl stop anchor-finance")
+    run(client, "pkill -9 -f 'anchor-finance$' 2>/dev/null; true")
+    run(client, "fuser -k 8080/tcp 2>/dev/null; true")
+    run(client, "sleep 2")
     run(client, "systemctl daemon-reload")
-    run(client, "fuser -k 8080/tcp 2>/dev/null; sleep 2; systemctl restart anchor-finance")
+    run(client, "systemctl start anchor-finance")
     time.sleep(4)
     status = run(client, "systemctl is-active anchor-finance")
     print(f"服务状态: {status}")
