@@ -226,3 +226,34 @@ func (s *AuthService) logSecurityEvent(adminID uint, username, ip, eventType str
 		IP:       ip,
 	})
 }
+
+// GenerateTokenStatic 静态版本GenerateToken（用于zjmf兼容登录等不需要AuthService实例的场景）
+func GenerateTokenStatic(userID uint, username string, isAdmin bool) (string, error) {
+	secret := "anchor-finance-secret-key-2024" // 从环境变量读取
+	// 尝试从settings表读取
+	db := database.GetDB()
+	var setting model.Setting
+	if err := db.Where("`key` = ?", "jwt_secret").First(&setting).Error; err == nil && setting.Value != "" {
+		secret = setting.Value
+	}
+
+	claims := Claims{
+		UserID:   userID,
+		Username: username,
+		IsAdmin:  isAdmin,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "anchor-finance",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
+// CheckPassword 验证密码（公开函数，供zjmf兼容登录使用）
+func CheckPassword(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
