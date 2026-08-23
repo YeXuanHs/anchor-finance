@@ -28,6 +28,11 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 	r.GET("/host/trafficusage", middleware.JWTAuth(authService), ZjmfCompatTrafficUsage) // HostController:2192
 	r.POST("/host/setdownstream", middleware.JWTAuth(authService), ZjmfCompatSetDownstream) // ClientsServicesController:415
 
+	// v10类型端点（zjmf.php:190, ZjmfFinanceApiController:46）
+	r.POST("/api/v1/auth", ZjmfCompatLogin)          // v10登录（和zjmf_api_login共用handler）
+	r.GET("/api/v1/product", ZjmfCompatCartAll)       // v10商品列表
+	r.GET("/api/v1/group/product", ZjmfCompatCartAll) // v10分组商品
+
 	// 需要JWT认证的端点
 	v1Auth := r.Group("/v1")
 	v1Auth.Use(middleware.JWTAuth(authService))

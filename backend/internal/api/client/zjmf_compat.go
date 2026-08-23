@@ -658,7 +658,7 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 			"products":         products,
 			"customfields":     []gin.H{},
 			"product_pricings": productPricings,
-			"advanced":         "",
+			"advanced":         []gin.H{},
 			"config_groups":    configGroups,
 			"config_links":     configLinks,
 		},
