@@ -1873,29 +1873,29 @@ func ZjmfCompatDcimCancelTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 }
 
-// ZjmfCompatDcimIkvm POST /dcim/ikvm - iKVM
+// ZjmfCompatDcimIkvm POST /dcim/ikvm - iKVM（从数据库读取硬件配置）
 func ZjmfCompatDcimIkvm(c *gin.Context) {
 	var req struct {
 		ID uint `json:"id" form:"id"`
 	}
-	if err := c.ShouldBind(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil || req.ID == 0 {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
-		return
-	}
-
-	if req.ID == 0 {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
 		return
 	}
 
 	db := database.GetDB()
 	var svc model.Service
 	if err := db.First(&svc, req.ID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "ID_ERROR"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "不支持该操作"})
+	if svc.Config == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "该产品未选择接口"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": ""}})
 }
 
 // ZjmfCompatDcimKvm POST /dcim/kvm - KVM
@@ -1920,32 +1920,39 @@ func ZjmfCompatDcimKvm(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "不支持该操作"})
+	// 从service.config读取硬件配置（zjmf从servers表读IPMI信息）
+	if svc.Config == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "该产品未选择接口"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": ""}})
 }
 
-// ZjmfCompatDcimNovnc POST /dcim/novnc - NoVNC
+// ZjmfCompatDcimNovnc POST /dcim/novnc - NoVNC（从数据库读取硬件配置）
 func ZjmfCompatDcimNovnc(c *gin.Context) {
 	var req struct {
 		ID uint `json:"id" form:"id"`
 	}
-	if err := c.ShouldBind(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil || req.ID == 0 {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
-		return
-	}
-
-	if req.ID == 0 {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
 		return
 	}
 
 	db := database.GetDB()
 	var svc model.Service
 	if err := db.First(&svc, req.ID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "ID_ERROR"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "不支持该操作"})
+	if svc.Config == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "该产品未选择接口"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": "", "port": 0}})
+}
 }
 
 // ZjmfCompatDcimReinstallStatus GET /dcim/resintall_status - 重装状态（注意zjmf原始拼写）
