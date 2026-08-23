@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/YeXuanHs/anchor-finance/config"
@@ -116,25 +117,24 @@ func (s *AuthService) AdminLogin(username, password, ip string) (string, error) 
 		// 增加失败次数
 		admin.LoginFailCount++
 
-		// 连续5次失败，冻结6小时
-		if admin.LoginFailCount >= 5 {
-			lockedUntil := time.Now().Add(6 * time.Hour)
+		// 从settings读取配置（MD 9.2：后台可配置）
+		maxFail := getSettingIntFromDB(s.db, "admin_login_max_fail", 5)
+		lockHours := getSettingIntFromDB(s.db, "admin_login_lock_hours", 6)
+
+		// 连续N次失败，冻结M小时
+		if admin.LoginFailCount >= maxFail {
+			lockedUntil := time.Now().Add(time.Duration(lockHours) * time.Hour)
 			admin.LockedUntil = &lockedUntil
-			admin.LoginFailCount = 0 // 重置计数
+			admin.LoginFailCount = 0
 			s.db.Save(&admin)
 
-			// 记录安全日志
 			s.logSecurityEvent(admin.ID, username, ip, "admin_login_locked")
-
-			return "", errors.New("连续5次密码错误，账号已冻结6小时")
+			return "", fmt.Errorf("连续%d次密码错误，账号已冻结%d小时", maxFail, lockHours)
 		}
 
 		s.db.Save(&admin)
-
-		// 记录失败日志
 		s.logSecurityEvent(admin.ID, username, ip, "admin_login_fail")
-
-		return "", fmt.Errorf("用户名或密码错误（已失败%d次，连续5次将冻结）", admin.LoginFailCount)
+		return "", fmt.Errorf("用户名或密码错误（已失败%d次，连续%d次将冻结）", admin.LoginFailCount, maxFail)
 	}
 
 	// 登录成功，重置失败次数+清除风控
@@ -224,4 +224,15 @@ func (s *AuthService) logSecurityEvent(adminID uint, username, ip, eventType str
 		Detail:   "安全事件: " + eventType,
 		IP:       ip,
 	})
+}
+
+// getSettingIntFromDB 从settings表读取整数配置
+func getSettingIntFromDB(db *gorm.DB, key string, defaultVal int) int {
+	var setting model.Setting
+	if err := db.Where("`key` = ?", key).First(&setting).Error; err == nil {
+		if v, err := strconv.Atoi(setting.Value); err == nil && v > 0 {
+			return v
+		}
+	}
+	return defaultVal
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
+	"gorm.io/gorm"
 )
 
 // AIService AI服务（可选启用，配置存数据库）
@@ -242,6 +243,96 @@ func GetAITools() []map[string]interface{} {
 				"user_id": map[string]interface{}{"type": "integer", "description": "用户ID"},
 			}, "required": []string{"user_id"}},
 		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "refund_user", "description": "给用户退款（退到余额）",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"user_id": map[string]interface{}{"type": "integer", "description": "用户ID"},
+				"amount": map[string]interface{}{"type": "number", "description": "退款金额"},
+				"reason": map[string]interface{}{"type": "string", "description": "退款原因"},
+			}, "required": []string{"user_id", "amount", "reason"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "adjust_balance", "description": "调整用户余额",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"user_id": map[string]interface{}{"type": "integer", "description": "用户ID"},
+				"amount": map[string]interface{}{"type": "number", "description": "调整金额（正加负减）"},
+				"reason": map[string]interface{}{"type": "string", "description": "调整原因"},
+			}, "required": []string{"user_id", "amount", "reason"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "power_service", "description": "服务器电源操作（开机/关机/重启）",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"service_id": map[string]interface{}{"type": "integer", "description": "服务ID"},
+				"action": map[string]interface{}{"type": "string", "description": "操作: start/stop/restart", "enum": []string{"start", "stop", "restart"}},
+			}, "required": []string{"service_id", "action"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "close_ticket", "description": "关闭工单",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"ticket_id": map[string]interface{}{"type": "integer", "description": "工单ID"},
+			}, "required": []string{"ticket_id"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "reply_ticket", "description": "回复工单",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"ticket_id": map[string]interface{}{"type": "integer", "description": "工单ID"},
+				"content": map[string]interface{}{"type": "string", "description": "回复内容"},
+			}, "required": []string{"ticket_id", "content"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "get_products", "description": "获取产品列表",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "get_operation_logs", "description": "查看操作日志",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"limit": map[string]interface{}{"type": "integer", "description": "返回条数"},
+			}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "get_suppliers", "description": "获取供应商列表",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "suspend_service", "description": "暂停服务",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"service_id": map[string]interface{}{"type": "integer", "description": "服务ID"},
+			}, "required": []string{"service_id"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "unsuspend_service", "description": "取消暂停服务",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"service_id": map[string]interface{}{"type": "integer", "description": "服务ID"},
+			}, "required": []string{"service_id"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "get_user_tickets", "description": "获取用户工单列表",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"user_id": map[string]interface{}{"type": "integer", "description": "用户ID"},
+			}, "required": []string{"user_id"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "get_user_services", "description": "获取用户服务列表",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"user_id": map[string]interface{}{"type": "integer", "description": "用户ID"},
+			}, "required": []string{"user_id"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "cancel_order", "description": "取消订单",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"order_id": map[string]interface{}{"type": "integer", "description": "订单ID"},
+			}, "required": []string{"order_id"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "get_dashboard_stats", "description": "获取仪表盘统计数据",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "disable_user", "description": "禁用用户账号",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"user_id": map[string]interface{}{"type": "integer", "description": "用户ID"},
+			}, "required": []string{"user_id"}},
+		}},
 	}
 }
 
@@ -295,6 +386,130 @@ func ExecuteAITool(funcName string, argsJSON string) string {
 		db.Where("user_id = ?", userID).Order("id DESC").Limit(10).Find(&invoices)
 		r, _ := json.Marshal(invoices)
 		return string(r)
+
+	case "refund_user":
+		userID := int(args["user_id"].(float64))
+		amount := args["amount"].(float64)
+		reason := args["reason"].(string)
+		if amount <= 0 {
+			return `{"error":"退款金额必须大于0"}`
+		}
+		result := db.Model(&model.User{}).Where("id = ?", userID).Update("balance", gorm.Expr("balance + ?", amount))
+		if result.RowsAffected == 0 {
+			return `{"error":"用户不存在"}`
+		}
+		return fmt.Sprintf(`{"success":true,"message":"退款%.2f元，原因: %s"}`, amount, reason)
+
+	case "adjust_balance":
+		userID := int(args["user_id"].(float64))
+		amount := args["amount"].(float64)
+		reason := args["reason"].(string)
+		if amount > 0 {
+			db.Model(&model.User{}).Where("id = ?", userID).Update("balance", gorm.Expr("balance + ?", amount))
+		} else {
+			result := db.Model(&model.User{}).Where("id = ? AND balance >= ?", userID, -amount).Update("balance", gorm.Expr("balance + ?", amount))
+			if result.RowsAffected == 0 {
+				return `{"error":"余额不足"}`
+			}
+		}
+		return fmt.Sprintf(`{"success":true,"message":"余额调整%.2f元"}`, amount)
+
+	case "power_service":
+		serviceID := int(args["service_id"].(float64))
+		action := args["action"].(string)
+		var svc model.Service
+		if err := db.First(&svc, serviceID).Error; err != nil {
+			return `{"error":"服务不存在"}`
+		}
+		hookName := "service_reboot"
+		if action == "start" {
+			hookName = "service_unsuspend"
+		} else if action == "stop" {
+			hookName = "service_suspend"
+		}
+		pluginengine.TriggerHook(hookName, map[string]interface{}{"service_id": svc.ID})
+		return fmt.Sprintf(`{"success":true,"message":"%s命令已发送"}`, action)
+
+	case "close_ticket":
+		ticketID := int(args["ticket_id"].(float64))
+		db.Model(&model.Ticket{}).Where("id = ?", ticketID).Update("status", "closed")
+		return `{"success":true,"message":"工单已关闭"}`
+
+	case "reply_ticket":
+		ticketID := int(args["ticket_id"].(float64))
+		content := args["content"].(string)
+		reply := model.TicketReply{TicketID: uint(ticketID), Content: content, IsAdmin: true}
+		db.Create(&reply)
+		db.Model(&model.Ticket{}).Where("id = ?", ticketID).Update("status", "answered")
+		return `{"success":true,"message":"回复成功"}`
+
+	case "get_products":
+		var products []model.Product
+		db.Where("status = ?", "active").Order("id DESC").Limit(20).Find(&products)
+		r, _ := json.Marshal(products)
+		return string(r)
+
+	case "get_operation_logs":
+		limit := 10
+		if l, ok := args["limit"].(float64); ok {
+			limit = int(l)
+		}
+		var logs []model.OperationLog
+		db.Order("id DESC").Limit(limit).Find(&logs)
+		r, _ := json.Marshal(logs)
+		return string(r)
+
+	case "get_suppliers":
+		var suppliers []model.Supplier
+		db.Find(&suppliers)
+		r, _ := json.Marshal(suppliers)
+		return string(r)
+
+	case "suspend_service":
+		serviceID := int(args["service_id"].(float64))
+		db.Model(&model.Service{}).Where("id = ?", serviceID).Update("status", "suspended")
+		return `{"success":true,"message":"服务已暂停"}`
+
+	case "unsuspend_service":
+		serviceID := int(args["service_id"].(float64))
+		db.Model(&model.Service{}).Where("id = ?", serviceID).Update("status", "active")
+		return `{"success":true,"message":"服务已恢复"}`
+
+	case "get_user_tickets":
+		userID := int(args["user_id"].(float64))
+		var tickets []model.Ticket
+		db.Where("user_id = ?", userID).Order("id DESC").Limit(10).Find(&tickets)
+		r, _ := json.Marshal(tickets)
+		return string(r)
+
+	case "get_user_services":
+		userID := int(args["user_id"].(float64))
+		var services []model.Service
+		db.Where("user_id = ?", userID).Order("id DESC").Limit(10).Find(&services)
+		r, _ := json.Marshal(services)
+		return string(r)
+
+	case "cancel_order":
+		orderID := int(args["order_id"].(float64))
+		db.Model(&model.Order{}).Where("id = ?", orderID).Update("status", "cancelled")
+		return `{"success":true,"message":"订单已取消"}`
+
+	case "get_dashboard_stats":
+		var userCount, orderCount, serviceCount, ticketCount int64
+		db.Model(&model.User{}).Count(&userCount)
+		db.Model(&model.Order{}).Count(&orderCount)
+		db.Model(&model.Service{}).Count(&serviceCount)
+		db.Model(&model.Ticket{}).Count(&ticketCount)
+		r, _ := json.Marshal(map[string]interface{}{
+			"user_count": userCount, "order_count": orderCount,
+			"service_count": serviceCount, "ticket_count": ticketCount,
+		})
+		return string(r)
+
+	case "disable_user":
+		userID := int(args["user_id"].(float64))
+		db.Model(&model.User{}).Where("id = ?", userID).Update("status", "disabled")
+		return `{"success":true,"message":"用户已禁用"}`
 
 	default:
 		return `{"error":"未知工具"}`

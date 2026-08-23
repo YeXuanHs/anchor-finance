@@ -1,4 +1,4 @@
-﻿package client
+package client
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
 )
 
@@ -129,6 +130,11 @@ func CreateUserTicket(c *gin.Context) {
 		})
 		return
 	}
+
+	// 触发Hook: ticket_open
+	pluginengine.TriggerHook("ticket_open", map[string]interface{}{
+		"ticket_id": ticket.ID, "user_id": ticket.UserID, "subject": ticket.Subject,
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,

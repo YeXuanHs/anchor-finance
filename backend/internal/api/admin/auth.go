@@ -8,6 +8,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -52,6 +53,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		})
 		return
 	}
+
+	// 触发Hook: admin_login
+	pluginengine.TriggerHook("admin_login", map[string]interface{}{
+		"admin_id": admin.ID, "username": req.Username, "ip": c.ClientIP(),
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,

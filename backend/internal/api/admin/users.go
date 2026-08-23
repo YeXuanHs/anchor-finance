@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -161,6 +162,11 @@ func CreateUser(c *gin.Context) {
 		})
 		return
 	}
+
+	// 触发Hook: client_add
+	pluginengine.TriggerHook("client_add", map[string]interface{}{
+		"user_id": user.ID, "username": user.Username, "email": user.Email,
+	})
 
 	// 4. 返回统一格式
 	c.JSON(http.StatusOK, gin.H{

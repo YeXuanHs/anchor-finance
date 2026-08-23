@@ -1,4 +1,4 @@
-﻿package service
+package service
 
 import (
 	"fmt"
@@ -444,37 +444,52 @@ func (s *SupplierSyncService) SyncAllPrices(supplierID uint) error {
 
 	// 检查是否启用价格变动通知
 	priceNotify := getSettingInt("price_change_notify", 1) == 1
+	defaultProfitRate := float64(getSettingInt("default_profit_rate", 25))
 
+	// MD 7.2.3: 多线程并发同步价格
+	var wg sync.WaitGroup
 	for _, p := range products {
-		var existing model.SupplierProduct
-		if err := db.Where("supplier_id = ? AND remote_product_id = ?", supplierID, p.ID).First(&existing).Error; err != nil {
-			continue
-		}
+		wg.Add(1)
+		go func(product RemoteProduct) {
+			defer wg.Done()
+			s.syncSinglePrice(supplierID, product, priceNotify, defaultProfitRate)
+		}(p)
+	}
+	wg.Wait()
+	return nil
+}
 
-		oldPrice := existing.RemotePrice
+// syncSinglePrice 同步单个商品价格（goroutine安全）
+func (s *SupplierSyncService) syncSinglePrice(supplierID uint, p RemoteProduct, priceNotify bool, defaultProfitRate float64) {
+	db := database.GetDB()
 
-		// 应用利润率（MD 7.2.4：利润率后台可配置，默认25%）
-		profitRate := existing.ProfitRate
-		if profitRate <= 0 {
-			profitRate = float64(getSettingInt("default_profit_rate", 25))
-		}
-		localPrice := p.Price * (1 + profitRate/100)
+	var existing model.SupplierProduct
+	if err := db.Where("supplier_id = ? AND remote_product_id = ?", supplierID, p.ID).First(&existing).Error; err != nil {
+		return
+	}
 
-		// 更新
-		db.Model(&existing).Updates(map[string]interface{}{
-			"remote_price": p.Price,
-			"local_price":  localPrice,
+	oldPrice := existing.RemotePrice
+
+	profitRate := existing.ProfitRate
+	if profitRate <= 0 {
+		profitRate = defaultProfitRate
+	}
+	localPrice := p.Price * (1 + profitRate/100)
+
+	db.Model(&existing).Updates(map[string]interface{}{
+		"remote_price": p.Price,
+		"local_price":  localPrice,
+	})
+
+	if priceNotify && oldPrice != p.Price && oldPrice > 0 {
+		db.Create(&model.UserNotification{
+			UserID:  1,
+			Title:   "供应商价格变动",
+			Content: fmt.Sprintf("商品 %s 价格变动: %.2f → %.2f", existing.Name, oldPrice, p.Price),
+			Type:    "price_change",
 		})
-
-		// MD 7.2.4: 价格变动通知
-		if priceNotify && oldPrice != p.Price && oldPrice > 0 {
-			db.Create(&model.UserNotification{
-				UserID:  1, // 通知管理员
-				Title:   "供应商价格变动",
-				Content: fmt.Sprintf("商品 %s 价格变动: %.2f → %.2f", existing.Name, oldPrice, p.Price),
-				Type:    "price_change",
-			})
-		}
+	}
+}
 	}
 	return nil
 }

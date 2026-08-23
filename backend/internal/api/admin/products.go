@@ -7,6 +7,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
 )
 
@@ -151,6 +152,11 @@ func CreateProduct(c *gin.Context) {
 		})
 		return
 	}
+
+	// 触发Hook: product_create
+	pluginengine.TriggerHook("product_create", map[string]interface{}{
+		"product_id": product.ID, "name": product.Name, "price": product.Price,
+	})
 
 	// 3. 返回统一格式
 	c.JSON(http.StatusOK, gin.H{
