@@ -568,6 +568,16 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/customer-groups/:id", UpdateCustomerGroup)
 		authenticated.DELETE("/customer-groups/:id", DeleteCustomerGroup)
 
+		// DCIM服务器管理
+		authenticated.GET("/dcim-servers", GetDcimServerList)
+		authenticated.GET("/dcim-servers/options", GetDcimServerOptions)
+		authenticated.POST("/dcim-servers", CreateDcimServer)
+		authenticated.GET("/dcim-servers/:id", GetDcimServer)
+		authenticated.PUT("/dcim-servers/:id", UpdateDcimServer)
+		authenticated.DELETE("/dcim-servers/:id", DeleteDcimServer)
+		authenticated.POST("/dcim-servers/:id/test", TestDcimServer)
+		authenticated.POST("/dcim-servers/:id/refresh-status", RefreshDcimServerStatus)
+
 		// Redis配置
 		authenticated.GET("/redis/config", GetRedisConfig)
 		authenticated.GET("/redis/health", RedisHealthCheck)

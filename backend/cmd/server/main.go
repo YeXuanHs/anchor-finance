@@ -120,6 +120,9 @@ func main() {
 		&model.AITicketRule{},
 		&model.AITicketProcessLog{},
 		&model.SupplierGroupMapping{},
+		// DCIM服务器管理
+		&model.Server{},
+		&model.DcimServer{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

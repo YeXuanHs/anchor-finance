@@ -1019,6 +1019,16 @@ func ZjmfCompatDcimOn(c *gin.Context) {
 		return
 	}
 
+	// 尝试通过IPMI开机
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled {
+			// TODO: 调用IPMI API执行开机操作
+			// util.DecryptAES(server.Password) 获取密码
+			// server.Hostname, server.Port 获取地址
+		}
+	}
+
 	db.Model(&svc).Update("status", "active")
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "开机成功"})
 }
@@ -1045,6 +1055,14 @@ func ZjmfCompatDcimOff(c *gin.Context) {
 		return
 	}
 
+	// 尝试通过IPMI关机
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled {
+			// TODO: 调用IPMI API执行关机操作
+		}
+	}
+
 	db.Model(&svc).Update("status", "suspended")
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "关机成功"})
 }
@@ -1069,6 +1087,14 @@ func ZjmfCompatDcimReboot(c *gin.Context) {
 	if err := db.First(&svc, req.ID).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
+	}
+
+	// 尝试通过IPMI重启
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled {
+			// TODO: 调用IPMI API执行重启操作
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "重启成功"})
@@ -1198,18 +1224,31 @@ func ZjmfCompatDcimDetail(c *gin.Context) {
 		return
 	}
 
+	result := gin.H{
+		"dcimid":      svc.ID,
+		"status":      svc.Status,
+		"domain":      svc.Domain,
+		"dedicatedip": "",
+		"os":          "",
+		"username":    "",
+		"password":    "",
+	}
+
+	// 从servers表读取硬件配置
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			result["server_name"] = server.Name
+			result["server_host"] = server.Hostname
+			result["server_port"] = server.Port
+			result["link_status"] = server.LinkStatus
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"msg":   "请求成功",
-		"data": gin.H{
-			"dcimid":      svc.ID,
-			"status":      svc.Status,
-			"domain":      svc.Domain,
-			"dedicatedip": "",
-			"os":          "",
-			"username":    "",
-			"password":    "",
-		},
+		"data":  result,
 	})
 }
 
@@ -1342,7 +1381,24 @@ func ZjmfCompatRefreshPowerStatus(c *gin.Context) {
 		powerStatus = "on"
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"power_status": powerStatus}})
+	// 从servers表获取硬件连接状态
+	serverLinked := false
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			serverLinked = server.LinkStatus
+			// TODO: 通过IPMI查询真实电源状态
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "请求成功",
+		"data": gin.H{
+			"power_status":  powerStatus,
+			"server_linked": serverLinked,
+		},
+	})
 }
 
 // ZjmfCompatRefreshAllPowerStatus POST /dcim/refresh_all_power_status - 批量刷新电源状态
@@ -1862,9 +1918,33 @@ func ZjmfCompatDcimBmc(c *gin.Context) {
 		return
 	}
 
+	// 从servers表读取BMC/IPMI配置
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			scheme := "https"
+			if !server.Secure {
+				scheme = "http"
+			}
+			bmcURL := fmt.Sprintf("%s://%s:%d", scheme, server.Hostname, server.Port)
+			c.JSON(http.StatusOK, gin.H{
+				"status": 200,
+				"msg":   "请求成功",
+				"data": gin.H{
+					"url":      bmcURL,
+					"host":     server.Hostname,
+					"port":     server.Port,
+					"username": server.Username,
+				},
+			})
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
-		"msg":   "重置成功",
+		"msg":   "请求成功",
+		"data":  gin.H{},
 	})
 }
 
@@ -1873,7 +1953,7 @@ func ZjmfCompatDcimCancelTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 }
 
-// ZjmfCompatDcimIkvm POST /dcim/ikvm - iKVM（从数据库读取硬件配置）
+// ZjmfCompatDcimIkvm POST /dcim/ikvm - iKVM（从servers表读取IPMI配置）
 func ZjmfCompatDcimIkvm(c *gin.Context) {
 	var req struct {
 		ID uint `json:"id" form:"id"`
@@ -1890,15 +1970,24 @@ func ZjmfCompatDcimIkvm(c *gin.Context) {
 		return
 	}
 
-	if svc.Config == "" {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "获取ikvm失败"})
-		return
+	// 从servers表读取IPMI配置生成iKVM URL
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			scheme := "https"
+			if !server.Secure {
+				scheme = "http"
+			}
+			ikvmURL := fmt.Sprintf("%s://%s:%d/cgi/kvm.cgi", scheme, server.Hostname, server.Port)
+			c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": ikvmURL}})
+			return
+		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": ""}})
+	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "获取ikvm失败"})
 }
 
-// ZjmfCompatDcimKvm POST /dcim/kvm - KVM
+// ZjmfCompatDcimKvm POST /dcim/kvm - KVM（从servers表读取IPMI配置）
 func ZjmfCompatDcimKvm(c *gin.Context) {
 	var req struct {
 		ID uint `json:"id" form:"id"`
@@ -1920,16 +2009,24 @@ func ZjmfCompatDcimKvm(c *gin.Context) {
 		return
 	}
 
-	// 从service.config读取硬件配置（zjmf从servers表读IPMI信息）
-	if svc.Config == "" {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "获取kvm失败"})
-		return
+	// 从servers表读取IPMI配置生成KVM URL
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			scheme := "https"
+			if !server.Secure {
+				scheme = "http"
+			}
+			kvmURL := fmt.Sprintf("%s://%s:%d/cgi/kvm.cgi", scheme, server.Hostname, server.Port)
+			c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": kvmURL}})
+			return
+		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": ""}})
+	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "获取kvm失败"})
 }
 
-// ZjmfCompatDcimNovnc POST /dcim/novnc - NoVNC（从数据库读取硬件配置）
+// ZjmfCompatDcimNovnc POST /dcim/novnc - NoVNC（从servers表读取IPMI配置）
 func ZjmfCompatDcimNovnc(c *gin.Context) {
 	var req struct {
 		ID uint `json:"id" form:"id"`
@@ -1946,12 +2043,21 @@ func ZjmfCompatDcimNovnc(c *gin.Context) {
 		return
 	}
 
-	if svc.Config == "" {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "获取novnc失败"})
-		return
+	// 从servers表读取IPMI配置生成NoVNC URL
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			scheme := "https"
+			if !server.Secure {
+				scheme = "http"
+			}
+			novncURL := fmt.Sprintf("%s://%s:%d/cgi/novnc.cgi", scheme, server.Hostname, server.Port)
+			c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": novncURL, "port": server.Port}})
+			return
+		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": "", "port": 0}})
+	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "获取novnc失败"})
 }
 
 // ZjmfCompatDcimReinstallStatus GET /dcim/resintall_status - 重装状态（注意zjmf原始拼写）

@@ -12,6 +12,7 @@ type Service struct {
 	UserID         uint           `gorm:"index;not null" json:"user_id"`
 	ProductID      uint           `gorm:"index" json:"product_id"`
 	ProductTypeID  uint           `gorm:"index" json:"product_type_id"`
+	ServerID       uint           `gorm:"index" json:"server_id"`       // 关联servers表（DCIM硬件）
 	ProductName    string         `gorm:"size:100" json:"product_name"`
 	Domain         string         `gorm:"size:100" json:"domain"`
 	Username       string         `gorm:"size:50" json:"username"`
