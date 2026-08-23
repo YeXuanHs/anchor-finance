@@ -337,6 +337,13 @@ func ZjmfCompatCartAll(c *gin.Context) {
 		}
 	}
 
+	// 获取默认货币
+	var defaultCurrency model.Currency
+	currencyCode := "CNY"
+	if err := db.Where("is_default = ?", true).First(&defaultCurrency).Error; err == nil {
+		currencyCode = defaultCurrency.Code
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"msg":    "success",
@@ -344,7 +351,7 @@ func ZjmfCompatCartAll(c *gin.Context) {
 			"first_group": result,
 			"products":    flatProducts,
 			"count":       totalProducts,
-			"currency":    "CNY",
+			"currency":    currencyCode,
 		},
 	})
 }
