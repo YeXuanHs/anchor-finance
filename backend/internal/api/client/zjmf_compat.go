@@ -172,14 +172,17 @@ func ZjmfCompatModuleStatus(c *gin.Context) {
 	}
 
 	powerStatus := "off"
+	des := "已停止"
 	if svc.Status == "active" {
 		powerStatus = "on"
+		des = "运行中"
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"data": gin.H{
 			"status": powerStatus,
+			"des":    des,
 		},
 	})
 }
@@ -854,10 +857,12 @@ func ZjmfCompatOnTrialMax(c *gin.Context) {
 
 	// zjmf返回空数组表示无试用产品
 	c.JSON(http.StatusOK, gin.H{
-		"status": 200,
+		"status":  200,
+		"msg":     "请求成功",
 		"data": gin.H{
 			"product": []gin.H{},
 		},
+		"is_aff": "1",
 	})
 }
 
@@ -883,7 +888,8 @@ func ZjmfCompatStockControl(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status": 200,
+		"status":  200,
+		"msg":     "请求成功",
 		"data": gin.H{
 			"product": gin.H{
 				"hidden":        0,
@@ -891,6 +897,7 @@ func ZjmfCompatStockControl(c *gin.Context) {
 				"qty":           999,
 			},
 		},
+		"is_aff": "1",
 	})
 }
 
