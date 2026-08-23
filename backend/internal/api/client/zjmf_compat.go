@@ -813,6 +813,8 @@ func ZjmfCompatProductDetail(c *gin.Context) {
 			"upstream_auto_setup":        "",
 			"upstream_ontrial_status":    0,
 			"upstream_price":             "0.00",
+			"upstream_product_shopping_url": "",
+			"upstream_cycle":             "",
 			"customfields":               []gin.H{},
 			"product_pricings":           productPricings,
 			"advanced":                   []gin.H{},
