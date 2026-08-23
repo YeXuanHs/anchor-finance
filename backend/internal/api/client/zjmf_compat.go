@@ -22,7 +22,7 @@ func ZjmfCompatLogin(c *gin.Context) {
 		Password string `json:"password"` // API密钥（不是登录密码）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "msg": "参数错误"})
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
 		return
 	}
 
@@ -34,7 +34,7 @@ func ZjmfCompatLogin(c *gin.Context) {
 
 	token, err := LoginByAPIKey(account, req.Password)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 401, "msg": err.Error()})
+		c.JSON(http.StatusOK, gin.H{"status": 401, "msg": err.Error()})
 		return
 	}
 
@@ -61,7 +61,7 @@ func ZjmfCompatProducts(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success", "data": gin.H{"product": list}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success", "data": gin.H{"product": list}})
 }
 
 // ZjmfCompatCategories zjmf兼容商品分组（/v1/hosts/cates）
@@ -78,26 +78,26 @@ func ZjmfCompatCategories(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success", "data": gin.H{"cate": list}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success", "data": gin.H{"cate": list}})
 }
 
 // ZjmfCompatHostDetail zjmf兼容服务详情（/v1/host/header）
 func ZjmfCompatHostDetail(c *gin.Context) {
 	hostID := c.Query("host_id")
 	if hostID == "" {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "msg": "缺少host_id"})
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少host_id"})
 		return
 	}
 
 	db := database.GetDB()
 	var svc model.Service
 	if err := db.First(&svc, hostID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "msg": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
+		"status": 200,
 		"msg":  "success",
 		"data": gin.H{
 			"host_data": gin.H{
@@ -113,13 +113,15 @@ func ZjmfCompatHostDetail(c *gin.Context) {
 }
 
 // ZjmfCompatModuleStatus zjmf兼容模块状态（/v1/hosts/:id/module/status）
+// zjmf文档: type=host 服务器电源状态, type=reinstall 重装进度
 func ZjmfCompatModuleStatus(c *gin.Context) {
 	hostID := c.Param("id")
+	statusType := c.Query("type")
 
 	db := database.GetDB()
 	var svc model.Service
 	if err := db.First(&svc, hostID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "msg": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
 	}
 
@@ -135,8 +137,25 @@ func ZjmfCompatModuleStatus(c *gin.Context) {
 		zjmfStatus = "Unknown"
 	}
 
+	if statusType == "reinstall" {
+		// 重装进度
+		c.JSON(http.StatusOK, gin.H{"status": 200, "data": gin.H{"progress": 100, "status": "completed"}})
+		return
+	}
+
+	// 默认返回电源状态
 	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
+		"status": 200,
+		"data": gin.H{
+			"status": zjmfStatus,
+		},
+	})
+}
+		zjmfStatus = "Unknown"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
 		"msg":  "success",
 		"data": gin.H{
 			"status": zjmfStatus,
@@ -151,12 +170,12 @@ func ZjmfCompatModuleSuspend(c *gin.Context) {
 
 	var svc model.Service
 	if err := db.First(&svc, hostID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "msg": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
 	}
 
 	db.Model(&svc).Update("status", "suspended")
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success"})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success"})
 }
 
 // ZjmfCompatModuleUnsuspend zjmf兼容取消暂停（/v1/hosts/:id/module/unsuspend）
@@ -166,12 +185,12 @@ func ZjmfCompatModuleUnsuspend(c *gin.Context) {
 
 	var svc model.Service
 	if err := db.First(&svc, hostID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "msg": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
 	}
 
 	db.Model(&svc).Update("status", "active")
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success"})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success"})
 }
 
 // ZjmfCompatModuleTerminate zjmf兼容终止（/v1/hosts/:id/module/terminate）
@@ -181,12 +200,12 @@ func ZjmfCompatModuleTerminate(c *gin.Context) {
 
 	var svc model.Service
 	if err := db.First(&svc, hostID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "msg": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
 	}
 
 	db.Model(&svc).Update("status", "terminated")
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success"})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success"})
 }
 
 // ZjmfCompatRenew zjmf兼容续费（/v1/hosts/:id/renew）
@@ -196,12 +215,12 @@ func ZjmfCompatRenew(c *gin.Context) {
 
 	var svc model.Service
 	if err := db.First(&svc, hostID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "msg": "服务不存在"})
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
 	}
 
 	// 续费逻辑：延长到期时间
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success", "data": gin.H{"amount": svc.Amount}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success", "data": gin.H{"amount": svc.Amount}})
 }
 
 // ZjmfCompatUser zjmf兼容用户信息（/v1/user）
@@ -211,12 +230,12 @@ func ZjmfCompatUser(c *gin.Context) {
 
 	var user model.User
 	if err := db.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "msg": "用户不存在"})
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "用户不存在"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
+		"status": 200,
 		"msg":  "success",
 		"data": gin.H{
 			"client": gin.H{
@@ -237,12 +256,12 @@ func ZjmfCompatBalance(c *gin.Context) {
 
 	var user model.User
 	if err := db.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "msg": "用户不存在"})
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "用户不存在"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
+		"status": 200,
 		"msg":  "success",
 		"data": gin.H{
 			"credit": user.Balance,
