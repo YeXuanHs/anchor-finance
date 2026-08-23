@@ -324,11 +324,25 @@ func ZjmfCompatCartAll(c *gin.Context) {
 		})
 	}
 
+	// 构建扁平products列表（zjmf的getUpstreamProducts取$list["products"]）
+	var flatProducts []gin.H
+	for _, fg := range result {
+		groups := fg["group"].([]gin.H)
+		for _, g := range groups {
+			flatProducts = append(flatProducts, gin.H{
+				"id":       g["id"],
+				"name":     g["name"],
+				"products": g["products"],
+			})
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"msg":    "success",
 		"data": gin.H{
 			"first_group": result,
+			"products":    flatProducts,
 			"count":       totalProducts,
 			"currency": gin.H{
 				"id":     1,
