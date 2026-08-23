@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"net/http"
@@ -51,7 +51,7 @@ func AddUserRemark(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "添加成功", "data": gin.H{"id": remark.ID}})
 }
 
-// LoginAsUser 以用户身份登录
+// LoginAsUser 以用户身份登录（生成临时token）
 func LoginAsUser(c *gin.Context) {
 	id := c.Param("id")
 	db := database.GetDB()
@@ -60,7 +60,19 @@ func LoginAsUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "用户不存在", "data": nil})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"user_id": user.ID, "username": user.Username}})
+
+	// 生成用户token
+	token, err := service.GenerateTokenStatic(user.ID, user.Username, false)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "生成token失败", "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{
+		"user_id":  user.ID,
+		"username": user.Username,
+		"token":    token,
+	}})
 }
 
 // RefreshUserServicesStatus 刷新用户服务状态
@@ -910,7 +922,15 @@ func AdminUpdateServiceMeta(c *gin.Context) {
 	if req.Remark != "" { updates["remark"] = req.Remark }
 	if req.Hostname != "" { updates["hostname"] = req.Hostname }
 	if req.Username != "" { updates["username"] = req.Username }
-	if req.Password != "" { updates["password"] = req.Password }
+	if req.Password != "" {
+		// 密码加密存储（bcrypt）
+		hashed, err := service.HashPassword(req.Password)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 500, "message": "密码加密失败", "data": nil})
+			return
+		}
+		updates["password_hash"] = hashed
+	}
 	if req.IPAddress != "" { updates["ip_address"] = req.IPAddress }
 
 	db.Model(&service).Updates(updates)
