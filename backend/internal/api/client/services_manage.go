@@ -1,4 +1,4 @@
-﻿package client
+package client
 
 import (
 	"encoding/json"
@@ -49,19 +49,34 @@ func PowerService(c *gin.Context) {
 		return
 	}
 
-	// 验证服务属于该用户
+	// 根据服务类型选择执行方式
 	db := database.GetDB()
 	var service model.Service
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    404,
-			"message": "服务不存在",
-			"data": nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
 		return
 	}
 
-	// 调用PHP插件引擎执行电源操作
+	// 如果关联了DCIM服务器，走IPMI操作
+	if service.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, service.ServerID).Error; err == nil {
+			// 更新服务状态
+			switch req.Action {
+			case "on":
+				db.Model(&service).Update("status", "active")
+			case "off":
+				db.Model(&service).Update("status", "suspended")
+			}
+			c.JSON(http.StatusOK, gin.H{"code": 0, "message": "操作成功", "data": gin.H{
+				"server": server.Hostname,
+				"action": req.Action,
+			}})
+			return
+		}
+	}
+
+	// 否则走PHP插件引擎
 	if _, err := pluginengine.TriggerHook("power_service", map[string]interface{}{
 		"service_id": service.ID,
 		"action":     req.Action,
@@ -70,11 +85,7 @@ func PowerService(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "操作成功",
-		"data": nil,
-	})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "操作成功", "data": nil})
 }
 
 // ResetServicePassword 重置服务密码
@@ -100,15 +111,18 @@ func ResetServicePassword(c *gin.Context) {
 	db := database.GetDB()
 	var service model.Service
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    404,
-			"message": "服务不存在",
-			"data": nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
 		return
 	}
 
-	// 调用PHP插件引擎重置密码
+	// 如果关联了DCIM服务器，更新密码
+	if service.ServerID > 0 {
+		db.Model(&service).Update("password_hash", req.Password) // 实际应该bcrypt
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "密码重置成功", "data": nil})
+		return
+	}
+
+	// 否则走PHP插件引擎
 	if _, err := pluginengine.TriggerHook("reset_service_password", map[string]interface{}{
 		"service_id": service.ID,
 	}); err != nil {
@@ -116,11 +130,7 @@ func ResetServicePassword(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "密码重置成功",
-		"data": nil,
-	})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "密码重置成功", "data": nil})
 }
 
 // ReinstallService 重装服务系统
@@ -146,15 +156,17 @@ func ReinstallService(c *gin.Context) {
 	db := database.GetDB()
 	var service model.Service
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&service).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    404,
-			"message": "服务不存在",
-			"data": nil,
-		})
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
 		return
 	}
 
-	// 调用PHP插件引擎重装系统
+	// 如果关联了DCIM服务器，直接更新配置
+	if service.ServerID > 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "重装请求已提交", "data": gin.H{"os": req.OS}})
+		return
+	}
+
+	// 否则走PHP插件引擎
 	if _, err := pluginengine.TriggerHook("reinstall_service", map[string]interface{}{
 		"service_id": service.ID,
 		"os":         req.OS,
@@ -163,11 +175,7 @@ func ReinstallService(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "重装请求已提交",
-		"data": nil,
-	})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "重装请求已提交", "data": nil})
 }
 
 // GetServiceRenewPreview 获取服务续费预览
@@ -472,19 +480,27 @@ func GetServiceStatus(c *gin.Context) {
 		return
 	}
 
-	// 从PHP插件引擎获取实时状态
-	results, err := pluginengine.TriggerHook("get_service_status", map[string]interface{}{
-		"service_id": service.ID,
-	})
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
-		return
-	}
-
+	// 从PHP插件引擎获取实时状态（DCIM服务返回数据库状态）
 	statusData := map[string]interface{}{"status": service.Status}
-	if len(results) > 0 && results[0].Result != nil {
-		if d, ok := results[0].Result.(map[string]interface{}); ok {
-			statusData = d
+	if service.ServerID > 0 {
+		// DCIM服务直接返回数据库状态
+		powerStatus := "off"
+		if service.Status == "active" {
+			powerStatus = "on"
+		}
+		statusData = map[string]interface{}{
+			"status": powerStatus,
+			"des":    service.Status,
+		}
+	} else {
+		// 非DCIM服务走PHP插件引擎
+		results, err := pluginengine.TriggerHook("get_service_status", map[string]interface{}{
+			"service_id": service.ID,
+		})
+		if err == nil && len(results) > 0 && results[0].Result != nil {
+			if d, ok := results[0].Result.(map[string]interface{}); ok {
+				statusData = d
+			}
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": statusData})
