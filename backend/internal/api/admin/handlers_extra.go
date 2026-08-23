@@ -1478,7 +1478,7 @@ func TestAIConnection(c *gin.Context) {
 
 	result, err := aiSvc.ChatCompletion([]map[string]string{
 		{"role": "user", "content": "你好，请回复'连接成功'四个字"},
-	})
+	}, nil)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "AI连接失败: " + err.Error(), "data": nil})
 		return
