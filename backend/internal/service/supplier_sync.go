@@ -425,15 +425,10 @@ func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct
 			"name":         p.Name,
 		})
 
-		// MD 7.2.4: 库存不足通知
+		// MD 7.2.4: 库存不足通知（通知所有admin）
 		stockThreshold := getSettingInt("stock_notify_threshold", 5)
 		if oldStock > stockThreshold && p.Stock <= stockThreshold && p.Stock >= 0 {
-			db.Create(&model.UserNotification{
-				UserID:  1,
-				Title:   "供应商库存不足",
-				Content: fmt.Sprintf("商品 %s 库存不足: %d（阈值%d）", existing.Name, p.Stock, stockThreshold),
-				Type:    "stock_low",
-			})
+			notifyAllAdmins(db, "供应商库存不足", fmt.Sprintf("商品 %s 库存不足: %d（阈值%d）", existing.Name, p.Stock, stockThreshold), "stock_low")
 		}
 	}
 }
@@ -490,12 +485,7 @@ func (s *SupplierSyncService) syncSinglePrice(supplierID uint, p RemoteProduct, 
 	})
 
 	if priceNotify && oldPrice != p.Price && oldPrice > 0 {
-		db.Create(&model.UserNotification{
-			UserID:  1,
-			Title:   "供应商价格变动",
-			Content: fmt.Sprintf("商品 %s 价格变动: %.2f → %.2f", existing.Name, oldPrice, p.Price),
-			Type:    "price_change",
-		})
+		notifyAllAdmins(db, "供应商价格变动", fmt.Sprintf("商品 %s 价格变动: %.2f → %.2f", existing.Name, oldPrice, p.Price), "price_change")
 	}
 }
 
@@ -634,4 +624,18 @@ func (s *SupplierSyncService) SyncProductStatus(supplierID uint) error {
 		}
 	}
 	return nil
+}
+
+// notifyAllAdmins 通知所有admin用户
+func notifyAllAdmins(db *gorm.DB, title, content, notifType string) {
+	var admins []model.Admin
+	db.Find(&admins)
+	for _, admin := range admins {
+		db.Create(&model.UserNotification{
+			UserID:  admin.ID,
+			Title:   title,
+			Content: content,
+			Type:    notifType,
+		})
+	}
 }

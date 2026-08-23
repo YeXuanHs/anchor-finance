@@ -13,6 +13,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 
 	// 公开路由（不需要认证）
 	public := r.Group("")
+	public.Use(middleware.RedirectWhitelist()) // MD 9.1漏洞6：跳转URL白名单
 	{
 		public.POST("/login", authHandler.Login)
 		public.POST("/register", authHandler.Register)

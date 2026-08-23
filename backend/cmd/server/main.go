@@ -137,6 +137,9 @@ func main() {
 			if result.RowsAffected > 0 {
 				log.Printf("[Cleanup] Deleted %d expired captcha entries", result.RowsAffected)
 			}
+			// 清理过期的登录风控记录
+			riskSvc := service.NewLoginRiskControl(db)
+			riskSvc.Cleanup()
 		}
 	}()
 
