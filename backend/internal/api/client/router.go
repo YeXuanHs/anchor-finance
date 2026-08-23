@@ -16,6 +16,9 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 		v1Compat.GET("/hosts/cates", ZjmfCompatCategories)
 	}
 
+	// zjmf对接上游时调的端点（{url}/zjmf_api_login）
+	r.POST("/zjmf_api_login", ZjmfCompatLogin)
+
 	// 需要JWT认证的端点
 	v1Auth := r.Group("/v1")
 	v1Auth.Use(middleware.JWTAuth(authService))
