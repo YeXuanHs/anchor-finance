@@ -503,7 +503,7 @@ func (d *AnchorDriver) login() (string, error) {
 	}
 	body, _ := json.Marshal(payload)
 
-	resp, err := d.client.Post(d.apiURL+"/api/admin/login", "application/json", bytes.NewReader(body))
+	resp, err := d.client.Post(d.apiURL+"/api/client/login", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return "", fmt.Errorf("登录请求失败: %w", err)
 	}
@@ -589,7 +589,7 @@ func (d *AnchorDriver) FetchProducts() ([]RemoteProduct, error) {
 }
 
 func (d *AnchorDriver) FetchProductGroups() ([]RemoteGroup, error) {
-	result, err := d.request("GET", "/api/admin/product-groups", nil)
+	result, err := d.request("GET", "/api/client/products/categories", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -610,7 +610,7 @@ func (d *AnchorDriver) FetchProductGroups() ([]RemoteGroup, error) {
 }
 
 func (d *AnchorDriver) SyncStatus(serviceID string) (*StatusResult, error) {
-	result, err := d.request("GET", "/api/admin/services/"+serviceID, nil)
+	result, err := d.request("GET", "/api/client/services/"+serviceID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -625,24 +625,36 @@ func (d *AnchorDriver) SyncStatus(serviceID string) (*StatusResult, error) {
 }
 
 func (d *AnchorDriver) CreateService(params CreateServiceParams) (*ServiceResult, error) {
-	return nil, fmt.Errorf("锚点接口暂不支持自动开通")
+	// 通过购物车流程
+	_, err := d.request("POST", "/api/client/cart", map[string]interface{}{
+		"product_id": params.ProductID,
+		"quantity":   1,
+		"cycle":      params.Cycle,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("加入购物车失败: %w", err)
+	}
+
+	_, err = d.request("POST", "/api/client/cart/checkout", nil)
+	if err != nil {
+		return nil, fmt.Errorf("结算失败: %w", err)
+	}
+
+	return &ServiceResult{}, nil
 }
 
 func (d *AnchorDriver) SuspendService(serviceID string) error {
-	_, err := d.request("POST", "/api/admin/services/"+serviceID+"/suspend", nil)
-	return err
+	return fmt.Errorf("锚点接口暂不支持远程暂停")
 }
 
 func (d *AnchorDriver) UnsuspendService(serviceID string) error {
-	_, err := d.request("POST", "/api/admin/services/"+serviceID+"/unsuspend", nil)
-	return err
+	return fmt.Errorf("锚点接口暂不支持远程取消暂停")
 }
 
 func (d *AnchorDriver) TerminateService(serviceID string) error {
-	_, err := d.request("POST", "/api/admin/services/"+serviceID+"/terminate", nil)
-	return err
+	return fmt.Errorf("锚点接口暂不支持远程终止")
 }
 
 func (d *AnchorDriver) RenewService(serviceID string, cycle string) error {
-	return fmt.Errorf("锚点接口暂不支持自动续费")
+	return fmt.Errorf("锚点接口暂不支持远程续费")
 }
