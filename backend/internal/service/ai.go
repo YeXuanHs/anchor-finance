@@ -10,6 +10,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 )
 
 // AIService AI服务（可选启用，配置存数据库）
@@ -86,8 +87,8 @@ func (s *AIService) GetConfig() map[string]interface{} {
 	}
 }
 
-// ChatCompletion 调用AI对话接口
-func (s *AIService) ChatCompletion(messages []map[string]string) (string, error) {
+// ChatCompletion 调用AI对话接口（支持function calling）
+func (s *AIService) ChatCompletion(messages []map[string]string, tools []map[string]interface{}) (string, error) {
 	if !s.enabled {
 		return "", fmt.Errorf("AI服务未启用")
 	}
@@ -95,6 +96,9 @@ func (s *AIService) ChatCompletion(messages []map[string]string) (string, error)
 	payload := map[string]interface{}{
 		"model":    s.model,
 		"messages": messages,
+	}
+	if len(tools) > 0 {
+		payload["tools"] = tools
 	}
 
 	body, _ := json.Marshal(payload)
@@ -116,7 +120,8 @@ func (s *AIService) ChatCompletion(messages []map[string]string) (string, error)
 	var result struct {
 		Choices []struct {
 			Message struct {
-				Content string `json:"content"`
+				Content   string                   `json:"content"`
+				ToolCalls []map[string]interface{} `json:"tool_calls,omitempty"`
 			} `json:"message"`
 		} `json:"choices"`
 	}
@@ -128,7 +133,34 @@ func (s *AIService) ChatCompletion(messages []map[string]string) (string, error)
 		return "", fmt.Errorf("AI无响应")
 	}
 
-	return result.Choices[0].Message.Content, nil
+	// 如果AI返回tool_calls，执行工具调用后继续对话
+	msg := result.Choices[0].Message
+	if len(msg.ToolCalls) > 0 {
+		return s.handleToolCalls(messages, msg.ToolCalls)
+	}
+
+	return msg.Content, nil
+}
+
+// handleToolCalls 执行AI工具调用后继续对话
+func (s *AIService) handleToolCalls(messages []map[string]string, toolCalls []map[string]interface{}) (string, error) {
+	// 执行每个tool并收集结果文本
+	var toolContext string
+	for _, tc := range toolCalls {
+		fn, _ := tc["function"].(map[string]interface{})
+		funcName, _ := fn["name"].(string)
+		funcArgs, _ := fn["arguments"].(string)
+		result := ExecuteAITool(funcName, funcArgs)
+		toolContext += fmt.Sprintf("工具[%s]结果: %s\n", funcName, result)
+	}
+
+	// 把工具结果作为assistant消息追加，再让AI总结
+	messages = append(messages, map[string]string{
+		"role":    "assistant",
+		"content": toolContext,
+	})
+
+	return s.ChatCompletion(messages, nil)
 }
 
 // GenerateProductDescription AI生成商品简介
@@ -149,7 +181,7 @@ func (s *AIService) GenerateProductDescription(productName string, config map[st
 		},
 	}
 
-	return s.ChatCompletion(messages)
+	return s.ChatCompletion(messages, nil)
 }
 
 // TicketAutoReply AI工单自动回复
@@ -174,5 +206,97 @@ func (s *AIService) TicketAutoReply(ticketSubject string, ticketContent string, 
 		{"role": "user", "content": userPrompt},
 	}
 
-	return s.ChatCompletion(messages)
+	return s.ChatCompletion(messages, nil)
+}
+
+// GetAITools 获取AI可用工具列表（function calling定义）
+func GetAITools() []map[string]interface{} {
+	return []map[string]interface{}{
+		{"type": "function", "function": map[string]interface{}{
+			"name": "get_user_info", "description": "获取客户信息",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"user_id": map[string]interface{}{"type": "integer", "description": "用户ID"},
+			}, "required": []string{"user_id"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "get_service_status", "description": "查询服务状态",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"service_id": map[string]interface{}{"type": "integer", "description": "服务ID"},
+			}, "required": []string{"service_id"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "reboot_service", "description": "重启客户服务器",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"service_id": map[string]interface{}{"type": "integer", "description": "服务ID"},
+			}, "required": []string{"service_id"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "get_user_orders", "description": "获取客户订单列表",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"user_id": map[string]interface{}{"type": "integer", "description": "用户ID"},
+			}, "required": []string{"user_id"}},
+		}},
+		{"type": "function", "function": map[string]interface{}{
+			"name": "get_user_invoices", "description": "获取客户账单列表",
+			"parameters": map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+				"user_id": map[string]interface{}{"type": "integer", "description": "用户ID"},
+			}, "required": []string{"user_id"}},
+		}},
+	}
+}
+
+// ExecuteAITool 执行AI工具调用
+func ExecuteAITool(funcName string, argsJSON string) string {
+	db := database.GetDB()
+	var args map[string]interface{}
+	json.Unmarshal([]byte(argsJSON), &args)
+
+	switch funcName {
+	case "get_user_info":
+		userID := int(args["user_id"].(float64))
+		var user model.User
+		if err := db.First(&user, userID).Error; err != nil {
+			return `{"error":"用户不存在"}`
+		}
+		r, _ := json.Marshal(map[string]interface{}{"id": user.ID, "username": user.Username, "email": user.Email, "balance": user.Balance, "status": user.Status})
+		return string(r)
+
+	case "get_service_status":
+		serviceID := int(args["service_id"].(float64))
+		var svc model.Service
+		if err := db.First(&svc, serviceID).Error; err != nil {
+			return `{"error":"服务不存在"}`
+		}
+		r, _ := json.Marshal(map[string]interface{}{"id": svc.ID, "status": svc.Status, "product_name": svc.ProductName, "username": svc.Username, "domain": svc.Domain})
+		return string(r)
+
+	case "reboot_service":
+		serviceID := int(args["service_id"].(float64))
+		var svc model.Service
+		if err := db.First(&svc, serviceID).Error; err != nil {
+			return `{"error":"服务不存在"}`
+		}
+		_, err := pluginengine.TriggerHook("service_reboot", map[string]interface{}{"service_id": svc.ID, "user_id": svc.UserID})
+		if err != nil {
+			return fmt.Sprintf(`{"error":"重启失败: %s"}`, err.Error())
+		}
+		return `{"success":true,"message":"重启命令已发送"}`
+
+	case "get_user_orders":
+		userID := int(args["user_id"].(float64))
+		var orders []model.Order
+		db.Where("user_id = ?", userID).Order("id DESC").Limit(10).Find(&orders)
+		r, _ := json.Marshal(orders)
+		return string(r)
+
+	case "get_user_invoices":
+		userID := int(args["user_id"].(float64))
+		var invoices []model.Invoice
+		db.Where("user_id = ?", userID).Order("id DESC").Limit(10).Find(&invoices)
+		r, _ := json.Marshal(invoices)
+		return string(r)
+
+	default:
+		return `{"error":"未知工具"}`
+	}
 }

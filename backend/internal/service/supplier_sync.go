@@ -280,11 +280,17 @@ func (s *SupplierSyncService) GetDriver(supplierID uint) UpstreamDriver {
 	return s.drivers[supplierID]
 }
 
-// SyncAllProducts 同步所有供应商商品（多线程）
+// SyncAllProducts 同步所有供应商商品（多线程，自动创建分组+自动上架）
 func (s *SupplierSyncService) SyncAllProducts(supplierID uint) error {
 	driver := s.GetDriver(supplierID)
 	if driver == nil {
 		return fmt.Errorf("供应商驱动未注册: %d", supplierID)
+	}
+
+	// MD 7.2.2: 拉取上游分组并自动创建本地分组
+	groups, err := driver.FetchProductGroups()
+	if err == nil && len(groups) > 0 {
+		s.autoCreateGroups(groups)
 	}
 
 	products, err := driver.FetchProducts()
@@ -293,21 +299,46 @@ func (s *SupplierSyncService) SyncAllProducts(supplierID uint) error {
 	}
 
 	db := database.GetDB()
+
+	// 检查是否启用自动上架
+	autoListing := false
+	var listingSetting model.Setting
+	if err := db.Where("`key` = ?", "auto_listing_enabled").First(&listingSetting).Error; err == nil && listingSetting.Value == "1" {
+		autoListing = true
+	}
+
 	for _, p := range products {
-		// 查找或创建本地商品
+		// 查找或创建本地供应商商品
 		var existing model.SupplierProduct
 		result := db.Where("supplier_id = ? AND remote_product_id = ?", supplierID, p.ID).First(&existing)
 		if result.Error != nil {
-			// 新商品，创建
+			// 新商品，创建供应商商品记录
+			profitRate := 25.0 // 默认25%利润率
+			localPrice := p.Price * (1 + profitRate/100)
+
 			sp := model.SupplierProduct{
-				SupplierID:     supplierID,
+				SupplierID:      supplierID,
 				RemoteProductID: p.ID,
-				Name:           p.Name,
-				RemotePrice:    p.Price,
-				Stock:          p.Stock,
-				Status:         "active",
+				Name:            p.Name,
+				RemotePrice:     p.Price,
+				LocalPrice:      localPrice,
+				ProfitRate:      profitRate,
+				Stock:           p.Stock,
+				Status:          "active",
 			}
 			db.Create(&sp)
+
+			// MD 7.2.5: 自动上架（创建本地Product）
+			if autoListing {
+				product := model.Product{
+					Name:   p.Name,
+					Type:   "server",
+					Price:  localPrice,
+					Amount: localPrice,
+					Status: "active",
+				}
+				db.Create(&product)
+			}
 		} else {
 			// 已有商品，更新价格和库存
 			db.Model(&existing).Updates(map[string]interface{}{
@@ -387,4 +418,23 @@ func (s *SupplierSyncService) StartStockSyncCron() {
 			}
 		}
 	}()
+}
+
+// autoCreateGroups 自动创建商品分组（MD 7.2.2）
+func (s *SupplierSyncService) autoCreateGroups(groups []RemoteGroup) {
+	db := database.GetDB()
+	for _, g := range groups {
+		var existing model.ProductGroup
+		if err := db.Where("name = ? AND parent_id = 0", g.Name).First(&existing).Error; err != nil {
+			existing = model.ProductGroup{Name: g.Name, ParentID: 0, Status: "active"}
+			db.Create(&existing)
+		}
+		for _, child := range g.Children {
+			var existingChild model.ProductGroup
+			if err := db.Where("name = ? AND parent_id = ?", child.Name, existing.ID).First(&existingChild).Error; err != nil {
+				existingChild = model.ProductGroup{Name: child.Name, ParentID: existing.ID, Status: "active"}
+				db.Create(&existingChild)
+			}
+		}
+	}
 }
