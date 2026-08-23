@@ -108,12 +108,13 @@ func GetProduct(c *gin.Context) {
 func CreateProduct(c *gin.Context) {
 	// 1. 解析请求参数
 	var req struct {
-		Name         string  `json:"name" binding:"required"`
-		GroupID      uint    `json:"group_id"`
-		Type         string  `json:"type"`
-		Description  string  `json:"description"`
-		Price        float64 `json:"price"`
-		BillingCycle string  `json:"billing_cycle"`
+		Name          string  `json:"name" binding:"required"`
+		GroupID       uint    `json:"group_id"`
+		Type          string  `json:"type"`
+		Description   string  `json:"description"`
+		Price         float64 `json:"price"`
+		BillingCycle  string  `json:"billing_cycle"`
+		ConfigOptions string  `json:"config_options"` // JSON配置选项
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -134,14 +135,15 @@ func CreateProduct(c *gin.Context) {
 	// 2. 创建产品
 	db := database.GetDB()
 	product := model.Product{
-		Name:         req.Name,
-		GroupID:      req.GroupID,
-		Type:         req.Type,
-		Description:  req.Description,
-		Amount:       req.Price,
-		Price:        req.Price,
-		BillingCycle: req.BillingCycle,
-		Status:       "active",
+		Name:          req.Name,
+		GroupID:       req.GroupID,
+		Type:          req.Type,
+		Description:   req.Description,
+		Amount:        req.Price,
+		Price:         req.Price,
+		BillingCycle:  req.BillingCycle,
+		ConfigOptions: req.ConfigOptions,
+		Status:        "active",
 	}
 
 	if err := db.Create(&product).Error; err != nil {
@@ -184,13 +186,14 @@ func UpdateProduct(c *gin.Context) {
 
 	// 2. 解析请求参数
 	var req struct {
-		Name         string  `json:"name"`
-		GroupID      uint    `json:"group_id"`
-		Type         string  `json:"type"`
-		Description  string  `json:"description"`
-		Price        float64 `json:"price"`
-		BillingCycle string  `json:"billing_cycle"`
-		Status       string  `json:"status"`
+		Name          string  `json:"name"`
+		GroupID       uint    `json:"group_id"`
+		Type          string  `json:"type"`
+		Description   string  `json:"description"`
+		Price         float64 `json:"price"`
+		BillingCycle  string  `json:"billing_cycle"`
+		Status        string  `json:"status"`
+		ConfigOptions string  `json:"config_options"` // JSON配置选项
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -237,6 +240,9 @@ func UpdateProduct(c *gin.Context) {
 	}
 	if req.Status != "" {
 		updates["status"] = req.Status
+	}
+	if req.ConfigOptions != "" {
+		updates["config_options"] = req.ConfigOptions
 	}
 
 	if err := db.Model(&product).Updates(updates).Error; err != nil {
