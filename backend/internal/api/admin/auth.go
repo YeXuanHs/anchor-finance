@@ -56,7 +56,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// 触发Hook: admin_login
 	pluginengine.TriggerHook("admin_login", map[string]interface{}{
-		"admin_id": admin.ID, "username": req.Username, "ip": c.ClientIP(),
+		"username": req.Username, "ip": c.ClientIP(),
 	})
 
 	c.JSON(http.StatusOK, gin.H{
