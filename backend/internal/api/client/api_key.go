@@ -102,12 +102,14 @@ func EnableAPIKey(c *gin.Context) {
 
 	// 生成API密钥
 	apiKey, _ := generateAPIKey()
-	encrypted, _ := util.EncryptAES(apiKey)
+	encrypted, encErr := util.EncryptAES(apiKey)
+	if encErr != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "密钥加密失败", "data": nil})
+		return
+	}
 
-	db.Model(&user).Updates(map[string]interface{}{
-		"api_key":    encrypted,
-		"api_enabled": true,
-	})
+	db.Model(&user).Update("api_key", encrypted)
+	db.Model(&user).Update("api_enabled", true)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0, "message": "API开通成功",
@@ -134,7 +136,11 @@ func ResetAPIKey(c *gin.Context) {
 
 	// 生成新密钥
 	apiKey, _ := generateAPIKey()
-	encrypted, _ := util.EncryptAES(apiKey)
+	encrypted, encErr := util.EncryptAES(apiKey)
+	if encErr != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "密钥加密失败", "data": nil})
+		return
+	}
 
 	db.Model(&user).Update("api_key", encrypted)
 
@@ -156,10 +162,8 @@ func DisableAPIKey(c *gin.Context) {
 		return
 	}
 
-	db.Model(&user).Updates(map[string]interface{}{
-		"api_enabled": false,
-		"api_key":     "",
-	})
+	db.Model(&user).Update("api_enabled", false)
+	db.Model(&user).Update("api_key", "")
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "API已关闭", "data": nil})
 }
