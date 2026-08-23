@@ -247,9 +247,15 @@ func ZjmfCompatBalance(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
-		"msg":  "success",
+		"msg":    "success",
 		"data": gin.H{
 			"credit": user.Balance,
+			"currency": gin.H{
+				"id":     1,
+				"code":   "CNY",
+				"prefix": "¥",
+				"suffix": "元",
+			},
 		},
 	})
 }
@@ -287,29 +293,34 @@ func ZjmfCompatCartAll(c *gin.Context) {
 			var productList []gin.H
 			for _, p := range products {
 				productList = append(productList, gin.H{
-					"id":           p.ID,
-					"name":         p.Name,
-					"description":  p.Description,
+					"id":            p.ID,
+					"name":          p.Name,
+					"description":   p.Description,
 					"product_price": p.Price,
 					"billingcycle":  p.BillingCycle,
 					"type":          p.Type,
 					"qty":           1,
 					"stock_control": 0,
 					"setup_fee":     0,
+					"ontrial":       gin.H{"ontrial": 0},
 				})
 			}
 
 			groupList = append(groupList, gin.H{
 				"id":       g.ID,
 				"name":     g.Name,
+				"headline": "",
+				"tagline":  "",
+				"fields":   []gin.H{},
 				"products": productList,
 			})
 		}
 
 		result = append(result, gin.H{
-			"id":    fg.ID,
-			"name":  fg.Name,
-			"group": groupList,
+			"id":     fg.ID,
+			"name":   fg.Name,
+			"fields": []gin.H{},
+			"group":  groupList,
 		})
 	}
 
