@@ -1022,7 +1022,7 @@ func ZjmfCompatDcimOn(c *gin.Context) {
 	}
 
 	db.Model(&svc).Update("status", "active")
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "开机成功"})
 }
 
 // ZjmfCompatDcimOff POST /dcim/off - 关机
@@ -1048,7 +1048,7 @@ func ZjmfCompatDcimOff(c *gin.Context) {
 	}
 
 	db.Model(&svc).Update("status", "suspended")
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "关机成功"})
 }
 
 // ZjmfCompatDcimReboot POST /dcim/reboot - 重启
@@ -1073,7 +1073,7 @@ func ZjmfCompatDcimReboot(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "重启成功"})
 }
 
 // ZjmfCompatDcimRescue POST /dcim/rescue - 救援模式
@@ -1128,13 +1128,17 @@ func ZjmfCompatDcimReinstall(c *gin.Context) {
 		db.Model(&svc).Update("config", req.OS)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "重装成功"})
 }
 
 // ZjmfCompatDcimCrackPass POST /dcim/crack_pass - 重置密码
 func ZjmfCompatDcimCrackPass(c *gin.Context) {
 	var req struct {
-		ID uint `json:"id" form:"id"`
+		ID        uint   `json:"id" form:"id"`
+		Password  string `json:"password" form:"password"`
+		User      string `json:"user" form:"user"`
+		OtherUser string `json:"other_user" form:"other_user"`
+		Action    string `json:"action" form:"action"`
 	}
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
@@ -1153,12 +1157,7 @@ func ZjmfCompatDcimCrackPass(c *gin.Context) {
 		return
 	}
 
-	// 生成随机密码
-	bytes := make([]byte, 16)
-	rand.Read(bytes)
-	password := hex.EncodeToString(bytes)[:16]
-
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"password": password}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "发起成功"})
 }
 
 // ZjmfCompatDcimCheckReinstall POST /dcim/check_reinstall - 检查可重装
@@ -1183,8 +1182,7 @@ func ZjmfCompatDcimCheckReinstall(c *gin.Context) {
 		return
 	}
 
-	allow := svc.Status == "active"
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"allow": allow}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "可以重装", "num": 0, "max_times": 3})
 }
 
 // ZjmfCompatDcimDetail GET /dcim/detail - 服务器详情
@@ -1206,46 +1204,20 @@ func ZjmfCompatDcimDetail(c *gin.Context) {
 		"status": 200,
 		"msg":   "请求成功",
 		"data": gin.H{
-			"id":     svc.ID,
-			"status": svc.Status,
-			"domain": svc.Domain,
-			"os":     svc.Config,
-			"ip":     "",
+			"dcimid":      svc.ID,
+			"status":      svc.Status,
+			"domain":      svc.Domain,
+			"dedicatedip": "",
+			"os":          "",
+			"username":    "",
+			"password":    "",
 		},
 	})
 }
 
 // ZjmfCompatDcimBuyReinstallTimes POST /dcim/buy_reinstall_times - 购买重装次数
 func ZjmfCompatDcimBuyReinstallTimes(c *gin.Context) {
-	var req struct {
-		ID uint `json:"id" form:"id"`
-	}
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
-		return
-	}
-
-	if req.ID == 0 {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
-		return
-	}
-
-	db := database.GetDB()
-	var svc model.Service
-	if err := db.First(&svc, req.ID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
-		return
-	}
-
-	invoice := model.Invoice{
-		UserID: svc.UserID,
-		Amount: 0,
-		Status: "unpaid",
-		Note:   fmt.Sprintf("购买重装次数 服务#%d", svc.ID),
-	}
-	db.Create(&invoice)
-
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": invoice.ID, "amount": fmt.Sprintf("%.2f", invoice.Amount)}})
+	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "不需要购买次数"})
 }
 
 // ZjmfCompatDcimBuyFlowPacket POST /dcim/buy_flow_packet - 购买流量包
