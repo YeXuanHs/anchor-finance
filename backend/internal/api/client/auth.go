@@ -291,6 +291,11 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	hashedPassword, _ := service.HashPassword(req.Password)
 	db.Model(&user).Update("password_hash", hashedPassword)
 
+	// 触发Hook: client_reset_password
+	pluginengine.TriggerHook("client_reset_password", map[string]interface{}{
+		"user_id": user.ID, "email": req.Email, "ip": c.ClientIP(),
+	})
+
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "密码重置成功", "data": nil})
 }
 
@@ -344,6 +349,12 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 			ExpiresAt: expiresAt,
 		})
 	}
+
+	// 触发Hook: client_logout
+	userID, _ := c.Get("user_id")
+	pluginengine.TriggerHook("client_logout", map[string]interface{}{
+		"user_id": userID, "ip": c.ClientIP(),
+	})
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": nil})
 }
