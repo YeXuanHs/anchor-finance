@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
-	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -55,26 +54,9 @@ func ZjmfCompatLogin(c *gin.Context) {
 }
 
 // ZjmfCompatProducts zjmf兼容商品列表（/v1/products）
+// 和/cart/all返回相同嵌套格式
 func ZjmfCompatProducts(c *gin.Context) {
-	db := database.GetDB()
-	var products []model.Product
-	db.Where("status = ?", "active").Order("id ASC").Find(&products)
-
-	// 转成zjmf格式
-	var list []gin.H
-	for _, p := range products {
-		list = append(list, gin.H{
-			"id":         p.ID,
-			"name":       p.Name,
-			"description": p.Description,
-			"price":      p.Price,
-			"gid":        p.GroupID,
-			"stock":      999, // 默认充足库存
-			"status":     "active",
-		})
-	}
-
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success", "data": gin.H{"product": list}})
+	ZjmfCompatCartAll(c)
 }
 
 // ZjmfCompatCategories zjmf兼容商品分组（/v1/hosts/cates）
@@ -272,7 +254,7 @@ func ZjmfCompatBalance(c *gin.Context) {
 }
 
 // ZjmfCompatCartAll zjmf兼容商品目录（/cart/all）
-// zjmf调此端点获取商品目录，期望嵌套结构：first_group→group→products
+// zjmf调此端点获取商品目录，期望嵌套结构+count+product_price
 func ZjmfCompatCartAll(c *gin.Context) {
 	db := database.GetDB()
 
@@ -283,9 +265,9 @@ func ZjmfCompatCartAll(c *gin.Context) {
 		firstGroups = []model.ProductGroup{}
 	}
 
+	totalProducts := 0
 	var result []gin.H
 	for _, fg := range firstGroups {
-		// 获取二级分组
 		var groups []model.ProductGroup
 		db.Where("parent_id = ? AND status = ?", fg.ID, "active").Order("sort_order ASC").Find(&groups)
 		if groups == nil {
@@ -294,21 +276,25 @@ func ZjmfCompatCartAll(c *gin.Context) {
 
 		var groupList []gin.H
 		for _, g := range groups {
-			// 获取该分组下的商品
 			var products []model.Product
 			db.Where("group_id = ? AND status = ?", g.ID, "active").Find(&products)
 			if products == nil {
 				products = []model.Product{}
 			}
+			totalProducts += len(products)
 
 			var productList []gin.H
 			for _, p := range products {
 				productList = append(productList, gin.H{
-					"id":   p.ID,
-					"name": p.Name,
-					"price": p.Price,
-					"pay_type": "recurring",
-					"billingcycle": p.BillingCycle,
+					"id":           p.ID,
+					"name":         p.Name,
+					"description":  p.Description,
+					"product_price": p.Price,
+					"billingcycle":  p.BillingCycle,
+					"type":          p.Type,
+					"qty":           1,
+					"stock_control": 0,
+					"setup_fee":     0,
 				})
 			}
 
@@ -331,6 +317,7 @@ func ZjmfCompatCartAll(c *gin.Context) {
 		"msg":    "success",
 		"data": gin.H{
 			"first_group": result,
+			"count":       totalProducts,
 			"currency": gin.H{
 				"id":     1,
 				"code":   "CNY",
