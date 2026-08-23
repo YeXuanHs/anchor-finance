@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
@@ -358,10 +359,28 @@ func ZjmfCompatCartAll(c *gin.Context) {
 
 // ZjmfCompatProductInfo zjmf兼容商品详情（/api/product/proinfo）
 // zjmf.php line 48: $path = "api/product/proinfo"; params: pids=[]
+// zjmf发的是pids[0]=63（PHP数组格式），需要特殊解析
 func ZjmfCompatProductInfo(c *gin.Context) {
+	// 先尝试标准格式 pids=63&pids=64
 	pids := c.QueryArray("pids")
+
+	// 再尝试PHP格式 pids[0]=63&pids[1]=64
 	if len(pids) == 0 {
-		pids = append(pids, c.Query("pids"))
+		for i := 0; ; i++ {
+			key := fmt.Sprintf("pids[%d]", i)
+			val := c.Query(key)
+			if val == "" {
+				break
+			}
+			pids = append(pids, val)
+		}
+	}
+
+	// 最后尝试单个pids=63
+	if len(pids) == 0 {
+		if val := c.Query("pids"); val != "" {
+			pids = append(pids, val)
+		}
 	}
 
 	db := database.GetDB()
