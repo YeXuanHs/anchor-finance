@@ -20,6 +20,7 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 	r.POST("/zjmf_api_login", ZjmfCompatLogin) // zjmf.php line 193
 	r.GET("/cart/all", ZjmfCompatCartAll)       // zjmf.php line 38: "cart/all"
 	r.GET("/api/product/proinfo", ZjmfCompatProductInfo) // zjmf.php line 48
+	r.GET("/api/product/prodetail", ZjmfCompatProductDetail) // zjmf.php line 54
 	r.GET("/cart/get_product_config", ZjmfCompatProductConfig) // zjmf.php line 70
 
 	// 需要JWT认证的端点

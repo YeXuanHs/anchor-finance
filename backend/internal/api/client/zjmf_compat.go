@@ -464,3 +464,67 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 		},
 	})
 }
+
+// ZjmfCompatProductDetail zjmf兼容商品详细配置（/api/product/prodetail）
+// zjmf.php line 54: $path = "api/product/prodetail"; params: pids=[]
+// zjmf取 $res["data"]["detail"][$upstream_pid]
+func ZjmfCompatProductDetail(c *gin.Context) {
+	pids := c.QueryArray("pids")
+	if len(pids) == 0 {
+		for i := 0; ; i++ {
+			key := fmt.Sprintf("pids[%d]", i)
+			val := c.Query(key)
+			if val == "" {
+				break
+			}
+			pids = append(pids, val)
+		}
+	}
+	if len(pids) == 0 {
+		if val := c.Query("pids"); val != "" {
+			pids = append(pids, val)
+		}
+	}
+
+	db := database.GetDB()
+	var products []model.Product
+	if len(pids) > 0 {
+		db.Where("id IN ?", pids).Find(&products)
+	} else {
+		db.Where("status = ?", "active").Limit(50).Find(&products)
+	}
+
+	detail := gin.H{}
+	for _, p := range products {
+		detail[fmt.Sprintf("%d", p.ID)] = gin.H{
+			"id":                p.ID,
+			"name":              p.Name,
+			"description":       p.Description,
+			"type":              p.Type,
+			"pay_type":          `{"pay_type":"recurring"}`,
+			"auto_setup":        "on_order",
+			"auto_terminate_days": 0,
+			"config_options_upgrade": 0,
+			"down_configoption_refund": 0,
+			"retired":           0,
+			"is_featured":       0,
+			"allow_qty":         0,
+			"is_truename":       0,
+			"is_bind_phone":     0,
+			"groupid":           p.GroupID,
+			"qty":               1,
+			"stock_control":     0,
+			"pay_method":        "",
+			"product_shopping_url": "",
+			"location_version":  1,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "success",
+		"data": gin.H{
+			"detail": detail,
+		},
+	})
+}
