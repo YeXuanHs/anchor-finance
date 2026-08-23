@@ -163,6 +163,15 @@ func (d *ZjmfDriver) FetchProducts() ([]RemoteProduct, error) {
 					if price, ok := m["price"].(float64); ok {
 						p.Price = price
 					}
+					if gid, ok := m["gid"].(float64); ok {
+						p.GroupID = fmt.Sprintf("%.0f", gid)
+					}
+					if gname, ok := m["group_name"].(string); ok {
+						p.GroupName = gname
+					}
+					if stock, ok := m["stock"].(float64); ok {
+						p.Stock = int(stock)
+					}
 					products = append(products, p)
 				}
 			}
@@ -377,6 +386,15 @@ func (d *V10Driver) FetchProducts() ([]RemoteProduct, error) {
 					if price, ok := m["price"].(float64); ok {
 						p.Price = price
 					}
+					if gid, ok := m["gid"].(float64); ok {
+						p.GroupID = fmt.Sprintf("%.0f", gid)
+					}
+					if gname, ok := m["group_name"].(string); ok {
+						p.GroupName = gname
+					}
+					if stock, ok := m["stock"].(float64); ok {
+						p.Stock = int(stock)
+					}
 					products = append(products, p)
 				}
 			}
@@ -553,6 +571,12 @@ func (d *AnchorDriver) FetchProducts() ([]RemoteProduct, error) {
 					}
 					if price, ok := m["price"].(float64); ok {
 						p.Price = price
+					}
+					if gid, ok := m["group_id"].(float64); ok {
+						p.GroupID = fmt.Sprintf("%.0f", gid)
+					}
+					if stock, ok := m["stock"].(float64); ok {
+						p.Stock = int(stock)
 					}
 					products = append(products, p)
 				}

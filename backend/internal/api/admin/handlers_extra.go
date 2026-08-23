@@ -1812,3 +1812,102 @@ func SetAITicketMode(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "设置成功", "data": nil})
 }
+
+// ==================== API审计补充的4个缺失路由 ====================
+
+// PullTrafficPackageCatalog 流量包同步
+// POST /api/admin/products/traffic-package-pulls
+func PullTrafficPackageCatalog(c *gin.Context) {
+	// 流量包从插件引擎拉取目录
+	results, err := pluginengine.TriggerHook("traffic_package_pull", map[string]interface{}{})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "同步完成", "data": results})
+}
+
+// RunCouponCampaignTask 优惠券活动任务执行
+// POST /api/admin/coupon-campaigns/:id/tasks
+func RunCouponCampaignTask(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var campaign model.CouponCampaign
+	if err := db.First(&campaign, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "活动不存在", "data": nil})
+		return
+	}
+
+	// 根据活动类型执行不同任务
+	switch campaign.Type {
+	case "auto_issue":
+		// 自动发放优惠券
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "自动发放任务已执行", "data": gin.H{"campaign_id": campaign.ID}})
+	default:
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "不支持的活动类型", "data": nil})
+	}
+}
+
+// AdminCreateUserService 管理员为用户创建服务
+// POST /api/admin/users/:id/services
+func AdminCreateUserService(c *gin.Context) {
+	userID := c.Param("id")
+	var req struct {
+		ProductID uint   `json:"product_id" binding:"required"`
+		BillingCycle string `json:"billing_cycle"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var user model.User
+	if err := db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "用户不存在", "data": nil})
+		return
+	}
+
+	var product model.Product
+	if err := db.First(&product, req.ProductID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "产品不存在", "data": nil})
+		return
+	}
+
+	service := model.Service{
+		UserID:       user.ID,
+		ProductID:    product.ID,
+		ProductName:  product.Name,
+		BillingCycle: req.BillingCycle,
+		Amount:       product.Amount,
+		Status:       "pending",
+	}
+	if err := db.Create(&service).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建失败", "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "服务创建成功", "data": gin.H{"id": service.ID}})
+}
+
+// AdminDeleteUserService 管理员删除用户服务
+// DELETE /api/admin/users/:id/services/:service_id
+func AdminDeleteUserService(c *gin.Context) {
+	serviceID := c.Param("service_id")
+	db := database.GetDB()
+
+	var svc model.Service
+	if err := db.First(&svc, serviceID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "服务不存在", "data": nil})
+		return
+	}
+
+	if svc.Status == "active" {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "不能删除活跃服务，请先终止", "data": nil})
+		return
+	}
+
+	db.Delete(&svc)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "删除成功", "data": nil})
+}

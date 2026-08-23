@@ -324,10 +324,12 @@ func (s *SupplierSyncService) SyncAllProducts(supplierID uint) error {
 		return fmt.Errorf("供应商驱动未注册: %d", supplierID)
 	}
 
-	// MD 7.2.2: 拉取上游分组并自动创建本地分组
-	groups, err := driver.FetchProductGroups()
-	if err == nil && len(groups) > 0 {
-		s.autoCreateGroups(groups)
+	// MD 7.2.2: 拉取上游分组并自动创建本地分组（需开启auto_create_groups）
+	if getSettingInt("auto_create_groups", 0) == 1 {
+		groups, err := driver.FetchProductGroups()
+		if err == nil && len(groups) > 0 {
+			s.autoCreateGroups(groups)
+		}
 	}
 
 	products, err := driver.FetchProducts()
@@ -344,59 +346,73 @@ func (s *SupplierSyncService) SyncAllProducts(supplierID uint) error {
 		autoListing = true
 	}
 
+	// MD 7.2.3: 多线程并发同步（每个商品一个goroutine）
+	var wg sync.WaitGroup
 	for _, p := range products {
-		// 查找或创建本地供应商商品
-		var existing model.SupplierProduct
-		result := db.Where("supplier_id = ? AND remote_product_id = ?", supplierID, p.ID).First(&existing)
-		if result.Error != nil {
-			// 新商品，创建供应商商品记录
-			profitRate := 25.0 // 默认25%利润率
-			localPrice := p.Price * (1 + profitRate/100)
+		wg.Add(1)
+		go func(product RemoteProduct) {
+			defer wg.Done()
+			s.syncSingleProduct(supplierID, product, autoListing)
+		}(p)
+	}
+	wg.Wait()
+	return nil
+}
 
-			sp := model.SupplierProduct{
-				SupplierID:      supplierID,
-				RemoteProductID: p.ID,
-				Name:            p.Name,
-				RemotePrice:     p.Price,
-				LocalPrice:      localPrice,
-				ProfitRate:      profitRate,
-				Stock:           p.Stock,
-				Status:          "active",
+// syncSingleProduct 同步单个商品（goroutine安全）
+func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct, autoListing bool) {
+	db := database.GetDB()
+
+	// 查找或创建本地供应商商品
+	var existing model.SupplierProduct
+	result := db.Where("supplier_id = ? AND remote_product_id = ?", supplierID, p.ID).First(&existing)
+	if result.Error != nil {
+		// 新商品，创建供应商商品记录
+		profitRate := float64(getSettingInt("default_profit_rate", 25))
+		localPrice := p.Price * (1 + profitRate/100)
+
+		sp := model.SupplierProduct{
+			SupplierID:      supplierID,
+			RemoteProductID: p.ID,
+			Name:            p.Name,
+			RemotePrice:     p.Price,
+			LocalPrice:      localPrice,
+			ProfitRate:      profitRate,
+			Stock:           p.Stock,
+			Status:          "active",
+		}
+		db.Create(&sp)
+
+		// MD 7.2.5: 自动上架（读取分组映射表，创建本地Product到对应分组）
+		if autoListing {
+			product := model.Product{
+				Name:   p.Name,
+				Type:   "server",
+				Price:  localPrice,
+				Amount: localPrice,
+				Status: "active",
 			}
-			db.Create(&sp)
-
-			// MD 7.2.5: 自动上架（读取分组映射表，创建本地Product到对应分组）
-			if autoListing {
-				product := model.Product{
-					Name:   p.Name,
-					Type:   "server",
-					Price:  localPrice,
-					Amount: localPrice,
-					Status: "active",
-				}
-				// 查找分组映射（上游分组→本地分组）
-				if p.GroupID != "" {
-					var mapping model.SupplierGroupMapping
-					if err := db.Where("supplier_id = ? AND remote_group_id = ?", supplierID, p.GroupID).First(&mapping).Error; err == nil {
-						product.GroupID = mapping.LocalGroupID
-						if mapping.ProfitRate > 0 {
-							product.Price = p.Price * (1 + mapping.ProfitRate/100)
-							product.Amount = product.Price
-						}
+			// 查找分组映射（上游分组→本地分组）
+			if p.GroupID != "" {
+				var mapping model.SupplierGroupMapping
+				if err := db.Where("supplier_id = ? AND remote_group_id = ?", supplierID, p.GroupID).First(&mapping).Error; err == nil {
+					product.GroupID = mapping.LocalGroupID
+					if mapping.ProfitRate > 0 {
+						product.Price = p.Price * (1 + mapping.ProfitRate/100)
+						product.Amount = product.Price
 					}
 				}
-				db.Create(&product)
 			}
-		} else {
-			// 已有商品，更新价格和库存
-			db.Model(&existing).Updates(map[string]interface{}{
-				"remote_price": p.Price,
-				"stock":        p.Stock,
-				"name":         p.Name,
-			})
+			db.Create(&product)
 		}
+	} else {
+		// 已有商品，更新价格和库存
+		db.Model(&existing).Updates(map[string]interface{}{
+			"remote_price": p.Price,
+			"stock":        p.Stock,
+			"name":         p.Name,
+		})
 	}
-	return nil
 }
 
 // SyncAllPrices 同步所有供应商价格
@@ -514,4 +530,36 @@ func (s *SupplierSyncService) autoCreateGroups(groups []RemoteGroup) {
 			}
 		}
 	}
+}
+
+// SyncProductStatus 同步商品状态（MD 7.2.4：上游隐藏/删除时本地自动同步）
+func (s *SupplierSyncService) SyncProductStatus(supplierID uint) error {
+	driver := s.GetDriver(supplierID)
+	if driver == nil {
+		return fmt.Errorf("供应商驱动未注册: %d", supplierID)
+	}
+
+	remoteProducts, err := driver.FetchProducts()
+	if err != nil {
+		return err
+	}
+
+	remoteMap := make(map[string]bool)
+	for _, rp := range remoteProducts {
+		remoteMap[rp.ID] = true
+	}
+
+	db := database.GetDB()
+	var localProducts []model.SupplierProduct
+	db.Where("supplier_id = ?", supplierID).Find(&localProducts)
+
+	for _, lp := range localProducts {
+		_, exists := remoteMap[lp.RemoteProductID]
+		if !exists && lp.Status == "active" {
+			db.Model(&lp).Update("status", "disabled")
+		} else if exists && lp.Status == "disabled" {
+			db.Model(&lp).Update("status", "active")
+		}
+	}
+	return nil
 }

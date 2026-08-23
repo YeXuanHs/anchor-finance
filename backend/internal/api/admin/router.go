@@ -64,6 +64,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/users/:id/services/:service_id/manual-provision", AdminManualProvision)
 		authenticated.POST("/users/:id/services/:service_id/power-actions", AdminServicePowerAction)
 		authenticated.POST("/users/:id/services/:service_id/password-resets", AdminResetServicePassword)
+		authenticated.POST("/users/:id/services", AdminCreateUserService)
+		authenticated.DELETE("/users/:id/services/:service_id", AdminDeleteUserService)
 		// 新增：用户备注、登录为用户、刷新服务状态
 		authenticated.GET("/users/:id/remarks", GetUserRemarks)
 		authenticated.POST("/users/:id/remarks", AddUserRemark)
@@ -169,6 +171,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PATCH("/products/:id/status", UpdateProductStatus)
 		authenticated.POST("/products/reorders", ReorderProducts)
 		authenticated.POST("/products/provision-hostname-batches", BatchUpdateProvisionHostname)
+		authenticated.POST("/products/traffic-package-pulls", PullTrafficPackageCatalog)
 		authenticated.POST("/products/split-previews", SplitProductPreview)
 		authenticated.POST("/products/splits", SplitProduct)
 		authenticated.POST("/products/category-batches", BatchUpdateProductCategory)
@@ -426,6 +429,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/coupon-campaigns/:id", UpdateCouponCampaign)
 		authenticated.DELETE("/coupon-campaigns/:id", DeleteCouponCampaign)
 		authenticated.PATCH("/coupon-campaigns/:id/status", UpdateCouponCampaignStatus)
+		authenticated.POST("/coupon-campaigns/:id/tasks", RunCouponCampaignTask)
 
 		// 发送消息
 		authenticated.GET("/send-message/search-params", GetSendMessageSearchParams)
