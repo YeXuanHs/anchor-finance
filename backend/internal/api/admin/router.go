@@ -380,6 +380,12 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/plugins/:id/config", UpdatePluginConfig)
 		authenticated.POST("/plugins/:id/health", PluginHealthCheck)
 
+		// 插件iframe路由（MD 3.4：adminarea/addon/plugin/oauth）
+		authenticated.GET("/plugin-engine/adminarea/:module", PluginAdminArea)
+		authenticated.GET("/plugin-engine/addon/:name/:type", PluginAddonArea)
+		authenticated.GET("/plugin-engine/plugin/:domain/:name/:type", PluginConfigArea)
+		authenticated.GET("/plugin-engine/oauth/:provider/callback", PluginOAuthCallback)
+
 		// 插件域API
 		authenticated.GET("/payment-gateways", GetPaymentGateways)
 		authenticated.GET("/sms-providers", GetSMSProviders)

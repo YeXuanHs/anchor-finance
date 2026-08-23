@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"net/http"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
 )
 
@@ -260,4 +261,85 @@ func UpdatePluginConfig(c *gin.Context) {
 		"message": "配置更新成功",
 		"data":    nil,
 	})
+}
+
+// ==================== 插件iframe路由（MD 3.4）====================
+
+// PluginAdminArea 插件后台管理页面
+// GET /api/admin/plugin-engine/adminarea/:module
+func PluginAdminArea(c *gin.Context) {
+	module := c.Param("module")
+	// 转发到PHP插件引擎
+	results, err := pluginengine.TriggerHook("plugin_adminarea", map[string]interface{}{
+		"module": module,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	if len(results) > 0 && results[0].Data != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Data})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 404, "message": "插件页面不存在", "data": nil})
+}
+
+// PluginAddonArea 插件addon页面（前台/后台）
+// GET /api/admin/plugin-engine/addon/:name/:type
+func PluginAddonArea(c *gin.Context) {
+	name := c.Param("name")
+	areaType := c.Param("type") // clientarea or adminarea
+	results, err := pluginengine.TriggerHook("plugin_addon_area", map[string]interface{}{
+		"name": name, "type": areaType,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	if len(results) > 0 && results[0].Data != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Data})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 404, "message": "插件页面不存在", "data": nil})
+}
+
+// PluginConfigArea 插件配置/前台页面
+// GET /api/admin/plugin-engine/plugin/:domain/:name/:type
+func PluginConfigArea(c *gin.Context) {
+	domain := c.Param("domain")
+	name := c.Param("name")
+	areaType := c.Param("type") // config or clientarea
+	results, err := pluginengine.TriggerHook("plugin_config_area", map[string]interface{}{
+		"domain": domain, "name": name, "type": areaType,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	if len(results) > 0 && results[0].Data != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Data})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 404, "message": "插件页面不存在", "data": nil})
+}
+
+// PluginOAuthCallback OAuth回调
+// GET /api/admin/plugin-engine/oauth/:provider/callback
+func PluginOAuthCallback(c *gin.Context) {
+	provider := c.Param("provider")
+	code := c.Query("code")
+	state := c.Query("state")
+
+	results, err := pluginengine.TriggerHook("oauth_callback", map[string]interface{}{
+		"provider": provider, "code": code, "state": state,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
+		return
+	}
+	if len(results) > 0 && results[0].Data != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": results[0].Data})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 404, "message": "OAuth回调处理失败", "data": nil})
 }

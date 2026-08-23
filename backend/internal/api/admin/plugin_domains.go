@@ -8,11 +8,30 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// getPluginsByDomain 通用函数：按域获取已启用插件列表
+// domainMapping Go端域概念名 → PHP端实际目录名
+// MD定义：payment/upstream/verification，PHP实际：gateways/servers/certification
+var domainMapping = map[string][]string{
+	"payment":       {"payment", "gateways"},
+	"upstream":      {"upstream", "servers"},
+	"verification":  {"verification", "certification"},
+	"sms":           {"sms"},
+	"mail":          {"mail"},
+	"oauth":         {"oauth"},
+	"captcha":       {"captcha"},
+	"addons":        {"addons"},
+}
+
+// getPluginsByDomain 通用函数：按域获取已启用插件列表（支持域名映射）
 func getPluginsByDomain(domain string) []model.Plugin {
 	db := database.GetDB()
 	var plugins []model.Plugin
-	db.Where("domain = ? AND status = ?", domain, "active").Order("name ASC").Find(&plugins)
+
+	domains := []string{domain}
+	if mapped, ok := domainMapping[domain]; ok {
+		domains = mapped
+	}
+
+	db.Where("domain IN ? AND status = ?", domains, "active").Order("name ASC").Find(&plugins)
 	if plugins == nil {
 		plugins = []model.Plugin{}
 	}
@@ -46,5 +65,5 @@ func GetCertificationProviders(c *gin.Context) {
 // GetServerModules 获取服务器开通模块列表
 // GET /api/admin/server-modules
 func GetServerModules(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": getPluginsByDomain("servers")})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": getPluginsByDomain("upstream")})
 }
