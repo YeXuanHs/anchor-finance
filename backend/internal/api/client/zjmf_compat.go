@@ -1864,12 +1864,7 @@ func ZjmfCompatDcimBmc(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
-		"msg":   "请求成功",
-		"data": gin.H{
-			"bmc_ip":   "",
-			"bmc_user": "",
-			"bmc_pass": "",
-		},
+		"msg":   "重置成功",
 	})
 }
 
@@ -1900,7 +1895,7 @@ func ZjmfCompatDcimIkvm(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": ""}})
+	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "不支持该操作"})
 }
 
 // ZjmfCompatDcimKvm POST /dcim/kvm - KVM
@@ -1925,7 +1920,7 @@ func ZjmfCompatDcimKvm(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": ""}})
+	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "不支持该操作"})
 }
 
 // ZjmfCompatDcimNovnc POST /dcim/novnc - NoVNC
