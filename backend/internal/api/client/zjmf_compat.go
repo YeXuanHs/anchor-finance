@@ -358,13 +358,11 @@ func ZjmfCompatCartAll(c *gin.Context) {
 }
 
 // ZjmfCompatProductInfo zjmf兼容商品详情（/api/product/proinfo）
-// zjmf.php line 48: $path = "api/product/proinfo"; params: pids=[]
-// zjmf发的是pids[0]=63（PHP数组格式），需要特殊解析
+// zjmf期望返回格式：{status:200, data:{info:[{...}], currency:"CNY"}}
+// zjmf取 $res["data"]["info"][0] 和 $res["data"]["currency"]
 func ZjmfCompatProductInfo(c *gin.Context) {
-	// 先尝试标准格式 pids=63&pids=64
+	// 解析pids参数（支持pids[0]=63格式）
 	pids := c.QueryArray("pids")
-
-	// 再尝试PHP格式 pids[0]=63&pids[1]=64
 	if len(pids) == 0 {
 		for i := 0; ; i++ {
 			key := fmt.Sprintf("pids[%d]", i)
@@ -375,8 +373,6 @@ func ZjmfCompatProductInfo(c *gin.Context) {
 			pids = append(pids, val)
 		}
 	}
-
-	// 最后尝试单个pids=63
 	if len(pids) == 0 {
 		if val := c.Query("pids"); val != "" {
 			pids = append(pids, val)
@@ -384,6 +380,14 @@ func ZjmfCompatProductInfo(c *gin.Context) {
 	}
 
 	db := database.GetDB()
+
+	// 获取默认货币
+	var defaultCurrency model.Currency
+	currencyCode := "CNY"
+	if err := db.Where("is_default = ?", true).First(&defaultCurrency).Error; err == nil {
+		currencyCode = defaultCurrency.Code
+	}
+
 	var products []model.Product
 	if len(pids) > 0 {
 		db.Where("id IN ?", pids).Find(&products)
@@ -391,7 +395,28 @@ func ZjmfCompatProductInfo(c *gin.Context) {
 		db.Where("status = ?", "active").Limit(50).Find(&products)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success", "data": products})
+	// 构建info数组（zjmf取$data["info"][0]）
+	var infoList []gin.H
+	for _, p := range products {
+		infoList = append(infoList, gin.H{
+			"id":               p.ID,
+			"name":             p.Name,
+			"description":      p.Description,
+			"type":             p.Type,
+			"qty":              1,
+			"stock_control":    0,
+			"location_version": 1,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "success",
+		"data": gin.H{
+			"info":     infoList,
+			"currency": currencyCode,
+		},
+	})
 }
 
 // ZjmfCompatProductConfig zjmf兼容商品配置（/cart/get_product_config）
