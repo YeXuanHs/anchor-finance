@@ -490,9 +490,6 @@ func (s *SupplierSyncService) syncSinglePrice(supplierID uint, p RemoteProduct, 
 		})
 	}
 }
-	}
-	return nil
-}
 
 // getSettingInt 从settings表读取整数配置
 func getSettingInt(key string, defaultVal int) int {
