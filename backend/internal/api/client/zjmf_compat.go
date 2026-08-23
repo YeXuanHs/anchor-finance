@@ -388,7 +388,7 @@ func ZjmfCompatCartAll(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
-		"msg":    "success",
+		"msg":    "请求成功",
 		"data": gin.H{
 			"first_group": result,
 			"products":    flatProducts,
@@ -583,6 +583,21 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 		"upstream_auto_setup":        "",
 		"upstream_ontrial_status":    0,
 		"upstream_price":             "0.00",
+		"version_description":        nil,
+		"app_type":                   "",
+		"app_version":                nil,
+		"app_hot_order":              0,
+		"app_hot_lock":               0,
+		"app_hot_heat":               0,
+		"app_recommend_status":       0,
+		"app_recommend_order":        0,
+		"app_recommend_lock":         0,
+		"app_pay_type":               0,
+		"app_score":                  0,
+		"app_images":                 nil,
+		"app_status":                 0,
+		"unretired_time":             0,
+		"upstream_cycle":             "",
 	}
 
 	// product_pricings
@@ -615,8 +630,8 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 	}}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status": 200,
-		"msg":   "success",
+		"status":  200,
+		"msg":     "请求成功",
 		"data": gin.H{
 			"flag":             gin.H{"type": 1, "bates": "100.00"},
 			"products":         products,
@@ -626,6 +641,7 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 			"config_groups":    []gin.H{},
 			"config_links":     0,
 		},
+		"is_aff": "1",
 	})
 }
 
