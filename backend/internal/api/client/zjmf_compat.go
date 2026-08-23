@@ -13,11 +13,12 @@ import (
 // zjmf系统选"zjmf"类型，填我们的网址，就能拉取商品/同步状态
 // ============================================================
 
-// ZjmfCompatLogin zjmf兼容登录（/v1/login_api）
-// 用账号+API密钥登录获取JWT（参考zjmf：account=用户名/邮箱，password=API密钥）
+// ZjmfCompatLogin zjmf兼容登录（/zjmf_api_login 和 /v1/login_api）
+// zjmf传username+password（API密钥），我们也兼容account+password
 func ZjmfCompatLogin(c *gin.Context) {
 	var req struct {
 		Account  string `json:"account"`
+		Username string `json:"username"`
 		Password string `json:"password"` // API密钥（不是登录密码）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -25,7 +26,13 @@ func ZjmfCompatLogin(c *gin.Context) {
 		return
 	}
 
-	token, err := LoginByAPIKey(req.Account, req.Password)
+	// 兼容两种参数名
+	account := req.Username
+	if account == "" {
+		account = req.Account
+	}
+
+	token, err := LoginByAPIKey(account, req.Password)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 401, "msg": err.Error()})
 		return
