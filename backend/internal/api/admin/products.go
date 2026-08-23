@@ -1,6 +1,7 @@
-﻿package admin
+package admin
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -664,4 +665,96 @@ func DeleteProductGroup(c *gin.Context) {
 		"message": "删除成功",
 		"data":    nil,
 	})
+}
+
+// SplitProductPreview 产品拆分预览
+// POST /api/admin/products/split-previews
+func SplitProductPreview(c *gin.Context) {
+	var req struct {
+		ProductID uint `json:"product_id" binding:"required"`
+		Count     int  `json:"count" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var product model.Product
+	if err := db.First(&product, req.ProductID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "产品不存在", "data": nil})
+		return
+	}
+
+	previews := make([]gin.H, req.Count)
+	for i := 0; i < req.Count; i++ {
+		previews[i] = gin.H{
+			"name":   fmt.Sprintf("%s #%d", product.Name, i+1),
+			"price":  product.Price,
+			"amount": product.Amount,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"previews": previews, "original": product}})
+}
+
+// SplitProduct 执行产品拆分
+// POST /api/admin/products/splits
+func SplitProduct(c *gin.Context) {
+	var req struct {
+		ProductID uint `json:"product_id" binding:"required"`
+		Count     int  `json:"count" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	if req.Count < 2 || req.Count > 100 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "拆分数量必须在2-100之间", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	var product model.Product
+	if err := db.First(&product, req.ProductID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "产品不存在", "data": nil})
+		return
+	}
+
+	created := 0
+	for i := 0; i < req.Count; i++ {
+		newProduct := model.Product{
+			Name:        fmt.Sprintf("%s #%d", product.Name, i+1),
+			Type:        product.Type,
+			Price:       product.Price,
+			Amount:      product.Amount,
+			Description: product.Description,
+			GroupID:     product.GroupID,
+			Status:      product.Status,
+		}
+		if err := db.Create(&newProduct).Error; err == nil {
+			created++
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "拆分成功", "data": gin.H{"created": created}})
+}
+
+// BatchUpdateProvisionHostname 批量更新开通主机名模板
+// POST /api/admin/products/provision-hostname-batches
+func BatchUpdateProvisionHostname(c *gin.Context) {
+	var req struct {
+		ProductIDs []uint `json:"product_ids" binding:"required"`
+		Hostname   string `json:"hostname" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	db := database.GetDB()
+	updated := db.Model(&model.Product{}).Where("id IN ?", req.ProductIDs).Update("provision_hostname", req.Hostname).RowsAffected
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": gin.H{"updated": updated}})
 }

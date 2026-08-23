@@ -422,6 +422,40 @@ func GetSupplierProducts(c *gin.Context) {
 	})
 }
 
+// GetSupplierProductConfigTemplate 获取供应商产品配置模板
+// GET /api/admin/suppliers/:id/products/:product_id/config-template
+func GetSupplierProductConfigTemplate(c *gin.Context) {
+	supplierID := c.Param("id")
+	productID := c.Param("product_id")
+
+	db := database.GetDB()
+	var supplier model.Supplier
+	if err := db.First(&supplier, supplierID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "供应商不存在", "data": nil})
+		return
+	}
+
+	// 通过驱动获取产品配置
+	driver := service.NewDriver(supplier)
+	structure, err := driver.GetProductStructure()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "获取配置失败", "data": nil})
+		return
+	}
+
+	// 查找指定产品
+	for _, group := range structure.Groups {
+		for _, product := range group.Products {
+			if product.ID == productID {
+				c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": product})
+				return
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 404, "message": "产品不存在", "data": nil})
+}
+
 // RevealSupplierSecret 查看供应商密钥（解密返回完整值）
 // GET /api/admin/suppliers/:id/secrets/:key
 func RevealSupplierSecret(c *gin.Context) {

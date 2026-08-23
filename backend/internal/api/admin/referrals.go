@@ -197,3 +197,24 @@ func RejectReferralWithdrawal(c *gin.Context) {
 		"message": "拒绝成功",
 	})
 }
+
+// ConfirmReferralWithdrawalPayment 提现支付确认
+// POST /api/admin/referral-withdrawals/:id/payment-confirmations
+func ConfirmReferralWithdrawalPayment(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var withdrawal model.ReferralWithdrawal
+	if err := db.First(&withdrawal, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "提现记录不存在", "data": nil})
+		return
+	}
+
+	if withdrawal.Status != "approved" {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "只有已审核的提现才能确认支付", "data": nil})
+		return
+	}
+
+	db.Model(&withdrawal).Update("status", "paid")
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "支付确认成功", "data": nil})
+}

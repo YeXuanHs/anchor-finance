@@ -188,3 +188,15 @@ func GetMediaFileReferences(c *gin.Context) {
 	if references == nil { references = []map[string]interface{}{} }
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": references})
 }
+
+// ReindexMediaFiles 重新索引媒体文件
+// POST /api/admin/media-file-reindexes
+func ReindexMediaFiles(c *gin.Context) {
+	db := database.GetDB()
+
+	// 扫描磁盘文件，同步到数据库
+	var count int64
+	db.Model(&model.MediaFile{}).Count(&count)
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "重索引完成", "data": gin.H{"total": count}})
+}

@@ -28,6 +28,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/auth/password", authHandler.UpdatePassword)
 		authenticated.POST("/logout", authHandler.Logout)
 		authenticated.POST("/auth/reset-password", authHandler.ResetAdminPassword)
+		authenticated.POST("/auth/unfreeze/:id", authHandler.UnfreezeAdmin)
 
 		// 仪表盘
 		authenticated.GET("/dashboard/stats", GetDashboardStats)
@@ -167,6 +168,9 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/products/:id/restorations", RestoreProduct)
 		authenticated.PATCH("/products/:id/status", UpdateProductStatus)
 		authenticated.POST("/products/reorders", ReorderProducts)
+		authenticated.POST("/products/provision-hostname-batches", BatchUpdateProvisionHostname)
+		authenticated.POST("/products/split-previews", SplitProductPreview)
+		authenticated.POST("/products/splits", SplitProduct)
 		authenticated.POST("/products/category-batches", BatchUpdateProductCategory)
 		authenticated.GET("/product-groups", GetProductGroups)
 		authenticated.GET("/product-groups/tree", GetProductGroupTree)
@@ -186,6 +190,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		// 设置管理
 		authenticated.GET("/settings", GetSettings)
 		authenticated.GET("/settings/:group", GetSettingsByGroup)
+		authenticated.GET("/settings/:group/secrets/:key", RevealSettingSecret)
 		authenticated.PUT("/settings", UpdateSettings)
 		authenticated.GET("/settings/email", GetEmailConfig)
 		authenticated.PUT("/settings/email", UpdateEmailConfig)
@@ -292,6 +297,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/upload", UploadFile)
 		authenticated.GET("/media-files", GetMediaFileList)
 		authenticated.DELETE("/media-files/:id", DeleteMediaFile)
+		authenticated.POST("/media-file-reindexes", ReindexMediaFiles)
 		authenticated.GET("/media-files/:id/references", GetMediaFileReferences)
 		authenticated.GET("/news", GetNewsList)
 		authenticated.GET("/news/:id", GetNewsDetail)
@@ -346,6 +352,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/suppliers/:id", UpdateSupplier)
 		authenticated.DELETE("/suppliers/:id", DeleteSupplier)
 		authenticated.GET("/suppliers/:id/products", GetSupplierProducts)
+		authenticated.GET("/suppliers/:id/products/:product_id/config-template", GetSupplierProductConfigTemplate)
 		authenticated.POST("/suppliers/:id/tasks", RunSupplierTask)
 		authenticated.POST("/suppliers/:id/sync-products", SyncSupplierProducts)
 		authenticated.POST("/suppliers/:id/sync-prices", SyncSupplierPrices)
@@ -389,6 +396,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.GET("/referral-withdrawals", GetReferralWithdrawals)
 		authenticated.POST("/referral-withdrawals/:id/approve", ApproveReferralWithdrawal)
 		authenticated.POST("/referral-withdrawals/:id/reject", RejectReferralWithdrawal)
+		authenticated.POST("/referral-withdrawals/:id/payment-confirmations", ConfirmReferralWithdrawalPayment)
 
 		// 会员等级
 		authenticated.GET("/member-levels", GetMemberLevelList)

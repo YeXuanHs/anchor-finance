@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"fmt"
@@ -287,4 +287,20 @@ func DeleteMenu(c *gin.Context) {
 		"message": "删除成功",
 		"data":    nil,
 	})
+}
+
+// RevealSettingSecret 查看设置项密钥值
+// GET /api/admin/settings/:group/secrets/:key
+func RevealSettingSecret(c *gin.Context) {
+	group := c.Param("group")
+	key := c.Param("key")
+
+	db := database.GetDB()
+	var setting model.Setting
+	if err := db.Where("`group` = ? AND `key` = ?", group, key).First(&setting).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "设置项不存在", "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"key": key, "value": setting.Value}})
 }

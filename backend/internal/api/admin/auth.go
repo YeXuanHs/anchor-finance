@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"crypto/sha256"
@@ -258,4 +258,24 @@ func (h *AuthHandler) ResetAdminPassword(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "密码重置成功", "data": nil})
+}
+
+// UnfreezeAdmin 超级管理员手动解冻（MD 9.3.1）
+// POST /api/admin/auth/unfreeze/:id
+func (h *AuthHandler) UnfreezeAdmin(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var admin model.Admin
+	if err := db.First(&admin, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "管理员不存在", "data": nil})
+		return
+	}
+
+	db.Model(&admin).Updates(map[string]interface{}{
+		"login_fail_count": 0,
+		"locked_until":     nil,
+	})
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "解冻成功", "data": nil})
 }
