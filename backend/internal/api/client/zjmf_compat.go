@@ -1945,7 +1945,7 @@ func ZjmfCompatDcimNovnc(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"url": "", "port": 0}})
+	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "不支持该操作"})
 }
 
 // ZjmfCompatDcimReinstallStatus GET /dcim/resintall_status - 重装状态（注意zjmf原始拼写）
