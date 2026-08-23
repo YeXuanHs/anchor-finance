@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
+	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/gin-gonic/gin"
 )
 
