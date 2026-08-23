@@ -926,13 +926,13 @@ func ZjmfCompatApplyCredit(c *gin.Context) {
 		return
 	}
 
-	if user.Balance < invoice.Total {
+	if user.Balance < invoice.Amount {
 		c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "余额不足"})
 		return
 	}
 
 	// 扣余额+标记已付
-	db.Model(&user).Update("balance", gorm.Expr("balance - ?", invoice.Total))
+	db.Model(&user).Update("balance", gorm.Expr("balance - ?", invoice.Amount))
 	db.Model(&invoice).Update("status", "Paid")
 
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "支付成功"})
