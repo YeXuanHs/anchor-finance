@@ -1,8 +1,6 @@
 package client
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 
