@@ -344,12 +344,7 @@ func ZjmfCompatCartAll(c *gin.Context) {
 			"first_group": result,
 			"products":    flatProducts,
 			"count":       totalProducts,
-			"currency": gin.H{
-				"id":     1,
-				"code":   "CNY",
-				"prefix": "¥",
-				"suffix": "元",
-			},
+			"currency":    "CNY",
 		},
 	})
 }
