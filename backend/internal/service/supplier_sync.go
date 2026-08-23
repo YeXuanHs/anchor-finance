@@ -391,10 +391,10 @@ func (s *SupplierSyncService) SyncAllPrices(supplierID uint) error {
 			continue
 		}
 
-		// 应用利润率
+		// 应用利润率（MD 7.2.4：利润率后台可配置，默认25%）
 		profitRate := existing.ProfitRate
 		if profitRate <= 0 {
-			profitRate = 25 // 默认25%
+			profitRate = float64(getSettingInt("default_profit_rate", 25))
 		}
 		localPrice := p.Price * (1 + profitRate/100)
 
@@ -407,11 +407,32 @@ func (s *SupplierSyncService) SyncAllPrices(supplierID uint) error {
 	return nil
 }
 
-// StartPriceSyncCron 启动价格同步定时任务
+// getSettingInt 从settings表读取整数配置
+func getSettingInt(key string, defaultVal int) int {
+	db := database.GetDB()
+	var setting model.Setting
+	if err := db.Where("`key` = ?", key).First(&setting).Error; err == nil {
+		var v int
+		if _, err := fmt.Sscanf(setting.Value, "%d", &v); err == nil && v > 0 {
+			return v
+		}
+	}
+	return defaultVal
+}
+
+// StartPriceSyncCron 启动价格同步定时任务（MD 7.2.4：频率后台可配置，默认每小时）
 func (s *SupplierSyncService) StartPriceSyncCron() {
-	ticker := time.NewTicker(1 * time.Hour)
 	go func() {
-		for range ticker.C {
+		for {
+			// 从settings读取同步频率（分钟）
+			intervalMin := getSettingInt("price_sync_interval", 60)
+			time.Sleep(time.Duration(intervalMin) * time.Minute)
+
+			// 检查是否启用
+			if getSettingInt("price_sync_enabled", 1) == 0 {
+				continue
+			}
+
 			db := database.GetDB()
 			var suppliers []model.Supplier
 			db.Where("status = ?", "active").Find(&suppliers)
@@ -424,11 +445,19 @@ func (s *SupplierSyncService) StartPriceSyncCron() {
 	}()
 }
 
-// StartStockSyncCron 启动库存同步定时任务
+// StartStockSyncCron 启动库存同步定时任务（MD 7.2.4：频率后台可配置，默认每5分钟）
 func (s *SupplierSyncService) StartStockSyncCron() {
-	ticker := time.NewTicker(5 * time.Minute)
 	go func() {
-		for range ticker.C {
+		for {
+			// 从settings读取同步频率（分钟）
+			intervalMin := getSettingInt("stock_sync_interval", 5)
+			time.Sleep(time.Duration(intervalMin) * time.Minute)
+
+			// 检查是否启用
+			if getSettingInt("stock_sync_enabled", 1) == 0 {
+				continue
+			}
+
 			db := database.GetDB()
 			var suppliers []model.Supplier
 			db.Where("status = ?", "active").Find(&suppliers)

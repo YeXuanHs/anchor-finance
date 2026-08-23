@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// LoginRiskControl 登录风控（数据库存储，Redis可选加速）
+// LoginRiskControl 登录风控（数据库存储）
 type LoginRiskControl struct {
 	db *gorm.DB
 }
