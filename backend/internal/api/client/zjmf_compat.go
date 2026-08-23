@@ -961,9 +961,25 @@ func ZjmfCompatApplyCredit(c *gin.Context) {
 }
 
 // ZjmfCompatTrafficUsage zjmf兼容流量使用统计（/host/trafficusage）
+// ZjmfCompatTrafficUsage GET /host/trafficusage - 流量使用统计
 func ZjmfCompatTrafficUsage(c *gin.Context) {
+	hostID := c.Query("host_id")
+	if hostID == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少host_id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, hostID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	// 我们没有流量统计系统，返回零值
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
+		"msg":   "请求成功",
 		"data": gin.H{
 			"incoming": 0,
 			"outgoing": 0,
@@ -2118,6 +2134,7 @@ func ZjmfCompatDcimTrafficUsage(c *gin.Context) {
 		return
 	}
 
+	// 我们没有流量统计系统，返回零值
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"incoming": 0, "outgoing": 0, "total": 0}})
 }
 
