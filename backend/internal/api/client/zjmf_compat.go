@@ -151,17 +151,6 @@ func ZjmfCompatModuleStatus(c *gin.Context) {
 		},
 	})
 }
-		zjmfStatus = "Unknown"
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"status": 200,
-		"msg":  "success",
-		"data": gin.H{
-			"status": zjmfStatus,
-		},
-	})
-}
 
 // ZjmfCompatModuleSuspend zjmf兼容暂停（/v1/hosts/:id/module/suspend）
 func ZjmfCompatModuleSuspend(c *gin.Context) {
