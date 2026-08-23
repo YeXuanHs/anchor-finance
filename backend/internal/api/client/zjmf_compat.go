@@ -420,7 +420,7 @@ func ZjmfCompatProductInfo(c *gin.Context) {
 }
 
 // ZjmfCompatProductConfig zjmf兼容商品配置（/cart/get_product_config）
-// zjmf.php line 70: $path = "cart/get_product_config"; params: pid
+// 完全照着zjmf格式返回
 func ZjmfCompatProductConfig(c *gin.Context) {
 	pid := c.Query("pid")
 	if pid == "" {
@@ -435,39 +435,161 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 		return
 	}
 
+	// 获取货币ID
+	var defaultCurrency model.Currency
+	currencyID := 1
+	db.Where("is_default = ?", true).First(&defaultCurrency)
+	if defaultCurrency.ID > 0 {
+		currencyID = int(defaultCurrency.ID)
+	}
+
+	// pay_type JSON
+	payType := fmt.Sprintf(`{"pay_type":"%s","pay_hour_cycle":"720","pay_day_cycle":"30","pay_ontrial_status":0,"pay_ontrial_cycle":"0","pay_ontrial_num":"1","pay_ontrial_condition":[],"pay_ontrial_cycle_type":"day","pay_ontrial_num_rule":"0","clientscount_rule":0}`, product.BillingCycle)
+	if product.BillingCycle == "free" {
+		payType = `{"pay_type":"free","pay_hour_cycle":"720","pay_day_cycle":"30","pay_ontrial_status":0,"pay_ontrial_cycle":"0","pay_ontrial_num":"1","pay_ontrial_condition":[],"pay_ontrial_cycle_type":"day","pay_ontrial_num_rule":"0","clientscount_rule":0}`
+	}
+	if product.BillingCycle == "onetime" {
+		payType = `{"pay_type":"onetime","pay_hour_cycle":"720","pay_day_cycle":"30","pay_ontrial_status":0,"pay_ontrial_cycle":"0","pay_ontrial_num":"1","pay_ontrial_condition":[],"pay_ontrial_cycle_type":"day","pay_ontrial_num_rule":"0","clientscount_rule":0}`
+	}
+
+	products := gin.H{
+		"id":                         product.ID,
+		"type":                       product.Type,
+		"gid":                        product.GroupID,
+		"name":                       product.Name,
+		"description":                product.Description,
+		"host":                       `{"show":"0","modify":0,"prefix":"ser","rule":{"upper":"0","lower":"0","num":"1","len_num":12}}`,
+		"is_domain":                  0,
+		"hidden":                     0,
+		"password":                   `{"show":"1","modify":0,"rule":{"len_num":"12","upper":"1","lower":"1","num":"1","special":"0"}}`,
+		"show_domain_options":        0,
+		"welcome_email":              0,
+		"stock_control":              0,
+		"qty":                        999,
+		"prorata_billing":            0,
+		"prorata_date":               0,
+		"prorata_charge_next_month":  0,
+		"pay_type":                   payType,
+		"pay_method":                 "prepayment",
+		"allow_qty":                  0,
+		"auto_setup":                 "payment",
+		"server_type":                "",
+		"server_group":               0,
+		"config_option1":             "",
+		"config_option2":             "",
+		"config_option3":             "",
+		"config_option4":             "",
+		"config_option5":             "",
+		"config_option6":             "",
+		"config_option7":             "",
+		"config_option8":             "",
+		"config_option9":             "",
+		"config_option10":            "",
+		"config_option11":            "",
+		"config_option12":            "",
+		"config_option13":            "",
+		"config_option14":            "",
+		"config_option15":            "",
+		"config_option16":            "",
+		"config_option17":            "",
+		"config_option18":            "",
+		"config_option19":            "",
+		"config_option20":            "",
+		"config_option21":            "",
+		"config_option22":            "",
+		"config_option23":            "",
+		"config_option24":            "",
+		"recurring_cycles":           0,
+		"auto_terminate_days":        0,
+		"auto_terminate_email":       0,
+		"config_options_upgrade":     0,
+		"billing_cycle_upgrade":      "",
+		"upgrade_email":              0,
+		"down_configoption_refund":   0,
+		"overages_enabled":           "",
+		"overages_disk_limit":        0,
+		"overages_bw_limit":          0,
+		"overages_disk_price":        "0.0000",
+		"overages_bw_price":          "0.0000",
+		"tax":                        0,
+		"affiliateonetime":           0,
+		"affiliate_pay_type":         "default",
+		"affiliate_pay_amount":       "0.00",
+		"order":                      0,
+		"retired":                    0,
+		"is_featured":                0,
+		"create_time":                product.CreatedAt.Unix(),
+		"update_time":                product.UpdatedAt.Unix(),
+		"auto_create_config_options": 0,
+		"groupid":                    product.GroupID,
+		"api_type":                   "normal",
+		"location_version":           1,
+		"upstream_version":           0,
+		"upstream_price_type":        "",
+		"upstream_price_value":       "",
+		"zjmf_api_id":                0,
+		"upstream_pid":               0,
+		"is_truename":                0,
+		"uuid":                       nil,
+		"p_uid":                      0,
+		"rate":                       "1.00",
+		"clientscount":               0,
+		"product_shopping_url":       "",
+		"product_group_url":          "",
+		"upper_reaches_id":           0,
+		"is_bind_phone":              0,
+		"upstream_qty":               0,
+		"cancel_control":             1,
+		"upstream_stock_control":     0,
+		"upstream_auto_setup":        "",
+		"upstream_ontrial_status":    0,
+		"upstream_price":             "0.00",
+	}
+
+	// product_pricings
+	monthlyPrice := fmt.Sprintf("%.2f", product.Price)
+	productPricings := []gin.H{{
+		"id":          1,
+		"type":        "product",
+		"currency":    currencyID,
+		"relid":       product.ID,
+		"osetupfee":   "0.00",
+		"hsetupfee":   "0.00",
+		"dsetupfee":   "0.00",
+		"ontrialfee":  "0.00",
+		"msetupfee":   "0.00",
+		"qsetupfee":   "0.00",
+		"ssetupfee":   "0.00",
+		"asetupfee":   "0.00",
+		"bsetupfee":   "0.00",
+		"tsetupfee":   "0.00",
+		"onetime":     "-1.00",
+		"hour":        "-1.00",
+		"day":         "-1.00",
+		"ontrial":     "-1.00",
+		"monthly":     monthlyPrice,
+		"quarterly":   fmt.Sprintf("%.2f", product.Price*3),
+		"semiannually": fmt.Sprintf("%.2f", product.Price*6),
+		"annually":    fmt.Sprintf("%.2f", product.Price*12),
+		"biennially":  "-1.00",
+		"triennially": "-1.00",
+	}}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"msg":   "success",
 		"data": gin.H{
-			"products": gin.H{
-				"id":                product.ID,
-				"name":              product.Name,
-				"description":       product.Description,
-				"type":              product.Type,
-				"pay_type":          `{"pay_type":"recurring"}`,
-				"auto_setup":        "on_order",
-				"auto_terminate_days": 0,
-				"config_options_upgrade": 0,
-				"down_configoption_refund": 0,
-				"retired":           0,
-				"is_featured":       0,
-				"allow_qty":         0,
-				"is_truename":       0,
-				"is_bind_phone":     0,
-				"groupid":           product.GroupID,
-				"qty":               1,
-				"stock_control":     0,
-				"pay_method":        "",
-				"product_shopping_url": "",
-				"location_version":  1,
-			},
+			"flag":             gin.H{"type": 1, "bates": "100.00"},
+			"products":         products,
+			"customfields":     []gin.H{},
+			"product_pricings": productPricings,
 		},
 	})
 }
 
 // ZjmfCompatProductDetail zjmf兼容商品详细配置（/api/product/prodetail）
-// zjmf.php line 54: $path = "api/product/prodetail"; params: pids=[]
 // zjmf取 $res["data"]["detail"][$upstream_pid]
+// 返回格式和cart/get_product_config一样
 func ZjmfCompatProductDetail(c *gin.Context) {
 	pids := c.QueryArray("pids")
 	if len(pids) == 0 {
@@ -487,6 +609,14 @@ func ZjmfCompatProductDetail(c *gin.Context) {
 	}
 
 	db := database.GetDB()
+
+	var defaultCurrency model.Currency
+	currencyID := 1
+	db.Where("is_default = ?", true).First(&defaultCurrency)
+	if defaultCurrency.ID > 0 {
+		currencyID = int(defaultCurrency.ID)
+	}
+
 	var products []model.Product
 	if len(pids) > 0 {
 		db.Where("id IN ?", pids).Find(&products)
@@ -496,27 +626,55 @@ func ZjmfCompatProductDetail(c *gin.Context) {
 
 	detail := gin.H{}
 	for _, p := range products {
+		payType := fmt.Sprintf(`{"pay_type":"%s","pay_hour_cycle":"720","pay_day_cycle":"30","pay_ontrial_status":0,"pay_ontrial_cycle":"0","pay_ontrial_num":"1","pay_ontrial_condition":[],"pay_ontrial_cycle_type":"day","pay_ontrial_num_rule":"0","clientscount_rule":0}`, p.BillingCycle)
+
+		monthlyPrice := fmt.Sprintf("%.2f", p.Price)
+		productPricings := []gin.H{{
+			"id":          1,
+			"type":        "product",
+			"currency":    currencyID,
+			"relid":       p.ID,
+			"osetupfee":   "0.00",
+			"onetime":     "-1.00",
+			"hour":        "-1.00",
+			"day":         "-1.00",
+			"ontrial":     "-1.00",
+			"monthly":     monthlyPrice,
+			"quarterly":   fmt.Sprintf("%.2f", p.Price*3),
+			"semiannually": fmt.Sprintf("%.2f", p.Price*6),
+			"annually":    fmt.Sprintf("%.2f", p.Price*12),
+			"biennially":  "-1.00",
+			"triennially": "-1.00",
+		}}
+
 		detail[fmt.Sprintf("%d", p.ID)] = gin.H{
-			"id":                p.ID,
-			"name":              p.Name,
-			"description":       p.Description,
-			"type":              p.Type,
-			"pay_type":          `{"pay_type":"recurring"}`,
-			"auto_setup":        "on_order",
-			"auto_terminate_days": 0,
-			"config_options_upgrade": 0,
-			"down_configoption_refund": 0,
-			"retired":           0,
-			"is_featured":       0,
-			"allow_qty":         0,
-			"is_truename":       0,
-			"is_bind_phone":     0,
-			"groupid":           p.GroupID,
-			"qty":               1,
-			"stock_control":     0,
-			"pay_method":        "",
-			"product_shopping_url": "",
-			"location_version":  1,
+			"id":                         p.ID,
+			"type":                       p.Type,
+			"gid":                        p.GroupID,
+			"name":                       p.Name,
+			"description":                p.Description,
+			"host":                       `{"show":"0","modify":0,"prefix":"ser","rule":{"upper":"0","lower":"0","num":"1","len_num":12}}`,
+			"hidden":                     0,
+			"password":                   `{"show":"1","modify":0,"rule":{"len_num":"12","upper":"1","lower":"1","num":"1","special":"0"}}`,
+			"stock_control":              0,
+			"qty":                        999,
+			"pay_type":                   payType,
+			"pay_method":                 "prepayment",
+			"allow_qty":                  0,
+			"auto_setup":                 "payment",
+			"auto_terminate_days":        0,
+			"config_options_upgrade":     0,
+			"down_configoption_refund":   0,
+			"retired":                    0,
+			"is_featured":                0,
+			"groupid":                    p.GroupID,
+			"location_version":           1,
+			"is_truename":                0,
+			"is_bind_phone":              0,
+			"cancel_control":             1,
+			"upstream_stock_control":     0,
+			"product_shopping_url":       "",
+			"product_pricings":           productPricings,
 		}
 	}
 
