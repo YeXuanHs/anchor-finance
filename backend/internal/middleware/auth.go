@@ -24,7 +24,7 @@ func JWTAuth(authService *service.AuthService) gin.HandlerFunc {
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		if len(parts) != 2 || (parts[0] != "Bearer" && parts[0] != "JWT") {
 			c.JSON(http.StatusOK, gin.H{"code": 401, "message": "认证格式错误", "data": nil})
 			c.Abort()
 			return
