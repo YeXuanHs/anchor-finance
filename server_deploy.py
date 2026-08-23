@@ -34,9 +34,11 @@ def main():
     run(client, "pkill -f 'anchor-finance$' 2>/dev/null || true")
     time.sleep(2)
 
-    # 2. 拉取代码
+    # 2. 拉取代码（备份.env防止被覆盖）
     print("\n=== 拉取代码 ===")
+    run(client, f"cp {REMOTE_DIR}/server/.env /tmp/anchor-finance.env.bak 2>/dev/null; true")
     run(client, f"cd {REMOTE_DIR} && git fetch origin && git reset --hard origin/main")
+    run(client, f"cp /tmp/anchor-finance.env.bak {REMOTE_DIR}/server/.env 2>/dev/null; true")
 
     # 3. 下载Release二进制
     print("\n=== 下载Release===")
@@ -53,10 +55,9 @@ def main():
 
     # 4. 重启（先彻底释放端口，必须daemon-reload加载新环境变量）
     print("\n=== 启动服务 ===")
-    run(client, "systemctl stop anchor-finance")
-    run(client, "pkill -9 -f 'anchor-finance$' 2>/dev/null; true")
+    run(client, "systemctl stop anchor-finance 2>/dev/null; true")
     run(client, "fuser -k 8080/tcp 2>/dev/null; true")
-    run(client, "sleep 2")
+    run(client, "sleep 3")
     run(client, "systemctl daemon-reload")
     run(client, "systemctl start anchor-finance")
     time.sleep(4)
