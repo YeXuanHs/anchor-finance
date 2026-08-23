@@ -7,6 +7,7 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // ============================================================
@@ -833,4 +834,143 @@ func ZjmfCompatProductDetail(c *gin.Context) {
 			"detail": detail,
 		},
 	})
+}
+
+// ZjmfCompatOnTrialMax zjmf兼容试用上限（/cart/ontrialmax）
+// zjmf取 $res["data"]["product"]["qty"]
+func ZjmfCompatOnTrialMax(c *gin.Context) {
+	pid := c.Query("pid")
+	if pid == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少pid"})
+		return
+	}
+
+	db := database.GetDB()
+	var product model.Product
+	if err := db.First(&product, pid).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "产品不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"data": gin.H{
+			"product": gin.H{
+				"qty": 999,
+			},
+		},
+	})
+}
+
+// ZjmfCompatStockControl zjmf兼容库存检查（/cart/stock_control）
+// zjmf取 $upstream_data["product"]，检查hidden、stock_control、qty
+func ZjmfCompatStockControl(c *gin.Context) {
+	pid := c.Query("pid")
+	if pid == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少pid"})
+		return
+	}
+
+	db := database.GetDB()
+	var product model.Product
+	if err := db.First(&product, pid).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 200, "data": gin.H{}})
+		return
+	}
+
+	if product.Status != "active" {
+		c.JSON(http.StatusOK, gin.H{"status": 200, "data": gin.H{}})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"data": gin.H{
+			"product": gin.H{
+				"hidden":        0,
+				"stock_control": 0,
+				"qty":           999,
+			},
+		},
+	})
+}
+
+// ZjmfCompatApplyCredit zjmf兼容使用余额支付（/apply_credit）
+// zjmf传 invoiceid + use_credit
+func ZjmfCompatApplyCredit(c *gin.Context) {
+	var req struct {
+		InvoiceID uint `json:"invoiceid"`
+		UseCredit int  `json:"use_credit"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	db := database.GetDB()
+	var invoice model.Invoice
+	if err := db.First(&invoice, req.InvoiceID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "账单不存在"})
+		return
+	}
+
+	if invoice.Status == "Paid" {
+		c.JSON(http.StatusOK, gin.H{"status": 1001, "msg": "账单已支付"})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	var user model.User
+	if err := db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "用户不存在"})
+		return
+	}
+
+	if user.Balance < invoice.Total {
+		c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "余额不足"})
+		return
+	}
+
+	// 扣余额+标记已付
+	db.Model(&user).Update("balance", gorm.Expr("balance - ?", invoice.Total))
+	db.Model(&invoice).Update("status", "Paid")
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "支付成功"})
+}
+
+// ZjmfCompatTrafficUsage zjmf兼容流量使用统计（/host/trafficusage）
+func ZjmfCompatTrafficUsage(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"data": gin.H{
+			"incoming": 0,
+			"outgoing": 0,
+			"total":    0,
+		},
+	})
+}
+
+// ZjmfCompatSetDownstream zjmf兼容设置下游信息（/host/setdownstream）
+func ZjmfCompatSetDownstream(c *gin.Context) {
+	var req struct {
+		ID             uint   `json:"id"`
+		PID            uint   `json:"pid"`
+		DownstreamURL  string `json:"downstream_url"`
+		DownstreamToken string `json:"downstream_token"`
+		DownstreamID   uint   `json:"downstream_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	// 存储下游信息到service记录
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success"})
 }

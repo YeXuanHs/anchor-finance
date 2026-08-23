@@ -18,10 +18,15 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 
 	// zjmf对接上游时调的端点
 	r.POST("/zjmf_api_login", ZjmfCompatLogin) // zjmf.php line 193
-	r.GET("/cart/all", ZjmfCompatCartAll)       // zjmf.php line 38: "cart/all"
+	r.GET("/cart/all", ZjmfCompatCartAll)       // zjmf.php line 38
 	r.GET("/api/product/proinfo", ZjmfCompatProductInfo) // zjmf.php line 48
 	r.GET("/api/product/prodetail", ZjmfCompatProductDetail) // zjmf.php line 54
 	r.GET("/cart/get_product_config", ZjmfCompatProductConfig) // zjmf.php line 70
+	r.GET("/cart/ontrialmax", ZjmfCompatOnTrialMax) // CartController:1779
+	r.GET("/cart/stock_control", ZjmfCompatStockControl) // CartController:2804
+	r.POST("/apply_credit", middleware.JWTAuth(authService), ZjmfCompatApplyCredit) // common.php:2315
+	r.GET("/host/trafficusage", middleware.JWTAuth(authService), ZjmfCompatTrafficUsage) // HostController:2192
+	r.POST("/host/setdownstream", middleware.JWTAuth(authService), ZjmfCompatSetDownstream) // ClientsServicesController:415
 
 	// 需要JWT认证的端点
 	v1Auth := r.Group("/v1")
