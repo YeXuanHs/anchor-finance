@@ -38,7 +38,6 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 		v1Auth.POST("/hosts/:id/module/unsuspend", ZjmfCompatModuleUnsuspend)
 		v1Auth.POST("/hosts/:id/module/terminate", ZjmfCompatModuleTerminate)
 		v1Auth.GET("/hosts/:id/renew", ZjmfCompatRenew)
-		v1Auth.GET("/host/header", ZjmfCompatHostDetail)
 	}
 
 	// zjmf兼容余额查询（/cart/credit，需JWT）
