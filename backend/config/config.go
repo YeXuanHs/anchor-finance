@@ -9,7 +9,6 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
-	Redis    RedisConfig
 	JWT      JWTConfig
 }
 
@@ -26,19 +25,12 @@ type DatabaseConfig struct {
 	DBName   string
 }
 
-type RedisConfig struct {
-	Host     string
-	Port     int
-	Password string
-	DB       int
-}
-
 type JWTConfig struct {
 	Secret     string
 	ExpireHour int
 }
 
-// Load 从环境变量加载配置（.env由systemd的EnvironmentFile加载）
+// Load 从环境变量加载配置（MD 2.3：.env只存DB连接信息，其他业务配置放数据库settings表）
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -51,12 +43,6 @@ func Load() *Config {
 			User:     getEnv("DB_USER", "root"),
 			Password: getEnv("DB_PASSWORD", ""),
 			DBName:   getEnv("DB_NAME", "anchor_finance"),
-		},
-		Redis: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "127.0.0.1"),
-			Port:     getEnvInt("REDIS_PORT", 6379),
-			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       getEnvInt("REDIS_DB", 0),
 		},
 		JWT: JWTConfig{
 			Secret:     getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
