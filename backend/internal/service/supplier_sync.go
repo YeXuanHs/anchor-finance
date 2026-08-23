@@ -401,6 +401,16 @@ func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct
 						product.Price = p.Price * (1 + mapping.ProfitRate/100)
 						product.Amount = product.Price
 					}
+				} else {
+					// 无映射时，按上游分组名自动创建本地二级分组（MD 7.2.5）
+					if p.GroupName != "" {
+						var localGroup model.ProductGroup
+						if err := db.Where("name = ? AND parent_id = 0", p.GroupName).First(&localGroup).Error; err != nil {
+							localGroup = model.ProductGroup{Name: p.GroupName, ParentID: 0, Status: "active"}
+							db.Create(&localGroup)
+						}
+						product.GroupID = localGroup.ID
+					}
 				}
 			}
 			db.Create(&product)
@@ -546,6 +556,29 @@ func (s *SupplierSyncService) StartStockSyncCron() {
 			for _, supplier := range suppliers {
 				if s.GetDriver(supplier.ID) != nil {
 					s.SyncAllProducts(supplier.ID)
+				}
+			}
+		}
+	}()
+}
+
+// StartFullSyncCron 每天全量同步（MD 7.2.4：每天全量同步）
+func (s *SupplierSyncService) StartFullSyncCron() {
+	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			if getSettingInt("full_sync_enabled", 1) == 0 {
+				continue
+			}
+			db := database.GetDB()
+			var suppliers []model.Supplier
+			db.Where("status = ?", "active").Find(&suppliers)
+			for _, supplier := range suppliers {
+				if s.GetDriver(supplier.ID) != nil {
+					s.SyncAllProducts(supplier.ID)
+					s.SyncAllPrices(supplier.ID)
+					s.SyncProductStatus(supplier.ID)
 				}
 			}
 		}

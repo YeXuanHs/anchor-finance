@@ -12,13 +12,14 @@ import (
 	"context"
 )
 
-// RedisService Redis服务（可选启用，配置存数据库）
+// RedisService Redis服务（可选启用，配置存数据库，连接池复用）
 type RedisService struct {
 	enabled  bool
 	host     string
 	port     int
 	password string
 	db       int
+	client   *redis.Client // 持久连接，不每次新建
 }
 
 // NewRedisService 从数据库读取Redis配置并初始化
@@ -65,6 +66,13 @@ func (s *RedisService) loadConfig() {
 	if dbNum, err := strconv.Atoi(configMap["redis_db"]); err == nil {
 		s.db = dbNum
 	}
+
+	// 初始化持久连接池
+	s.client = redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", s.host, s.port),
+		Password: s.password,
+		DB:       s.db,
+	})
 }
 
 // IsEnabled 是否启用Redis
@@ -114,24 +122,20 @@ func (s *RedisService) HealthCheck() map[string]interface{} {
 
 // Set 设置缓存（如果Redis启用则存Redis，否则跳过）
 func (s *RedisService) Set(key string, value interface{}, ttl time.Duration) error {
-	if !s.enabled {
+	if !s.enabled || s.client == nil {
 		return nil
 	}
 	ctx := context.Background()
-	client := s.getClient()
-	defer client.Close()
-	return client.Set(ctx, key, fmt.Sprintf("%v", value), ttl).Err()
+	return s.client.Set(ctx, key, fmt.Sprintf("%v", value), ttl).Err()
 }
 
 // Get 获取缓存
 func (s *RedisService) Get(key string) (string, error) {
-	if !s.enabled {
+	if !s.enabled || s.client == nil {
 		return "", fmt.Errorf("redis未启用")
 	}
 	ctx := context.Background()
-	client := s.getClient()
-	defer client.Close()
-	val, err := client.Get(ctx, key).Result()
+	val, err := s.client.Get(ctx, key).Result()
 	if err == redis.Nil {
 		return "", fmt.Errorf("key不存在")
 	}
@@ -140,20 +144,9 @@ func (s *RedisService) Get(key string) (string, error) {
 
 // Delete 删除缓存
 func (s *RedisService) Delete(key string) error {
-	if !s.enabled {
+	if !s.enabled || s.client == nil {
 		return nil
 	}
 	ctx := context.Background()
-	client := s.getClient()
-	defer client.Close()
-	return client.Del(ctx, key).Err()
-}
-
-// getClient 获取Redis客户端连接
-func (s *RedisService) getClient() *redis.Client {
-	return redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", s.host, s.port),
-		Password: s.password,
-		DB:       s.db,
-	})
+	return s.client.Del(ctx, key).Err()
 }

@@ -1,10 +1,11 @@
-﻿package client
+package client
 
 import (
 	"net/http"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
 )
 
@@ -73,6 +74,19 @@ func SubmitVerification(c *gin.Context) {
 			"data": nil,
 		})
 		return
+	}
+
+	// 触发Hook: before_certifi_submit（返回false可阻止提交）
+	results, hookErr := pluginengine.TriggerHook("before_certifi_submit", map[string]interface{}{
+		"user_id": userID, "type": req.Type, "name": req.Name,
+	})
+	if hookErr == nil && len(results) > 0 {
+		if data, ok := results[0].Result.(map[string]interface{}); ok {
+			if allowed, ok := data["allowed"].(bool); ok && !allowed {
+				c.JSON(http.StatusOK, gin.H{"code": 403, "message": "认证提交被阻止", "data": nil})
+				return
+			}
+		}
 	}
 
 	verification := model.Verification{

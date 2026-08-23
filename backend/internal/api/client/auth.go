@@ -132,11 +132,18 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 		return
 	}
 
-	// 频率限制2：IP维度（同一IP每分钟最多发10次验证码，防跨目标轰炸）
+	// 频率限制2：IP维度（同一IP每分钟最大次数，防跨目标轰炸，默认10，后台可配）
 	clientIP := c.ClientIP()
+	ipRateLimit := 10
+	var ipRateSetting model.Setting
+	if err := db.Where("`key` = ?", "captcha_ip_rate").First(&ipRateSetting).Error; err == nil {
+		if v, err := strconv.Atoi(ipRateSetting.Value); err == nil && v > 0 {
+			ipRateLimit = v
+		}
+	}
 	var ipCount int64
 	db.Model(&model.Captcha{}).Where("ip = ? AND created_at > ?", clientIP, time.Now().Add(-1*time.Minute)).Count(&ipCount)
-	if ipCount >= 10 {
+	if ipCount >= int64(ipRateLimit) {
 		c.JSON(http.StatusOK, gin.H{"code": 429, "message": "该IP发送验证码过于频繁，请稍后再试", "data": nil})
 		return
 	}
