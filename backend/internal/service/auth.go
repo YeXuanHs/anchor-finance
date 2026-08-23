@@ -213,9 +213,8 @@ func (s *AuthService) UnlockAdmin(adminID uint) error {
 	}).Error
 }
 
-// logSecurityEvent 记录安全事件到操作日志
+// logSecurityEvent 记录安全事件
 func (s *AuthService) logSecurityEvent(adminID uint, username, ip, eventType string) {
-	// 写入操作日志表
 	s.db.Create(&model.OperationLog{
 		UserID:   adminID,
 		Username: username,
