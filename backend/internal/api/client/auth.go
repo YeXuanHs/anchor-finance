@@ -1,4 +1,4 @@
-﻿package client
+package client
 
 import (
 	"crypto/rand"
@@ -90,6 +90,11 @@ func (h *AuthHandler) LoginByCode(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "生成token失败", "data": nil})
 		return
 	}
+
+	// 触发Hook: client_login
+	pluginengine.TriggerHook("client_login", map[string]interface{}{
+		"user_id": user.ID, "username": user.Username, "ip": c.ClientIP(),
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0, "message": "success",

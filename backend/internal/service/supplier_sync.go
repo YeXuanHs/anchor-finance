@@ -56,12 +56,13 @@ type RemoteProduct struct {
 	Status      string  `json:"status"`
 }
 
-// RemoteGroup 上游商品分组
+// RemoteGroup 上游商品分组（MD 7.3）
 type RemoteGroup struct {
 	ID       string        `json:"id"`
 	Name     string        `json:"name"`
 	ParentID string        `json:"parent_id"`
 	Children []RemoteGroup `json:"children,omitempty"`
+	Products []RemoteProduct `json:"products,omitempty"`
 }
 
 // StatusResult 状态同步结果
@@ -364,7 +365,7 @@ func (s *SupplierSyncService) SyncAllProducts(supplierID uint) error {
 			}
 			db.Create(&sp)
 
-			// MD 7.2.5: 自动上架（创建本地Product）
+			// MD 7.2.5: 自动上架（读取分组映射表，创建本地Product到对应分组）
 			if autoListing {
 				product := model.Product{
 					Name:   p.Name,
@@ -372,6 +373,17 @@ func (s *SupplierSyncService) SyncAllProducts(supplierID uint) error {
 					Price:  localPrice,
 					Amount: localPrice,
 					Status: "active",
+				}
+				// 查找分组映射（上游分组→本地分组）
+				if p.GroupID != "" {
+					var mapping model.SupplierGroupMapping
+					if err := db.Where("supplier_id = ? AND remote_group_id = ?", supplierID, p.GroupID).First(&mapping).Error; err == nil {
+						product.GroupID = mapping.LocalGroupID
+						if mapping.ProfitRate > 0 {
+							product.Price = p.Price * (1 + mapping.ProfitRate/100)
+							product.Amount = product.Price
+						}
+					}
 				}
 				db.Create(&product)
 			}

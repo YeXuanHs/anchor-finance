@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"net/http"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
 )
 
@@ -220,6 +221,11 @@ func CloseTicket(c *gin.Context) {
 		})
 		return
 	}
+
+	// 触发Hook: ticket_close
+	pluginengine.TriggerHook("ticket_close", map[string]interface{}{
+		"ticket_id": ticket.ID, "user_id": ticket.UserID,
+	})
 
 	// 5. 返回统一格式
 	c.JSON(http.StatusOK, gin.H{

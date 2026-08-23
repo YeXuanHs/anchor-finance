@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"net/http"
@@ -155,6 +155,11 @@ func CancelInvoice(c *gin.Context) {
 		})
 		return
 	}
+
+	// 触发Hook: invoice_mark_cancelled
+	pluginengine.TriggerHook("invoice_mark_cancelled", map[string]interface{}{
+		"invoice_id": invoice.ID, "user_id": invoice.UserID,
+	})
 
 	// 5. 返回统一格式
 	c.JSON(http.StatusOK, gin.H{

@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"fmt"
@@ -171,6 +171,11 @@ func CreateOrder(c *gin.Context) {
 		})
 		return
 	}
+
+	// 触发Hook: order_created
+	pluginengine.TriggerHook("order_created", map[string]interface{}{
+		"order_id": order.ID, "user_id": order.UserID, "amount": order.Amount,
+	})
 
 	// 5. 返回统一格式
 	c.JSON(http.StatusOK, gin.H{
