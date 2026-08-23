@@ -10,6 +10,7 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // ==================== 用户备注 ====================
@@ -923,13 +924,12 @@ func AdminUpdateServiceMeta(c *gin.Context) {
 	if req.Hostname != "" { updates["hostname"] = req.Hostname }
 	if req.Username != "" { updates["username"] = req.Username }
 	if req.Password != "" {
-		// 密码加密存储（bcrypt）
-		hashed, err := service.HashPassword(req.Password)
+		hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 500, "message": "密码加密失败", "data": nil})
 			return
 		}
-		updates["password_hash"] = hashed
+		updates["password_hash"] = string(hashed)
 	}
 	if req.IPAddress != "" { updates["ip_address"] = req.IPAddress }
 
