@@ -852,12 +852,11 @@ func ZjmfCompatOnTrialMax(c *gin.Context) {
 		return
 	}
 
+	// zjmf返回空数组表示无试用产品
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"data": gin.H{
-			"product": gin.H{
-				"qty": 999,
-			},
+			"product": []gin.H{},
 		},
 	})
 }
