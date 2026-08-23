@@ -38,7 +38,7 @@ func ZjmfCompatLogin(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "success", "data": gin.H{"jwt": token}})
+	c.JSON(http.StatusOK, gin.H{"jwt": token, "status": 200, "msg": "鉴权成功"})
 }
 
 // ZjmfCompatProducts zjmf兼容商品列表（/v1/products）
@@ -246,6 +246,77 @@ func ZjmfCompatBalance(c *gin.Context) {
 		"msg":  "success",
 		"data": gin.H{
 			"credit": user.Balance,
+		},
+	})
+}
+
+// ZjmfCompatCartAll zjmf兼容购物车/商品列表（/cart/all）
+// zjmf.php line 38: $path = "cart/all"
+func ZjmfCompatCartAll(c *gin.Context) {
+	db := database.GetDB()
+	var products []model.Product
+	db.Where("status = ?", "active").Order("id ASC").Find(&products)
+
+	var list []gin.H
+	for _, p := range products {
+		list = append(list, gin.H{
+			"id":          p.ID,
+			"name":        p.Name,
+			"description": p.Description,
+			"price":       p.Price,
+			"gid":         p.GroupID,
+			"stock":       999,
+			"status":      "active",
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success", "data": list})
+}
+
+// ZjmfCompatProductInfo zjmf兼容商品详情（/api/product/proinfo）
+// zjmf.php line 48: $path = "api/product/proinfo"; params: pids=[]
+func ZjmfCompatProductInfo(c *gin.Context) {
+	pids := c.QueryArray("pids")
+	if len(pids) == 0 {
+		pids = append(pids, c.Query("pids"))
+	}
+
+	db := database.GetDB()
+	var products []model.Product
+	if len(pids) > 0 {
+		db.Where("id IN ?", pids).Find(&products)
+	} else {
+		db.Where("status = ?", "active").Limit(50).Find(&products)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success", "data": products})
+}
+
+// ZjmfCompatProductConfig zjmf兼容商品配置（/cart/get_product_config）
+// zjmf.php line 70: $path = "cart/get_product_config"; params: pid
+func ZjmfCompatProductConfig(c *gin.Context) {
+	pid := c.Query("pid")
+	if pid == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少pid"})
+		return
+	}
+
+	db := database.GetDB()
+	var product model.Product
+	if err := db.First(&product, pid).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "产品不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "success",
+		"data": gin.H{
+			"pid":         product.ID,
+			"name":        product.Name,
+			"description": product.Description,
+			"price":       product.Price,
+			"billing_cycle": product.BillingCycle,
 		},
 	})
 }

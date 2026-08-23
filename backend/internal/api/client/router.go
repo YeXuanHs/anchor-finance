@@ -16,8 +16,11 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 		v1Compat.GET("/hosts/cates", ZjmfCompatCategories)
 	}
 
-	// zjmf对接上游时调的端点（{url}/zjmf_api_login）
-	r.POST("/zjmf_api_login", ZjmfCompatLogin)
+	// zjmf对接上游时调的端点
+	r.POST("/zjmf_api_login", ZjmfCompatLogin) // zjmf.php line 193
+	r.GET("/cart/all", ZjmfCompatCartAll)       // zjmf.php line 38: "cart/all"
+	r.GET("/api/product/proinfo", ZjmfCompatProductInfo) // zjmf.php line 48
+	r.GET("/cart/get_product_config", ZjmfCompatProductConfig) // zjmf.php line 70
 
 	// 需要JWT认证的端点
 	v1Auth := r.Group("/v1")
@@ -34,6 +37,8 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 
 	// zjmf兼容余额查询（/cart/credit，需JWT）
 	r.GET("/cart/credit", middleware.JWTAuth(authService), ZjmfCompatBalance)
+	// zjmf调host/header（需JWT）
+	r.GET("/host/header", middleware.JWTAuth(authService), ZjmfCompatHostDetail)
 }
 
 // SetupRoutes 设置用户前台路由
