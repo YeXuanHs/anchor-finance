@@ -1891,7 +1891,7 @@ func ZjmfCompatDcimIkvm(c *gin.Context) {
 	}
 
 	if svc.Config == "" {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "该产品未选择接口"})
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "获取ikvm失败"})
 		return
 	}
 
@@ -1922,7 +1922,7 @@ func ZjmfCompatDcimKvm(c *gin.Context) {
 
 	// 从service.config读取硬件配置（zjmf从servers表读IPMI信息）
 	if svc.Config == "" {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "该产品未选择接口"})
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "获取kvm失败"})
 		return
 	}
 
@@ -1947,7 +1947,7 @@ func ZjmfCompatDcimNovnc(c *gin.Context) {
 	}
 
 	if svc.Config == "" {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "该产品未选择接口"})
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "获取novnc失败"})
 		return
 	}
 
