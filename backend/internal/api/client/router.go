@@ -1,8 +1,6 @@
 package client
 
 import (
-	"time"
-
 	"github.com/YeXuanHs/anchor-finance/internal/middleware"
 	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
@@ -10,9 +8,6 @@ import (
 
 // SetupRoutes 设置用户前台路由
 func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
-	// 全局IP频率限制（MD 9.2：默认60次/分钟）
-	r.Use(middleware.RateLimit(60, 1*time.Minute))
-
 	// 创建处理器
 	authHandler := NewAuthHandler(authService)
 
