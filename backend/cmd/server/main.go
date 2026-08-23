@@ -191,6 +191,9 @@ func main() {
 	clientGroup := api.Group("/client")
 	client.SetupRoutes(clientGroup, authService)
 
+	// zjmf兼容路由（根路径/v1/，让zjmf系统能对接我们）
+	client.SetupZjmfCompatRoutes(r, authService)
+
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{

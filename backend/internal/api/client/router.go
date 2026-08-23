@@ -6,6 +6,30 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// SetupZjmfCompatRoutes 注册zjmf兼容路由到根路径（/v1/）
+func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
+	// 公开端点
+	v1Compat := r.Group("/v1")
+	{
+		v1Compat.POST("/login_api", ZjmfCompatLogin)
+		v1Compat.GET("/products", ZjmfCompatProducts)
+		v1Compat.GET("/hosts/cates", ZjmfCompatCategories)
+	}
+
+	// 需要JWT认证的端点
+	v1Auth := r.Group("/v1")
+	v1Auth.Use(middleware.JWTAuth(authService))
+	{
+		v1Auth.GET("/user", ZjmfCompatUser)
+		v1Auth.GET("/hosts/:id/module/status", ZjmfCompatModuleStatus)
+		v1Auth.POST("/hosts/:id/module/suspend", ZjmfCompatModuleSuspend)
+		v1Auth.POST("/hosts/:id/module/unsuspend", ZjmfCompatModuleUnsuspend)
+		v1Auth.POST("/hosts/:id/module/terminate", ZjmfCompatModuleTerminate)
+		v1Auth.GET("/hosts/:id/renew", ZjmfCompatRenew)
+		v1Auth.GET("/host/header", ZjmfCompatHostDetail)
+	}
+}
+
 // SetupRoutes 设置用户前台路由
 func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 	// 创建处理器
@@ -28,29 +52,6 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		public.GET("/home-hero", GetClientHomeHero)
 		public.POST("/payment/notify/:gateway", PaymentNotify)
 		public.POST("/tickets/upstream/replies", TicketUpstreamReply)
-	}
-
-	// zjmf兼容API（让zjmf系统能对接锚点财务，选zjmf类型填我们网址即可）
-	// /v1/ 前缀，zjmf标准端点
-	v1Compat := r.Group("/v1")
-	{
-		// 公开端点（zjmf用账号密码登录获取JWT）
-		v1Compat.POST("/login_api", ZjmfCompatLogin)
-		v1Compat.GET("/products", ZjmfCompatProducts)
-		v1Compat.GET("/hosts/cates", ZjmfCompatCategories)
-	}
-
-	// 需要JWT认证的zjmf兼容端点
-	v1Auth := r.Group("/v1")
-	v1Auth.Use(middleware.JWTAuth(authService))
-	{
-		v1Auth.GET("/user", ZjmfCompatUser)
-		v1Auth.GET("/hosts/:id/module/status", ZjmfCompatModuleStatus)
-		v1Auth.POST("/hosts/:id/module/suspend", ZjmfCompatModuleSuspend)
-		v1Auth.POST("/hosts/:id/module/unsuspend", ZjmfCompatModuleUnsuspend)
-		v1Auth.POST("/hosts/:id/module/terminate", ZjmfCompatModuleTerminate)
-		v1Auth.GET("/hosts/:id/renew", ZjmfCompatRenew)
-		v1Auth.GET("/host/header", ZjmfCompatHostDetail)
 	}
 
 	// 需要认证的路由（禁止admin token访问，防越权）
