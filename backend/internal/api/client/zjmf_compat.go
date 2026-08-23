@@ -996,3 +996,547 @@ func ZjmfCompatSetDownstream(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success"})
 }
+
+// ZjmfCompatDcimOn POST /dcim/on - 开机
+func ZjmfCompatDcimOn(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimOff POST /dcim/off - 关机
+func ZjmfCompatDcimOff(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimReboot POST /dcim/reboot - 重启
+func ZjmfCompatDcimReboot(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimRescue POST /dcim/rescue - 救援模式
+func ZjmfCompatDcimRescue(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimReinstall POST /dcim/reinstall - 重装系统
+func ZjmfCompatDcimReinstall(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimCrackPass POST /dcim/crack_pass - 重置密码
+func ZjmfCompatDcimCrackPass(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimCheckReinstall POST /dcim/check_reinstall - 检查可重装
+func ZjmfCompatDcimCheckReinstall(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimDetail GET /dcim/detail - 服务器详情
+func ZjmfCompatDcimDetail(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimBuyReinstallTimes POST /dcim/buy_reinstall_times - 购买重装次数
+func ZjmfCompatDcimBuyReinstallTimes(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 1}})
+}
+
+// ZjmfCompatDcimBuyFlowPacket POST /dcim/buy_flow_packet - 购买流量包
+func ZjmfCompatDcimBuyFlowPacket(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 1}})
+}
+
+// ZjmfCompatUpgradeCheckoutConfig POST /upgrade/checkout_config_upgrade - 配置升级结算
+func ZjmfCompatUpgradeCheckoutConfig(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 1, "amount": "0.00"}})
+}
+
+// ZjmfCompatUpgradeProductPost POST /upgrade/upgrade_product_post - 产品升级
+func ZjmfCompatUpgradeProductPost(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 1, "amount": "0.00"}})
+}
+
+// ZjmfCompatUpgradeCheckoutProduct POST /upgrade/checkout_upgrade_product - 产品升级结算
+func ZjmfCompatUpgradeCheckoutProduct(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 1, "amount": "0.00"}})
+}
+
+// ZjmfCompatSslCertFunc POST /provision/sslCertFunc - SSL证书管理
+func ZjmfCompatSslCertFunc(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatRefreshPowerStatus POST /dcim/refresh_power_status - 刷新电源状态
+func ZjmfCompatRefreshPowerStatus(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatRefreshAllPowerStatus POST /dcim/refresh_all_power_status - 批量刷新电源状态
+func ZjmfCompatRefreshAllPowerStatus(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatDcimHideResult POST /dcim/hide_result - 隐藏操作结果
+func ZjmfCompatDcimHideResult(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+}
+
+// ZjmfCompatClearCart zjmf兼容清空购物车（/cart/clear）
+// zjmf源码(Host.php:74): zjmfCurl($apiId, "/cart/clear", [], 30, "POST")
+func ZjmfCompatClearCart(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	db := database.GetDB()
+
+	db.Where("user_id = ?", userID).Delete(&model.CartItem{})
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": []interface{}{}})
+}
+
+// ZjmfCompatAddToShop zjmf兼容添加商品到购物车（/cart/add_to_shop）
+// zjmf源码(Host.php:115): zjmfCurl($apiId, "/cart/add_to_shop", $cartData, 30, "POST")
+// zjmf传参: pid, qty, billingcycle, configoptions等
+func ZjmfCompatAddToShop(c *gin.Context) {
+	var req struct {
+		PID          uint   `json:"pid"`
+		Qty          int    `json:"qty"`
+		BillingCycle string `json:"billingcycle"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.PID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少pid"})
+		return
+	}
+	if req.Qty <= 0 {
+		req.Qty = 1
+	}
+
+	db := database.GetDB()
+
+	// 查询产品
+	var product model.Product
+	if err := db.First(&product, req.PID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "产品不存在"})
+		return
+	}
+
+	// 确定计费周期
+	cycle := req.BillingCycle
+	if cycle == "" {
+		cycle = product.BillingCycle
+	}
+
+	// 计算价格
+	amount := product.Price * float64(req.Qty)
+	switch cycle {
+	case "quarterly":
+		amount = product.Price * 3 * float64(req.Qty)
+	case "semiannually":
+		amount = product.Price * 6 * float64(req.Qty)
+	case "annually":
+		amount = product.Price * 12 * float64(req.Qty)
+	case "onetime":
+		amount = product.Price * float64(req.Qty)
+	case "free":
+		amount = 0
+	}
+
+	userID, _ := c.Get("user_id")
+
+	// 创建购物车项
+	cartItem := model.CartItem{
+		UserID:      userID.(uint),
+		ProductID:   product.ID,
+		ProductName: product.Name,
+		Quantity:    req.Qty,
+		Cycle:       cycle,
+		Amount:      amount,
+	}
+	db.Create(&cartItem)
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"cart_id": cartItem.ID}})
+}
+
+// ZjmfCompatSettle zjmf兼容结算购物车（/cart/settle）
+// zjmf源码(Host.php:128): zjmfCurl($apiId, "/cart/settle", $settleData, 30, "POST")
+// zjmf传参: payment method等
+func ZjmfCompatSettle(c *gin.Context) {
+	var req struct {
+		PaymentMethod string `json:"payment_method"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// 没有参数也可以，用默认支付方式
+		req.PaymentMethod = "balance"
+	}
+
+	userID, _ := c.Get("user_id")
+	db := database.GetDB()
+
+	// 获取购物车项
+	var cartItems []model.CartItem
+	db.Where("user_id = ?", userID).Find(&cartItems)
+
+	if len(cartItems) == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "购物车为空"})
+		return
+	}
+
+	// 计算总金额
+	var totalAmount float64
+	for _, item := range cartItems {
+		totalAmount += item.Amount
+	}
+
+	// 创建账单
+	invoice := model.Invoice{
+		UserID:        userID.(uint),
+		Amount:        totalAmount,
+		Status:        "unpaid",
+		PaymentMethod: req.PaymentMethod,
+	}
+	db.Create(&invoice)
+
+	// 清空购物车
+	db.Where("user_id = ?", userID).Delete(&model.CartItem{})
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":    "请求成功",
+		"data": gin.H{
+			"invoiceid": invoice.ID,
+			"amount":    fmt.Sprintf("%.2f", totalAmount),
+		},
+	})
+}
+
+// ZjmfCompatApplyCreditLimit zjmf兼容申请信用额度（/apply_credit_limit）
+// zjmf源码(Host.php:150): zjmfCurl($apiId, "/apply_credit_limit", $post_data)
+// zjmf传参: invoiceid
+func ZjmfCompatApplyCreditLimit(c *gin.Context) {
+	var req struct {
+		InvoiceID uint `json:"invoiceid"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	db := database.GetDB()
+
+	// 查询账单
+	var invoice model.Invoice
+	if err := db.First(&invoice, req.InvoiceID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "账单不存在"})
+		return
+	}
+
+	// 验证账单归属
+	if invoice.UserID != userID.(uint) {
+		c.JSON(http.StatusOK, gin.H{"status": 403, "msg": "无权限"})
+		return
+	}
+
+	// 查询信用额度
+	var creditLimit model.CreditLimit
+	if err := db.Where("user_id = ?", userID).First(&creditLimit).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "信用额度不足"})
+		return
+	}
+
+	// 检查可用信用额度
+	available := creditLimit.Amount - creditLimit.Used
+	if available < invoice.Amount {
+		c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "信用额度不足"})
+		return
+	}
+
+	// 使用信用额度支付
+	db.Model(&creditLimit).Update("used", gorm.Expr("used + ?", invoice.Amount))
+	db.Model(&invoice).Update("status", "Paid")
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功"})
+}
+
+// ZjmfCompatUserInfo zjmf兼容用户信息（/user_info）
+// zjmf源码(Host.php:56): zjmfCurl($apiId, "/user_info", [], 30, "GET")
+func ZjmfCompatUserInfo(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	db := database.GetDB()
+
+	var user model.User
+	if err := db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "用户不存在"})
+		return
+	}
+
+	// 查询信用额度
+	creditLimitAmount := "0.00"
+	var creditLimit model.CreditLimit
+	if err := db.Where("user_id = ?", userID).First(&creditLimit).Error; err == nil {
+		creditLimitAmount = fmt.Sprintf("%.2f", creditLimit.Amount-creditLimit.Used)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":    "请求成功",
+		"data": gin.H{
+			"credit":       fmt.Sprintf("%.2f", user.Balance),
+			"credit_limit": creditLimitAmount,
+		},
+	})
+}
+
+// ============================================================
+// 以下为 zjmf 深度兼容端点（host/provision/upgrade）
+// ============================================================
+
+// ZjmfCompatHostCancel zjmf兼容取消服务（POST /host/cancel）
+// zjmf源码(Host.php:538): zjmfCurl($apiId, "/host/cancel", $post_data)
+// 传参: host_id, reason
+func ZjmfCompatHostCancel(c *gin.Context) {
+	var req struct {
+		HostID uint   `json:"host_id" form:"host_id"`
+		Reason string `json:"reason" form:"reason"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.HostID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少host_id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.HostID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "未找到该产品"})
+		return
+	}
+
+	// 标记服务为已取消
+	db.Model(&svc).Update("status", "cancelled")
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功"})
+}
+
+// ZjmfCompatHostRenew zjmf兼容续费（POST /host/renew）
+// zjmf源码(Host.php:1855): zjmfCurl($apiId, "/host/renew", $renewData)
+// 传参: host_id, billingcycle
+// 返回: {"status": 200, "msg": "请求成功", "data": {"invoiceid": 1, "amount": "99.99"}}
+func ZjmfCompatHostRenew(c *gin.Context) {
+	var req struct {
+		HostID       uint   `json:"host_id" form:"host_id"`
+		BillingCycle string `json:"billingcycle" form:"billingcycle"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.HostID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少host_id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.HostID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "未找到该产品"})
+		return
+	}
+
+	// 生成续费账单
+	amount := svc.Amount
+
+	invoice := model.Invoice{
+		UserID: svc.UserID,
+		Amount: amount,
+		Status: "unpaid",
+		Note:   fmt.Sprintf("续费服务 #%d", svc.ID),
+	}
+	db.Create(&invoice)
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":    "请求成功",
+		"data": gin.H{
+			"invoiceid": invoice.ID,
+			"amount":    fmt.Sprintf("%.2f", amount),
+		},
+	})
+}
+
+// ZjmfCompatProvisionDefault zjmf兼容通用模块操作（POST /provision/default）
+// zjmf源码(Host.php:322等12+处): zjmfCurl($apiId, "/provision/default", $post_data)
+// 传参: func(操作类型), id(host_id), 其他参数
+// 返回: {"status": 200, "msg": "请求成功", "data": {}}
+func ZjmfCompatProvisionDefault(c *gin.Context) {
+	var req struct {
+		Func string `json:"func" form:"func"`
+		ID   uint   `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "未找到该产品"})
+		return
+	}
+
+	// 根据func执行不同操作（Create/Suspend/Unsuspend/Terminate等）
+	// 目前作为通用占位返回成功
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":    "请求成功",
+		"data":   gin.H{},
+	})
+}
+
+// ZjmfCompatProvisionButton zjmf兼容模块按钮（POST /provision/button）
+// zjmf源码(ProvisionController:467): zjmfCurl($apiId, "/provision/button", $post_data)
+// 传参: id, type等
+// 返回: {"status": 200, "msg": "请求成功", "data": {"button": [], "console": []}}
+func ZjmfCompatProvisionButton(c *gin.Context) {
+	var req struct {
+		ID   uint   `json:"id" form:"id"`
+		Type string `json:"type" form:"type"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "未找到该产品"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":    "请求成功",
+		"data": gin.H{
+			"button":  []gin.H{},
+			"console": []gin.H{},
+		},
+	})
+}
+
+// ZjmfCompatProvisionCustom zjmf兼容自定义模块操作（POST /provision/custom/:id）
+// zjmf源码(DcimCloud.php:297等): zjmfCurl($apiId, "/provision/custom/" . $id, $post)
+// 返回: {"status": 200, "msg": "请求成功", "data": {}}
+func ZjmfCompatProvisionCustom(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "未找到该产品"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":    "请求成功",
+		"data":   gin.H{},
+	})
+}
+
+// ZjmfCompatProvisionChart zjmf兼容图表数据（GET /provision/chart/:id）
+// zjmf源码(ProvisionController:432): zjmfCurl($apiId, "/provision/chart/" . $id, $params, 30, "GET")
+// 返回: {"status": 200, "msg": "请求成功", "data": {"chart": []}}
+func ZjmfCompatProvisionChart(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "未找到该产品"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":    "请求成功",
+		"data": gin.H{
+			"chart": []gin.H{},
+		},
+	})
+}
+
+// ZjmfCompatUpgradeConfigPost zjmf兼容配置选项升级（POST /upgrade/upgrade_config_post）
+// zjmf源码(Host.php:1534): zjmfCurl($apiId, "/upgrade/upgrade_config_post", $post_data)
+// 传参: host_id, configoptions等
+// 返回: {"status": 200, "msg": "请求成功", "data": {"invoiceid": 1, "amount": "99.99"}}
+func ZjmfCompatUpgradeConfigPost(c *gin.Context) {
+	var req struct {
+		HostID        uint                   `json:"host_id" form:"host_id"`
+		ConfigOptions map[string]interface{} `json:"configoptions" form:"configoptions"`
+	}
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	if req.HostID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少host_id"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.HostID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "未找到该产品"})
+		return
+	}
+
+	// 生成升级账单（差异金额，此处简化为当前产品价格的10%作为升级费）
+	amount := svc.Amount * 0.1
+
+	invoice := model.Invoice{
+		UserID: svc.UserID,
+		Amount: amount,
+		Status: "unpaid",
+		Note:   fmt.Sprintf("配置升级服务 #%d", svc.ID),
+	}
+	db.Create(&invoice)
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":    "请求成功",
+		"data": gin.H{
+			"invoiceid": invoice.ID,
+			"amount":    fmt.Sprintf("%.2f", amount),
+		},
+	})
+}

@@ -45,6 +45,45 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 	r.GET("/cart/credit", middleware.JWTAuth(authService), ZjmfCompatBalance)
 	// zjmf调host/header（需JWT）
 	r.GET("/host/header", middleware.JWTAuth(authService), ZjmfCompatHostDetail)
+
+	// DCIM硬件操作
+	r.POST("/dcim/on", middleware.JWTAuth(authService), ZjmfCompatDcimOn)
+	r.POST("/dcim/off", middleware.JWTAuth(authService), ZjmfCompatDcimOff)
+	r.POST("/dcim/reboot", middleware.JWTAuth(authService), ZjmfCompatDcimReboot)
+	r.POST("/dcim/rescue", middleware.JWTAuth(authService), ZjmfCompatDcimRescue)
+	r.POST("/dcim/reinstall", middleware.JWTAuth(authService), ZjmfCompatDcimReinstall)
+	r.POST("/dcim/crack_pass", middleware.JWTAuth(authService), ZjmfCompatDcimCrackPass)
+	r.POST("/dcim/check_reinstall", middleware.JWTAuth(authService), ZjmfCompatDcimCheckReinstall)
+	r.GET("/dcim/detail", middleware.JWTAuth(authService), ZjmfCompatDcimDetail)
+	r.POST("/dcim/buy_reinstall_times", middleware.JWTAuth(authService), ZjmfCompatDcimBuyReinstallTimes)
+	r.POST("/dcim/buy_flow_packet", middleware.JWTAuth(authService), ZjmfCompatDcimBuyFlowPacket)
+	r.POST("/dcim/refresh_power_status", middleware.JWTAuth(authService), ZjmfCompatRefreshPowerStatus)
+	r.POST("/dcim/refresh_all_power_status", middleware.JWTAuth(authService), ZjmfCompatRefreshAllPowerStatus)
+	r.POST("/dcim/hide_result", middleware.JWTAuth(authService), ZjmfCompatDcimHideResult)
+
+	// 升级操作
+	r.POST("/upgrade/checkout_config_upgrade", middleware.JWTAuth(authService), ZjmfCompatUpgradeCheckoutConfig)
+	r.POST("/upgrade/upgrade_product_post", middleware.JWTAuth(authService), ZjmfCompatUpgradeProductPost)
+	r.POST("/upgrade/checkout_upgrade_product", middleware.JWTAuth(authService), ZjmfCompatUpgradeCheckoutProduct)
+
+	// SSL证书
+	r.POST("/provision/sslCertFunc", middleware.JWTAuth(authService), ZjmfCompatSslCertFunc)
+
+	// 购物车/订单/信用额度操作
+	r.POST("/cart/clear", middleware.JWTAuth(authService), ZjmfCompatClearCart)
+	r.POST("/cart/add_to_shop", middleware.JWTAuth(authService), ZjmfCompatAddToShop)
+	r.POST("/cart/settle", middleware.JWTAuth(authService), ZjmfCompatSettle)
+	r.POST("/apply_credit_limit", middleware.JWTAuth(authService), ZjmfCompatApplyCreditLimit)
+	r.GET("/user_info", middleware.JWTAuth(authService), ZjmfCompatUserInfo)
+
+	// host/provision/upgrade 深度兼容端点
+	r.POST("/host/cancel", middleware.JWTAuth(authService), ZjmfCompatHostCancel)
+	r.POST("/host/renew", middleware.JWTAuth(authService), ZjmfCompatHostRenew)
+	r.POST("/provision/default", middleware.JWTAuth(authService), ZjmfCompatProvisionDefault)
+	r.POST("/provision/button", middleware.JWTAuth(authService), ZjmfCompatProvisionButton)
+	r.POST("/provision/custom/:id", middleware.JWTAuth(authService), ZjmfCompatProvisionCustom)
+	r.GET("/provision/chart/:id", middleware.JWTAuth(authService), ZjmfCompatProvisionChart)
+	r.POST("/upgrade/upgrade_config_post", middleware.JWTAuth(authService), ZjmfCompatUpgradeConfigPost)
 }
 
 // SetupRoutes 设置用户前台路由
