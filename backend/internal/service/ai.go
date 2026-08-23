@@ -336,11 +336,21 @@ func GetAITools() []map[string]interface{} {
 	}
 }
 
-// ExecuteAITool 执行AI工具调用
+// ExecuteAITool 执行AI工具调用（所有操作记录审计日志，MD 10.2）
 func ExecuteAITool(funcName string, argsJSON string) string {
 	db := database.GetDB()
 	var args map[string]interface{}
 	json.Unmarshal([]byte(argsJSON), &args)
+
+	// 审计日志：记录AI每次工具调用
+	db.Create(&model.OperationLog{
+		UserID:   0,
+		Username: "AI",
+		Action:   "ai_tool_call",
+		Resource: "ai",
+		Detail:   fmt.Sprintf("AI调用工具: %s, 参数: %s", funcName, argsJSON),
+		IP:       "internal",
+	})
 
 	switch funcName {
 	case "get_user_info":

@@ -671,17 +671,21 @@ func (d *AnchorDriver) CreateService(params CreateServiceParams) (*ServiceResult
 }
 
 func (d *AnchorDriver) SuspendService(serviceID string) error {
-	return fmt.Errorf("锚点接口暂不支持远程暂停")
+	_, err := d.request("POST", "/api/admin/services/"+serviceID+"/suspend", nil)
+	return err
 }
 
 func (d *AnchorDriver) UnsuspendService(serviceID string) error {
-	return fmt.Errorf("锚点接口暂不支持远程取消暂停")
+	_, err := d.request("POST", "/api/admin/services/"+serviceID+"/unsuspend", nil)
+	return err
 }
 
 func (d *AnchorDriver) TerminateService(serviceID string) error {
-	return fmt.Errorf("锚点接口暂不支持远程终止")
+	_, err := d.request("POST", "/api/admin/services/"+serviceID+"/terminate", nil)
+	return err
 }
 
 func (d *AnchorDriver) RenewService(serviceID string, cycle string) error {
-	return fmt.Errorf("锚点接口暂不支持远程续费")
+	_, err := d.request("POST", "/api/admin/services/"+serviceID+"/renewals", map[string]interface{}{"cycle": cycle})
+	return err
 }

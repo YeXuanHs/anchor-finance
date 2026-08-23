@@ -19,6 +19,11 @@ func main() {
 	// 加载配置
 	cfg := config.Load()
 
+	// 检查JWT密钥是否为默认弱密钥
+	if cfg.JWT.Secret == "your-secret-key-change-in-production" {
+		log.Println("[WARNING] JWT_SECRET is using default value! Set a strong secret in .env for production.")
+	}
+
 	// 初始化数据库
 	database.Init(&cfg.Database)
 
