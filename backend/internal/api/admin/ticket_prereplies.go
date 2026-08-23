@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -74,7 +74,7 @@ func CreateTicketPrereplyCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -90,7 +90,7 @@ func CreateTicketPrereplyCategory(c *gin.Context) {
 	if err := db.Create(&category).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建分类失败: " + err.Error(),
+			"message": "创建分类失败",
 			"data": nil,
 		})
 		return
@@ -118,7 +118,7 @@ func UpdateTicketPrereplyCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -186,7 +186,7 @@ func CreateTicketPrereply(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -204,7 +204,7 @@ func CreateTicketPrereply(c *gin.Context) {
 	if err := db.Create(&prereply).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建预回复失败: " + err.Error(),
+			"message": "创建预回复失败",
 			"data": nil,
 		})
 		return
@@ -234,7 +234,7 @@ func UpdateTicketPrereply(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -305,7 +305,7 @@ func SearchTicketPrereply(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return

@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -24,7 +24,7 @@ func CreateNews(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -46,7 +46,7 @@ func CreateNews(c *gin.Context) {
 	if err := db.Create(&news).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建新闻失败: " + err.Error(),
+			"message": "创建新闻失败",
 			"data": nil,
 		})
 		return
@@ -77,7 +77,7 @@ func UpdateNews(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -156,7 +156,7 @@ func CreateNewsCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -172,7 +172,7 @@ func CreateNewsCategory(c *gin.Context) {
 	if err := db.Create(&category).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建分类失败: " + err.Error(),
+			"message": "创建分类失败",
 			"data": nil,
 		})
 		return
@@ -201,7 +201,7 @@ func UpdateNewsCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -274,7 +274,7 @@ func CreateKnowledgeCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -290,7 +290,7 @@ func CreateKnowledgeCategory(c *gin.Context) {
 	if err := db.Create(&category).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建分类失败: " + err.Error(),
+			"message": "创建分类失败",
 			"data": nil,
 		})
 		return
@@ -320,7 +320,7 @@ func CreateKnowledgeArticle(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -341,7 +341,7 @@ func CreateKnowledgeArticle(c *gin.Context) {
 	if err := db.Create(&article).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建文章失败: " + err.Error(),
+			"message": "创建文章失败",
 			"data": nil,
 		})
 		return
@@ -371,7 +371,7 @@ func UpdateKnowledgeArticle(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -450,7 +450,7 @@ func CreateDownload(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -472,7 +472,7 @@ func CreateDownload(c *gin.Context) {
 	if err := db.Create(&download).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建下载失败: " + err.Error(),
+			"message": "创建下载失败",
 			"data": nil,
 		})
 		return
@@ -503,7 +503,7 @@ func UpdateDownload(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -582,7 +582,7 @@ func CreateDownloadCategory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -598,7 +598,7 @@ func CreateDownloadCategory(c *gin.Context) {
 	if err := db.Create(&category).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建分类失败: " + err.Error(),
+			"message": "创建分类失败",
 			"data": nil,
 		})
 		return

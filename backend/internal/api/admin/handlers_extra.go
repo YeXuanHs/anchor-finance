@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"fmt"
@@ -1480,7 +1480,7 @@ func TestAIConnection(c *gin.Context) {
 		{"role": "user", "content": "你好，请回复'连接成功'四个字"},
 	}, nil)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "AI连接失败: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "AI连接失败", "data": nil})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "AI连接成功", "data": gin.H{"response": result}})
@@ -1507,7 +1507,7 @@ func GenerateProductDescription(c *gin.Context) {
 
 	result, err := aiSvc.GenerateProductDescription(req.ProductName, req.Config, req.Template)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "AI生成失败: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "AI生成失败", "data": nil})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "生成成功", "data": gin.H{"description": result}})
@@ -1553,7 +1553,7 @@ func AITicketReply(c *gin.Context) {
 		"customer_info": gin.H{"username": user.Username, "email": user.Email},
 	})
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "AI回复失败: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "AI回复失败", "data": nil})
 		return
 	}
 
@@ -1608,7 +1608,7 @@ func ProcessAITicketQueue(c *gin.Context) {
 	aiTicketSvc := service.NewAITicketService()
 	processed, err := aiTicketSvc.ProcessQueue(20)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "处理失败: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "处理失败", "data": nil})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "处理完成", "data": gin.H{"processed": processed}})

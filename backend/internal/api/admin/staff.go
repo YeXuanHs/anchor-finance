@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -93,7 +93,7 @@ func CreateStaff(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -136,7 +136,7 @@ func CreateStaff(c *gin.Context) {
 	if err := db.Create(&staff).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建员工失败: " + err.Error(),
+			"message": "创建员工失败",
 			"data": nil,
 		})
 		return
@@ -166,7 +166,7 @@ func UpdateStaff(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -241,7 +241,7 @@ func UpdateStaffStatus(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -292,7 +292,7 @@ func ResetStaffPassword(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return

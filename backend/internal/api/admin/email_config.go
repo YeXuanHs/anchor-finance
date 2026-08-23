@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"fmt"
@@ -47,7 +47,7 @@ func UpdateEmailConfig(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 		})
 		return
 	}
@@ -119,7 +119,7 @@ func UpdateSMSConfig(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 		})
 		return
 	}
@@ -174,7 +174,7 @@ func UpdateRegisterLoginConfig(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 		})
 		return
 	}
@@ -229,7 +229,7 @@ func UpdateCaptchaConfig(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 		})
 		return
 	}

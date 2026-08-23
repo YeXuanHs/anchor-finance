@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -81,7 +81,7 @@ func ApproveCancelRequest(c *gin.Context) {
 			"service_id": request.ServiceID,
 		}); err != nil {
 			// 服务暂停失败仍需记录，但不阻止审批流
-			c.JSON(http.StatusOK, gin.H{"code": 502, "message": "服务暂停失败: " + err.Error(), "data": nil})
+			c.JSON(http.StatusOK, gin.H{"code": 502, "message": "服务暂停失败", "data": nil})
 			return
 		}
 	}

@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -72,7 +72,7 @@ func CreatePromoCode(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -124,7 +124,7 @@ func CreatePromoCode(c *gin.Context) {
 	if err := db.Create(&promoCode).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建优惠码失败: " + err.Error(),
+			"message": "创建优惠码失败",
 			"data":    nil,
 		})
 		return
@@ -167,7 +167,7 @@ func UpdatePromoCode(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return

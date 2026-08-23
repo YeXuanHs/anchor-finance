@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"fmt"
@@ -166,7 +166,7 @@ func CreateOrder(c *gin.Context) {
 	if err := db.Create(&order).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建订单失败: " + err.Error(),
+			"message": "创建订单失败",
 			"data":    nil,
 		})
 		return
@@ -209,7 +209,7 @@ func UpdateOrder(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -248,7 +248,7 @@ func UpdateOrder(c *gin.Context) {
 	if err := db.Model(&order).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "更新订单失败: " + err.Error(),
+			"message": "更新订单失败",
 			"data":    nil,
 		})
 		return
@@ -355,7 +355,7 @@ func CancelOrder(c *gin.Context) {
 	if err := db.Model(&order).Update("status", "cancelled").Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "取消订单失败: " + err.Error(),
+			"message": "取消订单失败",
 			"data":    nil,
 		})
 		return

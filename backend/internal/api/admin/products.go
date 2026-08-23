@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -145,7 +145,7 @@ func CreateProduct(c *gin.Context) {
 	if err := db.Create(&product).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建产品失败: " + err.Error(),
+			"message": "创建产品失败",
 			"data":    nil,
 		})
 		return
@@ -189,7 +189,7 @@ func UpdateProduct(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -235,7 +235,7 @@ func UpdateProduct(c *gin.Context) {
 	if err := db.Model(&product).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "更新产品失败: " + err.Error(),
+			"message": "更新产品失败",
 			"data":    nil,
 		})
 		return
@@ -279,7 +279,7 @@ func DeleteProduct(c *gin.Context) {
 	if err := db.Delete(&product).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "删除产品失败: " + err.Error(),
+			"message": "删除产品失败",
 			"data":    nil,
 		})
 		return
@@ -348,7 +348,7 @@ func RestoreProduct(c *gin.Context) {
 	if err := db.Unscoped().Model(&product).Update("deleted_at", nil).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "恢复产品失败: " + err.Error(),
+			"message": "恢复产品失败",
 			"data":    nil,
 		})
 		return
@@ -493,7 +493,7 @@ func UpdateProductStatus(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -530,7 +530,7 @@ func UpdateProductStatus(c *gin.Context) {
 	if err := db.Model(&product).Update("status", req.Status).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "更新状态失败: " + err.Error(),
+			"message": "更新状态失败",
 			"data":    nil,
 		})
 		return
@@ -557,7 +557,7 @@ func CreateProductGroup(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -575,7 +575,7 @@ func CreateProductGroup(c *gin.Context) {
 	if err := db.Create(&group).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建分组失败: " + err.Error(),
+			"message": "创建分组失败",
 			"data":    nil,
 		})
 		return
@@ -604,7 +604,7 @@ func UpdateProductGroup(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return

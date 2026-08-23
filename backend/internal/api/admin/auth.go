@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"crypto/sha256"
@@ -47,7 +47,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    401,
-			"message": err.Error(),
+			"message": "操作失败",
 			"data":    nil,
 		})
 		return
@@ -118,7 +118,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -156,7 +156,7 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return

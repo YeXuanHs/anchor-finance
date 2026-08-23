@@ -1,4 +1,4 @@
-package client
+﻿package client
 
 import (
 	"crypto/rand"
@@ -36,13 +36,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
 	token, err := h.authService.UserLogin(req.Username, req.Password, c.ClientIP())
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 401, "message": err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 401, "message": "操作失败", "data": nil})
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h *AuthHandler) LoginByCode(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
@@ -106,7 +106,7 @@ func (h *AuthHandler) SendCaptcha(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
@@ -179,7 +179,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
@@ -229,7 +229,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	if err := db.Create(&user).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "注册失败: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "注册失败", "data": nil})
 		return
 	}
 
@@ -255,7 +255,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
@@ -347,7 +347,7 @@ func (h *AuthHandler) UpdatePassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 
@@ -385,7 +385,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
 		return
 	}
 

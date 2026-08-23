@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -125,7 +125,7 @@ func ReplyTicket(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -215,7 +215,7 @@ func CloseTicket(c *gin.Context) {
 	if err := db.Model(&ticket).Update("status", "closed").Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "关闭工单失败: " + err.Error(),
+			"message": "关闭工单失败",
 			"data":    nil,
 		})
 		return
@@ -337,7 +337,7 @@ func ReopenTicket(c *gin.Context) {
 	if err := db.Model(&ticket).Update("status", "open").Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "重新打开工单失败: " + err.Error(),
+			"message": "重新打开工单失败",
 			"data":    nil,
 		})
 		return
@@ -373,7 +373,7 @@ func AssignTicket(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -395,7 +395,7 @@ func AssignTicket(c *gin.Context) {
 	if err := db.Model(&ticket).Update("assigned_to", req.AssignedTo).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "分配工单失败: " + err.Error(),
+			"message": "分配工单失败",
 			"data":    nil,
 		})
 		return

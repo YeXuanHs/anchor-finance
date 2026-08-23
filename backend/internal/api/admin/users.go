@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"fmt"
@@ -114,7 +114,7 @@ func CreateUser(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -156,7 +156,7 @@ func CreateUser(c *gin.Context) {
 	if err := db.Create(&user).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建用户失败: " + err.Error(),
+			"message": "创建用户失败",
 			"data":    nil,
 		})
 		return
@@ -198,7 +198,7 @@ func UpdateUser(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -237,7 +237,7 @@ func UpdateUser(c *gin.Context) {
 	if err := db.Model(&user).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "更新用户失败: " + err.Error(),
+			"message": "更新用户失败",
 			"data":    nil,
 		})
 		return
@@ -281,7 +281,7 @@ func DeleteUser(c *gin.Context) {
 	if err := db.Delete(&user).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "删除用户失败: " + err.Error(),
+			"message": "删除用户失败",
 			"data":    nil,
 		})
 		return
@@ -489,7 +489,7 @@ func UpdateUserStatus(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -526,7 +526,7 @@ func UpdateUserStatus(c *gin.Context) {
 	if err := db.Model(&user).Update("status", req.Status).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "更新状态失败: " + err.Error(),
+			"message": "更新状态失败",
 			"data":    nil,
 		})
 		return

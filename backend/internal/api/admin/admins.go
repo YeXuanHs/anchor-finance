@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -74,7 +74,7 @@ func CreateAdmin(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -116,7 +116,7 @@ func CreateAdmin(c *gin.Context) {
 	if err := db.Create(&admin).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建管理员失败: " + err.Error(),
+			"message": "创建管理员失败",
 			"data":    nil,
 		})
 		return
@@ -146,7 +146,7 @@ func UpdateAdmin(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -244,7 +244,7 @@ func CreateRole(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -260,7 +260,7 @@ func CreateRole(c *gin.Context) {
 	if err := db.Create(&role).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "创建角色失败: " + err.Error(),
+			"message": "创建角色失败",
 			"data": nil,
 		})
 		return
@@ -289,7 +289,7 @@ func UpdateRole(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -385,7 +385,7 @@ func CopyRole(c *gin.Context) {
 	if err := db.Create(&newRole).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "复制角色失败: " + err.Error(),
+			"message": "复制角色失败",
 			"data": nil,
 		})
 		return

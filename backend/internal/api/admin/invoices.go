@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -150,7 +150,7 @@ func CancelInvoice(c *gin.Context) {
 	if err := db.Model(&invoice).Update("status", "cancelled").Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "取消账单失败: " + err.Error(),
+			"message": "取消账单失败",
 			"data":    nil,
 		})
 		return

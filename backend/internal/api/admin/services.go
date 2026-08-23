@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"net/http"
@@ -130,7 +130,7 @@ func UpdateService(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data":    nil,
 		})
 		return
@@ -172,7 +172,7 @@ func UpdateService(c *gin.Context) {
 	if err := db.Model(&service).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "更新服务失败: " + err.Error(),
+			"message": "更新服务失败",
 			"data":    nil,
 		})
 		return
@@ -213,7 +213,7 @@ func SuspendService(c *gin.Context) {
 		"product_id": service.ProductID,
 		"user_id":    service.UserID,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
 		return
 	}
 
@@ -250,7 +250,7 @@ func UnsuspendService(c *gin.Context) {
 		"product_id": service.ProductID,
 		"user_id":    service.UserID,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
 		return
 	}
 
@@ -286,7 +286,7 @@ func TerminateService(c *gin.Context) {
 		"product_id": service.ProductID,
 		"user_id":    service.UserID,
 	}); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线: " + err.Error(), "data": nil})
+		c.JSON(http.StatusOK, gin.H{"code": 502, "message": "插件引擎离线", "data": nil})
 		return
 	}
 

@@ -1,4 +1,4 @@
-package client
+﻿package client
 
 import (
 	"net/http"
@@ -99,7 +99,7 @@ func ApplyReferralWithdrawal(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "参数错误",
 			"data": nil,
 		})
 		return
@@ -144,7 +144,7 @@ func ApplyReferralWithdrawal(c *gin.Context) {
 	if err := db.Create(&withdrawal).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": "申请提现失败: " + err.Error(),
+			"message": "申请提现失败",
 			"data": nil,
 		})
 		return
