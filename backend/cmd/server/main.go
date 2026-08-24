@@ -120,6 +120,9 @@ func main() {
 		// DCIM服务器管理
 		&model.Server{},
 		&model.DcimServer{},
+		// Hook系统
+		&model.HookDefinition{},
+		&model.HookBinding{},
 		// 产品配置选项（5张表，从zjmf搬的表结构）
 		&model.ProductConfigGroup{},
 		&model.ProductConfigOption{},
