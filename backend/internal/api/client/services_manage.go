@@ -632,7 +632,7 @@ func CreateServiceUpgradeOrder(c *gin.Context) {
 		OrderID: order.ID,
 		Amount:  priceDiff,
 		Status:  "unpaid",
-		DueDate: time.Now().Add(7 * 24 * time.Hour),
+		DueDate: func() *time.Time { t := time.Now().Add(7 * 24 * time.Hour); return &t }(),
 	}
 	db.Create(&invoice)
 
