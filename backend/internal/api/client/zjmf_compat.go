@@ -716,7 +716,7 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 					"config_id":  sub.ConfigID,
 					"option_name": sub.OptionName,
 					"sort_order": sub.SortOrder,
-					"hidden":     sub.Hidden,
+					"hidden":     func() int { if sub.Hidden { return 1 }; return 0 }(),
 					"upstream_id": sub.UpstreamID,
 				}
 				if len(pricings) > 0 {
@@ -735,21 +735,21 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 				"option_name":  opt.OptionName,
 				"option_type":  opt.OptionType,
 				"order":        opt.Order,
-				"hidden":       opt.Hidden,
-				"auto":         opt.Auto,
-				"is_discount":  opt.IsDiscount,
-				"is_rebate":    opt.IsRebate,
+				"hidden":       func() int { if opt.Hidden { return 1 }; return 0 }(),
+				"auto":         func() int { if opt.Auto { return 1 }; return 0 }(),
+				"is_discount":  func() int { if opt.IsDiscount { return 1 }; return 0 }(),
+				"is_rebate":    func() int { if opt.IsRebate { return 1 }; return 0 }(),
 				"qty_minimum":  opt.QtyMinimum,
 				"qty_maximum":  opt.QtyMaximum,
 				"qty_stage":    opt.QtyStage,
 				"unit":         opt.Unit,
-				"upgrade":      opt.Upgrade,
+				"upgrade":      func() int { if opt.Upgrade { return 1 }; return 0 }(),
 				"notes":        opt.Notes,
 				"upstream_id":  opt.UpstreamID,
 				"linkage_pid":  opt.LinkagePID,
 				"linkage_top_pid": opt.LinkageTopPID,
-				"linkage_level": opt.LinkageLevel,
-				"senior":       opt.Senior,
+				"linkage_level": fmt.Sprintf("%d", opt.LinkageLevel),
+				"senior":       func() int { if opt.Senior { return 1 }; return 0 }(),
 				"sub":          subList,
 			}
 			optionList = append(optionList, optEntry)
@@ -999,9 +999,9 @@ func ZjmfCompatProductDetail(c *gin.Context) {
 						db.Where("config_id = ? AND hidden = false", o.ID).Order("sort_order ASC, id ASC").Find(&subs)
 						var subList []gin.H
 						for _, s := range subs {
-							subList = append(subList, gin.H{"id": s.ID, "config_id": s.ConfigID, "option_name": s.OptionName, "sort_order": s.SortOrder, "hidden": s.Hidden, "upstream_id": s.UpstreamID})
+							subList = append(subList, gin.H{"id": s.ID, "config_id": s.ConfigID, "option_name": s.OptionName, "sort_order": s.SortOrder, "hidden": func() int { if s.Hidden { return 1 }; return 0 }(), "upstream_id": s.UpstreamID})
 						}
-						optList = append(optList, gin.H{"id": o.ID, "option_name": o.OptionName, "option_type": o.OptionType, "order": o.Order, "hidden": o.Hidden, "auto": o.Auto, "qty_minimum": o.QtyMinimum, "qty_maximum": o.QtyMaximum, "upgrade": o.Upgrade, "upstream_id": o.UpstreamID, "sub": subList})
+						optList = append(optList, gin.H{"id": o.ID, "option_name": o.OptionName, "option_type": o.OptionType, "order": o.Order, "hidden": func() int { if o.Hidden { return 1 }; return 0 }(), "auto": func() int { if o.Auto { return 1 }; return 0 }(), "qty_minimum": o.QtyMinimum, "qty_maximum": o.QtyMaximum, "upgrade": func() int { if o.Upgrade { return 1 }; return 0 }(), "upstream_id": o.UpstreamID, "sub": subList})
 					}
 					cgs = append(cgs, gin.H{"id": grp.ID, "name": grp.Name, "description": grp.Description, "options": optList})
 				}
@@ -1984,46 +1984,46 @@ func ZjmfCompatUserInfo(c *gin.Context) {
 	}
 	createdAt := user.CreatedAt.Format("2006-01-02 15:04:05")
 
+	// zjmf顶层直出，不用data包装
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"msg":    "请求成功",
-		"data": gin.H{
-			"user": gin.H{
-				"id":           user.ID,
-				"username":     user.Username,
-				"email":        user.Email,
-				"phone":        user.Phone,
-				"company":      user.Company,
-				"status":       user.Status,
-				"credit":       fmt.Sprintf("%.2f", user.Balance),
-				"groupid":      user.GroupID,
-				"level_id":     user.LevelID,
-				"is_verified":  user.IsVerified,
-				"last_login_at": lastLoginAt,
-				"created_at":   createdAt,
-			},
-			"credit":                   fmt.Sprintf("%.2f", user.Balance),
-			"credit_limit":             creditLimitAmount,
-			"currency": gin.H{
-				"id":     currency.ID,
-				"code":   currency.Code,
-				"prefix": currency.Symbol,
-				"suffix": "",
-			},
-			"is_aff":                   "0",
-			"gateways":                 []interface{}{},
-			"client_group":             gin.H{},
-			"certifi_open":             0,
-			"allow_second_verify":      allowSecondVerify,
-			"second_verify_action_home": secondVerifyActionHome,
-			"allow_resource_api":       allowResourceAPI,
-			"shd_allow_email_send":     1,
-			"shd_allow_sms_send":       1,
-			"buy_product_must_bind_phone": buyProductMustBindPhone,
-			"customs":                  []interface{}{},
-			"developer":                []interface{}{},
-			"voucher_manager":          gin.H{},
+		"user": gin.H{
+			"id":           user.ID,
+			"username":     user.Username,
+			"email":        user.Email,
+			"phonenumber":  user.Phone,
+			"companyname":  user.Company,
+			"status":       user.Status,
+			"credit":       fmt.Sprintf("%.2f", user.Balance),
+			"groupid":      user.GroupID,
+			"level_id":     user.LevelID,
+			"is_verified":  user.IsVerified,
+			"last_login_at": lastLoginAt,
+			"create_time":  createdAt,
+			"currency":     currency.Code,
 		},
+		"credit":                   fmt.Sprintf("%.2f", user.Balance),
+		"credit_limit":             creditLimitAmount,
+		"currency": gin.H{
+			"id":     currency.ID,
+			"code":   currency.Code,
+			"prefix": currency.Symbol,
+			"suffix": "",
+		},
+		"is_aff":                   "0",
+		"gateways":                 []interface{}{},
+		"client_group":             gin.H{},
+		"certifi_open":             0,
+		"allow_second_verify":      allowSecondVerify,
+		"second_verify_action_home": secondVerifyActionHome,
+		"allow_resource_api":       allowResourceAPI,
+		"shd_allow_email_send":     1,
+		"shd_allow_sms_send":       1,
+		"buy_product_must_bind_phone": buyProductMustBindPhone,
+		"customs":                  []interface{}{},
+		"developer":                []interface{}{},
+		"voucher_manager":          gin.H{},
 	})
 }
 
