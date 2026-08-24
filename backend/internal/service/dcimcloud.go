@@ -95,7 +95,7 @@ func (c *DcimCloudClient) Curl(action string, data map[string]interface{}, metho
 		return nil, err
 	}
 
-	headers := map[string]string{
+	headers := map[string]interface{}{
 		"access-token": token,
 	}
 
@@ -316,14 +316,14 @@ func (c *DcimCloudClient) doRequest(apiURL string, data map[string]interface{}, 
 	return result, nil
 }
 
-func (c *DcimCloudClient) httpPost(postURL string, body string, headers map[string]string) (map[string]interface{}, error) {
+func (c *DcimCloudClient) httpPost(postURL string, body string, headers map[string]interface{}) (map[string]interface{}, error) {
 	req, err := http.NewRequest("POST", postURL, strings.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	for k, v := range headers {
-		req.Header.Set(k, v)
+		req.Header.Set(k, fmt.Sprintf("%v", v))
 	}
 
 	resp, err := c.HTTPClient.Do(req)
