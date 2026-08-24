@@ -1483,13 +1483,24 @@ func ZjmfCompatRefreshPowerStatus(c *gin.Context) {
 		powerStatus = "on"
 	}
 
-	// 从servers表获取硬件连接状态
+	// 从servers表获取硬件连接状态（通过HTTP探测IPMI）
 	serverLinked := false
 	if svc.ServerID > 0 {
 		var server model.Server
-		if err := db.First(&server, svc.ServerID).Error; err == nil {
-			serverLinked = server.LinkStatus
-			// TODO: 通过IPMI查询真实电源状态
+		if err := db.First(&server, svc.ServerID).Error; err == nil && server.Hostname != "" {
+			scheme := "https"
+			if !server.Secure {
+				scheme = "http"
+			}
+			testURL := fmt.Sprintf("%s://%s:%d", scheme, server.Hostname, server.Port)
+			client := &http.Client{Timeout: 3 * time.Second}
+			resp, err := client.Get(testURL)
+			serverLinked = err == nil && resp != nil && resp.StatusCode < 500
+			if resp != nil {
+				resp.Body.Close()
+			}
+			// 更新连接状态到数据库
+			db.Model(&server).Update("link_status", serverLinked)
 		}
 	}
 
