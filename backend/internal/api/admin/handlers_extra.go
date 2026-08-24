@@ -1870,11 +1870,11 @@ func RunCouponCampaignTask(c *gin.Context) {
 
 	// 检查活动是否在有效期内
 	now := time.Now()
-	if !campaign.StartDate.IsZero() && now.Before(campaign.StartDate) {
+	if campaign.StartDate != nil && now.Before(*campaign.StartDate) {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动尚未开始", "data": nil})
 		return
 	}
-	if !campaign.EndDate.IsZero() && now.After(campaign.EndDate) {
+	if campaign.EndDate != nil && now.After(*campaign.EndDate) {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动已结束", "data": nil})
 		return
 	}
@@ -1908,7 +1908,7 @@ func RunCouponCampaignTask(c *gin.Context) {
 			userCoupon := model.UserCoupon{
 				UserID:   user.ID,
 				CouponID: coupon.ID,
-				Status:   "unused",
+				Status:   0,
 			}
 			if err := db.Create(&userCoupon).Error; err == nil {
 				distributed++
