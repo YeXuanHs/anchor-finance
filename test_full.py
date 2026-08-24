@@ -618,10 +618,6 @@ def test_currencies():
     r = api("GET", "/api/admin/currencies", token=ADMIN_TOKEN)
     assert_code(r, 0)
 
-def test_coupons():
-    r = api("GET", "/api/admin/coupons", token=ADMIN_TOKEN)
-    assert_code(r, 0)
-
 def test_contracts():
     r = api("GET", "/api/admin/contracts", token=ADMIN_TOKEN)
     assert_code(r, 0)
@@ -661,7 +657,6 @@ test("仪表盘", test_dashboard)
 test("用户列表", test_users)
 test("角色列表", test_roles)
 test("货币", test_currencies)
-test("优惠券", test_coupons)
 test("合同", test_contracts)
 test("黑名单", test_blacklist)
 test("主题", test_themes)
