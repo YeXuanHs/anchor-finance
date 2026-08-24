@@ -2,6 +2,7 @@ package admin
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -394,22 +395,29 @@ func TestDcimServer(c *gin.Context) {
 	}
 	testURL := fmt.Sprintf("%s://%s:%d", scheme, server.Hostname, server.Port)
 
-	// 这里可以实现实际的IPMI连接测试
-	// 目前模拟测试：检查配置是否完整
+	// 检查配置是否完整
 	if server.Hostname == "" {
 		db.Model(&server).Update("link_status", false)
 		response.Error(c, 400, "服务器地址为空，无法连接")
 		return
 	}
 
-	// 模拟连接测试（真实环境应调用IPMI API）
-	// TODO: 实现真实的IPMI连接测试
-	connected := true
+	// 实际连接测试：尝试HTTP请求IPMI地址
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(testURL)
+	connected := err == nil && resp != nil && resp.StatusCode < 500
+	if resp != nil {
+		resp.Body.Close()
+	}
 
 	// 更新连接状态
 	db.Model(&server).Update("link_status", connected)
 	// 更新DCIM API状态
-	db.Model(&model.DcimServer{}).Where("server_id = ?", server.ID).Update("api_status", 1)
+	apiStatus := 0
+	if connected {
+		apiStatus = 1
+	}
+	db.Model(&model.DcimServer{}).Where("server_id = ?", server.ID).Update("api_status", apiStatus)
 
 	if connected {
 		response.Success(c, gin.H{
@@ -422,7 +430,7 @@ func TestDcimServer(c *gin.Context) {
 	}
 }
 
-// RefreshDcimServerStatus 刷新状态
+// RefreshDcimServerStatus 刷新状态（实际连接测试）
 // POST /api/admin/dcim-servers/:id/refresh-status
 func RefreshDcimServerStatus(c *gin.Context) {
 	db := database.GetDB()
@@ -434,15 +442,29 @@ func RefreshDcimServerStatus(c *gin.Context) {
 		return
 	}
 
-	// TODO: 实现真实的IPMI状态查询
-	// 模拟状态刷新
-	apiStatus := 0
+	// 实际连接测试
+	scheme := "https"
+	if !server.Secure {
+		scheme = "http"
+	}
+	testURL := fmt.Sprintf("%s://%s:%d", scheme, server.Hostname, server.Port)
+
+	linked := false
 	if server.Hostname != "" && !server.Disabled {
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Get(testURL)
+		linked = err == nil && resp != nil && resp.StatusCode < 500
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}
+
+	apiStatus := 0
+	if linked {
 		apiStatus = 1
 	}
 
 	// 更新连接状态
-	linked := apiStatus == 1
 	db.Model(&server).Update("link_status", linked)
 
 	// 更新DCIM API状态

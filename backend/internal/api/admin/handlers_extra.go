@@ -1136,7 +1136,7 @@ func UnbindVerificationByUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "解绑成功", "data": nil})
 }
 
-// RecallTicketReply 撤回工单回复
+// RecallTicketReply 撤回工单回复（管理员可撤回任何回复）
 // POST /api/admin/tickets/:id/replies/:reply_id/recalls
 func RecallTicketReply(c *gin.Context) {
 	replyID := c.Param("reply_id")
@@ -1148,7 +1148,7 @@ func RecallTicketReply(c *gin.Context) {
 		return
 	}
 
-	// 只能撤回自己的回复或管理员可以撤回任何回复
+	// 管理员可以撤回任何回复（AdminRequired中间件已验证权限）
 	reply.Content = "[已撤回]"
 	db.Save(&reply)
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "撤回成功", "data": nil})
@@ -1296,9 +1296,13 @@ func GetTicketUpstreamDelivery(c *gin.Context) {
 	}
 
 	// 查询投递记录
+	var deliveries []model.TicketReply
+	db.Where("ticket_id = ?", id).Order("id DESC").Find(&deliveries)
+
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{
-		"ticket_id": ticket.ID,
-		"status":    ticket.Status,
+		"ticket_id":  ticket.ID,
+		"status":     ticket.Status,
+		"deliveries": deliveries,
 	}})
 }
 
@@ -1847,7 +1851,7 @@ func PullTrafficPackageCatalog(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "同步完成", "data": results})
 }
 
-// RunCouponCampaignTask 优惠券活动任务执行
+// RunCouponCampaignTask 优惠券活动任务执行（向符合条件的用户发放优惠券）
 // POST /api/admin/coupon-campaigns/:id/tasks
 func RunCouponCampaignTask(c *gin.Context) {
 	id := c.Param("id")
@@ -1859,13 +1863,64 @@ func RunCouponCampaignTask(c *gin.Context) {
 		return
 	}
 
-	// 根据活动状态执行任务
 	if campaign.Status != "active" {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动未激活", "data": nil})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "活动任务已执行", "data": gin.H{"campaign_id": campaign.ID, "name": campaign.Name}})
+	// 检查活动是否在有效期内
+	now := time.Now()
+	if !campaign.StartDate.IsZero() && now.Before(campaign.StartDate) {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动尚未开始", "data": nil})
+		return
+	}
+	if !campaign.EndDate.IsZero() && now.After(campaign.EndDate) {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动已结束", "data": nil})
+		return
+	}
+
+	// 查询该活动关联的优惠券
+	var coupons []model.Coupon
+	db.Where("campaign_id = ?", campaign.ID).Find(&coupons)
+	if len(coupons) == 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动无关联优惠券", "data": nil})
+		return
+	}
+
+	// 查询活跃用户
+	var users []model.User
+	db.Where("status = ?", "active").Limit(1000).Find(&users)
+	if len(users) == 0 {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无符合条件的用户", "data": nil})
+		return
+	}
+
+	// 为每个用户创建优惠券
+	distributed := 0
+	for _, user := range users {
+		for _, coupon := range coupons {
+			// 检查用户是否已领取
+			var existing model.UserCoupon
+			if err := db.Where("user_id = ? AND coupon_id = ?", user.ID, coupon.ID).First(&existing).Error; err == nil {
+				continue // 已领取，跳过
+			}
+
+			userCoupon := model.UserCoupon{
+				UserID:   user.ID,
+				CouponID: coupon.ID,
+				Status:   "unused",
+			}
+			if err := db.Create(&userCoupon).Error; err == nil {
+				distributed++
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "活动任务已执行", "data": gin.H{
+		"campaign_id": campaign.ID,
+		"name":        campaign.Name,
+		"distributed": distributed,
+	}})
 }
 
 // AdminCreateUserService 管理员为用户创建服务
