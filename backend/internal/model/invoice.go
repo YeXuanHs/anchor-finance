@@ -15,7 +15,7 @@ type Invoice struct {
 	Amount        float64        `gorm:"type:decimal(10,2);not null" json:"amount"`
 	Status        string         `gorm:"size:20;default:unpaid" json:"status"` // unpaid, paid, cancelled, refunded
 	PaymentMethod string         `gorm:"size:50" json:"payment_method"`
-	DueDate       time.Time      `json:"due_date"`
+	DueDate       *time.Time     `json:"due_date"`
 	PaidAt        *time.Time     `json:"paid_at"`
 	Note          string         `gorm:"type:text" json:"note"` // 管理员备注
 	Remark        string         `gorm:"size:500" json:"remark"`
