@@ -123,18 +123,18 @@ func (s *AuthService) ParseToken(tokenString string) (*Claims, error) {
 func (s *AuthService) AdminLogin(username, password, ip string) (string, string, error) {
 	// IP风控检查
 	if locked, msg := s.risk.IsLocked(username, ip); locked {
-		return "", errors.New(msg)
+		return "", "", errors.New(msg)
 	}
 
 	var admin model.Admin
 	if err := s.db.Where("username = ?", username).First(&admin).Error; err != nil {
 		s.risk.RecordFailure(username, ip)
-		return "", errors.New("用户名或密码错误")
+		return "", "", errors.New("用户名或密码错误")
 	}
 
 	// 检查账号状态
 	if admin.Status != "active" {
-		return "", errors.New("账号已被禁用")
+		return "", "", errors.New("账号已被禁用")
 	}
 
 	// 检查是否被锁定
@@ -142,7 +142,7 @@ func (s *AuthService) AdminLogin(username, password, ip string) (string, string,
 		remaining := time.Until(*admin.LockedUntil)
 		hours := int(remaining.Hours())
 		minutes := int(remaining.Minutes()) % 60
-		return "", fmt.Errorf("账号已冻结，请%d小时%d分钟后重试", hours, minutes)
+		return "", "", fmt.Errorf("账号已冻结，请%d小时%d分钟后重试", hours, minutes)
 	}
 
 	// 验证密码
@@ -165,12 +165,12 @@ func (s *AuthService) AdminLogin(username, password, ip string) (string, string,
 			s.db.Save(&admin)
 
 			s.logSecurityEvent(admin.ID, username, ip, "admin_login_locked")
-			return "", fmt.Errorf("连续%d次密码错误，账号已冻结%d小时", maxFail, lockHours)
+			return "", "", fmt.Errorf("连续%d次密码错误，账号已冻结%d小时", maxFail, lockHours)
 		}
 
 		s.db.Save(&admin)
 		s.logSecurityEvent(admin.ID, username, ip, "admin_login_fail")
-		return "", fmt.Errorf("用户名或密码错误（已失败%d次，连续%d次将冻结）", admin.LoginFailCount, maxFail)
+		return "", "", fmt.Errorf("用户名或密码错误（已失败%d次，连续%d次将冻结）", admin.LoginFailCount, maxFail)
 	}
 
 	// 登录成功，重置失败次数+清除风控
@@ -189,17 +189,17 @@ func (s *AuthService) AdminLogin(username, password, ip string) (string, string,
 func (s *AuthService) UserLogin(username, password, ip string) (string, string, error) {
 	// IP风控检查
 	if locked, msg := s.risk.IsLocked(username, ip); locked {
-		return "", errors.New(msg)
+		return "", "", errors.New(msg)
 	}
 
 	var user model.User
 	if err := s.db.Where("username = ? OR email = ?", username, username).First(&user).Error; err != nil {
 		s.risk.RecordFailure(username, ip)
-		return "", errors.New("用户名或密码错误")
+		return "", "", errors.New("用户名或密码错误")
 	}
 
 	if user.Status != "active" {
-		return "", errors.New("账号已被禁用")
+		return "", "", errors.New("账号已被禁用")
 	}
 
 	// M2修复：检查是否被锁定
@@ -207,7 +207,7 @@ func (s *AuthService) UserLogin(username, password, ip string) (string, string, 
 		remaining := time.Until(*user.LockedUntil)
 		hours := int(remaining.Hours())
 		minutes := int(remaining.Minutes()) % 60
-		return "", fmt.Errorf("账号已冻结，请%d小时%d分钟后重试", hours, minutes)
+		return "", "", fmt.Errorf("账号已冻结，请%d小时%d分钟后重试", hours, minutes)
 	}
 
 	if !CheckPassword(password, user.PasswordHash) {
@@ -226,11 +226,11 @@ func (s *AuthService) UserLogin(username, password, ip string) (string, string, 
 			user.LockedUntil = &lockedUntil
 			user.LoginFailCount = 0
 			s.db.Save(&user)
-			return "", fmt.Errorf("连续%d次密码错误，账号已冻结%d小时", maxFail, lockHours)
+			return "", "", fmt.Errorf("连续%d次密码错误，账号已冻结%d小时", maxFail, lockHours)
 		}
 
 		s.db.Save(&user)
-		return "", fmt.Errorf("用户名或密码错误（已失败%d次，连续%d次将冻结）", user.LoginFailCount, maxFail)
+		return "", "", fmt.Errorf("用户名或密码错误（已失败%d次，连续%d次将冻结）", user.LoginFailCount, maxFail)
 	}
 
 	// 登录成功，重置失败次数+清除风控
