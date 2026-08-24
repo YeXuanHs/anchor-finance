@@ -1263,17 +1263,30 @@ func ZjmfCompatDcimOff(c *gin.Context) {
 		return
 	}
 
-	// 通过IPMI关机
+	// 根据server_type分发到魔方云或IPMI
 	if svc.ServerID > 0 {
 		var server model.Server
-		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled && server.Hostname != "" {
-			scheme := "https"
-			if !server.Secure {
-				scheme = "http"
+		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled {
+			if server.ServerType == "dcimcloud" {
+				// 魔方云关机
+				if svc.DcimID > 0 {
+					client, err := service.NewDcimCloudClient(svc.ServerID)
+					if err == nil {
+						client.Off(svc.DcimID)
+					}
+				}
+			} else {
+				// IPMI关机
+				if server.Hostname != "" {
+					scheme := "https"
+					if !server.Secure {
+						scheme = "http"
+					}
+					ipmiURL := fmt.Sprintf("%s://%s:%d/api/power/off", scheme, server.Hostname, server.Port)
+					client := &http.Client{Timeout: 10 * time.Second}
+					client.Post(ipmiURL, "application/json", nil)
+				}
 			}
-			ipmiURL := fmt.Sprintf("%s://%s:%d/api/power/off", scheme, server.Hostname, server.Port)
-			client := &http.Client{Timeout: 10 * time.Second}
-			client.Post(ipmiURL, "application/json", nil)
 		}
 	}
 
@@ -1303,17 +1316,30 @@ func ZjmfCompatDcimReboot(c *gin.Context) {
 		return
 	}
 
-	// 通过IPMI重启
+	// 根据server_type分发到魔方云或IPMI
 	if svc.ServerID > 0 {
 		var server model.Server
-		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled && server.Hostname != "" {
-			scheme := "https"
-			if !server.Secure {
-				scheme = "http"
+		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled {
+			if server.ServerType == "dcimcloud" {
+				// 魔方云重启
+				if svc.DcimID > 0 {
+					client, err := service.NewDcimCloudClient(svc.ServerID)
+					if err == nil {
+						client.Reboot(svc.DcimID)
+					}
+				}
+			} else {
+				// IPMI重启
+				if server.Hostname != "" {
+					scheme := "https"
+					if !server.Secure {
+						scheme = "http"
+					}
+					ipmiURL := fmt.Sprintf("%s://%s:%d/api/power/reboot", scheme, server.Hostname, server.Port)
+					client := &http.Client{Timeout: 10 * time.Second}
+					client.Post(ipmiURL, "application/json", nil)
+				}
 			}
-			ipmiURL := fmt.Sprintf("%s://%s:%d/api/power/reboot", scheme, server.Hostname, server.Port)
-			client := &http.Client{Timeout: 10 * time.Second}
-			client.Post(ipmiURL, "application/json", nil)
 		}
 	}
 
@@ -1352,6 +1378,28 @@ func ZjmfCompatDcimRescue(c *gin.Context) {
 	var server model.Server
 	if err := db.First(&server, svc.ServerID).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "该产品未选择接口"})
+		return
+	}
+
+	// 根据server_type分发到魔方云或IPMI
+	if server.ServerType == "dcimcloud" {
+		// 魔方云救援模式
+		if svc.DcimID > 0 {
+			client, err := service.NewDcimCloudClient(svc.ServerID)
+			if err == nil {
+				system := req.System
+				if system == "" {
+					system = "linux"
+				}
+				tempPass := fmt.Sprintf("Tmp%d", time.Now().UnixNano()%1000000)
+				res, err := client.Rescue(svc.DcimID, system, tempPass)
+				if err == nil && res["status"] == "success" {
+					c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "发起救援系统成功", "data": gin.H{"rescue_mode": true, "password": tempPass}})
+					return
+				}
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "救援系统发起失败"})
 		return
 	}
 
@@ -1397,6 +1445,30 @@ func ZjmfCompatDcimReinstall(c *gin.Context) {
 		return
 	}
 
+	// 根据server_type分发到魔方云或本地
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled {
+			if server.ServerType == "dcimcloud" && svc.DcimID > 0 {
+				client, err := service.NewDcimCloudClient(svc.ServerID)
+				if err == nil {
+					data := map[string]interface{}{}
+					if req.OS != "" {
+						data["os"] = req.OS
+					}
+					res, err := client.Reinstall(svc.DcimID, data)
+					if err == nil && res["status"] == "success" {
+						if req.OS != "" {
+							db.Model(&svc).Update("config", req.OS)
+						}
+						c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "重装成功"})
+						return
+					}
+				}
+			}
+		}
+	}
+
 	if req.OS != "" {
 		db.Model(&svc).Update("config", req.OS)
 	}
@@ -1436,17 +1508,31 @@ func ZjmfCompatDcimCrackPass(c *gin.Context) {
 		newPass = fmt.Sprintf("Pw%d", time.Now().UnixNano()%1000000)
 	}
 
-	// 向IPMI发送密码重置指令
+	// 根据server_type分发到魔方云或IPMI
 	if svc.ServerID > 0 {
 		var server model.Server
-		if err := db.First(&server, svc.ServerID).Error; err == nil && server.Hostname != "" {
-			scheme := "https"
-			if !server.Secure {
-				scheme = "http"
+		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled {
+			if server.ServerType == "dcimcloud" && svc.DcimID > 0 {
+				client, err := service.NewDcimCloudClient(svc.ServerID)
+				if err == nil {
+					res, err := client.CrackPassword(svc.DcimID, newPass)
+					if err == nil && res["status"] == "success" {
+						c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "发起成功", "data": gin.H{"password": newPass}})
+						return
+					}
+				}
+			} else {
+				// 向IPMI发送密码重置指令
+				if server.Hostname != "" {
+					scheme := "https"
+					if !server.Secure {
+						scheme = "http"
+					}
+					ipmiURL := fmt.Sprintf("%s://%s:%d/api/password/reset", scheme, server.Hostname, server.Port)
+					client := &http.Client{Timeout: 30 * time.Second}
+					client.Post(ipmiURL, "application/json", nil)
+				}
 			}
-			ipmiURL := fmt.Sprintf("%s://%s:%d/api/password/reset", scheme, server.Hostname, server.Port)
-			client := &http.Client{Timeout: 30 * time.Second}
-			client.Post(ipmiURL, "application/json", nil)
 		}
 	}
 
@@ -1529,6 +1615,21 @@ func ZjmfCompatDcimDetail(c *gin.Context) {
 			result["server_host"] = server.Hostname
 			result["server_port"] = server.Port
 			result["link_status"] = server.LinkStatus
+
+			// 魔方云：从远端同步真实详情
+			if server.ServerType == "dcimcloud" && svc.DcimID > 0 {
+				client, err := service.NewDcimCloudClient(svc.ServerID)
+				if err == nil {
+					res, err := client.Sync(svc.DcimID)
+					if err == nil && res["status"] == "success" {
+						if data, ok := res["data"].(map[string]interface{}); ok {
+							for k, v := range data {
+								result[k] = v
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -1815,20 +1916,52 @@ func ZjmfCompatRefreshPowerStatus(c *gin.Context) {
 	serverLinked := false
 	if svc.ServerID > 0 {
 		var server model.Server
-		if err := db.First(&server, svc.ServerID).Error; err == nil && server.Hostname != "" {
-			scheme := "https"
-			if !server.Secure {
-				scheme = "http"
+		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			if server.ServerType == "dcimcloud" && svc.DcimID > 0 {
+				// 魔方云：从远端获取真实电源状态
+				client, err := service.NewDcimCloudClient(svc.ServerID)
+				if err == nil {
+					res, err := client.GetCloudStatus(svc.DcimID)
+					if err == nil && res["status"] == "success" {
+						serverLinked = true
+						if data, ok := res["data"].(map[string]interface{}); ok {
+							if s, ok := data["power_status"].(string); ok {
+								powerStatus = s
+							} else if s, ok := data["status"].(string); ok {
+								if s == "running" || s == "online" {
+									powerStatus = "on"
+								} else {
+									powerStatus = "off"
+								}
+							}
+						}
+						db.Model(&server).Update("link_status", true)
+						c.JSON(http.StatusOK, gin.H{
+							"status": 200,
+							"msg":   "请求成功",
+							"data": gin.H{
+								"power_status":  powerStatus,
+								"server_linked": serverLinked,
+							},
+						})
+						return
+					}
+				}
+			} else if server.Hostname != "" {
+				scheme := "https"
+				if !server.Secure {
+					scheme = "http"
+				}
+				testURL := fmt.Sprintf("%s://%s:%d", scheme, server.Hostname, server.Port)
+				client := &http.Client{Timeout: 3 * time.Second}
+				resp, err := client.Get(testURL)
+				serverLinked = err == nil && resp != nil && resp.StatusCode < 500
+				if resp != nil {
+					resp.Body.Close()
+				}
+				// 更新连接状态到数据库
+				db.Model(&server).Update("link_status", serverLinked)
 			}
-			testURL := fmt.Sprintf("%s://%s:%d", scheme, server.Hostname, server.Port)
-			client := &http.Client{Timeout: 3 * time.Second}
-			resp, err := client.Get(testURL)
-			serverLinked = err == nil && resp != nil && resp.StatusCode < 500
-			if resp != nil {
-				resp.Body.Close()
-			}
-			// 更新连接状态到数据库
-			db.Model(&server).Update("link_status", serverLinked)
 		}
 	}
 
@@ -2498,6 +2631,22 @@ func ZjmfCompatDcimBmc(c *gin.Context) {
 	if svc.ServerID > 0 {
 		var server model.Server
 		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			if server.ServerType == "dcimcloud" {
+				// 魔方云：返回管理面板URL
+				if svc.DcimID > 0 {
+					client, err := service.NewDcimCloudClient(svc.ServerID)
+					if err == nil {
+						res, err := client.ManagePanel(svc.DcimID)
+						if err == nil && res["status"] == "success" {
+							c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": res["data"]})
+							return
+						}
+					}
+				}
+				c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+				return
+			}
+
 			scheme := "https"
 			if !server.Secure {
 				scheme = "http"
@@ -2580,6 +2729,17 @@ func ZjmfCompatDcimIkvm(c *gin.Context) {
 	if svc.ServerID > 0 {
 		var server model.Server
 		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			if server.ServerType == "dcimcloud" && svc.DcimID > 0 {
+				client, err := service.NewDcimCloudClient(svc.ServerID)
+				if err == nil {
+					res, err := client.VNC(svc.DcimID)
+					if err == nil && res["status"] == "success" {
+						c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": res["data"]})
+						return
+					}
+				}
+			}
+
 			scheme := "https"
 			if !server.Secure {
 				scheme = "http"
@@ -2619,6 +2779,17 @@ func ZjmfCompatDcimKvm(c *gin.Context) {
 	if svc.ServerID > 0 {
 		var server model.Server
 		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			if server.ServerType == "dcimcloud" && svc.DcimID > 0 {
+				client, err := service.NewDcimCloudClient(svc.ServerID)
+				if err == nil {
+					res, err := client.VNC(svc.DcimID)
+					if err == nil && res["status"] == "success" {
+						c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": res["data"]})
+						return
+					}
+				}
+			}
+
 			scheme := "https"
 			if !server.Secure {
 				scheme = "http"
@@ -2653,6 +2824,17 @@ func ZjmfCompatDcimNovnc(c *gin.Context) {
 	if svc.ServerID > 0 {
 		var server model.Server
 		if err := db.First(&server, svc.ServerID).Error; err == nil {
+			if server.ServerType == "dcimcloud" && svc.DcimID > 0 {
+				client, err := service.NewDcimCloudClient(svc.ServerID)
+				if err == nil {
+					res, err := client.VNC(svc.DcimID)
+					if err == nil && res["status"] == "success" {
+						c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": res["data"]})
+						return
+					}
+				}
+			}
+
 			scheme := "https"
 			if !server.Secure {
 				scheme = "http"
@@ -2684,6 +2866,30 @@ func ZjmfCompatDcimReinstallStatus(c *gin.Context) {
 	// 从service config读取重装进度（zjmf从dcim_servers表读取）
 	progress := 100
 	reinstallStatus := "completed"
+
+	// 魔方云：从远端获取真实状态
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil && server.ServerType == "dcimcloud" && svc.DcimID > 0 {
+			client, err := service.NewDcimCloudClient(svc.ServerID)
+			if err == nil {
+				res, err := client.GetCloudStatus(svc.DcimID)
+				if err == nil && res["status"] == "success" {
+					if data, ok := res["data"].(map[string]interface{}); ok {
+						if p, ok := data["progress"].(float64); ok {
+							progress = int(p)
+						}
+						if s, ok := data["status"].(string); ok {
+							reinstallStatus = s
+						}
+						c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"progress": progress, "status": reinstallStatus}})
+						return
+					}
+				}
+			}
+		}
+	}
+
 	if svc.Config != "" {
 		var config map[string]interface{}
 		if json.Unmarshal([]byte(svc.Config), &config) == nil {
