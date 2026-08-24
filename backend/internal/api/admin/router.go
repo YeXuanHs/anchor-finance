@@ -194,6 +194,24 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.DELETE("/product-types/:id", DeleteProductType)
 		authenticated.POST("/product-types/reorders", ReorderProductTypes)
 
+		// 产品配置选项管理
+		authenticated.GET("/config-groups", GetConfigGroupList)
+		authenticated.POST("/config-groups", CreateConfigGroup)
+		authenticated.PUT("/config-groups/:id", UpdateConfigGroup)
+		authenticated.DELETE("/config-groups/:id", DeleteConfigGroup)
+		authenticated.GET("/config-groups/:gid/options", GetConfigOptionList)
+		authenticated.POST("/config-options", CreateConfigOption)
+		authenticated.PUT("/config-options/:id", UpdateConfigOption)
+		authenticated.DELETE("/config-options/:id", DeleteConfigOption)
+		authenticated.GET("/config-options/:oid/subs", GetConfigOptionSubList)
+		authenticated.POST("/config-option-subs", CreateConfigOptionSub)
+		authenticated.PUT("/config-option-subs/:id", UpdateConfigOptionSub)
+		authenticated.DELETE("/config-option-subs/:id", DeleteConfigOptionSub)
+		authenticated.POST("/products/:pid/config-links", CreateProductConfigLink)
+		authenticated.DELETE("/products/:pid/config-links/:gid", DeleteProductConfigLink)
+		authenticated.GET("/config-option-subs/:sid/pricing", GetConfigOptionSubPricing)
+		authenticated.POST("/config-option-subs/:sid/pricing", SetConfigOptionSubPricing)
+
 		// 设置管理
 		authenticated.GET("/settings", GetSettings)
 		authenticated.GET("/settings/:group", GetSettingsByGroup)
