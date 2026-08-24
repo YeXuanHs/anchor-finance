@@ -12,6 +12,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/util"
 )
 
 // DcimCloudClient 魔方云API客户端
@@ -48,11 +49,17 @@ func NewDcimCloudClient(serverID uint) (*DcimCloudClient, error) {
 		baseURL += fmt.Sprintf(":%d", server.Port)
 	}
 
+	// 解密密码（zjmf用aesPasswordDecode）
+	password := server.Password
+	if decrypted, err := util.DecryptAES(server.Password); err == nil {
+		password = decrypted
+	}
+
 	return &DcimCloudClient{
 		ServerID:   serverID,
 		URL:        baseURL,
 		Username:   server.Username,
-		Password:   server.Password, // 已加密存储
+		Password:   password,
 		HTTPClient: &http.Client{Timeout: 30 * time.Second},
 	}, nil
 }
@@ -266,6 +273,22 @@ func (c *DcimCloudClient) CreateSecurityGroup(dcimID uint, name string) (map[str
 // CreateSecurityRule 创建安全规则（DcimCloud.php:849）
 func (c *DcimCloudClient) CreateSecurityRule(dcimID uint, groupID uint, data map[string]interface{}) (map[string]interface{}, error) {
 	return c.Curl(fmt.Sprintf("/clouds/%d/security_group/%d/rule", dcimID, groupID), data, "POST")
+}
+
+// CreateAccount 开通虚拟机（DcimCloud.php:2570）
+// zjmf的createAccount是开通虚拟机的核心方法，调用魔方云API创建云主机
+func (c *DcimCloudClient) CreateAccount(params map[string]interface{}) (map[string]interface{}, error) {
+	return c.Curl("/clouds", params, "POST")
+}
+
+// GetOsList 获取操作系统列表（DcimCloud.php:93）
+func (c *DcimCloudClient) GetOsList() (map[string]interface{}, error) {
+	return c.Curl("/os", nil, "GET")
+}
+
+// GetAreaList 获取区域列表（DcimCloud.php:111）
+func (c *DcimCloudClient) GetAreaList() (map[string]interface{}, error) {
+	return c.Curl("/areas", nil, "GET")
 }
 
 // ============ HTTP工具方法 ============
