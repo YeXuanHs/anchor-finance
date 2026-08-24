@@ -120,12 +120,12 @@ func ZjmfCompatHostDetail(c *gin.Context) {
 				"domain":          svc.Domain,
 				"dedicatedip":     "",
 				"assignedips":     []string{},
-				"username":        "",
+				"username":        svc.Username,
 				"password":        "",
 				"port":            0,
 				"os":              "",
-				"regdate":         svc.CreatedAt.Format("2006-01-02"),
-				"nextduedate":     "",
+				"regdate":         svc.CreatedAt.Format("2006-01-02 15:04:05"),
+				"nextduedate":     func() string { if svc.NextDueDate != nil { return svc.NextDueDate.Format("2006-01-02") }; return "" }(),
 				"billingcycle":    svc.BillingCycle,
 				"firstpaymentamount": svc.Amount,
 				"amount":          svc.Amount,
@@ -136,6 +136,9 @@ func ZjmfCompatHostDetail(c *gin.Context) {
 				"os_ostype":       "",
 				"os_osname":       "",
 				"disk_num":        1,
+				"remark":          svc.Remark,
+				"serverid":        svc.ServerID,
+				"uid":             svc.UserID,
 			},
 			"module_button": gin.H{
 				"control": func() []gin.H {
@@ -172,6 +175,18 @@ func ZjmfCompatHostDetail(c *gin.Context) {
 				"nat_acl": "",
 				"nat_web": "",
 			},
+			"custom_field_data":   []gin.H{},
+			"config_options":      []gin.H{},
+			"cloud_os":            []gin.H{},
+			"cloud_os_group":      []gin.H{},
+			"flowpacket":          gin.H{"bwlimit": 0, "bwusage": 0},
+			"download_data":       []gin.H{},
+			"hook_output":         gin.H{},
+			"system_button":       []gin.H{},
+			"second":              gin.H{},
+			"cancelist":           []gin.H{},
+			"host_cancel":         gin.H{},
+			"system_config":       gin.H{},
 		},
 	})
 }
@@ -266,8 +281,23 @@ func ZjmfCompatRenew(c *gin.Context) {
 		return
 	}
 
-	// 续费逻辑：延长到期时间
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success", "data": gin.H{"amount": svc.Amount}})
+	// 创建续费账单
+	invoice := model.Invoice{
+		UserID:    svc.UserID,
+		InvoiceNo: fmt.Sprintf("RENEW%d", time.Now().UnixNano()%1000000000),
+		Amount:    svc.Amount,
+		Status:    "unpaid",
+	}
+	db.Create(&invoice)
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":    "请求成功",
+		"data": gin.H{
+			"invoiceid": invoice.ID,
+			"amount":    fmt.Sprintf("%.2f", svc.Amount),
+		},
+	})
 }
 
 // ZjmfCompatUser zjmf兼容用户信息（/v1/user）
@@ -287,10 +317,23 @@ func ZjmfCompatUser(c *gin.Context) {
 		"data": gin.H{
 			"client": gin.H{
 				"id":       user.ID,
-				"email":    user.Email,
 				"username": user.Username,
+				"email":    user.Email,
 				"phone":    user.Phone,
 				"company":  user.Company,
+				"status":   user.Status,
+				"balance":  user.Balance,
+				"credit_limit": user.CreditLimit,
+				"group_id": user.GroupID,
+				"level_id": user.LevelID,
+				"is_verified": user.IsVerified,
+				"created_at": user.CreatedAt.Format("2006-01-02 15:04:05"),
+				"last_login_at": func() string {
+					if user.LastLoginAt != nil {
+						return user.LastLoginAt.Format("2006-01-02 15:04:05")
+					}
+					return ""
+				}(),
 			},
 		},
 	})
