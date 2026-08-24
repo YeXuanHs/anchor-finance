@@ -582,6 +582,55 @@ func (c *DcimCloudClient) ModuleAllowFunction() []string {
 	}
 }
 
+// ============ 磁盘/网络高级操作（路径从zjmf确认） ============
+
+// AdjustBandwidth 带宽调整（DcimCloud.php:2209）
+// zjmf: PUT /clouds/{dcimid}/bw
+func (c *DcimCloudClient) AdjustBandwidth(dcimID uint, bw int) (map[string]interface{}, error) {
+	data := map[string]interface{}{"bw": bw}
+	return c.Curl(fmt.Sprintf("/clouds/%d/bw", dcimID), data, "PUT")
+}
+
+// AdjustIP IP数量调整（DcimCloud.php:2215）
+// zjmf: PUT /clouds/{dcimid}/ip
+func (c *DcimCloudClient) AdjustIP(dcimID uint, num int, ipGroup string) (map[string]interface{}, error) {
+	data := map[string]interface{}{"num": num, "ip_group": ipGroup}
+	return c.Curl(fmt.Sprintf("/clouds/%d/ip", dcimID), data, "PUT")
+}
+
+// CreateDisk 创建数据盘（DcimCloud.php:2256）
+// zjmf: POST /clouds/{dcimid}/disks
+func (c *DcimCloudClient) CreateDisk(dcimID uint, size int, storeID int, driver string) (map[string]interface{}, error) {
+	data := map[string]interface{}{"size": size, "store": storeID, "driver": driver}
+	return c.Curl(fmt.Sprintf("/clouds/%d/disks", dcimID), data, "POST")
+}
+
+// GetStores 获取存储列表（DcimCloud.php:2252）
+// zjmf: GET /clouds/{dcimid}/stores
+func (c *DcimCloudClient) GetStores(dcimID uint) (map[string]interface{}, error) {
+	return c.Curl(fmt.Sprintf("/clouds/%d/stores", dcimID), nil, "GET")
+}
+
+// ResizeDisk 磁盘扩容（DcimCloud.php:2249）
+// zjmf: PUT /disks/{disk_id}
+func (c *DcimCloudClient) ResizeDisk(diskID uint, newSize int) (map[string]interface{}, error) {
+	data := map[string]interface{}{"size": newSize}
+	return c.Curl(fmt.Sprintf("/disks/%d", diskID), data, "PUT")
+}
+
+// AdjustIPv6 IPv6调整（DcimCloud.php:2267）
+// zjmf: PUT /clouds/{dcimid}/ipv6
+func (c *DcimCloudClient) AdjustIPv6(dcimID uint, num int) (map[string]interface{}, error) {
+	data := map[string]interface{}{"num": num}
+	return c.Curl(fmt.Sprintf("/clouds/%d/ipv6", dcimID), data, "PUT")
+}
+
+// AdjustConfig 调整配置（DcimCloud.php:2206）
+// zjmf: PUT /clouds/{dcimid}（CPU/内存/快照数/备份数等）
+func (c *DcimCloudClient) AdjustConfig(dcimID uint, data map[string]interface{}) (map[string]interface{}, error) {
+	return c.Curl(fmt.Sprintf("/clouds/%d", dcimID), data, "PUT")
+}
+
 // ============ HTTP工具方法 ============
 
 func (c *DcimCloudClient) doRequest(apiURL string, data map[string]interface{}, method string, headers map[string]interface{}) (map[string]interface{}, error) {
