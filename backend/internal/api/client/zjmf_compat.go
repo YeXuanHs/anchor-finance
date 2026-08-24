@@ -1216,9 +1216,11 @@ func ZjmfCompatDcimOn(c *gin.Context) {
 		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled {
 			if server.ServerType == "dcimcloud" {
 				// 魔方云开机（zjmf: DcimCloud.php:1362）
-				client, err := service.NewDcimCloudClient(svc.ServerID)
-				if err == nil {
-					client.On(svc.ID)
+				if svc.DcimID > 0 {
+					client, err := service.NewDcimCloudClient(svc.ServerID)
+					if err == nil {
+						client.On(svc.DcimID)
+					}
 				}
 			} else {
 				// IPMI开机
