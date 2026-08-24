@@ -418,9 +418,9 @@ func ZjmfCompatCartAll(c *gin.Context) {
 				"type":          p.Type,
 				"product_price": fmt.Sprintf("%.2f", p.Price),
 				"billingcycle":  p.BillingCycle,
-				"qty":           999,
-				"stock_control": 0,
-				"setup_fee":     "0.00",
+				"qty":           p.Qty,
+				"stock_control": p.StockControl,
+				"setup_fee":     fmt.Sprintf("%.2f", p.SetupFee),
 				"ontrial":       0,
 			})
 		}
@@ -496,8 +496,8 @@ func ZjmfCompatProductInfo(c *gin.Context) {
 			"id":               p.ID,
 			"name":             p.Name,
 			"location_version": 1,
-			"stock_control":    0,
-			"qty":              999,
+			"stock_control":    p.StockControl,
+			"qty":              p.Qty,
 		})
 	}
 
@@ -552,12 +552,13 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 		"description":                product.Description,
 		"host":                       `{"show":"0","modify":0,"prefix":"ser","rule":{"upper":"0","lower":"0","num":"1","len_num":12}}`,
 		"is_domain":                  0,
-		"hidden":                     0,
+		"hidden":                     p.Hidden,
 		"password":                   `{"show":"1","modify":0,"rule":{"len_num":"12","upper":"1","lower":"1","num":"1","special":"0"}}`,
 		"show_domain_options":        0,
 		"welcome_email":              0,
-		"stock_control":              0,
-		"qty":                        999,
+		"stock_control":              p.StockControl,
+		"qty":                        p.Qty,
+		"setup_fee":                  fmt.Sprintf("%.2f", p.SetupFee),
 		"prorata_billing":            0,
 		"prorata_date":               0,
 		"prorata_charge_next_month":  0,
@@ -1083,9 +1084,9 @@ func ZjmfCompatStockControl(c *gin.Context) {
 		"msg":     "请求成功",
 		"data": gin.H{
 			"product": gin.H{
-				"hidden":        0,
-				"stock_control": 0,
-				"qty":           999,
+				"hidden":        product.Hidden,
+				"stock_control": product.StockControl,
+				"qty":           product.Qty,
 			},
 		},
 		"is_aff": "1",

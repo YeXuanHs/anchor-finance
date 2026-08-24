@@ -14,11 +14,18 @@ type Product struct {
 	GroupID       uint           `gorm:"index" json:"group_id"`
 	Type          string         `gorm:"size:50" json:"type"` // host, server, domain, etc.
 	Description   string         `gorm:"size:500" json:"description"`
-	Amount        float64        `gorm:"type:decimal(10,2)" json:"-"`      // 兼容字段，不返回给前端（历史数据保留）
+	Amount        float64        `gorm:"type:decimal(10,2)" json:"-"`      // 兼容字段
 	Price         float64        `gorm:"type:decimal(10,2)" json:"price"`  // 唯一价格字段
 	BillingCycle  string         `gorm:"size:20" json:"billing_cycle"`
-	ConfigOptions string         `gorm:"type:text" json:"config_options"` // JSON配置选项（创欧方式）
+	ConfigOptions string         `gorm:"type:text" json:"config_options"` // JSON配置选项
 	Status        string         `gorm:"size:20;default:active" json:"status"` // active, hidden, deleted
+	Hidden        int            `gorm:"default:0" json:"hidden"`        // 0=显示, 1=隐藏（zjmf兼容）
+	StockControl  int            `gorm:"default:0" json:"stock_control"` // 0=不限制, 1=限制库存
+	Qty           int            `gorm:"default:999" json:"qty"`         // 库存数量
+	SetupFee      float64        `gorm:"type:decimal(10,2);default:0" json:"setup_fee"` // 设置费
+	PayType       string         `gorm:"size:50" json:"pay_type"`        // 付款类型（月付/年付等）
+	AutoSetup     string         `gorm:"size:50" json:"auto_setup"`      // 自动开通方式
+	IsFeatured    int            `gorm:"default:0" json:"is_featured"`   // 是否推荐
 	SortOrder     int            `gorm:"default:0" json:"sort_order"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
