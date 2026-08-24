@@ -85,7 +85,7 @@ func (ProductConfigLink) TableName() string { return "product_config_links" }
 // zjmf表: pricing（type=config_option）
 type ProductConfigPricing struct {
 	ID         uint    `gorm:"primaryKey" json:"id"`
-	RelID      uint    `gorm:"index;not null" json:"relid"`      // 子选项ID
+	RelID      uint    `gorm:"column:rel_id;index;not null" json:"relid"`      // 子选项ID
 	Type       string  `gorm:"size:20;not null" json:"type"`     // config_option
 	Currency   int     `gorm:"not null" json:"currency"`         // 货币ID
 	Monthly    float64 `gorm:"type:decimal(10,2);default:0" json:"monthly"`
@@ -94,12 +94,12 @@ type ProductConfigPricing struct {
 	Annually   float64 `gorm:"type:decimal(10,2);default:0" json:"annually"`
 	Biennially float64 `gorm:"type:decimal(10,2);default:0" json:"biennially"`
 	Triennially float64 `gorm:"type:decimal(10,2);default:0" json:"triennially"`
-	MonthlySetup    float64 `gorm:"type:decimal(10,2);default:0" json:"monthlysetupfee"`
-	QuarterlySetup  float64 `gorm:"type:decimal(10,2);default:0" json:"quarterlysetupfee"`
-	SemiannualSetup float64 `gorm:"type:decimal(10,2);default:0" json:"semiannuallysetupfee"`
-	AnnuallySetup   float64 `gorm:"type:decimal(10,2);default:0" json:"annuallysetupfee"`
-	BienniallySetup float64 `gorm:"type:decimal(10,2);default:0" json:"bienniallysetupfee"`
-	TrienniallySetup float64 `gorm:"type:decimal(10,2);default:0" json:"trienniallysetupfee"`
+	MonthlySetup    float64 `gorm:"column:monthly_setup;type:decimal(10,2);default:0" json:"monthlysetupfee"`
+	QuarterlySetup  float64 `gorm:"column:quarterly_setup;type:decimal(10,2);default:0" json:"quarterlysetupfee"`
+	SemiannualSetup float64 `gorm:"column:semiannual_setup;type:decimal(10,2);default:0" json:"semiannuallysetupfee"`
+	AnnuallySetup   float64 `gorm:"column:annually_setup;type:decimal(10,2);default:0" json:"annuallysetupfee"`
+	BienniallySetup float64 `gorm:"column:biennially_setup;type:decimal(10,2);default:0" json:"bienniallysetupfee"`
+	TrienniallySetup float64 `gorm:"column:triennially_setup;type:decimal(10,2);default:0" json:"trienniallysetupfee"`
 }
 
 func (ProductConfigPricing) TableName() string { return "product_config_pricings" }

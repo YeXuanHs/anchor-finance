@@ -350,7 +350,7 @@ func DeleteConfigOption(c *gin.Context) {
 	var subIDs []uint
 	db.Model(&model.ProductConfigOptionSub{}).Where("config_id = ?", id).Pluck("id", &subIDs)
 	if len(subIDs) > 0 {
-		db.Where("relid IN ? AND type = ?", subIDs, "config_option").Delete(&model.ProductConfigPricing{})
+		db.Where("rel_id IN ? AND type = ?", subIDs, "config_option").Delete(&model.ProductConfigPricing{})
 	}
 	db.Where("config_id = ?", id).Delete(&model.ProductConfigOptionSub{})
 
@@ -482,7 +482,7 @@ func DeleteConfigOptionSub(c *gin.Context) {
 	}
 
 	// 删除相关定价
-	db.Where("relid = ? AND type = ?", id, "config_option").Delete(&model.ProductConfigPricing{})
+	db.Where("rel_id = ? AND type = ?", id, "config_option").Delete(&model.ProductConfigPricing{})
 
 	db.Delete(&sub)
 
@@ -584,7 +584,7 @@ func GetConfigOptionSubPricing(c *gin.Context) {
 	}
 
 	var pricings []model.ProductConfigPricing
-	db.Where("relid = ? AND type = ?", sid, "config_option").Find(&pricings)
+	db.Where("rel_id = ? AND type = ?", sid, "config_option").Find(&pricings)
 
 	if pricings == nil {
 		pricings = []model.ProductConfigPricing{}
@@ -632,7 +632,7 @@ func SetConfigOptionSubPricing(c *gin.Context) {
 
 	// 查找是否已有该货币的定价记录
 	var pricing model.ProductConfigPricing
-	err := db.Where("relid = ? AND type = ? AND currency = ?", sidUint, "config_option", req.Currency).
+	err := db.Where("rel_id = ? AND type = ? AND currency = ?", sidUint, "config_option", req.Currency).
 		First(&pricing).Error
 
 	if err == nil {

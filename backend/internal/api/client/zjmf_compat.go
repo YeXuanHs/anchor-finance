@@ -709,7 +709,7 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 			for _, sub := range subs {
 				// 查定价
 				var pricings []model.ProductConfigPricing
-				db.Where("relid = ? AND type = ?", sub.ID, "config_option").Find(&pricings)
+				db.Where("rel_id = ? AND type = ?", sub.ID, "config_option").Find(&pricings)
 
 				subEntry := gin.H{
 					"id":         sub.ID,
