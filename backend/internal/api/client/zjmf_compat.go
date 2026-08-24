@@ -1639,13 +1639,16 @@ func ZjmfCompatUpgradeCheckoutConfig(c *gin.Context) {
 	// 创建升级账单（zjmf源码Host.php:1534创建真实账单）
 	upgradeAmount := svc.Amount * 0.1 // 升级差价
 	invoice := model.Invoice{
-		InvoiceNo: fmt.Sprintf("INV%d%d", time.Now().UnixNano()%1000000000, rand.Intn(10000)),
+		InvoiceNo: fmt.Sprintf("UPG%d%d", time.Now().UnixNano()%1000000000, rand.Intn(10000)),
 		UserID:    svc.UserID,
 		Amount:    upgradeAmount,
 		Status:    "unpaid",
 		Note:      fmt.Sprintf("配置升级 服务#%d", svc.ID),
 	}
-	db.Create(&invoice)
+	if err := db.Create(&invoice).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 500, "msg": "创建账单失败: " + err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
