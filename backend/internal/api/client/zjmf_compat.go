@@ -181,7 +181,7 @@ func ZjmfCompatHostDetail(c *gin.Context) {
 			"config_options":      []gin.H{},
 			"cloud_os":            []gin.H{},
 			"cloud_os_group":      []gin.H{},
-			"flowpacket":          gin.H{"bwlimit": 0, "bwusage": 0},
+			"flowpacket":          gin.H{"bwlimit": svc.BwLimit, "bwusage": svc.BwUsage},
 			"download_data":       []gin.H{},
 			"hook_output":         gin.H{},
 			"system_button":       []gin.H{},

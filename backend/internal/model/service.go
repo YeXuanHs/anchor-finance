@@ -22,6 +22,8 @@ type Service struct {
 	BillingCycle   string         `gorm:"size:20" json:"billing_cycle"`
 	Amount         float64        `gorm:"type:decimal(10,2)" json:"amount"`
 	Remark         string         `gorm:"type:text" json:"remark"`
+	BwLimit        int            `gorm:"default:0" json:"bw_limit"`    // 带宽限制(Mbps)
+	BwUsage        int            `gorm:"default:0" json:"bw_usage"`    // 带宽使用(Mbps)
 	AutoRenew      bool           `gorm:"default:false" json:"auto_renew"`
 	NextDueDate    *time.Time     `json:"next_due_date"`
 	ActivatedAt    *time.Time     `json:"activated_at"`
