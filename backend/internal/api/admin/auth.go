@@ -69,19 +69,38 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
-// GetInfo 获取管理员信息
+// GetInfo 获取管理员信息（从admins表查询真实数据）
 func (h *AuthHandler) GetInfo(c *gin.Context) {
 	userID, _ := c.Get("user_id")
-	username, _ := c.Get("username")
+
+	db := database.GetDB()
+	var admin model.Admin
+	if err := db.First(&admin, userID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "管理员不存在", "data": nil})
+		return
+	}
+
+	// 查询角色名
+	roleName := "admin"
+	var role model.Role
+	if admin.RoleID > 0 && db.First(&role, admin.RoleID).Error == nil {
+		roleName = role.Name
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    0,
 		"message": "success",
 		"data": gin.H{
-			"user_id":  userID,
-			"username": username,
-			"avatar":   "",
-			"role":     "admin",
+			"user_id":   admin.ID,
+			"username":  admin.Username,
+			"nickname":  admin.Nickname,
+			"email":     admin.Email,
+			"avatar":    admin.Avatar,
+			"role":      roleName,
+			"role_id":   admin.RoleID,
+			"status":    admin.Status,
+			"last_login_at": admin.LastLoginAt,
+			"last_login_ip": admin.LastLoginIP,
 		},
 	})
 }

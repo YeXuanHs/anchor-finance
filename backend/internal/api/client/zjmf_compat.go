@@ -1628,14 +1628,12 @@ func ZjmfCompatAddToShop(c *gin.Context) {
 }
 
 // ZjmfCompatSettle zjmf兼容结算购物车（/cart/settle）
-// zjmf源码(Host.php:128): zjmfCurl($apiId, "/cart/settle", $settleData, 30, "POST")
-// zjmf传参: payment method等
+// zjmf源码(CartController.php:562): cartCheckout — 创建Order+Invoice+Service
 func ZjmfCompatSettle(c *gin.Context) {
 	var req struct {
 		PaymentMethod string `json:"payment_method"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 没有参数也可以，用默认支付方式
 		req.PaymentMethod = "balance"
 	}
 
@@ -1657,14 +1655,46 @@ func ZjmfCompatSettle(c *gin.Context) {
 		totalAmount += item.Amount
 	}
 
+	// 防0元购
+	if totalAmount <= 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "订单金额必须大于0"})
+		return
+	}
+
+	// 生成订单号
+	orderNo := fmt.Sprintf("ORD%d%d", time.Now().UnixNano()%1000000000, userID.(uint))
+
+	// 创建订单
+	order := model.Order{
+		UserID:      userID.(uint),
+		OrderNo:     orderNo,
+		Amount:      totalAmount,
+		Status:      "pending",
+		ProductName: cartItems[0].ProductName,
+		ProductID:   cartItems[0].ProductID,
+	}
+	db.Create(&order)
+
 	// 创建账单
 	invoice := model.Invoice{
 		UserID:        userID.(uint),
+		InvoiceNo:     fmt.Sprintf("INV%d", time.Now().UnixNano()%1000000000),
 		Amount:        totalAmount,
 		Status:        "unpaid",
 		PaymentMethod: req.PaymentMethod,
 	}
 	db.Create(&invoice)
+
+	// 为每个购物车项创建账单项
+	for _, item := range cartItems {
+		orderItem := model.OrderItem{
+			OrderID:     order.ID,
+			ProductID:   item.ProductID,
+			ProductName: item.ProductName,
+			Amount:      item.Amount,
+		}
+		db.Create(&orderItem)
+	}
 
 	// 清空购物车
 	db.Where("user_id = ?", userID).Delete(&model.CartItem{})
@@ -1674,6 +1704,7 @@ func ZjmfCompatSettle(c *gin.Context) {
 		"msg":    "请求成功",
 		"data": gin.H{
 			"invoiceid": invoice.ID,
+			"orderid":   order.ID,
 			"amount":    fmt.Sprintf("%.2f", totalAmount),
 		},
 	})

@@ -45,30 +45,36 @@ func GetSystemInfo(c *gin.Context) {
 	})
 }
 
-// GetSystemModules 获取系统模块列表
+// GetSystemModules 获取系统模块列表（检测真实状态）
 // GET /api/admin/system/modules
 func GetSystemModules(c *gin.Context) {
-	modules := []gin.H{
-		{"name": "认证模块", "version": "1.0.0", "status": "active"},
-		{"name": "用户管理", "version": "1.0.0", "status": "active"},
-		{"name": "订单管理", "version": "1.0.0", "status": "active"},
-		{"name": "服务管理", "version": "1.0.0", "status": "active"},
-		{"name": "账单管理", "version": "1.0.0", "status": "active"},
-		{"name": "工单管理", "version": "1.0.0", "status": "active"},
-		{"name": "产品管理", "version": "1.0.0", "status": "active"},
-		{"name": "插件管理", "version": "1.0.0", "status": "active"},
-		{"name": "设置管理", "version": "1.0.0", "status": "active"},
-		{"name": "日志管理", "version": "1.0.0", "status": "active"},
-		{"name": "内容管理", "version": "1.0.0", "status": "active"},
-		{"name": "财务管理", "version": "1.0.0", "status": "active"},
-		{"name": "供应商管理", "version": "1.0.0", "status": "active"},
-		{"name": "优惠券管理", "version": "1.0.0", "status": "active"},
-		{"name": "推介系统", "version": "1.0.0", "status": "active"},
+	db := database.GetDB()
+
+	// 检测各模块真实状态
+	checkModule := func(name string, model interface{}) gin.H {
+		status := "active"
+		count := int64(0)
+		if err := db.Model(model).Count(&count).Error; err != nil {
+			status = "error"
+		}
+		return gin.H{"name": name, "version": "1.0.0", "status": status, "count": count}
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "success",
-		"data":    modules,
-	})
+	modules := []gin.H{
+		checkModule("用户管理", &model.User{}),
+		checkModule("订单管理", &model.Order{}),
+		checkModule("服务管理", &model.Service{}),
+		checkModule("账单管理", &model.Invoice{}),
+		checkModule("工单管理", &model.Ticket{}),
+		checkModule("产品管理", &model.Product{}),
+		checkModule("插件管理", &model.Plugin{}),
+		checkModule("供应商管理", &model.Supplier{}),
+		checkModule("内容管理", &model.News{}),
+		checkModule("财务管理", &model.Payment{}),
+		checkModule("日志管理", &model.OperationLog{}),
+		{"name": "认证模块", "version": "1.0.0", "status": "active", "count": 0},
+		{"name": "设置管理", "version": "1.0.0", "status": "active", "count": 0},
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": modules})
 }
