@@ -67,8 +67,6 @@ func main() {
 		&model.Staff{},
 		&model.MemberLevel{},
 		&model.CustomField{},
-		&model.Coupon{},
-		&model.CouponCampaign{},
 		&model.Payment{},
 		&model.TicketPrereply{},
 		&model.TicketPrereplyCategory{},
