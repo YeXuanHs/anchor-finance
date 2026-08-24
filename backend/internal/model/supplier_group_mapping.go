@@ -13,3 +13,8 @@ type SupplierGroupMapping struct {
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
+
+// TableName 指定表名
+func (SupplierGroupMapping) TableName() string {
+	return "supplier_group_mappings"
+}

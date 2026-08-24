@@ -115,7 +115,10 @@ func SearchOrders(c *gin.Context) {
 		Page    int    `json:"page"`
 		PageSize int  `json:"page_size"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
 	if req.Page <= 0 {
 		req.Page = 1
 	}
@@ -310,7 +313,10 @@ func ReorderProducts(c *gin.Context) {
 			Position int  `json:"position"`
 		} `json:"items"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
 	db := database.GetDB()
 	for _, item := range req.Items {
 		db.Model(&model.Product{}).Where("id = ?", item.ID).Update("sort_order", item.Position)
@@ -324,7 +330,10 @@ func BatchUpdateProductCategory(c *gin.Context) {
 		ProductIDs []uint `json:"product_ids"`
 		GroupID    uint   `json:"group_id"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
 	db := database.GetDB()
 	db.Model(&model.Product{}).Where("id IN ?", req.ProductIDs).Update("group_id", req.GroupID)
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功", "data": nil})
@@ -350,7 +359,10 @@ func ReorderProductTypes(c *gin.Context) {
 			Position int  `json:"position"`
 		} `json:"items"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
 	db := database.GetDB()
 	for _, item := range req.Items {
 		db.Model(&model.ProductType{}).Where("id = ?", item.ID).Update("sort_order", item.Position)
@@ -546,7 +558,10 @@ func InstallPlugin(c *gin.Context) {
 		Slug   string `json:"slug" binding:"required"`
 		Domain string `json:"domain" binding:"required"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
 	db := database.GetDB()
 	plugin := model.Plugin{
 		Slug:   req.Slug,
@@ -709,7 +724,10 @@ func UpdateKnowledgeCategory(c *gin.Context) {
 		SortOrder int    `json:"sort_order"`
 		Status    string `json:"status"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
 	db := database.GetDB()
 	updates := map[string]interface{}{}
 	if req.Name != "" {
@@ -749,7 +767,10 @@ func UpdateDownloadCategory(c *gin.Context) {
 		SortOrder int    `json:"sort_order"`
 		Status    string `json:"status"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
 	db := database.GetDB()
 	updates := map[string]interface{}{}
 	if req.Name != "" {
@@ -1954,7 +1975,7 @@ func AdminCreateUserService(c *gin.Context) {
 		ProductID:    product.ID,
 		ProductName:  product.Name,
 		BillingCycle: req.BillingCycle,
-		Amount:       product.Amount,
+		Amount:       product.Price,
 		Status:       "pending",
 	}
 	if err := db.Create(&service).Error; err != nil {

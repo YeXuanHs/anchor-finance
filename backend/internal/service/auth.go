@@ -230,10 +230,10 @@ func (s *AuthService) logSecurityEvent(adminID uint, username, ip, eventType str
 
 // GenerateTokenStatic 静态版本GenerateToken（用于zjmf兼容登录等不需要AuthService实例的场景）
 func GenerateTokenStatic(userID uint, username string, isAdmin bool) (string, error) {
-	secret := "anchor-finance-secret-key-2024"
-	// 尝试从环境变量读取
-	if envSecret := os.Getenv("JWT_SECRET"); envSecret != "" {
-		secret = envSecret
+	// 安全要求：强制从环境变量读取密钥，不再使用硬编码备用密钥
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", fmt.Errorf("JWT_SECRET environment variable not set")
 	}
 
 	claims := Claims{

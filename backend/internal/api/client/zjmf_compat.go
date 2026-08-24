@@ -1332,15 +1332,24 @@ func ZjmfCompatUpgradeCheckoutConfig(c *gin.Context) {
 	var req struct {
 		HostID uint `json:"host_id" form:"host_id"`
 	}
-	c.ShouldBind(&req)
-
+	if err := c.ShouldBind(&req); err != nil || req.HostID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
 	db := database.GetDB()
 	var svc model.Service
-	if req.HostID > 0 {
-		db.First(&svc, req.HostID)
+	if err := db.First(&svc, req.HostID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 0, "amount": "0.00"}})
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "请求成功",
+		"data": gin.H{
+			"invoiceid": 0,
+			"amount":    fmt.Sprintf("%.2f", svc.Amount),
+		},
+	})
 }
 
 // ZjmfCompatUpgradeProductPost POST /upgrade/upgrade_product_post - 产品升级
@@ -1348,15 +1357,24 @@ func ZjmfCompatUpgradeProductPost(c *gin.Context) {
 	var req struct {
 		HostID uint `json:"host_id" form:"host_id"`
 	}
-	c.ShouldBind(&req)
-
+	if err := c.ShouldBind(&req); err != nil || req.HostID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
 	db := database.GetDB()
 	var svc model.Service
-	if req.HostID > 0 {
-		db.First(&svc, req.HostID)
+	if err := db.First(&svc, req.HostID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 0, "amount": "0.00"}})
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "请求成功",
+		"data": gin.H{
+			"invoiceid": 0,
+			"amount":    fmt.Sprintf("%.2f", svc.Amount),
+		},
+	})
 }
 
 // ZjmfCompatUpgradeCheckoutProduct POST /upgrade/checkout_upgrade_product - 产品升级结算
@@ -1364,15 +1382,24 @@ func ZjmfCompatUpgradeCheckoutProduct(c *gin.Context) {
 	var req struct {
 		HostID uint `json:"host_id" form:"host_id"`
 	}
-	c.ShouldBind(&req)
-
+	if err := c.ShouldBind(&req); err != nil || req.HostID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
 	db := database.GetDB()
 	var svc model.Service
-	if req.HostID > 0 {
-		db.First(&svc, req.HostID)
+	if err := db.First(&svc, req.HostID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": 0, "amount": "0.00"}})
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "请求成功",
+		"data": gin.H{
+			"invoiceid": 0,
+			"amount":    fmt.Sprintf("%.2f", svc.Amount),
+		},
+	})
 }
 
 // ZjmfCompatSslCertFunc POST /provision/sslCertFunc - SSL证书管理
@@ -1824,12 +1851,29 @@ func ZjmfCompatProvisionButton(c *gin.Context) {
 		return
 	}
 
+	// 根据服务状态返回控制按钮
+	button := []gin.H{}
+	if svc.Status == "active" {
+		button = append(button, gin.H{"name": "关机", "action": "off"})
+		button = append(button, gin.H{"name": "重启", "action": "reboot"})
+		button = append(button, gin.H{"name": "重装系统", "action": "reinstall"})
+		button = append(button, gin.H{"name": "重置密码", "action": "reset_password"})
+	} else if svc.Status == "suspended" {
+		button = append(button, gin.H{"name": "开机", "action": "on"})
+	}
+
+	console := []gin.H{}
+	if svc.ServerID > 0 {
+		console = append(console, gin.H{"name": "VNC控制台", "action": "vnc"})
+		console = append(console, gin.H{"name": "KVM控制台", "action": "kvm"})
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"msg":    "请求成功",
 		"data": gin.H{
-			"button":  []gin.H{},
-			"console": []gin.H{},
+			"button":  button,
+			"console": console,
 		},
 	})
 }

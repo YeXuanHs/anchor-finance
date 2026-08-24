@@ -14,8 +14,8 @@ type Product struct {
 	GroupID       uint           `gorm:"index" json:"group_id"`
 	Type          string         `gorm:"size:50" json:"type"` // host, server, domain, etc.
 	Description   string         `gorm:"size:500" json:"description"`
-	Amount        float64        `gorm:"type:decimal(10,2)" json:"amount"` // 价格
-	Price         float64        `gorm:"type:decimal(10,2)" json:"price"`  // 兼容字段
+	Amount        float64        `gorm:"type:decimal(10,2)" json:"-"`      // 兼容字段，不返回给前端（历史数据保留）
+	Price         float64        `gorm:"type:decimal(10,2)" json:"price"`  // 唯一价格字段
 	BillingCycle  string         `gorm:"size:20" json:"billing_cycle"`
 	ConfigOptions string         `gorm:"type:text" json:"config_options"` // JSON配置选项（创欧方式）
 	Status        string         `gorm:"size:20;default:active" json:"status"` // active, hidden, deleted

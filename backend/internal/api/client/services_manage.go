@@ -530,7 +530,7 @@ func GetServiceUpgradePreview(c *gin.Context) {
 
 	options := make([]UpgradeOption, 0)
 	for _, p := range products {
-		priceDiff := p.Amount - service.Amount
+		priceDiff := p.Price - service.Amount
 		if priceDiff > 0 {
 			options = append(options, UpgradeOption{
 				ProductID:   p.ID,

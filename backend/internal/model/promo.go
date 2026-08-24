@@ -7,6 +7,10 @@ import (
 )
 
 // PromoCode 优惠码模型
+// 注意：PromoCode 与 Coupon 功能有重叠但定位不同，暂不合并：
+// - PromoCode 面向营销推广，通常通过渠道分发，绑定活动场景
+// - Coupon 面向用户发放，通常绑定 CouponCampaign 活动，支持更灵活的发放策略
+// 贸然合并可能导致业务逻辑混乱，后续如需统一应做完整的数据迁移和业务梳理。
 type PromoCode struct {
 	ID          uint           `gorm:"primaryKey" json:"id"`
 	Code        string         `gorm:"size:50;uniqueIndex;not null" json:"code"`

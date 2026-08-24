@@ -1,10 +1,13 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/YeXuanHs/anchor-finance/internal/database"
+	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -72,7 +75,31 @@ func (rl *RateLimiter) Allow(key string) bool {
 	return true
 }
 
-// RateLimit 限流中间件工厂
+// getRateLimit 从settings表读取限流配置（防抖频率）
+func getRateLimit() (int, int) {
+	rate := 3      // 默认每分钟3次
+	window := 60   // 默认60秒
+	db := database.GetDB()
+	if db == nil {
+		return rate, window
+	}
+	var setting model.Setting
+	if err := db.Where("`key` = ?", "api_rate_limit").First(&setting).Error; err == nil {
+		var v int
+		if _, err := fmt.Sscanf(setting.Value, "%d", &v); err == nil && v > 0 {
+			rate = v
+		}
+	}
+	if err := db.Where("`key` = ?", "api_rate_window").First(&setting).Error; err == nil {
+		var v int
+		if _, err := fmt.Sscanf(setting.Value, "%d", &v); err == nil && v > 0 {
+			window = v
+		}
+	}
+	return rate, window
+}
+
+// RateLimit 限流中间件工厂（从settings表读取配置）
 func RateLimit(rate int, window time.Duration) gin.HandlerFunc {
 	limiter := NewRateLimiter(rate, window)
 	return func(c *gin.Context) {
@@ -89,4 +116,10 @@ func RateLimit(rate int, window time.Duration) gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+// RateLimitFromSettings 限流中间件工厂（从settings表读取配置，无需传参）
+func RateLimitFromSettings() gin.HandlerFunc {
+	rate, window := getRateLimit()
+	return RateLimit(rate, time.Duration(window)*time.Second)
 }

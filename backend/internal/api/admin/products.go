@@ -701,9 +701,8 @@ func SplitProductPreview(c *gin.Context) {
 	previews := make([]gin.H, req.Count)
 	for i := 0; i < req.Count; i++ {
 		previews[i] = gin.H{
-			"name":   fmt.Sprintf("%s #%d", product.Name, i+1),
-			"price":  product.Price,
-			"amount": product.Amount,
+			"name":  fmt.Sprintf("%s #%d", product.Name, i+1),
+			"price": product.Price,
 		}
 	}
 
@@ -740,7 +739,7 @@ func SplitProduct(c *gin.Context) {
 			Name:        fmt.Sprintf("%s #%d", product.Name, i+1),
 			Type:        product.Type,
 			Price:       product.Price,
-			Amount:      product.Amount,
+			Amount:      product.Price, // Amount=Price，保持兼容
 			Description: product.Description,
 			GroupID:     product.GroupID,
 			Status:      product.Status,

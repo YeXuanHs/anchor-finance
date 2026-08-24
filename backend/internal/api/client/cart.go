@@ -1,4 +1,4 @@
-﻿package client
+package client
 
 import (
 	"crypto/rand"
@@ -72,7 +72,7 @@ func AddToCart(c *gin.Context) {
 	}
 
 	// 服务端计算金额（防0元购，不接受前端价格）
-	amount := product.Amount
+	amount := product.Price
 
 	if amount <= 0 {
 		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "产品价格异常", "data": nil})
@@ -191,7 +191,7 @@ func Checkout(c *gin.Context) {
 			continue
 		}
 		// 使用服务端价格，忽略购物车中可能被篡改的价格
-		totalAmount += product.Amount * float64(item.Quantity)
+		totalAmount += product.Price * float64(item.Quantity)
 	}
 
 	// 防0元购：金额必须大于0
@@ -234,7 +234,7 @@ func Checkout(c *gin.Context) {
 			ProductName: item.ProductName,
 			Quantity:    item.Quantity,
 			Cycle:       item.Cycle,
-			Amount:      product.Amount,
+			Amount:      product.Price,
 		}
 		db.Create(&orderItem)
 	}
