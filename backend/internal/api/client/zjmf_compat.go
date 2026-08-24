@@ -8,6 +8,7 @@ import (
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
+	"github.com/YeXuanHs/anchor-finance/internal/service"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -369,80 +370,49 @@ func ZjmfCompatBalance(c *gin.Context) {
 }
 
 // ZjmfCompatCartAll zjmf兼容商品目录（/cart/all）
-// zjmf调此端点获取商品目录，期望嵌套结构+count+product_price
+// zjmf调此端点获取商品目录，返回分组+嵌套产品列表
+// 返回格式：{status:200, data:{products:[{id,name,products:[...]}], count:N, currency:"CNY"}, is_aff:"0"}
 func ZjmfCompatCartAll(c *gin.Context) {
 	db := database.GetDB()
 
 	// 获取一级分组
-	var firstGroups []model.ProductGroup
-	db.Where("parent_id = 0 AND status = ?", "active").Order("sort_order ASC").Find(&firstGroups)
-	if firstGroups == nil {
-		firstGroups = []model.ProductGroup{}
+	var groups []model.ProductGroup
+	db.Where("parent_id = 0 AND status = ?", "active").Order("sort_order ASC").Find(&groups)
+	if groups == nil {
+		groups = []model.ProductGroup{}
 	}
 
 	totalProducts := 0
-	var result []gin.H
-	for _, fg := range firstGroups {
-		var groups []model.ProductGroup
-		db.Where("parent_id = ? AND status = ?", fg.ID, "active").Order("sort_order ASC").Find(&groups)
-		if groups == nil {
-			groups = []model.ProductGroup{}
+	var products []gin.H
+	for _, g := range groups {
+		var productList []model.Product
+		db.Where("group_id = ? AND status = ?", g.ID, "active").Find(&productList)
+		if productList == nil {
+			productList = []model.Product{}
 		}
+		totalProducts += len(productList)
 
-		var groupList []gin.H
-		for _, g := range groups {
-			var products []model.Product
-			db.Where("group_id = ? AND status = ?", g.ID, "active").Find(&products)
-			if products == nil {
-				products = []model.Product{}
-			}
-			totalProducts += len(products)
-
-			var productList []gin.H
-			for _, p := range products {
-				productList = append(productList, gin.H{
-					"id":            p.ID,
-					"name":          p.Name,
-					"description":   p.Description,
-					"product_price": p.Price,
-					"billingcycle":  p.BillingCycle,
-					"type":          p.Type,
-					"qty":           1,
-					"stock_control": 0,
-					"setup_fee":     0,
-					"ontrial":       gin.H{"ontrial": 0},
-				})
-			}
-
-			groupList = append(groupList, gin.H{
-				"id":       g.ID,
-				"name":     g.Name,
-				"headline": "",
-				"tagline":  "",
-				"fields":   []gin.H{},
-				"products": productList,
+		var items []gin.H
+		for _, p := range productList {
+			items = append(items, gin.H{
+				"id":            p.ID,
+				"name":          p.Name,
+				"description":   p.Description,
+				"type":          p.Type,
+				"product_price": fmt.Sprintf("%.2f", p.Price),
+				"billingcycle":  p.BillingCycle,
+				"qty":           999,
+				"stock_control": 0,
+				"setup_fee":     "0.00",
+				"ontrial":       0,
 			})
 		}
 
-		result = append(result, gin.H{
-			"id":     fg.ID,
-			"name":   fg.Name,
-			"fields": []gin.H{},
-			"group":  groupList,
+		products = append(products, gin.H{
+			"id":       g.ID,
+			"name":     g.Name,
+			"products": items,
 		})
-	}
-
-	// 构建扁平products列表（zjmf的getUpstreamProducts取$list["products"]）
-	var flatProducts []gin.H
-	for _, fg := range result {
-		groups := fg["group"].([]gin.H)
-		for _, g := range groups {
-			flatProducts = append(flatProducts, gin.H{
-				"id":       g["id"],
-				"name":     g["name"],
-				"products": g["products"],
-			})
-		}
 	}
 
 	// 获取默认货币
@@ -456,11 +426,11 @@ func ZjmfCompatCartAll(c *gin.Context) {
 		"status": 200,
 		"msg":    "请求成功",
 		"data": gin.H{
-			"first_group": result,
-			"products":    flatProducts,
-			"count":       totalProducts,
-			"currency":    currencyCode,
+			"products": products,
+			"count":    totalProducts,
+			"currency": currencyCode,
 		},
+		"is_aff": "0",
 	})
 }
 
@@ -1821,12 +1791,65 @@ func ZjmfCompatUserInfo(c *gin.Context) {
 		creditLimitAmount = fmt.Sprintf("%.2f", creditLimit.Amount-creditLimit.Used)
 	}
 
+	// 查询默认货币
+	var currency model.Currency
+	db.Where("is_default = ?", true).First(&currency)
+
+	// 从settings读取配置
+	allowSecondVerify := service.GetSettingInt("allow_second_verify", 0)
+	secondVerifyActionHome := []interface{}{}
+	if allowSecondVerify == 1 {
+		secondVerifyActionHome = []interface{}{"home", "login"}
+	}
+	allowResourceAPI := service.GetSettingInt("allow_resource_api", 0)
+	buyProductMustBindPhone := service.GetSettingInt("buy_product_must_bind_phone", 0)
+
+	// 格式化时间
+	lastLoginAt := ""
+	if user.LastLoginAt != nil {
+		lastLoginAt = user.LastLoginAt.Format("2006-01-02 15:04:05")
+	}
+	createdAt := user.CreatedAt.Format("2006-01-02 15:04:05")
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"msg":    "请求成功",
 		"data": gin.H{
-			"credit":       fmt.Sprintf("%.2f", user.Balance),
-			"credit_limit": creditLimitAmount,
+			"user": gin.H{
+				"id":           user.ID,
+				"username":     user.Username,
+				"email":        user.Email,
+				"phone":        user.Phone,
+				"company":      user.Company,
+				"status":       user.Status,
+				"credit":       fmt.Sprintf("%.2f", user.Balance),
+				"groupid":      user.GroupID,
+				"level_id":     user.LevelID,
+				"is_verified":  user.IsVerified,
+				"last_login_at": lastLoginAt,
+				"created_at":   createdAt,
+			},
+			"credit":                   fmt.Sprintf("%.2f", user.Balance),
+			"credit_limit":             creditLimitAmount,
+			"currency": gin.H{
+				"id":     currency.ID,
+				"code":   currency.Code,
+				"prefix": currency.Symbol,
+				"suffix": "",
+			},
+			"is_aff":                   "0",
+			"gateways":                 []interface{}{},
+			"client_group":             gin.H{},
+			"certifi_open":             0,
+			"allow_second_verify":      allowSecondVerify,
+			"second_verify_action_home": secondVerifyActionHome,
+			"allow_resource_api":       allowResourceAPI,
+			"shd_allow_email_send":     1,
+			"shd_allow_sms_send":       1,
+			"buy_product_must_bind_phone": buyProductMustBindPhone,
+			"customs":                  []interface{}{},
+			"developer":                []interface{}{},
+			"voucher_manager":          gin.H{},
 		},
 	})
 }
