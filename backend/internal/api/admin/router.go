@@ -207,8 +207,8 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/config-option-subs", CreateConfigOptionSub)
 		authenticated.PUT("/config-option-subs/:id", UpdateConfigOptionSub)
 		authenticated.DELETE("/config-option-subs/:id", DeleteConfigOptionSub)
-		authenticated.POST("/products/:pid/config-links", CreateProductConfigLink)
-		authenticated.DELETE("/products/:pid/config-links/:gid", DeleteProductConfigLink)
+		authenticated.POST("/config-links/:pid", CreateProductConfigLink)
+		authenticated.DELETE("/config-links/:pid/:gid", DeleteProductConfigLink)
 		authenticated.GET("/config-option-subs/:sid/pricing", GetConfigOptionSubPricing)
 		authenticated.POST("/config-option-subs/:sid/pricing", SetConfigOptionSubPricing)
 
