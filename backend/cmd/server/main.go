@@ -107,7 +107,6 @@ func main() {
 		&model.UserRemark{},
 		&model.SMSConfig{},
 		&model.Referral{},
-		&model.UserCoupon{},
 		&model.ReferralWithdrawal{},
 		&service.LoginAttempt{},
 		&model.TicketDeliveryRule{},
