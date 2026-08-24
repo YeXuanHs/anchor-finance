@@ -912,8 +912,16 @@ func ZjmfCompatProductDetail(c *gin.Context) {
 			"customfields":               []gin.H{},
 			"product_pricings":           productPricings,
 			"advanced":                   []gin.H{},
-			"config_groups":              []gin.H{},
-			"config_links":               []int{},
+			"config_groups": func() []gin.H {
+				if p.ConfigOptions != "" {
+					var options []map[string]interface{}
+					if json.Unmarshal([]byte(p.ConfigOptions), &options) == nil && len(options) > 0 {
+						return []gin.H{{"id": p.ID, "name": p.Name, "options": options}}
+					}
+				}
+				return []gin.H{}
+			}(),
+			"config_links":               func() []int { if p.ConfigOptions != "" { return []int{int(p.ID)} }; return []int{} }(),
 		}
 	}
 
