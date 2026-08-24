@@ -24,7 +24,7 @@ func (ProductConfigGroup) TableName() string { return "product_config_groups" }
 // zjmf表: product_config_options
 type ProductConfigOption struct {
 	ID             uint           `gorm:"primaryKey" json:"id"`
-	GID            uint           `gorm:"index;not null" json:"gid"`             // 关联config_group
+	GID            uint           `gorm:"column:gid;index;not null" json:"gid"`             // 关联config_group
 	OptionName     string         `gorm:"size:200;not null" json:"option_name"`  // 选项名（支持"价格|显示名"格式）
 	OptionType     int            `gorm:"default:0" json:"option_type"`          // 类型: 1=单选, 2=多选, 3=下拉, 5=操作系统, 6=数量, 8=文本
 	Order          int            `gorm:"default:0" json:"order"`
@@ -39,10 +39,10 @@ type ProductConfigOption struct {
 	Upgrade        bool           `gorm:"default:false" json:"upgrade"`
 	Notes          string         `gorm:"size:500" json:"notes"`
 	UpstreamID     int            `gorm:"default:0" json:"upstream_id"`          // 上游ID
-	LinkagePID     int            `gorm:"default:0" json:"linkage_pid"`          // 联动产品ID
-	LinkageTopPID  int            `gorm:"default:0" json:"linkage_top_pid"`
-	LinkageLevel   int            `gorm:"default:0" json:"linkage_level"`
-	CopyID         int            `gorm:"default:0" json:"copy_id"`
+	LinkagePID     int            `gorm:"column:linkage_pid;default:0" json:"linkage_pid"`
+	LinkageTopPID  int            `gorm:"column:linkage_top_pid;default:0" json:"linkage_top_pid"`
+	LinkageLevel   int            `gorm:"column:linkage_level;default:0" json:"linkage_level"`
+	CopyID         int            `gorm:"column:copyid;default:0" json:"copy_id"`
 	Senior         bool           `gorm:"default:false" json:"senior"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
@@ -59,11 +59,11 @@ type ProductConfigOptionSub struct {
 	OptionName string         `gorm:"size:200;not null" json:"option_name"`
 	SortOrder  int            `gorm:"default:0" json:"sort_order"`
 	Hidden     bool           `gorm:"default:false" json:"hidden"`
-	CopyID     int            `gorm:"default:0" json:"copy_id"`
+	CopyID     int            `gorm:"column:copyid;default:0" json:"copy_id"`
 	UpstreamID int            `gorm:"default:0" json:"upstream_id"`
-	LinkageLevel int          `gorm:"default:0" json:"linkage_level"`
-	LinkagePID int            `gorm:"default:0" json:"linkage_pid"`
-	LinkageTopPID int         `gorm:"default:0" json:"linkage_top_pid"`
+	LinkageLevel int          `gorm:"column:linkage_level;default:0" json:"linkage_level"`
+	LinkagePID int            `gorm:"column:linkage_pid;default:0" json:"linkage_pid"`
+	LinkageTopPID int         `gorm:"column:linkage_top_pid;default:0" json:"linkage_top_pid"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
@@ -75,8 +75,8 @@ func (ProductConfigOptionSub) TableName() string { return "product_config_option
 // zjmf表: product_config_links
 type ProductConfigLink struct {
 	ID  uint `gorm:"primaryKey" json:"id"`
-	PID uint `gorm:"index;not null" json:"pid"` // 产品ID
-	GID uint `gorm:"index;not null" json:"gid"` // 分组ID
+	PID uint `gorm:"column:pid;index;not null" json:"pid"` // 产品ID
+	GID uint `gorm:"column:gid;index;not null" json:"gid"` // 分组ID
 }
 
 func (ProductConfigLink) TableName() string { return "product_config_links" }
