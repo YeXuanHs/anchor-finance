@@ -678,15 +678,7 @@ func UnbindVerification(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "已解绑", "data": nil})
 }
 
-// ==================== 优惠券扩展 ====================
-
-// GetCouponProductGroups 获取优惠券可用产品分组
-func GetCouponProductGroups(c *gin.Context) {
-	db := database.GetDB()
-	var groups []model.ProductGroup
-	db.Find(&groups)
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": groups})
-}
+// ==================== 其他扩展 ====================
 
 // ==================== 内容详情 ====================
 
@@ -1872,77 +1864,7 @@ func PullTrafficPackageCatalog(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "同步完成", "data": results})
 }
 
-// RunCouponCampaignTask 优惠券活动任务执行（向符合条件的用户发放优惠券）
-// POST /api/admin/coupon-campaigns/:id/tasks
-func RunCouponCampaignTask(c *gin.Context) {
-	id := c.Param("id")
-	db := database.GetDB()
-
-	var campaign model.CouponCampaign
-	if err := db.First(&campaign, id).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "活动不存在", "data": nil})
-		return
-	}
-
-	if campaign.Status != "active" {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动未激活", "data": nil})
-		return
-	}
-
-	// 检查活动是否在有效期内
-	now := time.Now()
-	if campaign.StartDate != nil && now.Before(*campaign.StartDate) {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动尚未开始", "data": nil})
-		return
-	}
-	if campaign.EndDate != nil && now.After(*campaign.EndDate) {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动已结束", "data": nil})
-		return
-	}
-
-	// 查询该活动关联的优惠券
-	var coupons []model.Coupon
-	db.Where("campaign_id = ?", campaign.ID).Find(&coupons)
-	if len(coupons) == 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "活动无关联优惠券", "data": nil})
-		return
-	}
-
-	// 查询活跃用户
-	var users []model.User
-	db.Where("status = ?", "active").Limit(1000).Find(&users)
-	if len(users) == 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "无符合条件的用户", "data": nil})
-		return
-	}
-
-	// 为每个用户创建优惠券
-	distributed := 0
-	for _, user := range users {
-		for _, coupon := range coupons {
-			// 检查用户是否已领取
-			var existing model.UserCoupon
-			if err := db.Where("user_id = ? AND coupon_id = ?", user.ID, coupon.ID).First(&existing).Error; err == nil {
-				continue // 已领取，跳过
-			}
-
-			userCoupon := model.UserCoupon{
-				UserID:   user.ID,
-				CouponID: coupon.ID,
-				Status:   0,
-			}
-			if err := db.Create(&userCoupon).Error; err == nil {
-				distributed++
-			}
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "活动任务已执行", "data": gin.H{
-		"campaign_id": campaign.ID,
-		"name":        campaign.Name,
-		"distributed": distributed,
-	}})
-}
+// ==================== 其他管理功能 ====================
 
 // AdminCreateUserService 管理员为用户创建服务
 // POST /api/admin/users/:id/services

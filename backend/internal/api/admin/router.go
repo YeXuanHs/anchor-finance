@@ -424,24 +424,6 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/custom-fields/:id", UpdateCustomField)
 		authenticated.DELETE("/custom-fields/:id", DeleteCustomField)
 
-		// 优惠券
-		authenticated.GET("/coupons", GetCouponList)
-		authenticated.GET("/coupons/summary", GetCouponSummary)
-		authenticated.GET("/coupon-product-groups", GetCouponProductGroups)
-		authenticated.POST("/coupons", CreateCoupon)
-		authenticated.PUT("/coupons/:id", UpdateCoupon)
-		authenticated.DELETE("/coupons/:id", DeleteCoupon)
-		authenticated.PATCH("/coupons/:id/status", UpdateCouponStatus)
-
-		// 优惠券活动
-		authenticated.GET("/coupon-campaigns", GetCouponCampaignList)
-		authenticated.GET("/coupon-campaigns/summary", GetCouponCampaignSummary)
-		authenticated.POST("/coupon-campaigns", CreateCouponCampaign)
-		authenticated.PUT("/coupon-campaigns/:id", UpdateCouponCampaign)
-		authenticated.DELETE("/coupon-campaigns/:id", DeleteCouponCampaign)
-		authenticated.PATCH("/coupon-campaigns/:id/status", UpdateCouponCampaignStatus)
-		authenticated.POST("/coupon-campaigns/:id/tasks", RunCouponCampaignTask)
-
 		// 发送消息
 		authenticated.GET("/send-message/search-params", GetSendMessageSearchParams)
 		authenticated.GET("/send-message/send-methods", GetSendMethodList)

@@ -10,7 +10,6 @@ import (
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // GetBalanceLogs 获取余额日志（从充值记录+操作日志合并）
@@ -142,118 +141,6 @@ func CreateRecharge(c *gin.Context) {
 			"pay_url":     paymentURL,
 		},
 	})
-}
-
-// GetUserCoupons 获取用户可用的优惠券（真实数据）
-// GET /api/client/coupons
-func GetUserCoupons(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-
-	db := database.GetDB()
-	now := time.Now()
-
-	// 查询所有有效且未过期的优惠券
-	query := db.Model(&model.Coupon{}).
-		Where("status = ? AND (start_date IS NULL OR start_date <= ?) AND (end_date IS NULL OR end_date >= ?)",
-			"active", now, now)
-
-	var total int64
-	query.Count(&total)
-
-	var coupons []model.Coupon
-	offset := (page - 1) * pageSize
-	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&coupons)
-
-	if coupons == nil {
-		coupons = []model.Coupon{}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "success",
-		"data": gin.H{
-			"list":      coupons,
-			"total":     total,
-			"page":      page,
-			"page_size": pageSize,
-		},
-	})
-}
-
-// ClaimCoupon 领取优惠券（校验有效期+使用次数）
-// POST /api/client/coupons/:id/claim
-func ClaimCoupon(c *gin.Context) {
-	couponID := c.Param("id")
-	userID, _ := c.Get("user_id")
-
-	db := database.GetDB()
-	var coupon model.Coupon
-	if err := db.First(&coupon, couponID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 404, "message": "优惠券不存在", "data": nil})
-		return
-	}
-
-	// 校验状态
-	if coupon.Status != "active" {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已失效", "data": nil})
-		return
-	}
-
-	// 校验有效期
-	now := time.Now()
-	if coupon.StartDate != nil && now.Before(*coupon.StartDate) {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券未开始", "data": nil})
-		return
-	}
-	if coupon.EndDate != nil && now.After(*coupon.EndDate) {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已过期", "data": nil})
-		return
-	}
-
-	// 学创欧：检查是否已领取过（user_coupons表）
-	var existingCount int64
-	db.Model(&model.UserCoupon{}).Where("coupon_id = ? AND user_id = ?", coupon.ID, userID).Count(&existingCount)
-	if existingCount > 0 {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "你已经领取过这张优惠券", "data": nil})
-		return
-	}
-
-	// 校验领取上限
-	if coupon.UsageLimit > 0 {
-		var claimedCount int64
-		db.Model(&model.UserCoupon{}).Where("coupon_id = ?", coupon.ID).Count(&claimedCount)
-		if claimedCount >= int64(coupon.UsageLimit) {
-			c.JSON(http.StatusOK, gin.H{"code": 400, "message": "优惠券已被领完", "data": nil})
-			return
-		}
-	}
-
-	// 创建领取记录
-	claimedAt := time.Now()
-	userCoupon := model.UserCoupon{
-		CouponID:    coupon.ID,
-		UserID:      userID.(uint),
-		ReceiveType: "claim",
-		Status:      1,
-		ClaimedAt:   &claimedAt,
-	}
-	if err := db.Create(&userCoupon).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "领取失败，可能已领取过", "data": nil})
-		return
-	}
-
-	// 更新优惠券使用次数
-	db.Model(&coupon).Update("used_count", gorm.Expr("used_count + ?", 1))
-
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "领取成功", "data": gin.H{"coupon_id": coupon.ID, "user_coupon_id": userCoupon.ID}})
 }
 
 // GetUserNotifications 获取用户通知

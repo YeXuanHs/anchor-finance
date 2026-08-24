@@ -211,10 +211,6 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.POST("/recharge", CreateRecharge)
 		authenticated.GET("/recharge/:paymentNo/status", GetRechargeStatus)
 
-		// 优惠券
-		authenticated.GET("/coupons", GetUserCoupons)
-		authenticated.POST("/coupons/:id/claim", ClaimCoupon)
-
 		// 公告系统（需登录）
 		authenticated.GET("/notices/unread-count", GetNoticesUnreadCount)
 		authenticated.POST("/notices/mark-all-read", MarkAllNoticesRead)
