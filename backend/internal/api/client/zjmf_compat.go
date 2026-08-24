@@ -1198,13 +1198,8 @@ func ZjmfCompatDcimOn(c *gin.Context) {
 	var req struct {
 		ID uint `json:"id" form:"id"`
 	}
-	if err := c.ShouldBind(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil || req.ID == 0 {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
-		return
-	}
-
-	if req.ID == 0 {
-		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
 		return
 	}
 
@@ -1215,17 +1210,28 @@ func ZjmfCompatDcimOn(c *gin.Context) {
 		return
 	}
 
-	// 通过IPMI开机（向IPMI地址发送开机指令）
+	// 根据server_type分发到魔方云或IPMI
 	if svc.ServerID > 0 {
 		var server model.Server
-		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled && server.Hostname != "" {
-			scheme := "https"
-			if !server.Secure {
-				scheme = "http"
+		if err := db.First(&server, svc.ServerID).Error; err == nil && !server.Disabled {
+			if server.ServerType == "dcimcloud" {
+				// 魔方云开机（zjmf: DcimCloud.php:1362）
+				client, err := service.NewDcimCloudClient(svc.ServerID)
+				if err == nil {
+					client.On(svc.ID)
+				}
+			} else {
+				// IPMI开机
+				if server.Hostname != "" {
+					scheme := "https"
+					if !server.Secure {
+						scheme = "http"
+					}
+					ipmiURL := fmt.Sprintf("%s://%s:%d/api/power/on", scheme, server.Hostname, server.Port)
+					client := &http.Client{Timeout: 10 * time.Second}
+					client.Post(ipmiURL, "application/json", nil)
+				}
 			}
-			ipmiURL := fmt.Sprintf("%s://%s:%d/api/power/on", scheme, server.Hostname, server.Port)
-			client := &http.Client{Timeout: 10 * time.Second}
-			client.Post(ipmiURL, "application/json", nil) // 忽略错误，IPMI可能不支持此API
 		}
 	}
 
