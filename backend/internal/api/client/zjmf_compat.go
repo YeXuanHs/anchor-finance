@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -1560,10 +1561,11 @@ func ZjmfCompatDcimBuyReinstallTimes(c *gin.Context) {
 
 	// 创建购买账单
 	invoice := model.Invoice{
-		UserID: 0,
-		Amount: totalAmount,
-		Status: "unpaid",
-		Note:   fmt.Sprintf("购买重装次数 x%d", req.Num),
+		InvoiceNo: fmt.Sprintf("INV%d%d", time.Now().UnixNano()%1000000000, rand.Intn(10000)),
+		UserID:    0,
+		Amount:    totalAmount,
+		Status:    "unpaid",
+		Note:      fmt.Sprintf("购买重装次数 x%d", req.Num),
 	}
 	if req.ID > 0 {
 		var svc model.Service
@@ -1607,10 +1609,11 @@ func ZjmfCompatDcimBuyFlowPacket(c *gin.Context) {
 	}
 
 	invoice := model.Invoice{
-		UserID: svc.UserID,
-		Amount: flowAmount,
-		Status: "unpaid",
-		Note:   fmt.Sprintf("购买流量包 服务#%d", svc.ID),
+		InvoiceNo: fmt.Sprintf("INV%d%d", time.Now().UnixNano()%1000000000, rand.Intn(10000)),
+		UserID:    svc.UserID,
+		Amount:    flowAmount,
+		Status:    "unpaid",
+		Note:      fmt.Sprintf("购买流量包 服务#%d", svc.ID),
 	}
 	db.Create(&invoice)
 
@@ -1636,10 +1639,11 @@ func ZjmfCompatUpgradeCheckoutConfig(c *gin.Context) {
 	// 创建升级账单（zjmf源码Host.php:1534创建真实账单）
 	upgradeAmount := svc.Amount * 0.1 // 升级差价
 	invoice := model.Invoice{
-		UserID: svc.UserID,
-		Amount: upgradeAmount,
-		Status: "unpaid",
-		Note:   fmt.Sprintf("配置升级 服务#%d", svc.ID),
+		InvoiceNo: fmt.Sprintf("INV%d%d", time.Now().UnixNano()%1000000000, rand.Intn(10000)),
+		UserID:    svc.UserID,
+		Amount:    upgradeAmount,
+		Status:    "unpaid",
+		Note:      fmt.Sprintf("配置升级 服务#%d", svc.ID),
 	}
 	db.Create(&invoice)
 
@@ -1671,10 +1675,11 @@ func ZjmfCompatUpgradeProductPost(c *gin.Context) {
 
 	upgradeAmount := svc.Amount * 0.1
 	invoice := model.Invoice{
-		UserID: svc.UserID,
-		Amount: upgradeAmount,
-		Status: "unpaid",
-		Note:   fmt.Sprintf("产品升级 服务#%d", svc.ID),
+		InvoiceNo: fmt.Sprintf("INV%d%d", time.Now().UnixNano()%1000000000, rand.Intn(10000)),
+		UserID:    svc.UserID,
+		Amount:    upgradeAmount,
+		Status:    "unpaid",
+		Note:      fmt.Sprintf("产品升级 服务#%d", svc.ID),
 	}
 	db.Create(&invoice)
 
@@ -1706,10 +1711,11 @@ func ZjmfCompatUpgradeCheckoutProduct(c *gin.Context) {
 
 	upgradeAmount := svc.Amount * 0.1
 	invoice := model.Invoice{
-		UserID: svc.UserID,
-		Amount: upgradeAmount,
-		Status: "unpaid",
-		Note:   fmt.Sprintf("产品升级结算 服务#%d", svc.ID),
+		InvoiceNo: fmt.Sprintf("INV%d%d", time.Now().UnixNano()%1000000000, rand.Intn(10000)),
+		UserID:    svc.UserID,
+		Amount:    upgradeAmount,
+		Status:    "unpaid",
+		Note:      fmt.Sprintf("产品升级结算 服务#%d", svc.ID),
 	}
 	db.Create(&invoice)
 
@@ -2216,10 +2222,11 @@ func ZjmfCompatHostRenew(c *gin.Context) {
 	amount := svc.Amount
 
 	invoice := model.Invoice{
-		UserID: svc.UserID,
-		Amount: amount,
-		Status: "unpaid",
-		Note:   fmt.Sprintf("续费服务 #%d", svc.ID),
+		InvoiceNo: fmt.Sprintf("INV%d%d", time.Now().UnixNano()%1000000000, rand.Intn(10000)),
+		UserID:    svc.UserID,
+		Amount:    amount,
+		Status:    "unpaid",
+		Note:      fmt.Sprintf("续费服务 #%d", svc.ID),
 	}
 	db.Create(&invoice)
 
@@ -2419,10 +2426,11 @@ func ZjmfCompatUpgradeConfigPost(c *gin.Context) {
 	amount := svc.Amount * 0.1
 
 	invoice := model.Invoice{
-		UserID: svc.UserID,
-		Amount: amount,
-		Status: "unpaid",
-		Note:   fmt.Sprintf("配置升级服务 #%d", svc.ID),
+		InvoiceNo: fmt.Sprintf("INV%d%d", time.Now().UnixNano()%1000000000, rand.Intn(10000)),
+		UserID:    svc.UserID,
+		Amount:    amount,
+		Status:    "unpaid",
+		Note:      fmt.Sprintf("配置升级服务 #%d", svc.ID),
 	}
 	db.Create(&invoice)
 
