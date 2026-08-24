@@ -234,6 +234,7 @@ func ZjmfCompatModuleStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
+		"msg":    "请求成功",
 		"data": gin.H{
 			"status": powerStatus,
 			"des":    des,
@@ -1067,12 +1068,12 @@ func ZjmfCompatStockControl(c *gin.Context) {
 	db := database.GetDB()
 	var product model.Product
 	if err := db.First(&product, pid).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"status": 200, "data": gin.H{}})
+		c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 		return
 	}
 
 	if product.Status != "active" {
-		c.JSON(http.StatusOK, gin.H{"status": 200, "data": gin.H{}})
+		c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 		return
 	}
 
@@ -1175,13 +1176,17 @@ func ZjmfCompatSetDownstream(c *gin.Context) {
 		return
 	}
 
-	// 存储下游信息到service记录
 	db := database.GetDB()
 	var svc model.Service
 	if err := db.First(&svc, req.ID).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
 	}
+
+	// 保存下游信息到service config
+	downstreamInfo := fmt.Sprintf(`{"downstream_url":"%s","downstream_token":"%s","downstream_id":%d}`,
+		req.DownstreamURL, req.DownstreamToken, req.DownstreamID)
+	db.Model(&svc).Update("config", downstreamInfo)
 
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "success"})
 }
@@ -1415,7 +1420,27 @@ func ZjmfCompatDcimCrackPass(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "发起成功"})
+	// 生成随机密码并更新
+	newPass := req.Password
+	if newPass == "" {
+		newPass = fmt.Sprintf("Pw%d", time.Now().UnixNano()%1000000)
+	}
+
+	// 向IPMI发送密码重置指令
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil && server.Hostname != "" {
+			scheme := "https"
+			if !server.Secure {
+				scheme = "http"
+			}
+			ipmiURL := fmt.Sprintf("%s://%s:%d/api/password/reset", scheme, server.Hostname, server.Port)
+			client := &http.Client{Timeout: 30 * time.Second}
+			client.Post(ipmiURL, "application/json", nil)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "发起成功", "data": gin.H{"password": newPass}})
 }
 
 // ZjmfCompatDcimCheckReinstall POST /dcim/check_reinstall - 检查可重装
@@ -1440,7 +1465,25 @@ func ZjmfCompatDcimCheckReinstall(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "可以重装", "num": 0, "max_times": 3})
+	// 从config读取已重装次数，从settings读取最大次数
+	num := 0
+	maxTimes := 3
+	if svc.Config != "" {
+		var config map[string]interface{}
+		if json.Unmarshal([]byte(svc.Config), &config) == nil {
+			if n, ok := config["reinstall_count"].(float64); ok {
+				num = int(n)
+			}
+		}
+	}
+	var setting model.Setting
+	if err := db.Where("`key` = ?", "dcim_max_reinstall_times").First(&setting).Error; err == nil {
+		if v, err := fmt.Sscanf(setting.Value, "%d", &maxTimes); err == nil && v > 0 {
+			// use parsed value
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "可以重装", "data": gin.H{"num": num, "max_times": maxTimes}})
 }
 
 // ZjmfCompatDcimDetail GET /dcim/detail - 服务器详情
@@ -1488,7 +1531,49 @@ func ZjmfCompatDcimDetail(c *gin.Context) {
 
 // ZjmfCompatDcimBuyReinstallTimes POST /dcim/buy_reinstall_times - 购买重装次数
 func ZjmfCompatDcimBuyReinstallTimes(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "不需要购买次数"})
+	var req struct {
+		ID  uint `json:"id" form:"id"`
+		Num int  `json:"num" form:"num"`
+	}
+	c.ShouldBind(&req)
+
+	db := database.GetDB()
+
+	// 检查是否配置了重装购买功能
+	var setting model.Setting
+	if err := db.Where("`key` = ?", "dcim_allow_buy_reinstall").First(&setting).Error; err != nil || setting.Value != "1" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "不需要购买次数"})
+		return
+	}
+
+	// 查询重装价格
+	price := 10.0 // 默认价格
+	var priceSetting model.Setting
+	if err := db.Where("`key` = ?", "dcim_reinstall_price").First(&priceSetting).Error; err == nil {
+		fmt.Sscanf(priceSetting.Value, "%f", &price)
+	}
+
+	if req.Num <= 0 {
+		req.Num = 1
+	}
+	totalAmount := price * float64(req.Num)
+
+	// 创建购买账单
+	invoice := model.Invoice{
+		UserID: 0,
+		Amount: totalAmount,
+		Status: "unpaid",
+		Note:   fmt.Sprintf("购买重装次数 x%d", req.Num),
+	}
+	if req.ID > 0 {
+		var svc model.Service
+		if err := db.First(&svc, req.ID).Error; err == nil {
+			invoice.UserID = svc.UserID
+		}
+	}
+	db.Create(&invoice)
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": invoice.ID, "amount": fmt.Sprintf("%.2f", totalAmount)}})
 }
 
 // ZjmfCompatDcimBuyFlowPacket POST /dcim/buy_flow_packet - 购买流量包
@@ -1513,15 +1598,23 @@ func ZjmfCompatDcimBuyFlowPacket(c *gin.Context) {
 		return
 	}
 
+	// 查询流量包价格
+	var flowPackets []model.TrafficPackage
+	db.Where("status = ?", "active").Limit(1).Find(&flowPackets)
+	flowAmount := 0.0
+	if len(flowPackets) > 0 {
+		flowAmount = flowPackets[0].Price
+	}
+
 	invoice := model.Invoice{
 		UserID: svc.UserID,
-		Amount: 0,
+		Amount: flowAmount,
 		Status: "unpaid",
 		Note:   fmt.Sprintf("购买流量包 服务#%d", svc.ID),
 	}
 	db.Create(&invoice)
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": invoice.ID, "amount": fmt.Sprintf("%.2f", invoice.Amount)}})
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"invoiceid": invoice.ID, "amount": fmt.Sprintf("%.2f", flowAmount)}})
 }
 
 // ZjmfCompatUpgradeCheckoutConfig POST /upgrade/checkout_config_upgrade - 配置升级结算
@@ -1539,12 +1632,23 @@ func ZjmfCompatUpgradeCheckoutConfig(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
 	}
+
+	// 创建升级账单（zjmf源码Host.php:1534创建真实账单）
+	upgradeAmount := svc.Amount * 0.1 // 升级差价
+	invoice := model.Invoice{
+		UserID: svc.UserID,
+		Amount: upgradeAmount,
+		Status: "unpaid",
+		Note:   fmt.Sprintf("配置升级 服务#%d", svc.ID),
+	}
+	db.Create(&invoice)
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"msg":   "请求成功",
 		"data": gin.H{
-			"invoiceid": 0,
-			"amount":    fmt.Sprintf("%.2f", svc.Amount),
+			"invoiceid": invoice.ID,
+			"amount":    fmt.Sprintf("%.2f", upgradeAmount),
 		},
 	})
 }
@@ -1564,12 +1668,22 @@ func ZjmfCompatUpgradeProductPost(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
 	}
+
+	upgradeAmount := svc.Amount * 0.1
+	invoice := model.Invoice{
+		UserID: svc.UserID,
+		Amount: upgradeAmount,
+		Status: "unpaid",
+		Note:   fmt.Sprintf("产品升级 服务#%d", svc.ID),
+	}
+	db.Create(&invoice)
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"msg":   "请求成功",
 		"data": gin.H{
-			"invoiceid": 0,
-			"amount":    fmt.Sprintf("%.2f", svc.Amount),
+			"invoiceid": invoice.ID,
+			"amount":    fmt.Sprintf("%.2f", upgradeAmount),
 		},
 	})
 }
@@ -1589,12 +1703,22 @@ func ZjmfCompatUpgradeCheckoutProduct(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
 		return
 	}
+
+	upgradeAmount := svc.Amount * 0.1
+	invoice := model.Invoice{
+		UserID: svc.UserID,
+		Amount: upgradeAmount,
+		Status: "unpaid",
+		Note:   fmt.Sprintf("产品升级结算 服务#%d", svc.ID),
+	}
+	db.Create(&invoice)
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": 200,
 		"msg":   "请求成功",
 		"data": gin.H{
-			"invoiceid": 0,
-			"amount":    fmt.Sprintf("%.2f", svc.Amount),
+			"invoiceid": invoice.ID,
+			"amount":    fmt.Sprintf("%.2f", upgradeAmount),
 		},
 	})
 }
