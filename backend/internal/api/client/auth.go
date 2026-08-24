@@ -48,7 +48,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0, "message": "success",
-		"data": gin.H{"token": token},
+		"data": gin.H{"token": token, "refresh_token": refreshToken},
 	})
 }
 
@@ -85,7 +85,7 @@ func (h *AuthHandler) LoginByCode(c *gin.Context) {
 		return
 	}
 
-	token, err := h.authService.GenerateToken(user.ID, user.Username, false)
+	token, refreshToken, err := h.authService.GenerateToken(user.ID, user.Username, false)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "生成token失败", "data": nil})
 		return
@@ -98,7 +98,7 @@ func (h *AuthHandler) LoginByCode(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0, "message": "success",
-		"data": gin.H{"token": token},
+		"data": gin.H{"token": token, "refresh_token": refreshToken},
 	})
 }
 
@@ -245,7 +245,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	token, err := h.authService.GenerateToken(user.ID, user.Username, false)
+	token, refreshToken, err := h.authService.GenerateToken(user.ID, user.Username, false)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "生成token失败", "data": nil})
 		return
@@ -253,7 +253,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0, "message": "注册成功",
-		"data": gin.H{"token": token},
+		"data": gin.H{"token": token, "refresh_token": refreshToken},
 	})
 }
 
@@ -564,5 +564,42 @@ func LoginByAPIKeyHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0, "message": "success",
 		"data": gin.H{"token": token},
+	})
+}
+
+// RefreshToken 刷新Access Token
+// POST /api/client/auth/refresh
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refresh_token" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "message": "参数错误", "data": nil})
+		return
+	}
+
+	// 验证refresh_token
+	claims, err := h.authService.ParseToken(req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 401, "message": "refresh_token无效或已过期", "data": nil})
+		return
+	}
+
+	// 检查issuer是refresh类型
+	if claims.Issuer != "anchor-finance-refresh" {
+		c.JSON(http.StatusOK, gin.H{"code": 401, "message": "token类型错误", "data": nil})
+		return
+	}
+
+	// 生成新的access_token和refresh_token
+	newAccess, newRefresh, err := h.authService.GenerateToken(claims.UserID, claims.Username, claims.IsAdmin)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 500, "message": "生成token失败", "data": nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0, "message": "success",
+		"data": gin.H{"token": newAccess, "refresh_token": newRefresh},
 	})
 }

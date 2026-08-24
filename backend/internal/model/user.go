@@ -29,6 +29,8 @@ type User struct {
 	LastLoginIP    string         `gorm:"size:45" json:"last_login_ip"`
 	APIKey         string         `gorm:"size:64" json:"-"`           // API密钥（AES加密存储）
 	APIEnabled     bool           `gorm:"default:false" json:"api_enabled"` // API是否开通
+	RefreshToken   string         `gorm:"size:512" json:"-"`          // Refresh Token
+	RefreshExpire  *time.Time     `json:"-"`                          // Refresh Token过期时间
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`

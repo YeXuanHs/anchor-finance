@@ -21,6 +21,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 	authenticated := r.Group("")
 	authenticated.Use(middleware.JWTAuth(authService))
 	authenticated.Use(middleware.AdminRequired())
+	authenticated.Use(middleware.CSRF())
 	{
 		// 认证相关
 		authenticated.GET("/auth/info", authHandler.GetInfo)

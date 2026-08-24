@@ -49,21 +49,57 @@ func CheckPassword(password, hash string) bool {
 	return err == nil
 }
 
-// GenerateToken 生成JWT Token
-func (s *AuthService) GenerateToken(userID uint, username string, isAdmin bool) (string, error) {
-	claims := Claims{
+// GenerateToken 生成JWT Token（Access + Refresh）
+func (s *AuthService) GenerateToken(userID uint, username string, isAdmin bool) (string, string, error) {
+	// Access Token（短期，2小时）
+	accessClaims := Claims{
 		UserID:   userID,
 		Username: username,
 		IsAdmin:  isAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(s.cfg.ExpireHour) * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "anchor-finance",
 		},
 	}
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
+	accessString, err := accessToken.SignedString([]byte(s.cfg.Secret))
+	if err != nil {
+		return "", "", err
+	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(s.cfg.Secret))
+	// Refresh Token（长期，7天）
+	refreshClaims := Claims{
+		UserID:   userID,
+		Username: username,
+		IsAdmin:  isAdmin,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "anchor-finance-refresh",
+		},
+	}
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
+	refreshString, err := refreshToken.SignedString([]byte(s.cfg.Secret))
+	if err != nil {
+		return "", "", err
+	}
+
+	// 存储Refresh Token到数据库
+	expireAt := time.Now().Add(7 * 24 * time.Hour)
+	if isAdmin {
+		s.db.Model(&model.Admin{}).Where("id = ?", userID).Updates(map[string]interface{}{
+			"refresh_token": refreshString,
+			"refresh_expire": &expireAt,
+		})
+	} else {
+		s.db.Model(&model.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+			"refresh_token": refreshString,
+			"refresh_expire": &expireAt,
+		})
+	}
+
+	return accessString, refreshString, nil
 }
 
 // ParseToken 解析JWT Token
@@ -84,7 +120,7 @@ func (s *AuthService) ParseToken(tokenString string) (*Claims, error) {
 }
 
 // AdminLogin 管理员登录（带防暴力破解+IP软锁）
-func (s *AuthService) AdminLogin(username, password, ip string) (string, error) {
+func (s *AuthService) AdminLogin(username, password, ip string) (string, string, error) {
 	// IP风控检查
 	if locked, msg := s.risk.IsLocked(username, ip); locked {
 		return "", errors.New(msg)
@@ -150,7 +186,7 @@ func (s *AuthService) AdminLogin(username, password, ip string) (string, error) 
 }
 
 // UserLogin 用户登录（M2修复：带防暴力破解锁定）
-func (s *AuthService) UserLogin(username, password, ip string) (string, error) {
+func (s *AuthService) UserLogin(username, password, ip string) (string, string, error) {
 	// IP风控检查
 	if locked, msg := s.risk.IsLocked(username, ip); locked {
 		return "", errors.New(msg)

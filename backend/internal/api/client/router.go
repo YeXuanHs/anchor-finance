@@ -114,6 +114,7 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		public.POST("/login", authHandler.Login)
 		public.POST("/register", authHandler.Register)
 		public.POST("/auth/reset-password", authHandler.ResetPassword)
+		public.POST("/auth/refresh", authHandler.RefreshToken)
 		public.POST("/auth/captcha", authHandler.SendCaptcha)
 		public.POST("/auth/login-by-code", authHandler.LoginByCode)
 		public.GET("/notices", GetNotices)

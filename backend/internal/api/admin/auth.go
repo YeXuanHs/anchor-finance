@@ -44,7 +44,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// 获取客户端IP
 	ip := c.ClientIP()
 
-	token, err := h.authService.AdminLogin(req.Username, req.Password, ip)
+	token, refreshToken, err := h.authService.AdminLogin(req.Username, req.Password, ip)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    401,
@@ -63,7 +63,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		"code":    0,
 		"message": "success",
 		"data": gin.H{
-			"token": token,
+			"token":         token,
+			"refresh_token": refreshToken,
 		},
 	})
 }
