@@ -206,7 +206,22 @@ func ZjmfCompatModuleStatus(c *gin.Context) {
 	}
 
 	if statusType == "reinstall" {
-		c.JSON(http.StatusOK, gin.H{"status": 200, "data": gin.H{"progress": 100, "status": "completed"}})
+		// 检查service的config是否记录了重装状态（从DB读取）
+		progress := 100
+		reinstallStatus := "completed"
+		if svc.Config != "" {
+			// 如果config中有reinstall_progress字段，使用它
+			var config map[string]interface{}
+			if json.Unmarshal([]byte(svc.Config), &config) == nil {
+				if p, ok := config["reinstall_progress"].(float64); ok {
+					progress = int(p)
+				}
+				if s, ok := config["reinstall_status"].(string); ok {
+					reinstallStatus = s
+				}
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"status": 200, "data": gin.H{"progress": progress, "status": reinstallStatus}})
 		return
 	}
 
@@ -1188,10 +1203,11 @@ func ZjmfCompatDcimReboot(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "重启成功"})
 }
 
-// ZjmfCompatDcimRescue POST /dcim/rescue - 救援模式
+// ZjmfCompatDcimRescue POST /dcim/rescue - 救援模式（从zjmf源码Dcim.php:810搬）
 func ZjmfCompatDcimRescue(c *gin.Context) {
 	var req struct {
-		ID uint `json:"id" form:"id"`
+		ID     uint   `json:"id" form:"id"`
+		System string `json:"system" form:"system"`
 	}
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
@@ -1210,7 +1226,35 @@ func ZjmfCompatDcimRescue(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"rescue_mode": true}})
+	// 检查是否有硬件配置
+	if svc.ServerID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "救援系统失败"})
+		return
+	}
+
+	var server model.Server
+	if err := db.First(&server, svc.ServerID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "该产品未选择接口"})
+		return
+	}
+
+	// 向IPMI发送救援指令（模拟zjmf的ipmiRescueSystem调用）
+	scheme := "https"
+	if !server.Secure {
+		scheme = "http"
+	}
+	ipmiURL := fmt.Sprintf("%s://%s:%d/api/rescue", scheme, server.Hostname, server.Port)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Post(ipmiURL, "application/json", nil)
+	if err != nil || resp == nil || resp.StatusCode >= 500 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "救援系统发起失败"})
+		return
+	}
+	if resp != nil {
+		resp.Body.Close()
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "发起救援系统成功", "data": gin.H{"rescue_mode": true}})
 }
 
 // ZjmfCompatDcimReinstall POST /dcim/reinstall - 重装系统
@@ -1453,20 +1497,47 @@ func ZjmfCompatUpgradeCheckoutProduct(c *gin.Context) {
 	})
 }
 
-// ZjmfCompatSslCertFunc POST /provision/sslCertFunc - SSL证书管理
+// ZjmfCompatSslCertFunc POST /provision/sslCertFunc - SSL证书管理（从zjmf源码ProvisionController.php:528搬）
 func ZjmfCompatSslCertFunc(c *gin.Context) {
 	var req struct {
-		ID uint `json:"id" form:"id"`
+		ID   uint   `json:"id" form:"id"`
+		Func string `json:"func" form:"func"`
 	}
 	c.ShouldBind(&req)
 
-	if req.ID > 0 {
-		db := database.GetDB()
-		var svc model.Service
-		db.First(&svc, req.ID)
-	}
+	db := database.GetDB()
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	// 根据func执行不同操作
+	switch req.Func {
+	case "getAllInfo":
+		// 返回SSL证书订单信息
+		if req.ID > 0 {
+			var svc model.Service
+			if err := db.First(&svc, req.ID).Error; err == nil {
+				c.JSON(http.StatusOK, gin.H{
+					"status": 200,
+					"msg":   "请求成功",
+					"data": gin.H{
+						"orderInfo": gin.H{
+							"id":          svc.ID,
+							"productid":   svc.ProductID,
+							"domain":      svc.Domain,
+							"status":      svc.Status,
+							"amount":      svc.Amount,
+							"billingcycle": svc.BillingCycle,
+							"regdate":     svc.CreatedAt.Format("2006-01-02"),
+						},
+						"cert_pinfo": gin.H{},
+					},
+				})
+				return
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"orderInfo": gin.H{}, "cert_pinfo": gin.H{}}})
+	default:
+		// 未知操作返回成功（zjmf也这样）
+		c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
+	}
 }
 
 // ZjmfCompatRefreshPowerStatus POST /dcim/refresh_power_status - 刷新电源状态
@@ -2320,7 +2391,22 @@ func ZjmfCompatDcimReinstallStatus(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"progress": 100, "status": "completed"}})
+	// 从service config读取重装进度（zjmf从dcim_servers表读取）
+	progress := 100
+	reinstallStatus := "completed"
+	if svc.Config != "" {
+		var config map[string]interface{}
+		if json.Unmarshal([]byte(svc.Config), &config) == nil {
+			if p, ok := config["reinstall_progress"].(float64); ok {
+				progress = int(p)
+			}
+			if s, ok := config["reinstall_status"].(string); ok {
+				reinstallStatus = s
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"progress": progress, "status": reinstallStatus}})
 }
 
 // ZjmfCompatDcimTraffic POST /dcim/traffic - 流量管理
@@ -2345,7 +2431,22 @@ func ZjmfCompatDcimTraffic(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"bwlimit": 0, "bwusage": 0}})
+	// 从service config读取带宽限制（zjmf从dcim_servers表读取bwlimit）
+	bwlimit := 0
+	bwusage := 0
+	if svc.Config != "" {
+		var config map[string]interface{}
+		if json.Unmarshal([]byte(svc.Config), &config) == nil {
+			if bl, ok := config["bwlimit"].(float64); ok {
+				bwlimit = int(bl)
+			}
+			if bu, ok := config["bwusage"].(float64); ok {
+				bwusage = int(bu)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"bwlimit": bwlimit, "bwusage": bwusage}})
 }
 
 // ZjmfCompatDcimTrafficUsage GET /dcim/traffic_usage - 流量使用统计
@@ -2363,8 +2464,24 @@ func ZjmfCompatDcimTrafficUsage(c *gin.Context) {
 		return
 	}
 
-	// 我们没有流量统计系统，返回零值
-	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"incoming": 0, "outgoing": 0, "total": 0}})
+	// 从service config读取流量使用数据（zjmf从dcim_servers表读取）
+	incoming := 0
+	outgoing := 0
+	total := 0
+	if svc.Config != "" {
+		var config map[string]interface{}
+		if json.Unmarshal([]byte(svc.Config), &config) == nil {
+			if v, ok := config["incoming"].(float64); ok {
+				incoming = int(v)
+			}
+			if v, ok := config["outgoing"].(float64); ok {
+				outgoing = int(v)
+			}
+			total = incoming + outgoing
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{"incoming": incoming, "outgoing": outgoing, "total": total}})
 }
 
 // ZjmfCompatCartHostinfo GET /cart/hostinfo - 购物车中商品对应的主机信息
