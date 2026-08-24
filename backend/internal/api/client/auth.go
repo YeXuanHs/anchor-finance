@@ -40,7 +40,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.authService.UserLogin(req.Username, req.Password, c.ClientIP())
+	token, refreshToken, err := h.authService.UserLogin(req.Username, req.Password, c.ClientIP())
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 401, "message": "操作失败", "data": nil})
 		return
