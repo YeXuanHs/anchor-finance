@@ -120,6 +120,12 @@ func main() {
 		// DCIM服务器管理
 		&model.Server{},
 		&model.DcimServer{},
+		// 产品配置选项（5张表，从zjmf搬的表结构）
+		&model.ProductConfigGroup{},
+		&model.ProductConfigOption{},
+		&model.ProductConfigOptionSub{},
+		&model.ProductConfigLink{},
+		&model.ProductConfigPricing{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

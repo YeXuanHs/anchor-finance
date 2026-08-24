@@ -680,24 +680,94 @@ func ZjmfCompatProductConfig(c *gin.Context) {
 		"triennially": "-1.00",
 	}}
 
-	// 解析产品的ConfigOptions构建config_groups
+	// 从5张表构建config_groups（和zjmf源码getConfigInfo一致）
 	var configGroups []gin.H
 	var configLinks []int
-	if product.ConfigOptions != "" {
-		var options []map[string]interface{}
-		if jsonErr := json.Unmarshal([]byte(product.ConfigOptions), &options); jsonErr == nil && len(options) > 0 {
-			configLinks = append(configLinks, int(product.ID))
-			group := gin.H{
-				"id":       product.ID,
-				"name":     product.Name + "配置项组",
-				"desc":     product.Name,
-				"options":  options,
-			}
-			configGroups = append(configGroups, group)
+
+	// 查product_config_links获取产品关联的分组
+	var links []model.ProductConfigLink
+	db.Where("pid = ?", product.ID).Find(&links)
+
+	for _, link := range links {
+		var group model.ProductConfigGroup
+		if err := db.First(&group, link.GID).Error; err != nil {
+			continue
 		}
+		configLinks = append(configLinks, int(link.GID))
+
+		// 查该分组下的所有配置选项
+		var options []model.ProductConfigOption
+		db.Where("gid = ? AND hidden = false", group.ID).Order("`order` ASC, id ASC").Find(&options)
+
+		var optionList []gin.H
+		for _, opt := range options {
+			// 查子选项
+			var subs []model.ProductConfigOptionSub
+			db.Where("config_id = ? AND hidden = false", opt.ID).Order("sort_order ASC, id ASC").Find(&subs)
+
+			var subList []gin.H
+			for _, sub := range subs {
+				// 查定价
+				var pricings []model.ProductConfigPricing
+				db.Where("relid = ? AND type = ?", sub.ID, "config_option").Find(&pricings)
+
+				subEntry := gin.H{
+					"id":         sub.ID,
+					"config_id":  sub.ConfigID,
+					"option_name": sub.OptionName,
+					"sort_order": sub.SortOrder,
+					"hidden":     sub.Hidden,
+					"upstream_id": sub.UpstreamID,
+				}
+				if len(pricings) > 0 {
+					p := pricings[0]
+					subEntry["pricings"] = gin.H{
+						"monthly": p.Monthly, "quarterly": p.Quarterly,
+						"semiannually": p.Semiannual, "annually": p.Annually,
+						"biennially": p.Biennially, "triennially": p.Triennially,
+					}
+				}
+				subList = append(subList, subEntry)
+			}
+
+			optEntry := gin.H{
+				"id":           opt.ID,
+				"option_name":  opt.OptionName,
+				"option_type":  opt.OptionType,
+				"order":        opt.Order,
+				"hidden":       opt.Hidden,
+				"auto":         opt.Auto,
+				"is_discount":  opt.IsDiscount,
+				"is_rebate":    opt.IsRebate,
+				"qty_minimum":  opt.QtyMinimum,
+				"qty_maximum":  opt.QtyMaximum,
+				"qty_stage":    opt.QtyStage,
+				"unit":         opt.Unit,
+				"upgrade":      opt.Upgrade,
+				"notes":        opt.Notes,
+				"upstream_id":  opt.UpstreamID,
+				"linkage_pid":  opt.LinkagePID,
+				"linkage_top_pid": opt.LinkageTopPID,
+				"linkage_level": opt.LinkageLevel,
+				"senior":       opt.Senior,
+				"sub":          subList,
+			}
+			optionList = append(optionList, optEntry)
+		}
+
+		configGroups = append(configGroups, gin.H{
+			"id":          group.ID,
+			"name":        group.Name,
+			"description": group.Description,
+			"options":     optionList,
+		})
 	}
+
 	if configGroups == nil {
 		configGroups = []gin.H{}
+	}
+	if configLinks == nil {
+		configLinks = []int{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -913,15 +983,39 @@ func ZjmfCompatProductDetail(c *gin.Context) {
 			"product_pricings":           productPricings,
 			"advanced":                   []gin.H{},
 			"config_groups": func() []gin.H {
-				if p.ConfigOptions != "" {
-					var options []map[string]interface{}
-					if json.Unmarshal([]byte(p.ConfigOptions), &options) == nil && len(options) > 0 {
-						return []gin.H{{"id": p.ID, "name": p.Name, "options": options}}
+				var cgs []gin.H
+				var cls []int
+				var pLinks []model.ProductConfigLink
+				db.Where("pid = ?", p.ID).Find(&pLinks)
+				for _, pl := range pLinks {
+					var grp model.ProductConfigGroup
+					if db.First(&grp, pl.GID).Error != nil { continue }
+					cls = append(cls, int(pl.GID))
+					var opts []model.ProductConfigOption
+					db.Where("gid = ? AND hidden = false", grp.ID).Order("`order` ASC, id ASC").Find(&opts)
+					var optList []gin.H
+					for _, o := range opts {
+						var subs []model.ProductConfigOptionSub
+						db.Where("config_id = ? AND hidden = false", o.ID).Order("sort_order ASC, id ASC").Find(&subs)
+						var subList []gin.H
+						for _, s := range subs {
+							subList = append(subList, gin.H{"id": s.ID, "config_id": s.ConfigID, "option_name": s.OptionName, "sort_order": s.SortOrder, "hidden": s.Hidden, "upstream_id": s.UpstreamID})
+						}
+						optList = append(optList, gin.H{"id": o.ID, "option_name": o.OptionName, "option_type": o.OptionType, "order": o.Order, "hidden": o.Hidden, "auto": o.Auto, "qty_minimum": o.QtyMinimum, "qty_maximum": o.QtyMaximum, "upgrade": o.Upgrade, "upstream_id": o.UpstreamID, "sub": subList})
 					}
+					cgs = append(cgs, gin.H{"id": grp.ID, "name": grp.Name, "description": grp.Description, "options": optList})
 				}
-				return []gin.H{}
+				if cgs == nil { cgs = []gin.H{} }
+				return cgs
 			}(),
-			"config_links":               func() []int { if p.ConfigOptions != "" { return []int{int(p.ID)} }; return []int{} }(),
+			"config_links": func() []int {
+				var cls []int
+				var pLinks []model.ProductConfigLink
+				db.Where("pid = ?", p.ID).Find(&pLinks)
+				for _, pl := range pLinks { cls = append(cls, int(pl.GID)) }
+				if cls == nil { cls = []int{} }
+				return cls
+			}(),
 		}
 	}
 
