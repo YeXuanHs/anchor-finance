@@ -44,12 +44,13 @@ func (TicketDepartment) TableName() string {
 
 // TicketStatus 工单状态模型
 type TicketStatus struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Value     string    `gorm:"size:20;uniqueIndex;not null" json:"value"`
-	Label     string    `gorm:"size:50;not null" json:"label"`
-	SortOrder int       `gorm:"default:0" json:"sort_order"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	Value     string         `gorm:"size:20;uniqueIndex;not null" json:"value"`
+	Label     string         `gorm:"size:50;not null" json:"label"`
+	SortOrder int            `gorm:"default:0" json:"sort_order"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // TableName 指定表名

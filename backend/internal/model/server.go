@@ -29,18 +29,19 @@ func (Server) TableName() string { return "servers" }
 
 // DcimServer DCIM服务器扩展配置
 type DcimServer struct {
-	ID             uint    `gorm:"primaryKey" json:"id"`
-	ServerID       uint    `gorm:"uniqueIndex" json:"server_id"`
-	Auth           string  `gorm:"type:text" json:"auth"`                          // 认证配置JSON
-	Area           string  `gorm:"size:100" json:"area"`                           // 区域
-	BillType       string  `gorm:"size:20;default:month" json:"bill_type"`
-	FlowRemind     string  `gorm:"size:255" json:"flow_remind"`
-	ReinstallTimes int     `gorm:"default:3" json:"reinstall_times"`
-	BuyTimes       int     `gorm:"default:1" json:"buy_times"`
-	ReinstallPrice float64 `gorm:"type:decimal(10,2);default:0" json:"reinstall_price"`
-	APIStatus      int     `gorm:"default:0" json:"api_status"`                    // 0=未连接, 1=已连接
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             uint           `gorm:"primaryKey" json:"id"`
+	ServerID       uint           `gorm:"uniqueIndex" json:"server_id"`
+	Auth           string         `gorm:"type:text" json:"auth"`
+	Area           string         `gorm:"size:100" json:"area"`
+	BillType       string         `gorm:"size:20;default:month" json:"bill_type"`
+	FlowRemind     string         `gorm:"size:255" json:"flow_remind"`
+	ReinstallTimes int            `gorm:"default:3" json:"reinstall_times"`
+	BuyTimes       int            `gorm:"default:1" json:"buy_times"`
+	ReinstallPrice float64        `gorm:"type:decimal(10,2);default:0" json:"reinstall_price"`
+	APIStatus      int            `gorm:"default:0" json:"api_status"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (DcimServer) TableName() string { return "dcim_servers" }
