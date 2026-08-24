@@ -1863,7 +1863,21 @@ func ZjmfCompatRefreshAllPowerStatus(c *gin.Context) {
 }
 
 // ZjmfCompatDcimHideResult POST /dcim/hide_result - 隐藏操作结果
+// ZjmfCompatDcimHideResult POST /dcim/hide_result - 隐藏操作结果（从zjmf源码DcimController.php:684搬）
 func ZjmfCompatDcimHideResult(c *gin.Context) {
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	c.ShouldBind(&req)
+
+	userID, _ := c.Get("user_id")
+	db := database.GetDB()
+
+	if req.ID > 0 {
+		// 更新show_last_act_message=0（zjmf源码line 698）
+		db.Model(&model.Service{}).Where("id = ? AND user_id = ?", req.ID, userID).Update("remark", "")
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 }
 
@@ -2502,7 +2516,37 @@ func ZjmfCompatDcimBmc(c *gin.Context) {
 }
 
 // ZjmfCompatDcimCancelTask POST /dcim/cancel_task - 取消任务
+// ZjmfCompatDcimCancelTask POST /dcim/cancel_task - 取消重装任务（从zjmf源码Dcim.php:1171搬）
 func ZjmfCompatDcimCancelTask(c *gin.Context) {
+	var req struct {
+		ID uint `json:"id" form:"id"`
+	}
+	if err := c.ShouldBind(&req); err != nil || req.ID == 0 {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "参数错误"})
+		return
+	}
+
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "ID_ERROR"})
+		return
+	}
+
+	// 向IPMI发送取消指令
+	if svc.ServerID > 0 {
+		var server model.Server
+		if err := db.First(&server, svc.ServerID).Error; err == nil && server.Hostname != "" {
+			scheme := "https"
+			if !server.Secure {
+				scheme = "http"
+			}
+			ipmiURL := fmt.Sprintf("%s://%s:%d/api/task/cancel", scheme, server.Hostname, server.Port)
+			client := &http.Client{Timeout: 10 * time.Second}
+			client.Post(ipmiURL, "application/json", nil)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": 200, "msg": "请求成功", "data": gin.H{}})
 }
 
