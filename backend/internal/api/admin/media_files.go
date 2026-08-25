@@ -182,7 +182,7 @@ func GetMediaFileReferences(c *gin.Context) {
 	var heroes []model.HomeHero
 	db.Where("image_url = ?", file.Path).Find(&heroes)
 	for _, h := range heroes {
-		references = append(references, map[string]interface{}{"type": "home_hero", "id": h.ID, "title": h.Title})
+		references = append(references, map[string]interface{}{"type": "home_hero", "id": h.ID, "title": "Home Hero"})
 	}
 
 	if references == nil { references = []map[string]interface{}{} }

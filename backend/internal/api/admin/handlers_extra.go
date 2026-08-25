@@ -792,23 +792,6 @@ func DeleteDownloadCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "删除成功", "data": nil})
 }
 
-// ==================== Home Hero Assets ====================
-
-// GetHomeHeroAssets 获取首页Hero可用资源文件（扫描uploads目录）
-func GetHomeHeroAssets(c *gin.Context) {
-	db := database.GetDB()
-	var files []model.MediaFile
-	db.Where("mime_type LIKE ?", "image/%").Order("id DESC").Limit(50).Find(&files)
-
-	images := []string{}
-	for _, f := range files {
-		images = append(images, f.Path)
-	}
-	if images == nil { images = []string{} }
-
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": gin.H{"images": images, "videos": []string{}}})
-}
-
 // ==================== Admin 用户服务子操作 ====================
 
 // GetUserEmailLogs 获取用户邮件日志
