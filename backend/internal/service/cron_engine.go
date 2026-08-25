@@ -152,13 +152,32 @@ func (e *CronEngine) executeTask(task model.ScheduleTask) {
 	}
 
 	var err error
+	// 遍历所有供应商执行同步
+	var suppliers []model.Supplier
+	e.db.Where("status = ?", "active").Find(&suppliers)
+	for _, supplier := range suppliers {
+		switch task.Type {
+		case "supplier_price_sync":
+			if e := e.supplierSync.SyncAllPrices(supplier.ID); e != nil {
+				err = e
+			}
+		case "supplier_stock_sync":
+			if e := e.supplierSync.SyncAllProducts(supplier.ID); e != nil {
+				err = e
+			}
+		case "supplier_full_sync":
+			if e := e.supplierSync.SyncAllProducts(supplier.ID); e != nil {
+				err = e
+			}
+			if e := e.supplierSync.SyncAllPrices(supplier.ID); e != nil {
+				err = e
+			}
+			if e := e.supplierSync.SyncProductStatus(supplier.ID); e != nil {
+				err = e
+			}
+		}
+	}
 	switch task.Type {
-	case "supplier_price_sync":
-		err = e.supplierSync.SyncAllPrices()
-	case "supplier_stock_sync":
-		err = e.supplierSync.SyncAllStocks()
-	case "supplier_full_sync":
-		err = e.supplierSync.SyncAllFull()
 	case "ai_ticket_process":
 		e.processAITickets()
 	case "suspend_check":
@@ -188,8 +207,8 @@ func (e *CronEngine) executeTask(task model.ScheduleTask) {
 
 // processAITickets 处理AI工单队列
 func (e *CronEngine) processAITickets() {
-	aiTicketSvc := NewAITicketService(e.db)
-	processed, err := aiTicketSvc.ProcessQueue()
+	aiTicketSvc := NewAITicketService()
+	processed, err := aiTicketSvc.ProcessQueue(10)
 	if err != nil {
 		log.Printf("[Cron] AI ticket process error: %v", err)
 		return
