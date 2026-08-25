@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
@@ -9,12 +10,32 @@ import (
 	"gorm.io/gorm"
 )
 
-// GetClientHomeHero 用户前台获取首页Hero配置
-// GET /api/client/home-hero
+// GetClientHomeHero 用户前台获取首页Hero配置（MD 11.3：GET /api/client/home-hero）
+// 返回JSON格式的Hero配置，包含slides和features
 func GetClientHomeHero(c *gin.Context) {
 	db := database.GetDB()
 	var hero model.HomeHero
-	if err := db.Where("is_active = ?", true).Order("id DESC").First(&hero).Error; err != nil {
+
+	// 优先获取默认配置
+	if err := db.Where("is_default = ? AND status = ?", true, "active").First(&hero).Error; err != nil {
+		// 回退到任意active配置
+		if err := db.Where("status = ?", "active").Order("id ASC").First(&hero).Error; err != nil {
+			// 无配置时返回空结构
+			c.JSON(http.StatusOK, gin.H{
+				"code": 0, "message": "success",
+				"data": gin.H{
+					"slides":   []interface{}{},
+					"features": []interface{}{},
+				},
+			})
+			return
+		}
+	}
+
+	// 解析config JSON并返回
+	var config map[string]interface{}
+	if err := json.Unmarshal([]byte(hero.Config), &config); err != nil {
+		// JSON解析失败，返回空结构
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0, "message": "success",
 			"data": gin.H{
@@ -25,7 +46,7 @@ func GetClientHomeHero(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": hero})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": config})
 }
 
 // GetContentOverview 获取首页内容概览

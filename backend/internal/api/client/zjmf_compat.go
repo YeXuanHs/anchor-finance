@@ -2605,6 +2605,104 @@ func ZjmfCompatUpgradeConfigPost(c *gin.Context) {
 
 // ==================== 补充缺失端点 ====================
 
+// ZjmfCompatProductById zjmf兼容单个商品详情（GET /api/v1/product/:id）
+// zjmf源码(v10.php:30): zjmfCurl($apiId, "api/v1/product/" . $data["upstream_pid"], [], 30, "GET")
+// zjmf取 $result["data"]["product"] 获取 pay_type, auto_setup, stock_control, qty, price, cycle 等
+func ZjmfCompatProductById(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "msg": "缺少id"})
+		return
+	}
+
+	db := database.GetDB()
+	var product model.Product
+	if err := db.First(&product, id).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "产品不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "请求成功",
+		"data": gin.H{
+			"product": gin.H{
+				"id":            product.ID,
+				"name":          product.Name,
+				"description":   product.Description,
+				"type":          product.Type,
+				"gid":           product.GroupID,
+				"pay_type": func() string {
+					switch product.BillingCycle {
+					case "onetime":
+						return "onetime"
+					case "free":
+						return "free"
+					default:
+						return "recurring_prepayment"
+					}
+				}(),
+				"auto_setup":    true,
+				"stock_control": product.StockControl,
+				"qty":           product.Qty,
+				"cancel_control": 1,
+				"price":         fmt.Sprintf("%.2f", product.Price),
+				"cycle":         product.BillingCycle,
+				"hidden":        product.Hidden,
+				"status":        product.Status,
+			},
+		},
+	})
+}
+
+// ZjmfCompatProvisionCustomContent zjmf兼容自定义开通页面内容（POST /zjmf_api/provision/custom/content）
+// zjmf源码(ProvisionController.php:246): zjmfCurl($host["zjmf_api_id"], "/zjmf_api/provision/custom/content?jwt=...", $post_data)
+// zjmf取 $res["data"]["html"] 渲染页面
+func ZjmfCompatProvisionCustomContent(c *gin.Context) {
+	jwt := c.Query("jwt")
+
+	var req struct {
+		ID     uint   `json:"id" form:"id"`
+		Key    string `json:"key" form:"key"`
+		APIURL string `json:"api_url" form:"api_url"`
+		NowJWT string `json:"now_jwt" form:"now_jwt"`
+	}
+	c.ShouldBind(&req)
+
+	if jwt == "" {
+		jwt = req.NowJWT
+	}
+
+	_ = jwt // JWT可用于后续鉴权
+
+	db := database.GetDB()
+	var svc model.Service
+	if req.ID > 0 {
+		if err := db.First(&svc, req.ID).Error; err != nil {
+			c.JSON(http.StatusOK, gin.H{"status": 404, "msg": "服务不存在"})
+			return
+		}
+	}
+
+	// 返回基础管理页面HTML（锚点无真实硬件，返回状态信息页）
+	html := fmt.Sprintf(`<div style="padding:20px;font-family:Arial,sans-serif;">
+		<h3>服务管理面板</h3>
+		<p><b>服务ID:</b> %d</p>
+		<p><b>产品ID:</b> %d</p>
+		<p><b>状态:</b> %s</p>
+		<p><b>域名:</b> %s</p>
+		<p style="color:#888;margin-top:20px;">当前由锚点财务系统管理</p>
+	</div>`, svc.ID, svc.ProductID, svc.Status, svc.Domain)
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 200,
+		"msg":   "请求成功",
+		"data": gin.H{
+			"html": html,
+		},
+	})
+}
+
 // ZjmfCompatDcimBmc POST /dcim/bmc - BMC管理
 func ZjmfCompatDcimBmc(c *gin.Context) {
 	var req struct {

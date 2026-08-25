@@ -2,12 +2,14 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
 	"github.com/YeXuanHs/anchor-finance/internal/database"
 	"github.com/YeXuanHs/anchor-finance/internal/model"
 	"github.com/YeXuanHs/anchor-finance/internal/pluginengine"
+	"github.com/YeXuanHs/anchor-finance/internal/util"
 	"gorm.io/gorm"
 )
 
@@ -59,10 +61,10 @@ type RemoteProduct struct {
 
 // RemoteGroup 上游商品分组（MD 7.3）
 type RemoteGroup struct {
-	ID       string        `json:"id"`
-	Name     string        `json:"name"`
-	ParentID string        `json:"parent_id"`
-	Children []RemoteGroup `json:"children,omitempty"`
+	ID       string          `json:"id"`
+	Name     string          `json:"name"`
+	ParentID string          `json:"parent_id"`
+	Children []RemoteGroup   `json:"children,omitempty"`
 	Products []RemoteProduct `json:"products,omitempty"`
 }
 
@@ -131,8 +133,8 @@ func NewPluginDriver(supplier model.Supplier) *PluginDriver {
 	}
 }
 
-func (d *PluginDriver) Key() string   { return d.slug }
-func (d *PluginDriver) Name() string  { return d.slug }
+func (d *PluginDriver) Key() string  { return d.slug }
+func (d *PluginDriver) Name() string { return d.slug }
 func (d *PluginDriver) Capabilities() []string {
 	return []string{"provisioning", "renewal", "status_sync", "product_sync"}
 }
@@ -318,11 +320,45 @@ func (s *SupplierSyncService) GetDriver(supplierID uint) UpstreamDriver {
 	return s.drivers[supplierID]
 }
 
+// getOrCreateDriver 获取已注册的驱动，或按供应商类型自动创建（修复cron无法工作的问题）
+// 关键修复：cron启动时drivers map为空，需要从DB读取supplier并自动创建driver
+func (s *SupplierSyncService) getOrCreateDriver(supplierID uint) (UpstreamDriver, error) {
+	// 先查已注册的缓存
+	if d := s.GetDriver(supplierID); d != nil {
+		return d, nil
+	}
+	// 从数据库读取供应商信息，按类型自动创建驱动
+	db := database.GetDB()
+	var supplier model.Supplier
+	if err := db.First(&supplier, supplierID).Error; err != nil {
+		return nil, fmt.Errorf("供应商不存在: %d", supplierID)
+	}
+	// 解密API密钥（AES加密存储）
+	apiKey := supplier.APIKey
+	apiSecret := supplier.APISecret
+	if apiKey != "" {
+		if dec, err := util.DecryptAES(apiKey); err == nil {
+			apiKey = dec
+		}
+	}
+	if apiSecret != "" {
+		if dec, err := util.DecryptAES(apiSecret); err == nil {
+			apiSecret = dec
+		}
+	}
+	supplier.APIKey = apiKey
+	supplier.APISecret = apiSecret
+	driver := NewDriver(supplier)
+	// 缓存到map，避免重复创建
+	s.RegisterDriver(supplierID, driver)
+	return driver, nil
+}
+
 // SyncAllProducts 同步所有供应商商品（多线程，自动创建分组+自动上架）
 func (s *SupplierSyncService) SyncAllProducts(supplierID uint) error {
-	driver := s.GetDriver(supplierID)
-	if driver == nil {
-		return fmt.Errorf("供应商驱动未注册: %d", supplierID)
+	driver, err := s.getOrCreateDriver(supplierID)
+	if err != nil {
+		return fmt.Errorf("获取供应商驱动失败: %w", err)
 	}
 
 	// MD 7.2.2: 拉取上游分组并自动创建本地分组（需开启auto_create_groups）
@@ -417,11 +453,19 @@ func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct
 			db.Create(&product)
 		}
 	} else {
-		// 已有商品，更新价格和库存
+		// 已有商品，更新价格、利润率和库存
 		oldStock := existing.Stock
+
+		// 重新计算local_price（上游价格可能已变）
+		profitRate := existing.ProfitRate
+		if profitRate <= 0 {
+			profitRate = float64(GetSettingInt("default_profit_rate", 25))
+		}
+		localPrice := p.Price * (1 + profitRate/100)
 
 		db.Model(&existing).Updates(map[string]interface{}{
 			"remote_price": p.Price,
+			"local_price":  localPrice,
 			"stock":        p.Stock,
 			"name":         p.Name,
 		})
@@ -436,9 +480,9 @@ func (s *SupplierSyncService) syncSingleProduct(supplierID uint, p RemoteProduct
 
 // SyncAllPrices 同步所有供应商价格
 func (s *SupplierSyncService) SyncAllPrices(supplierID uint) error {
-	driver := s.GetDriver(supplierID)
-	if driver == nil {
-		return fmt.Errorf("供应商驱动未注册: %d", supplierID)
+	driver, err := s.getOrCreateDriver(supplierID)
+	if err != nil {
+		return fmt.Errorf("获取供应商驱动失败: %w", err)
 	}
 
 	products, err := driver.FetchProducts()
@@ -520,8 +564,8 @@ func (s *SupplierSyncService) StartPriceSyncCron() {
 			var suppliers []model.Supplier
 			db.Where("status = ?", "active").Find(&suppliers)
 			for _, supplier := range suppliers {
-				if s.GetDriver(supplier.ID) != nil {
-					s.SyncAllPrices(supplier.ID)
+				if err := s.SyncAllPrices(supplier.ID); err != nil {
+					log.Printf("[Cron] 供应商 %s 价格同步失败: %v", supplier.Name, err)
 				}
 			}
 		}
@@ -545,8 +589,8 @@ func (s *SupplierSyncService) StartStockSyncCron() {
 			var suppliers []model.Supplier
 			db.Where("status = ?", "active").Find(&suppliers)
 			for _, supplier := range suppliers {
-				if s.GetDriver(supplier.ID) != nil {
-					s.SyncAllProducts(supplier.ID)
+				if err := s.SyncAllProducts(supplier.ID); err != nil {
+					log.Printf("[Cron] 供应商 %s 库存同步失败: %v", supplier.Name, err)
 				}
 			}
 		}
@@ -566,10 +610,15 @@ func (s *SupplierSyncService) StartFullSyncCron() {
 			var suppliers []model.Supplier
 			db.Where("status = ?", "active").Find(&suppliers)
 			for _, supplier := range suppliers {
-				if s.GetDriver(supplier.ID) != nil {
-					s.SyncAllProducts(supplier.ID)
-					s.SyncAllPrices(supplier.ID)
-					s.SyncProductStatus(supplier.ID)
+				log.Printf("[Cron] 开始全量同步供应商: %s", supplier.Name)
+				if err := s.SyncAllProducts(supplier.ID); err != nil {
+					log.Printf("[Cron] 供应商 %s 全量商品同步失败: %v", supplier.Name, err)
+				}
+				if err := s.SyncAllPrices(supplier.ID); err != nil {
+					log.Printf("[Cron] 供应商 %s 全量价格同步失败: %v", supplier.Name, err)
+				}
+				if err := s.SyncProductStatus(supplier.ID); err != nil {
+					log.Printf("[Cron] 供应商 %s 状态同步失败: %v", supplier.Name, err)
 				}
 			}
 		}
@@ -596,10 +645,11 @@ func (s *SupplierSyncService) autoCreateGroups(groups []RemoteGroup) {
 }
 
 // SyncProductStatus 同步商品状态（MD 7.2.4：上游隐藏/删除时本地自动同步）
+// 关键修复：使用DisableReason区分自动禁用和手动禁用
 func (s *SupplierSyncService) SyncProductStatus(supplierID uint) error {
-	driver := s.GetDriver(supplierID)
-	if driver == nil {
-		return fmt.Errorf("供应商驱动未注册: %d", supplierID)
+	driver, err := s.getOrCreateDriver(supplierID)
+	if err != nil {
+		return fmt.Errorf("获取供应商驱动失败: %w", err)
 	}
 
 	remoteProducts, err := driver.FetchProducts()
@@ -619,9 +669,17 @@ func (s *SupplierSyncService) SyncProductStatus(supplierID uint) error {
 	for _, lp := range localProducts {
 		_, exists := remoteMap[lp.RemoteProductID]
 		if !exists && lp.Status == "active" {
-			db.Model(&lp).Update("status", "disabled")
-		} else if exists && lp.Status == "disabled" {
-			db.Model(&lp).Update("status", "active")
+			// MD 7.2.4: 上游已删除/隐藏，本地自动禁用，标记原因为upstream_removed
+			db.Model(&lp).Updates(map[string]interface{}{
+				"status":         "disabled",
+				"disable_reason": "upstream_removed",
+			})
+		} else if exists && lp.Status == "disabled" && lp.DisableReason == "upstream_removed" {
+			// MD 7.2.4: 上游恢复，本地自动启用（仅恢复因upstream_removed禁用的商品）
+			db.Model(&lp).Updates(map[string]interface{}{
+				"status":         "active",
+				"disable_reason": "",
+			})
 		}
 	}
 	return nil

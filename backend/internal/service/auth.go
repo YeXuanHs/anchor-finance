@@ -15,17 +15,19 @@ import (
 
 // AuthService 认证服务
 type AuthService struct {
-	db    *gorm.DB
-	cfg   *config.JWTConfig
-	risk  *LoginRiskControl
+	db      *gorm.DB
+	cfg     *config.JWTConfig
+	risk    *LoginRiskControl
+	secLog  *SecurityLogger
 }
 
 // NewAuthService 创建认证服务
 func NewAuthService(db *gorm.DB, cfg *config.JWTConfig) *AuthService {
 	return &AuthService{
-		db:   db,
-		cfg:  cfg,
-		risk: NewLoginRiskControl(db),
+		db:     db,
+		cfg:    cfg,
+		risk:   NewLoginRiskControl(db),
+		secLog: NewSecurityLogger(db),
 	}
 }
 
@@ -252,8 +254,9 @@ func (s *AuthService) UnlockAdmin(adminID uint) error {
 	}).Error
 }
 
-// logSecurityEvent 记录安全事件
+// logSecurityEvent 记录安全事件（MD 9.1：记录到security_logs表）
 func (s *AuthService) logSecurityEvent(adminID uint, username, ip, eventType string) {
+	// 同时记录到operation_logs（兼容）
 	s.db.Create(&model.OperationLog{
 		UserID:   adminID,
 		Username: username,
@@ -262,6 +265,16 @@ func (s *AuthService) logSecurityEvent(adminID uint, username, ip, eventType str
 		Detail:   "安全事件: " + eventType,
 		IP:       ip,
 	})
+
+	// 记录到独立的安全审计日志（MD 9.1 功能9）
+	attackType := eventType
+	switch eventType {
+	case "admin_login_fail", "admin_login_locked":
+		attackType = AttackBruteForce
+	case "user_login_fail", "user_login_locked":
+		attackType = AttackBruteForce
+	}
+	s.secLog.LogSecurityEvent(attackType, adminID, username, ip, "", "POST", "", "", eventType, nil)
 }
 
 // GenerateTokenStatic 静态版本GenerateToken（用于zjmf兼容登录等不需要AuthService实例的场景）

@@ -1361,13 +1361,36 @@ func SyncSupplierProducts(c *gin.Context) {
 	}
 
 	synced := 0
+	defaultProfitRate := float64(service.GetSettingInt("default_profit_rate", 25))
 	for _, p := range products {
 		var existing model.SupplierProduct
 		result := db.Where("supplier_id = ? AND remote_product_id = ?", supplier.ID, p.ID).First(&existing)
 		if result.Error != nil {
-			db.Create(&model.SupplierProduct{SupplierID: supplier.ID, RemoteProductID: p.ID, Name: p.Name, RemotePrice: p.Price, Stock: p.Stock, Status: "active"})
+			// 新商品：设置默认利润率和本地价格（MD 7.2.4）
+			localPrice := p.Price * (1 + defaultProfitRate/100)
+			db.Create(&model.SupplierProduct{
+				SupplierID:      supplier.ID,
+				RemoteProductID: p.ID,
+				Name:            p.Name,
+				RemotePrice:     p.Price,
+				LocalPrice:      localPrice,
+				ProfitRate:      defaultProfitRate,
+				Stock:           p.Stock,
+				Status:          "active",
+			})
 		} else {
-			db.Model(&existing).Updates(map[string]interface{}{"name": p.Name, "remote_price": p.Price, "stock": p.Stock})
+			// 已有商品：重新计算local_price（MD 7.2.4）
+			profitRate := existing.ProfitRate
+			if profitRate <= 0 {
+				profitRate = defaultProfitRate
+			}
+			localPrice := p.Price * (1 + profitRate/100)
+			db.Model(&existing).Updates(map[string]interface{}{
+				"name":         p.Name,
+				"remote_price": p.Price,
+				"local_price":  localPrice,
+				"stock":        p.Stock,
+			})
 		}
 		synced++
 	}
@@ -1427,10 +1450,21 @@ func SyncSupplierStock(c *gin.Context) {
 	}
 
 	updated := 0
+	defaultProfitRate := float64(service.GetSettingInt("default_profit_rate", 25))
 	for _, p := range products {
 		var existing model.SupplierProduct
 		if err := db.Where("supplier_id = ? AND remote_product_id = ?", supplier.ID, p.ID).First(&existing).Error; err == nil {
-			db.Model(&existing).Update("stock", p.Stock)
+			// 同步库存时也更新local_price（上游价格可能已变，MD 7.2.4）
+			profitRate := existing.ProfitRate
+			if profitRate <= 0 {
+				profitRate = defaultProfitRate
+			}
+			localPrice := p.Price * (1 + profitRate/100)
+			db.Model(&existing).Updates(map[string]interface{}{
+				"stock":        p.Stock,
+				"remote_price": p.Price,
+				"local_price":  localPrice,
+			})
 			updated++
 		}
 	}

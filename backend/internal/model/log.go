@@ -59,3 +59,27 @@ type LoginLog struct {
 func (LoginLog) TableName() string {
 	return "login_logs"
 }
+
+// SecurityLog 安全审计日志模型（MD 9.1 功能9：安全审计日志）
+// 记录所有安全事件：0元购/SQL注入/暴力破解/越权等
+type SecurityLog struct {
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	AttackType string    `gorm:"size:50;index" json:"attack_type"`   // zero_price/sql_inject/brute_force/idor/csrf/registration_abuse
+	UserID     uint      `gorm:"index" json:"user_id"`
+	Username   string    `gorm:"size:100" json:"username"`
+	IP         string    `gorm:"size:45;index" json:"ip"`
+	RealIP     string    `gorm:"size:45" json:"real_ip"`             // X-Forwarded-For
+	Path       string    `gorm:"size:500" json:"path"`
+	Method     string    `gorm:"size:10" json:"method"`
+	UserAgent  string    `gorm:"size:500" json:"user_agent"`
+	SessionID  string    `gorm:"size:100" json:"session_id"`
+	Referer    string    `gorm:"size:500" json:"referer"`
+	Params     string    `gorm:"type:text" json:"params"`            // 脱敏后的请求参数
+	Detail     string    `gorm:"type:text" json:"detail"`
+	CreatedAt  time.Time `gorm:"index" json:"created_at"`
+}
+
+// TableName 指定表名
+func (SecurityLog) TableName() string {
+	return "security_logs"
+}

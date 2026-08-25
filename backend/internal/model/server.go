@@ -16,7 +16,7 @@ type Server struct {
 	Port       int            `gorm:"default:443" json:"port"`                      // 端口
 	Secure     bool           `gorm:"default:true" json:"secure"`                   // 是否HTTPS
 	AccessHash string         `gorm:"size:255" json:"-"`                            // 访问哈希
-	ServerType string         `gorm:"size:20;default:dcim" json:"server_type"`      // dcim/normal
+	ServerType string         `gorm:"size:20;default:dcim" json:"server_type"`      // dcim/dcimcloud/normal
 	GroupID    uint           `gorm:"index" json:"group_id"`                        // 分组ID
 	Disabled   bool           `gorm:"default:false" json:"disabled"`
 	LinkStatus bool           `gorm:"default:false" json:"link_status"`             // 连接状态

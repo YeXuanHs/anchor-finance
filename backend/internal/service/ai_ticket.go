@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -247,10 +248,20 @@ func (s *AITicketService) runJob(job model.AITicketQueue) error {
 		return nil
 	}
 
-	// 发送AI回复（以管理员身份）
-	replyAdminID := uint(1)
-	if id, ok := config["ai_ticket_reply_admin"].(string); ok && id != "" {
-		// 解析管理员ID
+	// 发送AI回复（以管理员身份，MD 10.3：可配置reply_admin）
+	replyAdminID := uint(1) // 默认使用ID=1的管理员
+	if idStr, ok := config["ai_ticket_reply_admin"].(string); ok && idStr != "" {
+		if parsedID, err := strconv.ParseUint(idStr, 10, 32); err == nil && parsedID > 0 {
+			replyAdminID = uint(parsedID)
+		}
+	}
+
+	// 获取AI模型名称用于日志
+	modelName := ""
+	if aiConfig := s.aiSvc.GetConfig(); aiConfig != nil {
+		if m, ok := aiConfig["model"].(string); ok {
+			modelName = m
+		}
 	}
 
 	// 创建工单回复
@@ -270,7 +281,7 @@ func (s *AITicketService) runJob(job model.AITicketQueue) error {
 		"updated_at": time.Now(),
 	})
 
-	s.logProcess(job.TicketID, "ai_reply", "success", 1.0, "AI回复成功", "", "success")
+	s.logProcess(job.TicketID, "ai_reply", "success", 1.0, "AI回复成功", modelName, "success")
 	return nil
 }
 

@@ -1,0 +1,227 @@
+﻿1dbc17d fix: 修复CI编译失败（captcha.go未使用gorm import）
+ff52adb fix: 批量修复错误信息泄露内部细节（45个文件）
+a82dffb fix: 中等安全问题修复
+b873d76 fix: 第三轮审计安全修复（4个严重问题）
+ab21a91 feat: 购物车系统+IP限流中间件（参考zjmf+创欧）
+9fc052b fix: 移除所有降级逻辑（PHP引擎离线必须报错）
+761bad9 feat: Go后端通过HTTP调用PHP插件引擎（架构修正）
+0f75508 fix: 安全加固（审计第二轮）
+f984e06 feat: 批量实现高优先级客户端API（参考创欧/图拉）
+ffb2425 feat: 验证码登录API（参考创欧财务）
+611fe29 fix: 修复审计发现的问题
+2036e39 fix: 注册验证码改为数据库真实校验（修复安全漏洞）
+82e6ef1 feat: 客户端推介API补充（参考创欧/图拉）
+9a28425 feat: 本地化设置API（参考zjmf菜单结构）
+b0cb1fb feat: 网站设置API（参考zjmf菜单结构）
+dea5ede feat: 显示设置API（参考zjmf菜单结构）
+3f0b22f feat: 认证设置API（参考zjmf菜单结构）
+689dd1d feat: 信用额设置API（参考zjmf菜单结构）
+1ee6de4 feat: 支付接口设置API（参考zjmf菜单结构）
+aced861 feat: 显示设置API（参考zjmf菜单结构）
+ca6cc91 feat: 防欺诈设置API（参考zjmf安全设计）
+820e77f feat: 账单周期设置API（参考zjmf菜单结构）
+5c6a591 feat: 通知设置API（参考zjmf菜单结构）
+db99386 feat: 常规设置API（参考zjmf菜单结构）
+0771f66 feat: 认证设置API（参考zjmf菜单结构）
+91ec59d feat: 管理员登录日志API（参考zjmf菜单结构）
+7b2d3d2 feat: 客户分组管理API（参考zjmf菜单结构）
+d49208f feat: 合同设置API（参考zjmf菜单结构）
+24766a6 feat: 发票设置API（参考zjmf菜单结构）
+7d13a8c feat: 收入排名API（参考zjmf）
+35abbb9 feat: 内容格式映射（时间戳/状态值/布尔值自动转换）
+ab80ba9 fix: 修正所有字段映射（严格对照zjmf源码thinkcmf.sql）
+b946b7e fix: 表名映射加入shd_前缀（zjmf实际表名）
+69e7d02 fix: 修复QueryBuilder语法错误（→private ）
+80f1af9 feat: 完整数据库映射（表名+字段名+内容格式）
+d27f8d5 refactor: 插件管理改为创欧风格
+c1d6924 feat: 插件引擎完整实现（zjmf兼容层已连接）
+3cc6772 fix: 修复插件引擎路由解析（sub_path前导斜杠问题）
+fa41635 fix: 修复PHP内置服务器路由解析
+1e9a8ea feat: 添加PHP内置服务器路由文件router.php
+dad887c refactor: 插件引擎改为原生PHP（去掉Laravel依赖）
+f90032f fix: 添加config/view.php配置（Laravel视图路径）
+32a2f93 fix: 简化config/app.php providers为Laravel 10兼容版本
+70a4ffd fix: 移除ForkServiceProvider（Laravel 11类，L10不存在）
+93d737c fix: 修复artisan文件Laravel 10语法（handleCommand是L11）
+3e0b8e7 fix: 修复Laravel 10 bootstrap语法（Application::configure是L11）
+90a888c feat: Laravel插件引擎完整框架
+81aacc2 feat: 插件扫描/Schema读取（Go直接实现，不依赖PHP）
+df337b7 refactor: 删除版本检查功能（阉割）
+6a4556e feat: 修复3个TODO占位业务逻辑
+fa92e70 feat: 4个插件域API（P2 MD规范补全）
+cd26ad2 feat: 注册接口验证码校验（P2安全修复）
+f36d5f4 feat: 用户登录暴力破解防护（P2安全修复）
+68b66cb refactor: 清理重复代码
+34ac4b7 refactor: 创建response统一响应包 + 重构auth.go使用统一格式
+419976d fix: 修复services_manage.go语法错误
+eaff269 fix: 修复硬编码数据问题（审计发现的P0/P1问题）
+6797d6f feat: copy轮播图资源（从旧锚点财务carousel目录）
+740a82c fix: 删除payment图标目录（支付方式走插件系统，不需要静态图标）
+3444f19 feat: copy图标资源（从旧锚点财务）
+74782b7 feat: 主题模板API（首页Hero配置）
+53a50b3 fix: 修复编译错误（添加缺失字段、修复函数名、添加import）
+19038ea fix: 继续修复重复函数（删除sms_config.go, 清理settings.go, verifications.go）
+23404c3 fix: 删除重复的sms_config.go（功能在email_config.go中）
+6602071 fix: 继续修复重复函数声明（清理settings.go, content.go, system.go）
+e0eec02 fix: 修复settings.go语法错误
+e9deca8 fix: 修复所有重复函数声明（编译错误）
+904f622 feat: 各种日志API（5个接口）（参考zjmf）
+606ecd6 feat: 流量包管理API（5个接口）+ TrafficPackage/TrafficLog模型（参考zjmf）
+d037031 feat: 二次验证设置API（2个接口）+ TwoFactorConfig模型（参考zjmf）
+30ef334 feat: 短信/邮件配置API（4个接口）+ SMSConfig模型（参考zjmf）
+45a9284 feat: 销售设置API（6个接口）+ SalesConfig/SalesGroup模型（参考zjmf）
+8d73fdd feat: 官网自定义字段API（4个接口）+ CustomTemplateField模型（参考zjmf）
+5aacc13 feat: 商品订购设置API（4个接口）+ OrderConfig模型（参考zjmf）
+9947795 feat: 第三方登录设置API（4个接口）+ OAuthProvider模型（参考zjmf）
+fc15fe8 feat: 全局可配置项API（4个接口）+ ConfigurableOption模型（参考zjmf）
+1d8e0ce feat: 工单传递规则API（4个接口）+ TicketRule模型（参考zjmf）
+b24ab2a feat: 任务队列管理API（4个接口）+ TaskQueue模型（参考zjmf）
+9e8f471 feat: 主题模板管理API（6个接口）+ Theme模型（参考zjmf）
+86f073a feat: 系统升级信息API（参考zjmf）
+ec1d165 feat: 安全设置API（2个接口）（参考FUSION_PLAN_V2.md）
+64b8e69 feat: 帮助文章管理API（5个接口）+ 修复重复路由
+3231ae9 feat: 知识库分类管理API（完整CRUD）
+68993eb docs: 全面更新API清单，反映当前真实状态（365+接口，60个模型）
+739889c feat: 菜单管理API（独立文件，5个接口）
+9cb7bc2 feat: 下载分组管理API（4个接口）（参考zjmf）
+5d900af feat: 短信模板管理API（4个接口）+ SMSTemplate模型（参考zjmf）
+e389d1a feat: 黑名单管理API（3个接口）+ Blacklist模型（安全功能）
+7b22c1a fix: 删除重复路由 dashboard/recent-invoices
+6f37f86 feat: 用户前台工单服务选项API（参考创欧/图拉）
+a9386ad feat: 用户前台认证API补充（参考图拉）
+570c1b2 feat: 用户前台订单统计API（参考图拉）
+8f4c058 feat: 用户前台服务管理API补充（参考图拉）
+50f56ad feat: 用户前台服务管理API补充（参考创欧/图拉）
+19fd4de feat: 营销推送API（4个接口）+ MarketingPush模型（参考创欧财务）
+7a2b716 feat: 合同管理API（11个接口）+ Contract/ContractTemplate模型（参考zjmf）
+ab25e84 feat: 用户账单详情API（参考图拉财务）
+1963cf7 feat: 供应商产品配置模板API（参考创欧财务）
+2dfa425 feat: 账单备注API（参考zjmf）
+6acb343 feat: 产品类型排序API（参考图拉财务）
+df6395c feat: 插件安装API（参考创欧财务）
+458c304 feat: 订单搜索API（参考zjmf）
+fd5cb76 feat: 用户服务详情API（参考图拉财务）
+2df5ab2 feat: 插件任务API（参考创欧财务）
+9ae8d24 feat: 工单部门/状态详情API（参考zjmf）
+165f65f feat: 知识库文章详情API（参考图拉财务）
+8d8ced1 feat: 工单回复撤回API（参考创欧财务）
+d7a7623 feat: 新客户统计API（参考zjmf）
+ab2a612 feat: 最近账单API（参考图拉财务）
+f9f614a feat: 财务账本详情API（参考创欧财务）
+7c789f8 feat: 用户备注API（2个接口）+ UserRemark模型（参考zjmf）
+fba49b4 feat: 员工角色列表API（参考图拉财务）
+484d961 feat: 用户服务刷新状态API（参考创欧财务）
+bdd84bf feat: 工单部门排序API（参考zjmf）
+a78aae2 feat: 产品批量更新分类API（参考图拉财务）
+1ce60b1 feat: 优惠券产品分组API（参考创欧财务）
+a080a2c fix: 移除硬编码数据，CPU/实例规格从数据库读取
+476c9c6 docs: 更新API清单，统计约385个API接口
+a9ed67d feat: CPU/实例规格目录API（参考图拉财务）
+34d0dee feat: 实名认证解绑API（参考创欧财务）
+6b8a67c feat: 邮件模板API（5个接口）+ EmailTemplate模型（参考zjmf）
+d8ed05c feat: 供应商任务API（参考图拉财务）
+4627dc4 feat: 用户短信/邮件日志API（参考创欧财务）
+1e98321 feat: 友情链接API（4个接口）+ FriendlyLink模型（参考zjmf）
+7d2fe88 feat: 插件扫描API（参考图拉财务）
+04592d0 feat: 财务账本汇总API（参考创欧财务）
+0cc75cf feat: 销售统计API（2个接口）（参考zjmf）
+1915d4b docs: 更新API清单，统计约355个API接口
+f6d56ed feat: 取消请求API（3个接口）（参考zjmf）
+1d66bb5 feat: 定时任务API（3个接口）（参考图拉财务）
+4c445fb feat: 订单备注API（参考zjmf）
+d958e21 feat: 产品排序API（参考图拉财务）
+6298e6a feat: 测试通知模板发送API（参考创欧财务）
+4de65dd feat: 工单接收API（参考zjmf）
+ea57151 feat: 插件Schema API（参考创欧财务）
+3a60721 feat: 用户实名认证历史API（参考图拉财务）
+111e0e1 feat: 新闻详情API（参考创欧财务）
+3b339d4 docs: 更新API清单，统计约325个API接口
+e79f55c feat: 年度收入统计API（参考zjmf）
+a5b3844 feat: 提现审批确认API（参考图拉财务）
+199e844 feat: 产品分组详情API（参考创欧财务）
+67ee891 feat: 工单统计API（参考zjmf）
+928c755 feat: 续费/升级订单API（参考图拉财务）
+937b61e feat: 用户登录API（参考创欧财务）
+4c608c4 feat: 文件上传API（参考zjmf）
+f68517e feat: 供应商状态API（参考图拉财务）
+223d698 feat: 首页英雄区API（2个接口）+ HomeHero模型（参考创欧财务）
+4c80af3 feat: 菜单类型API（参考zjmf）
+c676674 feat: 供应商余额API（参考图拉财务）
+29d2d24 feat: 产品恢复API（参考创欧财务）
+ff7689f feat: 产品分组子级API
+ee30613 feat: 发送消息API（3个接口）（参考zjmf）
+0db1d75 feat: 工单管理员用户列表API（参考创欧财务）
+8b5c1fb feat: 用户服务连接/运行时API（参考图拉财务）
+7d870d8 docs: 更新API清单，统计约290个API接口
+075d811 feat: 邮件/短信/注册登录/验证码配置API（参考zjmf）
+441d372 feat: 日志清理API（2个接口）（参考zjmf）
+c802887 feat: 媒体文件API（3个接口）+ MediaFile模型（参考图拉财务）
+039c8c1 feat: 充值记录API（2个接口）+ Recharge模型（参考创欧财务）
+c67be4d feat: 信用额管理API（7个接口）+ CreditLimit模型（参考zjmf）
+17ffb3f feat: 角色复制API（参考图拉财务）
+7b8f803 feat: 供应商类型API（参考创欧财务）
+9194428 feat: 工单预回复API（9个接口）+ TicketPrereply模型（参考zjmf）
+1f1708e feat: 产品所有者API（参考图拉财务）
+8aa963e feat: OS选项API（参考创欧财务）
+dab35a4 feat: 产品类型API（4个接口）+ ProductType模型（参考图拉财务）
+044c6d7 feat: 内容统计API（参考创欧财务）
+460a0f1 feat: 系统信息API（2个接口）（参考zjmf）
+51dc2e3 feat: 用户支付记录API（3个接口）+ Payment模型（参考创欧财务）
+20dd5d4 feat: 用户服务补充API（参考zjmf）
+e47864e feat: 用户退款API（参考图拉财务）
+a5660ac feat: 优惠券API（12个接口）+ Coupon/CouponCampaign模型（参考创欧财务）
+6a87c89 feat: 自定义字段API（4个接口）+ CustomField模型（参考zjmf）
+d0467bd feat: 会员等级API（4个接口）+ MemberLevel模型（参考图拉财务）
+e3cbc57 feat: 员工管理API（7个接口）+ Staff模型（参考图拉财务）
+3d2bd04 feat: 数据库备份API（参考创欧财务）
+3cccf8f feat: 用户服务续费API
+7e11a80 feat: 用户账单补充API
+dee2553 feat: 用户通知API（4个接口）+ UserNotification模型
+ef38f0e feat: 通知模板API + NotificationTemplate模型
+bc2fe2c feat: 财务报表API
+3993165 feat: 用户工单回复API
+00a7cb0 feat: 工单回复模型+API
+9c38ad5 feat: 用户操作日志API
+ed2c852 feat: 仪表盘补充API
+41a2f93 feat: 用户前台实名认证+推介API（6个接口）
+4fe1450 test: 46个API全部测试通过
+19229b6 fix: 移除未使用的import
+7aa0eda feat: 内容管理CRUD API（16个接口）
+6b15b0b feat: 推介系统API（5个接口）+ Referral模型
+542f718 feat: 用户前台财务API + 内容API
+c2339cf feat: 数据库状态API + 角色管理完善 + 权限列表
+e7d1254 test: 综合测试脚本，24个API全部通过
+78878a2 docs: 更新API清单，添加用户前台API
+d055fa3 feat: 用户前台API（16个接口）
+a429a34 feat: 用户前台认证API（5个接口）
+3b7fb6a test: 添加综合测试脚本，验证所有API正常工作
+400ad31 docs: 更新API清单，优惠码管理已完成
+3a58c1e feat: 优惠码管理API（4个接口）
+99c09f0 feat: 插件管理API（7个接口）+ Plugin模型
+d488912 feat: 供应商管理API（7个接口）+ Supplier/SupplierProduct模型
+56da754 feat: 实名认证API（5个接口）+ Verification模型
+212542e feat: 产品管理补充API
+065091d feat: 工单管理补充API
+12b9ad3 feat: 用户管理补充API
+f7b169f feat: 认证模块补充（更新资料+修改密码）
+6db41c4 feat: 优惠码模型 + 货币管理完成
+c2cb517 feat: 货币管理API（3个接口）+ Currency模型
+5ef5da4 feat: 内容管理API（6个接口）+ Content模型
+59673ee feat: 日志API（3个接口）+ Log模型
+2a7e304 feat: 仪表盘API（3个接口）
+4d60aed feat: 管理员管理API（5个接口）
+3a94629 feat: 设置管理API（7个接口）
+cd66c86 fix: 移除硬编码API，改为从数据库读取
+fb5e33f feat: 产品管理API（6个接口）+ Product/ProductGroup模型
+cd8ac2f feat: 工单管理API（6个接口）
+7aa8314 feat: 账单管理API（4个接口）
+2f05131 feat: 服务管理API（6个接口）
+ca2bc47 feat: 订单管理API（6个接口）
+4c8a3b8 feat: 用户管理API测试通过，更新API清单
+75bd746 chore: 删除前端代码，专注后端开发
+18441b4 ci: 暂停前端构建，专注后端开发
+207b718 fix: 注释未实现的路由，修复编译错误
+5317e3f feat: 用户管理API + 管理员登录防暴力破解
+bd79a6d docs: 完善API格式规范和开发流程，防止屎山
+3b41a0f fix: 添加前端logo资源文件，修复构建失败
+35728dd init: 项目骨架搭建

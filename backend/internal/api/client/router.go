@@ -31,6 +31,7 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 	// v10类型端点（zjmf.php:190, ZjmfFinanceApiController:46）
 	r.POST("/api/v1/auth", ZjmfCompatLogin)          // v10登录（和zjmf_api_login共用handler）
 	r.GET("/api/v1/product", ZjmfCompatCartAll)       // v10商品列表
+	r.GET("/api/v1/product/:id", ZjmfCompatProductById) // v10单个商品详情（v10.php:30）
 	r.GET("/api/v1/group/product", ZjmfCompatCartAll) // v10分组商品
 
 	// 需要JWT认证的端点
@@ -72,6 +73,8 @@ func SetupZjmfCompatRoutes(r *gin.Engine, authService *service.AuthService) {
 
 	// SSL证书
 	r.POST("/provision/sslCertFunc", middleware.JWTAuth(authService), ZjmfCompatSslCertFunc)
+	// 自定义开通页面内容（ProvisionController.php:246,310）
+	r.POST("/zjmf_api/provision/custom/content", middleware.JWTAuth(authService), ZjmfCompatProvisionCustomContent)
 
 	// 购物车/订单/信用额度操作
 	r.POST("/cart/clear", middleware.JWTAuth(authService), ZjmfCompatClearCart)
