@@ -2,7 +2,6 @@ package service
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -436,8 +435,6 @@ func (c *DcimCloudClient) DcimCloudProvision(serviceID uint) (map[string]interfa
 		return nil, fmt.Errorf("密码加密失败: %v", err)
 	}
 
-	now := svc.UpdatedAt // 用当前GORM会自动更新
-	_ = now
 	updateData := map[string]interface{}{
 		"dcim_id":       cloudID,
 		"domain":        domain,
@@ -661,13 +658,6 @@ func cryptoRandInt(max int) int {
 		return 0
 	}
 	return int(n.Int64())
-}
-
-// generateRandomHex 生成指定字节数的随机十六进制字符串
-func generateRandomHex(bytes int) string {
-	b := make([]byte, bytes)
-	rand.Read(b)
-	return hex.EncodeToString(b)
 }
 
 // ============================================================

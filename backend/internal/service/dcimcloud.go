@@ -776,6 +776,38 @@ func (c *DcimCloudClient) AdjustConfig(dcimID uint, data map[string]interface{})
 	return c.Curl(fmt.Sprintf("/clouds/%d", dcimID), data, "PUT")
 }
 
+// UpdateResetFlowDay 更新流量重置日期（DcimCloud.php:2960-2984）
+// zjmf: 定时任务调用，根据traffic_bill_type决定重置日期
+// 如果是last_30days则按创建日期重置，否则每月1号重置
+func (c *DcimCloudClient) UpdateResetFlowDay(dcimID uint, createTime string) (map[string]interface{}, error) {
+	// 先获取当前云主机信息
+	res, err := c.Curl(fmt.Sprintf("/clouds/%d", dcimID), nil, "GET")
+	if err != nil {
+		return nil, err
+	}
+	if res["status"] != "success" {
+		return res, nil
+	}
+	detail, _ := res["data"].(map[string]interface{})
+	if detail == nil {
+		return res, nil
+	}
+	// 计算重置日期
+	resetFlowDay := 1 // 默认每月1号
+	if createTime != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05", createTime); err == nil {
+			resetFlowDay = t.Day()
+		}
+	}
+	// 如果当前重置日期不一致则更新
+	currentDay, _ := detail["reset_flow_day"].(float64)
+	if int(currentDay) != resetFlowDay {
+		data := map[string]interface{}{"reset_flow_day": resetFlowDay}
+		return c.Curl(fmt.Sprintf("/clouds/%d", dcimID), data, "PUT")
+	}
+	return map[string]interface{}{"status": "success"}, nil
+}
+
 // ============ HTTP工具方法 ============
 
 func (c *DcimCloudClient) doRequest(apiURL string, data map[string]interface{}, method string, headers map[string]interface{}) (map[string]interface{}, error) {
