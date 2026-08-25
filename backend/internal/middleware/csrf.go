@@ -25,8 +25,19 @@ func CSRF() gin.HandlerFunc {
 			token := generateCSRFToken()
 			c.SetCookie("csrf_token", token, 3600*24, "/", "", false, false)
 			c.Header("X-CSRF-Token", token)
-			// 首次POST不拦截（登录场景）
-			c.Next()
+			// 仅login路由首次POST不拦截
+			path := c.Request.URL.Path
+			if path == "/api/admin/login" || path == "/api/client/login" || path == "/api/client/register" || path == "/zjmf_api_login" {
+				c.Next()
+				return
+			}
+			// 其他路由首次POST也拦截
+			c.JSON(http.StatusOK, gin.H{
+				"code":    403,
+				"message": "CSRF token验证失败",
+				"data":    nil,
+			})
+			c.Abort()
 			return
 		}
 

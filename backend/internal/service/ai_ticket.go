@@ -282,6 +282,16 @@ func (s *AITicketService) runJob(job model.AITicketQueue) error {
 	})
 
 	s.logProcess(job.TicketID, "ai_reply", "success", 1.0, "AI回复成功", modelName, "success")
+
+	// AI自动关单（MD 9.3：客户诉求解决后自动关闭，默认开启）
+	var autoCloseSetting string
+	database.GetDB().Model(&model.Setting{}).Where("`key` = ?", "ai_ticket_auto_close").Pluck("value", &autoCloseSetting)
+	if autoCloseSetting != "0" && autoCloseSetting != "false" {
+		// AI回复后自动关闭工单
+		database.GetDB().Model(&model.Ticket{}).Where("id = ?", job.TicketID).Update("status", "closed")
+		log.Printf("[AITicket] Auto-closed ticket %d after AI reply", job.TicketID)
+	}
+
 	return nil
 }
 

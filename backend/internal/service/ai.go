@@ -398,6 +398,12 @@ func ExecuteAITool(funcName string, argsJSON string) string {
 		return string(r)
 
 	case "refund_user":
+		// 检查退款权限（MD 9.3：默认关闭）
+		var refundEnabled string
+		db.Model(&model.Setting{}).Where("`key` = ?", "ai_ticket_refund_enabled").Pluck("value", &refundEnabled)
+		if refundEnabled != "1" && refundEnabled != "true" {
+			return `{"error":"AI退款功能未启用，请联系管理员开启"}`
+		}
 		userID := int(args["user_id"].(float64))
 		amount := args["amount"].(float64)
 		reason := args["reason"].(string)

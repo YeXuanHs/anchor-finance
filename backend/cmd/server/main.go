@@ -158,27 +158,9 @@ func main() {
 		}
 	}()
 
-	// AI工单队列自动消费（每分钟处理pending工单）
-	go func() {
-		aiTicketSvc := service.NewAITicketService()
-		ticker := time.NewTicker(1 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			processed, err := aiTicketSvc.ProcessQueue(10)
-			if err != nil {
-				log.Printf("[AITicket] Queue processing error: %v", err)
-			}
-			if processed > 0 {
-				log.Printf("[AITicket] Processed %d queue items", processed)
-			}
-		}
-	}()
-
-	// 启动供应商同步定时任务
-	supplierSyncSvc := service.NewSupplierSyncService()
-	supplierSyncSvc.StartPriceSyncCron()
-	supplierSyncSvc.StartStockSyncCron()
-	supplierSyncSvc.StartFullSyncCron()
+	// 启动统一定时任务引擎（合并供应商同步+AI工单+通用定时任务）
+	cronEngine := service.NewCronEngine()
+	cronEngine.Start()
 
 	// 初始化Gin
 	if cfg.Server.Mode == "release" {
