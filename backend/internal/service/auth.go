@@ -18,16 +18,14 @@ type AuthService struct {
 	db      *gorm.DB
 	cfg     *config.JWTConfig
 	risk    *LoginRiskControl
-	secLog  *SecurityLogger
 }
 
 // NewAuthService 创建认证服务
 func NewAuthService(db *gorm.DB, cfg *config.JWTConfig) *AuthService {
 	return &AuthService{
-		db:     db,
-		cfg:    cfg,
-		risk:   NewLoginRiskControl(db),
-		secLog: NewSecurityLogger(db),
+		db:   db,
+		cfg:  cfg,
+		risk: NewLoginRiskControl(db),
 	}
 }
 

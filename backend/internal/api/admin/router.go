@@ -569,11 +569,6 @@ func SetupRoutes(r *gin.RouterGroup, authService *service.AuthService) {
 		authenticated.PUT("/customer-groups/:id", UpdateCustomerGroup)
 		authenticated.DELETE("/customer-groups/:id", DeleteCustomerGroup)
 
-		// 安全审计日志（MD 9.1 功能9：安全审计日志）
-		authenticated.GET("/security-logs", GetSecurityLogs)
-		authenticated.GET("/security-logs/summary", GetSecurityLogSummary)
-		authenticated.GET("/security-logs/:id", GetSecurityLogDetail)
-
 		// DCIM服务器管理
 		authenticated.GET("/dcim-servers", GetDcimServerList)
 		authenticated.GET("/dcim-servers/options", GetDcimServerOptions)
