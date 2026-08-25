@@ -357,10 +357,28 @@ func (c *DcimCloudClient) DelNatWeb(webID uint, dcimID uint) (map[string]interfa
 
 // ============ 流量操作（路径从zjmf确认） ============
 
-// GetTrafficUsage 获取流量使用（DcimCloud.php:2866）
-// zjmf: GET /clouds/{dcimid}/flow_data
+// GetTrafficUsage 获取流量使用（DcimCloud.php:2846-2878）
+// zjmf: GET /clouds/{dcimid}/flow_data，时间戳用毫秒级，单位GB
 func (c *DcimCloudClient) GetTrafficUsage(dcimID uint, start string, end string) (map[string]interface{}, error) {
-	data := map[string]interface{}{"start": start, "end": end}
+	// zjmf: strtotime($start . " 00:00:00") . "000"（毫秒级时间戳）
+	startTs := fmt.Sprintf("%d000", time.Now().AddDate(0, 0, -30).Unix())
+	endTs := fmt.Sprintf("%d000", time.Now().Unix())
+	if start != "" {
+		if t, err := time.Parse("2006-01-02", start); err == nil {
+			startTs = fmt.Sprintf("%d000", t.Unix())
+		}
+	}
+	if end != "" {
+		if t, err := time.Parse("2006-01-02", end); err == nil {
+			endTs = fmt.Sprintf("%d000", t.Add(24*time.Hour-time.Second).Unix())
+		}
+	}
+	data := map[string]interface{}{
+		"type":       2,
+		"start_time": startTs,
+		"end_time":   endTs,
+		"unit":       "GB",
+	}
 	return c.Curl(fmt.Sprintf("/clouds/%d/flow_data", dcimID), data, "GET")
 }
 
@@ -460,10 +478,23 @@ func (c *DcimCloudClient) ManagePanel(dcimID uint) (map[string]interface{}, erro
 	return c.Curl(fmt.Sprintf("/clouds/%d", dcimID), nil, "GET")
 }
 
-// SavePanelPass 保存面板密码（DcimCloud.php:2880）
-func (c *DcimCloudClient) SavePanelPass(dcimID uint, password string) (map[string]interface{}, error) {
-	data := map[string]interface{}{"password": password}
-	return c.Curl(fmt.Sprintf("/clouds/%d/panel/password", dcimID), data, "POST")
+// SavePanelPass 保存面板密码（DcimCloud.php:2880-2900）
+// zjmf存到customfields表，我们存到service.Config JSON的panel_password字段
+func (c *DcimCloudClient) SavePanelPass(serviceID uint, password string) (map[string]interface{}, error) {
+	db := database.GetDB()
+	var svc model.Service
+	if err := db.First(&svc, serviceID).Error; err != nil {
+		return nil, fmt.Errorf("服务不存在")
+	}
+	// 解析现有config，添加panel_password
+	config := make(map[string]interface{})
+	if svc.Config != "" {
+		json.Unmarshal([]byte(svc.Config), &config)
+	}
+	config["panel_password"] = password
+	configBytes, _ := json.Marshal(config)
+	db.Model(&svc).Update("config", string(configBytes))
+	return map[string]interface{}{"status": "success"}, nil
 }
 
 // SupportReinstallRandomPort 是否支持随机端口重装（DcimCloud.php:265）
@@ -501,15 +532,129 @@ func (c *DcimCloudClient) ModuleClientArea(dcimID uint) (map[string]interface{},
 // ModuleClientAreaDetail 客户端面板详情（DcimCloud.php:155-230）
 // zjmf: 根据key调用不同API
 func (c *DcimCloudClient) ModuleClientAreaDetail(dcimID uint, key string) (map[string]interface{}, error) {
+	// zjmf DcimCloud.php:155-236，根据key返回不同面板数据
 	switch key {
-	case "snap_backup":
-		return c.ListSnapBackup(dcimID)
-	case "nat_info":
-		return c.GetNatInfo(dcimID)
-	case "security":
-		return c.GetSecurityGroups(0, "")
-	case "remote_info":
-		return c.RemoteInfo(dcimID)
+	case "snapshot":
+		// zjmf: 获取云主机详情+快照列表+磁盘信息
+		cloud, err := c.Curl(fmt.Sprintf("/clouds/%d", dcimID), nil, "GET")
+		if err != nil {
+			return nil, err
+		}
+		snaps, _ := c.Curl(fmt.Sprintf("/clouds/%d/snapshots?per_page=100", dcimID), nil, "GET")
+		return map[string]interface{}{
+			"status": 200,
+			"data": map[string]interface{}{
+				"list":           snaps["data"],
+				"disk":           cloud["data"],
+				"support_snap":   true,
+				"support_backup": true,
+				"host_type":      "host",
+			},
+		}, nil
+	case "setting":
+		// zjmf: 获取ISO列表+启动顺序+云主机类型
+		cloud, err := c.Curl(fmt.Sprintf("/clouds/%d", dcimID), nil, "GET")
+		if err != nil {
+			return nil, err
+		}
+		nodeID := uint(0)
+		if data, ok := cloud["data"].(map[string]interface{}); ok {
+			if nid, ok := data["node_id"].(float64); ok {
+				nodeID = uint(nid)
+			}
+		}
+		isos, _ := c.Curl(fmt.Sprintf("/node_isos?id=%d&type=node", nodeID), nil, "GET")
+		isoList := []map[string]interface{}{}
+		if isosData, ok := isos["data"].([]interface{}); ok {
+			for _, v := range isosData {
+				if group, ok := v.(map[string]interface{}); ok {
+					if info, ok := group["info"].([]interface{}); ok {
+						for _, item := range info {
+							if iso, ok := item.(map[string]interface{}); ok {
+								isoList = append(isoList, map[string]interface{}{
+									"id":   iso["id"],
+									"name": iso["name"],
+								})
+							}
+						}
+					}
+				}
+			}
+		}
+		return map[string]interface{}{
+			"status": 200,
+			"data": map[string]interface{}{
+				"iso":       cloud["data"],
+				"bootorder": cloud["data"],
+				"iso2":      isoList,
+				"host_type": "host",
+			},
+		}, nil
+	case "security_groups":
+		// zjmf: 获取安全组列表+安全协议
+		cloud, err := c.Curl(fmt.Sprintf("/clouds/%d", dcimID), nil, "GET")
+		if err != nil {
+			return nil, err
+		}
+		userID := uint(0)
+		cloudType := "host"
+		if data, ok := cloud["data"].(map[string]interface{}); ok {
+			if uid, ok := data["user_id"].(float64); ok {
+				userID = uint(uid)
+			}
+			if t, ok := data["type"].(string); ok {
+				cloudType = t
+			}
+		}
+		groups, _ := c.GetSecurityGroups(userID, cloudType)
+		protocols, _ := c.GetSecurityGroupProtocols()
+		return map[string]interface{}{
+			"status": 200,
+			"data": map[string]interface{}{
+				"list":      groups["data"],
+				"used":      cloud["data"],
+				"protocols": protocols["data"],
+				"host_type": cloudType,
+			},
+		}, nil
+	case "nat_acl":
+		// zjmf: 获取NAT ACL列表（DcimCloud.php:215）
+		data, err := c.Curl(fmt.Sprintf("/clouds/%d/nat_acl?list_type=all", dcimID), nil, "GET")
+		if err != nil {
+			return nil, err
+		}
+		natHostIP := ""
+		if d, ok := data["data"].(map[string]interface{}); ok {
+			if ip, ok := d["nat_host_ip"].(string); ok {
+				natHostIP = ip
+			}
+		}
+		return map[string]interface{}{
+			"status": 200,
+			"data": map[string]interface{}{
+				"list":        data["data"],
+				"nat_host_ip": natHostIP,
+			},
+		}, nil
+	case "nat_web":
+		// zjmf: 获取NAT Web列表（DcimCloud.php:218）
+		data, err := c.Curl(fmt.Sprintf("/clouds/%d/nat_web?list_type=all", dcimID), nil, "GET")
+		if err != nil {
+			return nil, err
+		}
+		natHostIP := ""
+		if d, ok := data["data"].(map[string]interface{}); ok {
+			if ip, ok := d["nat_host_ip"].(string); ok {
+				natHostIP = ip
+			}
+		}
+		return map[string]interface{}{
+			"status": 200,
+			"data": map[string]interface{}{
+				"list":        data["data"],
+				"nat_host_ip": natHostIP,
+			},
+		}, nil
 	default:
 		return c.Curl(fmt.Sprintf("/clouds/%d", dcimID), nil, "GET")
 	}
